@@ -11,7 +11,7 @@ import {
   ElementRef,
   viewChild,
 } from '@angular/core';
-import { SlicePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { SelectModule } from 'primeng/select';
@@ -40,6 +40,8 @@ import {
   type DocumentType,
 } from '@core/models/ui/document-content-template.model';
 import type { BranchOption } from '@core/models/ui/branch.model';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
+import { editableDocumentTypes } from '@core/utils/document-template-options.utils';
 
 interface DocumentTypeOption {
   label: string;
@@ -68,7 +70,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
   imports: [
     BadgeComponent,
     TooltipModule,
-    SlicePipe,
+    ChileDatePipe,
     TableModule,
     TagModule,
     SelectModule,
@@ -306,7 +308,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                                 </p>
                                 <p class="text-xs m-0 text-text-secondary">
                                   {{ doc.studentName }} · {{ doc.typeLabel }} ·
-                                  {{ doc.documentAt | slice: 0 : 10 }}
+                                  {{ doc.documentAt | chileDate: 'yyyy-MM-dd' }}
                                 </p>
                               </div>
                             </div>
@@ -511,7 +513,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                                 }}{{ doc.description ? ' · ' + doc.description : '' }}
                               </p>
                               <p class="text-xs mt-0.5 m-0 text-text-muted">
-                                Subido el {{ doc.createdAt | slice: 0 : 10 }} por
+                                Subido el {{ doc.createdAt | chileDate: 'yyyy-MM-dd' }} por
                                 {{ doc.uploaderName }}
                               </p>
                             </div>
@@ -837,11 +839,15 @@ export class DmsListContentComponent {
     return this.templateIsGeneratingPreview() && this.pendingTemplateAction() === action;
   }
 
-  /** Filtra Profesional si la sede seleccionada no dicta cursos profesionales (AC8). */
+  /** Filtra Profesional si la sede no lo dicta (AC8) y el certificado Profesional en el piloto
+   * (fix-463-m). */
   readonly templateDocumentTypeOptions = computed<DocumentTypeOption[]>(() => {
     const branch = this.templateBranches().find((b) => b.id === this.selectedTemplateBranchId());
-    if (branch?.hasProfessional) return ALL_DOCUMENT_TYPE_OPTIONS;
-    return ALL_DOCUMENT_TYPE_OPTIONS.filter((o) => !o.value.includes('professional'));
+    const allowed = editableDocumentTypes(
+      branch?.hasProfessional ?? false,
+      isBlockedInPilot('clase-profesional-recorte'),
+    );
+    return ALL_DOCUMENT_TYPE_OPTIONS.filter((o) => allowed.includes(o.value));
   });
 
   constructor() {

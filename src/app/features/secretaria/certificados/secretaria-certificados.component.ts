@@ -32,6 +32,7 @@ import { EnviarMasivoDrawerComponent } from '@features/admin/certificacion/drawe
       (generarCertificado)="facade.generarCertificado($event)"
       (verCertificado)="facade.verCertificado($event.storagePath, $event.nombre)"
       (enviarEmail)="facade.enviarEmail($event)"
+      (regenerarCertificado)="facade.regenerarCertificado($event)"
       (abrirHistorialDrawer)="openHistorialDrawer()"
       (abrirGenerarPendientesDrawer)="openGenerarPendientesDrawer()"
       (abrirEnviarMasivoDrawer)="openEnviarMasivoDrawer()"

@@ -33,7 +33,7 @@
 | `src/app/core/utils/avatar-palette.ts` | `AvatarPaletteEntry`, `AVATAR_PALETTES`, `avatarPalette` |
 | `src/app/core/utils/beca.utils.ts` | `esBecaCompleta(totalPagado, saldoPendiente, cantidadPagos = 0)` — sin pagos ni saldo = beca 100 % (fix-057-i; la usan el Estado de Cuenta y la ficha del alumno) |
 | `src/app/core/utils/branch-scope-ui.utils.ts` | `isSedeDisabled`, `isBothBranchesVisible`, `isBothBranchesDisabled` |
-| `src/app/core/utils/branch-scope.utils.ts` | `NO_BRANCH_SCOPE`, `resolveBranchScope`, `canChooseBranch` |
+| `src/app/core/utils/branch-scope.utils.ts` | `NO_BRANCH_SCOPE`, `resolveBranchScope`, `canChooseBranch`, `scopeStudentsToBranch` (fix-458-m: alumnos de una sede por sus matrículas, DG-115) |
 | `src/app/core/utils/brand-text.utils.ts` | `resolveBrandText` |
 | `src/app/core/utils/carnet-menu.util.ts` | `CarnetMenuState`, `buildCarnetMenu` |
 | `src/app/core/utils/chile-time.utils.ts` | `CHILE_TIME_ZONE`, `ChileInstant`, `ChileParts`, `InstantRange`, `chileParts`, `toChileDate`, `chileToday`, `chileMonth`, `chileYear`, `chileWallTimeToInstant`, `chileDayRange`, `chileRange`, `chileMonthRange`, `addDaysIso`, `addMonthsIso`, `monthDays`, `startOfMonthIso`, `endOfMonthIso`, `diffDaysIso`, `weekdayOfIso`, `mondayOfIso`, `calendarDateToIso`, `isoToCalendarDate`, `formatChileDate`, `formatChilePattern`, `formatChileTime`, `chileTimeOfDay` |
@@ -57,6 +57,7 @@
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
 | `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
+| `src/app/core/utils/document-template-options.utils.ts` | `editableDocumentTypes` |
 | `src/app/core/utils/drawer-navigation.utils.ts` | `isRouteChange` |
 | `src/app/core/utils/edge-function-error.utils.ts` | `EdgeFunctionError`, `readEdgeFunctionError`, `edgeFunctionUserMessage` |
 | `src/app/core/utils/egresado-status.utils.ts` | `EgresadoAccountStatus`, `getEgresadoAccountStatus` |
@@ -117,6 +118,7 @@
 | `src/app/core/utils/reagendamiento.utils.ts` | `isRazonReagendamientoCompleta`, `slotChocaConClases` |
 | `src/app/core/utils/realtime-scope.utils.ts` | `RealtimeRowChange`, `StudentRealtimeScope`, `isRealtimeEventForStudent` |
 | `src/app/core/utils/recipient-filter.utils.ts` | `BulkAction`, `filterRecipients`, `includedCount`, `applyBulkAction`, `onlyExcluded` |
+| `src/app/core/utils/paged-fetch.utils.ts` | `PageResult`, `POSTGREST_MAX_ROWS`, `fetchAllPages` — trae todas las filas por páginas de `range()` (DG-008: PostgREST corta en 1.000 sin avisar); la consulta necesita orden estable con `id` de desempate (fix-457-m) |
 | `src/app/core/utils/reenrollment.utils.ts` | `EnrollmentStatus`, `ReenrollmentVerdict`, `BLOCKING_STATUSES`, `HISTORICAL_STATUSES`, `evaluateReenrollment` |
 | `src/app/core/utils/reportes-contables.utils.ts` | `PaymentRow`, `ExpenseRow`, `SingularSaleReportDto`, `mapSingularSaleToPaymentRow`, `SpecialServiceSaleReportDto`, `mapSpecialServiceSaleToPaymentRow`, `filterPaymentsByBranch`, `computeKpis`, `computeIngresosCategoria`, `computeGastosCategoria`, `computeEvolucionMensual`, `computeEvolucionRange`, `computeRentabilidadCursos`, `buildReporte` |
 | `src/app/core/utils/request-guard.utils.ts` | `RequestGuard`, `createRequestGuard` |

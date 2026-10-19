@@ -106,6 +106,17 @@ export class DocumentContentTemplatesFacade {
     const form = this._form();
     if (!form) return false;
 
+    // fix-450-m: una sección vacía saldría en blanco en el documento real (la edge function solo
+    // cae al texto por defecto con `??`, y ese texto es de una sola sede). AC-E1 de 0016-m.
+    const emptyLabels = form.sections.filter((s) => !s.body.trim()).map((s) => s.label);
+    if (emptyLabels.length > 0) {
+      this.toast.error(
+        'Hay secciones vacías',
+        `Completa antes de publicar: ${emptyLabels.join(', ')}.`,
+      );
+      return false;
+    }
+
     this._isPublishing.set(true);
     this._error.set(null);
 

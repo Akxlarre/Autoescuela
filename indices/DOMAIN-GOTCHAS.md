@@ -51,7 +51,8 @@
 ### DG-008 — Sin `.order()`/`.limit()`, PostgREST trunca en silencio a 1000 filas
 - **Trampa:** asumir que una query sin límite explícito devuelve todas las filas.
 - **Realidad:** `supabase/config.toml` fija `max_rows = 1000`. PostgREST corta ahí sin lanzar error — invisible con pocos datos de prueba, silencioso a escala real.
-- **Fuente:** `specs/fixes/fix-053-b-ciclos-queries-limit`
+- **Regla de aplicabilidad:** un listado que debe traer todo pasa por `fetchAllPages()` (`core/utils/paged-fetch.utils.ts`) con orden estable e `id` de desempate.
+- **Fuente:** `specs/fixes/fix-053-b-ciclos-queries-limit`, `specs/fixes/fix-457-m-dms-sin-tope-1000-filas`
 
 ### DG-009 — Un campo "sede" en un listado puede ser un placeholder sin JOIN real
 - **Trampa:** asumir que el campo "sucursal" de una fila ya trae el nombre resuelto.
@@ -1899,6 +1900,22 @@
   la transacción con `set_config('app.<marca>', 'on', true)`, y el trigger deja pasar solo con esa
   marca. El cliente no puede fijarla: PostgREST no expone `set_config` (comprobado: 404).
 - **Fuente:** `specs/fixes/fix-445-m-egreso-en-dia-con-caja-cerrada`, `fix-444-m`, `fix-051-i`.
+
+### DG-115 — "La sede del alumno" no existe como tal: un alumno es de cada sede donde tiene matrícula
+
+- **Trampa:** filtrar alumnos (o lo que cuelga de ellos) por sede con `users.branch_id`, ya sea en
+  una query (`.eq('users.branch_id', sede)`) o en una policy.
+- **Realidad:** `students` no tiene sede; `users.branch_id` es un único valor (la sede donde se
+  registró), pero cada matrícula tiene su `enrollments.branch_id` y puede ser de la otra sede
+  (spec 0007-m, re-matrícula). Un alumno de la sede 2 con matrícula activa en la sede 1 **también
+  es alumno de la sede 1**. Filtrar por `users.branch_id` lo hacía invisible para la secretaria de
+  la sede 1 (que sí podía leer su matrícula y sus documentos) y mostraba sus documentos en la sede
+  equivocada.
+- **Regla de aplicabilidad:** para "alumnos/documentos/datos de la sede X", filtrar por la sede de la
+  **matrícula** (`enrollments!inner` + `.eq('enrollments.branch_id', X)`; documentos por
+  `enrollment_id`). `select_students` deja ver a la secretaria los alumnos de su sede **o** con
+  alguna matrícula en ella (`20261018120000`).
+- **Fuente:** `specs/fixes/fix-456-m-dms-sede-de-la-matricula`, `specs/fixes/fix-458-m-base-alumnos-sede-de-la-matricula` (Base Alumnos: `scopeStudentsToBranch()` en `core/utils/branch-scope.utils.ts`).
 
 ## Convención para agregar una entrada nueva
 

@@ -315,6 +315,22 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                           </button>
                           <button
                             class="inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                            data-llm-action="regenerate-certificate"
+                            title="Volver a generar el PDF con los datos y la plantilla actuales"
+                            [disabled]="generatingId() !== null"
+                            [appStableWidth]="generatingId() === alumno.enrollmentId"
+                            (click)="regenerarCertificado.emit(alumno.enrollmentId)"
+                          >
+                            @if (generatingId() === alumno.enrollmentId) {
+                              <app-icon name="loader-circle" [size]="13" class="animate-spin" />
+                              Generando...
+                            } @else {
+                              <app-icon name="refresh-cw" [size]="13" />
+                              Regenerar
+                            }
+                          </button>
+                          <button
+                            class="inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
                             data-llm-action="send-certificate-email"
                             [disabled]="sendingEmailId() === alumno.enrollmentId"
                             [appStableWidth]="sendingEmailId() === alumno.enrollmentId"
@@ -529,6 +545,20 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                     </button>
                     <button
                       class="flex-1 inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                      data-llm-action="regenerate-certificate"
+                      [disabled]="generatingId() !== null"
+                      (click)="regenerarCertificado.emit(alumno.enrollmentId)"
+                    >
+                      @if (generatingId() === alumno.enrollmentId) {
+                        <app-icon name="loader-circle" [size]="13" class="animate-spin" />
+                        Generando...
+                      } @else {
+                        <app-icon name="refresh-cw" [size]="13" />
+                        Regenerar
+                      }
+                    </button>
+                    <button
+                      class="flex-1 inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
                       data-llm-action="send-certificate-email"
                       [disabled]="sendingEmailId() === alumno.enrollmentId"
                       (click)="onClickEmail(alumno)"
@@ -697,6 +727,8 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   readonly generarCertificadoForzado = output<number>();
   readonly verCertificado = output<{ storagePath: string; nombre: string }>();
   readonly enviarEmail = output<number>();
+  /** fix-464-m: reemitir el PDF de un certificado ya generado (conserva el folio). */
+  readonly regenerarCertificado = output<number>();
   readonly abrirHistorialDrawer = output<void>();
   readonly abrirGenerarPendientesDrawer = output<void>();
   readonly abrirEnviarMasivoDrawer = output<void>();
@@ -803,8 +835,12 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
     return this.filteredAlumnos().slice(start, start + this.PAGE_SIZE);
   });
 
+  /** fix-462-m: los que "Generar pendientes" emite — mismo criterio que `pendientesElegibles`. */
   readonly pendientesCount = computed(
-    () => this.alumnos().filter((a) => a.certificadoStatus === 'pendiente').length,
+    () =>
+      this.alumnos().filter(
+        (a) => a.certificadoStatus === 'pendiente' && a.clasesCompletadas >= a.clasesTotales,
+      ).length,
   );
 
   /** Alumnos con certificado generado que aún no recibieron el correo. */

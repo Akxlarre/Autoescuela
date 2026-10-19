@@ -52,3 +52,29 @@ export function canChooseBranch(
 ): boolean {
   return role === 'admin' || canAccessBothBranches;
 }
+
+/**
+ * Alumnos de una sede (fix-458-m, DG-115).
+ *
+ * `users.branch_id` es un solo valor, pero cada matrícula tiene su propia sede (spec 0007-m):
+ * un alumno es de cada sede donde tiene matrícula. Con `branchId`:
+ * - con matrículas → aparece si alguna es de esa sede, y la fila queda solo con esas;
+ * - sin matrículas → aparece en la sede de su usuario.
+ * `null` = todas las sedes (sin cambios). `NO_BRANCH_SCOPE` no coincide con ninguna sede → vacío.
+ */
+export function scopeStudentsToBranch<
+  T extends { users: { branch_id: number | null }; enrollments: { branch_id: number | null }[] },
+>(rows: T[], branchId: number | null): T[] {
+  if (branchId === null) return rows;
+  const scoped: T[] = [];
+  for (const row of rows) {
+    const enrollments = row.enrollments ?? [];
+    if (enrollments.length === 0) {
+      if (row.users.branch_id === branchId) scoped.push(row);
+      continue;
+    }
+    const inBranch = enrollments.filter((e) => e.branch_id === branchId);
+    if (inBranch.length > 0) scoped.push({ ...row, enrollments: inBranch });
+  }
+  return scoped;
+}

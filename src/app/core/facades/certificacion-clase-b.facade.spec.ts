@@ -9,6 +9,12 @@ import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import type { CertificacionAlumnoRow } from '@core/models/ui/certificacion-clase-b.model';
 
+// fix-463-m: el piloto se controla por test; por defecto el portal del alumno está habilitado.
+const pilot = vi.hoisted(() => ({ alumnoBloqueado: false }));
+vi.mock('@core/config/pilot-phase.config', () => ({
+  isBlockedInPilot: (module: string) => module === 'alumno' && pilot.alumnoBloqueado,
+}));
+
 describe('CertificacionClaseBFacade', () => {
   let facade: CertificacionClaseBFacade;
   let supabaseSpy: any;
@@ -99,7 +105,10 @@ describe('CertificacionClaseBFacade', () => {
       notifyUsers: vi.fn().mockResolvedValue(undefined),
       notifyRole: vi.fn().mockResolvedValue(undefined),
     };
-    confirmSpy = { confirmWithReason: vi.fn().mockResolvedValue(null) };
+    confirmSpy = {
+      confirm: vi.fn().mockResolvedValue(false),
+      confirmWithReason: vi.fn().mockResolvedValue(null),
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -349,6 +358,79 @@ describe('CertificacionClaseBFacade', () => {
     });
   });
 
+  // fix-459-m: la secretaria ve lo mismo que el botón y la edge function consideran elegible.
+  describe('fetchAlumnos — lista de la secretaria (fix-459-m)', () => {
+    const enrollment = (id: number, extra: Record<string, unknown> = {}) => ({
+      id,
+      branch_id: 1,
+      certificate_b_pdf_url: null,
+      courses: { name: 'Clase B', type: 'class_b', practical_hours: 9.0 },
+      students: {
+        id: id * 10,
+        users: {
+          first_names: `N${id}`,
+          paternal_last_name: `A${id}`,
+          maternal_last_name: '',
+          rut: `${id}-0`,
+          email: '',
+        },
+      },
+      certificates: [],
+      ...extra,
+    });
+
+    function mockData(sessionsPerEnrollment: Record<number, number>) {
+      const enrollmentsQuery = makeAwaitableQuery({
+        data: [
+          enrollment(1), // 12/12 → elegible
+          enrollment(2), // 11/12 → no
+          enrollment(3, {
+            // 5/12 pero ya tiene certificado (generado por el admin con bypass)
+            certificate_b_pdf_url: 'certificates/3/c.pdf',
+            certificates: [
+              { id: 30, folio: 7, status: 'issued', created_at: '2026-10-01T12:00:00Z' },
+            ],
+          }),
+        ],
+        error: null,
+      });
+      const sessions = Object.entries(sessionsPerEnrollment).flatMap(([id, n]) =>
+        Array.from({ length: n }, () => ({ enrollment_id: Number(id) })),
+      );
+      supabaseSpy.client.from = mockFromByTable({
+        enrollments: enrollmentsQuery,
+        v_student_progress_b: makeAwaitableQuery({ data: [], error: null }),
+        class_b_sessions: makeAwaitableQuery({ data: sessions, error: null }),
+        certificate_issuance_log: makeAwaitableQuery({ data: [], error: null }),
+      });
+      return enrollmentsQuery;
+    }
+
+    const ids = () =>
+      facade
+        .alumnos()
+        .map((a) => a.enrollmentId)
+        .sort();
+
+    it('secretaria: ve 12/12 y los que ya tienen certificado; no 11/12; no filtra por certificate_enabled', async () => {
+      authFacadeSpy.currentUser.mockReturnValue({ role: 'secretary', branchId: 1 });
+      const q = mockData({ 1: 12, 2: 11, 3: 5 });
+
+      await facade.initialize();
+
+      expect(ids()).toEqual([1, 3]);
+      expect(q.eq).not.toHaveBeenCalledWith('certificate_enabled', true);
+    });
+
+    it('admin: ve todos, cumplan o no', async () => {
+      mockData({ 1: 12, 2: 11, 3: 5 });
+
+      await facade.initialize();
+
+      expect(ids()).toEqual([1, 2, 3]);
+    });
+  });
+
   describe('generarCertificado()', () => {
     it('invoca la Edge Function con el enrollment_id correcto y force=false por defecto', async () => {
       await facade.generarCertificado(42);
@@ -511,6 +593,34 @@ describe('CertificacionClaseBFacade', () => {
     });
   });
 
+  describe('regenerarCertificado() (fix-464-m)', () => {
+    it('si se cancela la confirmación, no invoca la generación', async () => {
+      await facade.regenerarCertificado(42);
+      expect(confirmSpy.confirm).toHaveBeenCalled();
+      expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
+    });
+
+    it('admin: confirma, regenera con force y abre el visor', async () => {
+      confirmSpy.confirm.mockResolvedValueOnce(true);
+      await facade.regenerarCertificado(42);
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(
+        'generate-certificate-b-pdf',
+        { body: { enrollment_id: 42, force: true } },
+      );
+      expect(dmsViewerSpy.openByUrl).toHaveBeenCalled();
+    });
+
+    it('secretaria: regenera sin force', async () => {
+      authFacadeSpy.currentUser.mockReturnValue({ role: 'secretary', branchId: 1 });
+      confirmSpy.confirm.mockResolvedValueOnce(true);
+      await facade.regenerarCertificado(42);
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(
+        'generate-certificate-b-pdf',
+        { body: { enrollment_id: 42, force: false } },
+      );
+    });
+  });
+
   describe('verCertificado()', () => {
     it('genera signed URL y abre DMS viewer', async () => {
       await facade.verCertificado('certificates/42/cert.pdf', 'Juan López');
@@ -535,9 +645,49 @@ describe('CertificacionClaseBFacade', () => {
       await facade.generarPendientes();
       expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
     });
+
+    it('fix-462-m: solo genera a los pendientes con todas las clases completadas', async () => {
+      (facade as any)._alumnos.set([
+        makeAlumnoRow({ enrollmentId: 1, clasesCompletadas: 12 }),
+        makeAlumnoRow({ enrollmentId: 2, clasesCompletadas: 8 }),
+        makeAlumnoRow({ enrollmentId: 3, certificadoStatus: 'generado' }),
+      ]);
+      expect(facade.pendientesElegibles().map((a) => a.enrollmentId)).toEqual([1]);
+
+      await facade.generarPendientes();
+
+      const invoke = supabaseSpy.client.functions.invoke;
+      expect(invoke).toHaveBeenCalledTimes(1);
+      expect(invoke).toHaveBeenCalledWith('generate-certificate-b-pdf', {
+        body: { enrollment_id: 1 },
+      });
+    });
   });
 
   describe('notificaciones de certificado (Spec 0024, AC7)', () => {
+    afterEach(() => {
+      pilot.alumnoBloqueado = false;
+    });
+
+    it('fix-463-m: con el portal del alumno en piloto, generar no lo notifica', async () => {
+      pilot.alumnoBloqueado = true;
+      (facade as any)._alumnos.set([makeAlumnoRow({ enrollmentId: 42, studentId: 5 })]);
+      supabaseSpy.client.from = mockFromByTable({
+        students: {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({ data: { user_id: 900 }, error: null }),
+            }),
+          }),
+        },
+      });
+
+      await facade.generarCertificado(42);
+      await flushMicrotasks();
+
+      expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+    });
+
     it('notifica al alumno tras generar un certificado individual', async () => {
       (facade as any)._alumnos.set([makeAlumnoRow({ enrollmentId: 42, studentId: 5 })]);
       const studentsHandler = {

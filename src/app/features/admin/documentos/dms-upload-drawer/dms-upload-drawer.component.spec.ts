@@ -64,6 +64,7 @@ describe('DmsUploadDrawerComponent', () => {
     facadeMock = {
       currentUploadMode,
       studentsWithDocs: signal([]),
+      uploadableStudents: signal([]),
       instructorsWithDocs: signal([]),
       studentDetail,
       studentDocs,

@@ -23,6 +23,7 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { fetchAllPages } from '@core/utils/paged-fetch.utils';
 
 // ─── Labels ──────────────────────────────────────────────────────────────────
 
@@ -236,6 +237,8 @@ export class DmsFacade {
   // ── Estado Privado ───────────────────────────────────────────────────────────
 
   private readonly _studentsWithDocs = signal<StudentWithDocsRow[]>([]);
+  /** Alumnos del scope con ≥1 matrícula, tengan o no documentos (fix-449-m). */
+  private readonly _uploadableStudents = signal<{ studentId: number; name: string }[]>([]);
   private readonly _recentDocs = signal<DmsStudentDocRow[]>([]);
   private readonly _schoolDocs = signal<SchoolDocRow[]>([]);
   private readonly _isLoading = signal(false);
@@ -287,6 +290,8 @@ export class DmsFacade {
   // ── Estado Público ───────────────────────────────────────────────────────────
 
   readonly studentsWithDocs = this._studentsWithDocs.asReadonly();
+  /** Opciones del selector "Alumno" de "Subir documento": incluye a quien aún no tiene documentos. */
+  readonly uploadableStudents = this._uploadableStudents.asReadonly();
   readonly recentDocs = this._recentDocs.asReadonly();
   readonly schoolDocs = this._schoolDocs.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
@@ -310,11 +315,13 @@ export class DmsFacade {
   readonly previewDoc = this._previewDoc.asReadonly();
   readonly previewDocLoading = this._previewDocLoading.asReadonly();
 
-  readonly kpis = computed((): DmsKpis => ({
-    totalStudentDocs: this._recentDocs().length, // proxy; backend contaría mejor
-    totalSchoolDocs: this._schoolDocs().length,
-    recentUploads: this._studentsWithDocs().reduce((acc, s) => acc + s.docCount, 0),
-  }));
+  readonly kpis = computed(
+    (): DmsKpis => ({
+      totalStudentDocs: this._recentDocs().length, // proxy; backend contaría mejor
+      totalSchoolDocs: this._schoolDocs().length,
+      recentUploads: this._studentsWithDocs().reduce((acc, s) => acc + s.docCount, 0),
+    }),
+  );
 
   // ── Métodos de Acción ────────────────────────────────────────────────────────
 
@@ -336,6 +343,9 @@ export class DmsFacade {
     this._error.set(null);
     await this.fetchAllData();
     this._isLoading.set(false);
+    // fix-455-m: solo la primera carga avisa; el refresco silencioso (SWR) deja los datos stale.
+    const loadError = this._error();
+    if (loadError) this.toast.error('Error al cargar documentos', loadError);
   }
 
   private getActiveBranchId(): number | null {
@@ -622,7 +632,10 @@ export class DmsFacade {
       storage_url: path,
       status: 'pending',
     });
-    if (insertError) throw insertError;
+    if (insertError) {
+      await this.removeStoredFile(path);
+      throw insertError;
+    }
 
     await this.refreshSilently();
   }
@@ -631,16 +644,41 @@ export class DmsFacade {
     docId: string,
     source: 'student_document' | 'digital_contract' | 'enrollment_license',
   ): Promise<void> {
-    if (source === 'enrollment_license') {
-      // Fila sintética derivada de enrollments.license_*_url — no existe como registro
-      // propio que borrar. El carnet se regenera/reemplaza desde la ficha del alumno.
-      throw new Error('El Carnet no se puede eliminar desde el DMS. Ve a la ficha del alumno.');
-    }
-    const table = source === 'student_document' ? 'student_documents' : 'digital_contracts';
-    const numericId = parseInt(docId, 10);
-    const { error } = await this.supabase.client.from(table).delete().eq('id', numericId);
-    if (error) throw error;
+    await this.withDeleteFeedback(async () => {
+      if (source === 'enrollment_license') {
+        // Fila sintética derivada de enrollments.license_*_url — no existe como registro
+        // propio que borrar. El carnet se regenera/reemplaza desde la ficha del alumno.
+        throw new Error('El Carnet no se puede eliminar desde el DMS. Ve a la ficha del alumno.');
+      }
+      const numericId = parseInt(docId, 10);
+      if (source === 'student_document') {
+        await this.deleteRowAndFile('student_documents', numericId);
+      } else {
+        // El PDF del contrato lo genera el wizard de matrícula: fuera del alcance de fix-454-m.
+        const { error } = await this.supabase.client
+          .from('digital_contracts')
+          .delete()
+          .eq('id', numericId);
+        if (error) throw error;
+      }
+    });
     await this.refreshSilently();
+  }
+
+  /**
+   * fix-455-m: los handlers de la UI solo hacían `console.error`, así que un borrado fallido (o
+   * correcto) no se le mostraba a nadie. El error se relanza para que el llamador no siga como
+   * si hubiera funcionado.
+   */
+  private async withDeleteFeedback(run: () => Promise<void>): Promise<void> {
+    try {
+      await run();
+    } catch (err) {
+      const message = this.sanitizer.sanitize(err).message || 'Error desconocido';
+      this.toast.error('No se pudo eliminar el documento', message);
+      throw err;
+    }
+    this.toast.success('Documento eliminado');
   }
 
   // ── Tab 4 — Documentos del Instructor ───────────────────────────────────────
@@ -728,17 +766,16 @@ export class DmsFacade {
       status: 'pending',
       uploaded_by: numericUserId,
     });
-    if (insertError) throw insertError;
+    if (insertError) {
+      await this.removeStoredFile(path);
+      throw insertError;
+    }
 
     await this.refreshSilently();
   }
 
   async deleteInstructorDocument(docId: number): Promise<void> {
-    const { error } = await this.supabase.client
-      .from('instructor_documents')
-      .delete()
-      .eq('id', docId);
-    if (error) throw error;
+    await this.withDeleteFeedback(() => this.deleteRowAndFile('instructor_documents', docId));
     await this.refreshSilently();
   }
 
@@ -753,36 +790,54 @@ export class DmsFacade {
       .upload(path, payload.file, { upsert: true });
     if (uploadError) throw uploadError;
 
-    const sessionRes = await this.supabase.client.auth.getUser();
-    const userId = sessionRes.data.user?.id;
-
-    // Obtener numeric user id
-    let numericUserId: number | null = null;
-    if (userId) {
-      const { data: userData } = await this.supabase.client
-        .from('users')
-        .select('id')
-        .eq('auth_id', userId)
-        .single();
-      numericUserId = (userData as { id: number } | null)?.id ?? null;
-    }
-
     const { error: insertError } = await this.supabase.client.from('school_documents').insert({
       type: payload.type,
       file_name: payload.file.name,
       storage_url: path,
       description: payload.description ?? null,
-      uploaded_by: numericUserId,
+      // fix-452-m: antes se buscaba por `users.auth_id` (no existe) y siempre quedaba NULL.
+      uploaded_by: this.auth.currentUser()?.dbId ?? null,
     });
-    if (insertError) throw insertError;
+    if (insertError) {
+      await this.removeStoredFile(path);
+      throw insertError;
+    }
 
     await this.refreshSilently();
   }
 
   async deleteSchoolDocument(docId: number): Promise<void> {
-    const { error } = await this.supabase.client.from('school_documents').delete().eq('id', docId);
-    if (error) throw error;
+    await this.withDeleteFeedback(() => this.deleteRowAndFile('school_documents', docId));
     await this.refreshSilently();
+  }
+
+  /**
+   * fix-454-m: borra la fila y después su archivo del bucket `documents` (antes el archivo quedaba
+   * huérfano para siempre — datos personales que la escuela creía eliminados, Ley 21.719).
+   * La fila va primero: si Storage falla, el documento igual desaparece de la lista y el
+   * error solo se registra.
+   */
+  private async deleteRowAndFile(
+    table: 'student_documents' | 'instructor_documents' | 'school_documents',
+    id: number,
+  ): Promise<void> {
+    const { data, error } = await this.supabase.client
+      .from(table)
+      .delete()
+      .eq('id', id)
+      .select('storage_url');
+    if (error) throw error;
+
+    const paths = ((data ?? []) as { storage_url: string | null }[])
+      .map((row) => row.storage_url)
+      .filter((p): p is string => !!p);
+    for (const path of paths) await this.removeStoredFile(path);
+  }
+
+  /** Borra un archivo del bucket `documents`; un fallo se registra y no interrumpe al llamador. */
+  private async removeStoredFile(path: string): Promise<void> {
+    const { error } = await this.supabase.client.storage.from('documents').remove([path]);
+    if (error) console.error('[DmsFacade] No se pudo borrar el archivo de Storage:', path, error);
   }
 
   clearError(): void {
@@ -806,16 +861,30 @@ export class DmsFacade {
         `,
         )
         .order('created_at', { ascending: false });
-      if (branchId !== null) schoolDocsQuery = schoolDocsQuery.eq('branch_id', branchId);
+      // fix-451-m: branch_id NULL = "ambas sedes" (así se suben todos); `.eq` los excluía.
+      if (branchId !== null) {
+        schoolDocsQuery = schoolDocsQuery.or(`branch_id.is.null,branch_id.eq.${branchId}`);
+      }
 
-      let studentsQuery: any = this.supabase.client.from('students').select(
-        `
+      // fix-456-m: con sede, se filtra por la sede de la MATRÍCULA (spec 0007-m: puede diferir de la
+      // del alumno). `!inner` deja solo alumnos con matrícula en esa sede y solo esas matrículas.
+      const enrollmentsEmbed = branchId !== null ? 'enrollments!inner' : 'enrollments';
+      // fix-457-m: alumnos, documentos de alumno y de instructor se paginan (DG-008: PostgREST
+      // corta en 1.000 sin avisar). Cada página arma su consulta, con `id` como desempate.
+      const studentsPage = (from: number, to: number) => {
+        let q: any = this.supabase.client
+          .from('students')
+          .select(
+            `
           id,
           users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, branch_id, branches(name)),
-          enrollments(id, number, created_at, branch_id, branches(name))
+          ${enrollmentsEmbed}(id, number, created_at, branch_id, branches(name))
         `,
-      );
-      if (branchId !== null) studentsQuery = studentsQuery.eq('users.branch_id', branchId);
+          )
+          .order('id');
+        if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
+        return q.range(from, to);
+      };
 
       let instructorsQuery: any = this.supabase.client
         .from('instructors')
@@ -826,21 +895,37 @@ export class DmsFacade {
 
       const [vDocsRes, schoolDocsRes, studentsRes, instructorsRes, instructorDocsRes] =
         await Promise.all([
-          this.supabase.client
-            .from('v_dms_student_documents')
-            .select('*')
-            .order('document_at', { ascending: false }),
+          // La vista junta varios orígenes cuyos id pueden repetirse: source + id desempatan.
+          fetchAllPages((from, to) =>
+            this.supabase.client
+              .from('v_dms_student_documents')
+              .select('*')
+              .order('document_at', { ascending: false })
+              .order('source')
+              .order('id')
+              .range(from, to),
+          ),
 
           schoolDocsQuery,
 
-          studentsQuery,
+          fetchAllPages(studentsPage),
 
           instructorsQuery,
 
-          this.supabase.client
-            .from('instructor_documents')
-            .select('id, instructor_id, type, file_name, storage_url, status, created_at'),
+          fetchAllPages((from, to) =>
+            this.supabase.client
+              .from('instructor_documents')
+              .select('id, instructor_id, type, file_name, storage_url, status, created_at')
+              .order('id')
+              .range(from, to),
+          ),
         ]);
+
+      // fix-455-m: antes una consulta fallida se veía como "Sin documentos aún".
+      const failed = [vDocsRes, schoolDocsRes, studentsRes, instructorsRes, instructorDocsRes].find(
+        (res) => res.error,
+      );
+      if (failed) throw failed.error;
 
       // Construir mapa studentId → nombre/rut, y mapa enrollmentId → matrícula/sede DE ESA
       // matrícula (spec 0007-m: cada matrícula puede tener su propia sede, no la del alumno).
@@ -875,7 +960,7 @@ export class DmsFacade {
       const allVDocsRaw = (vDocsRes.data ?? []) as unknown as RawVDmsDoc[];
       const allVDocs =
         branchId !== null
-          ? allVDocsRaw.filter((d) => studentUserMap.has(d.student_id))
+          ? allVDocsRaw.filter((d) => enrollmentInfoMap.has(d.enrollment_id))
           : allVDocsRaw;
 
       const recentDocs = allVDocs.slice(0, 5).map((d) => {
@@ -918,6 +1003,15 @@ export class DmsFacade {
       }
       // Orden paterno - materno - nombre, igual que Base de Alumnos.
       const studentsWithDocs = sortByPaternalLastNameAsc(studentsWithDocsUnsorted, (s) => s.name);
+
+      // fix-449-m: el primer documento de un alumno se sube desde acá, así que el selector no
+      // puede depender de que ya tenga documentos. Sin matrícula no hay a qué asociarlo.
+      const uploadableStudents = sortByPaternalLastNameAsc(
+        rawStudents
+          .filter((s) => (s.enrollments ?? []).length > 0 && studentUserMap.has(s.id))
+          .map((s) => ({ studentId: s.id, name: studentUserMap.get(s.id)!.name })),
+        (s) => s.name,
+      );
 
       // Construir mapa instructorId → info
       const instructorMap = new Map<
@@ -991,12 +1085,12 @@ export class DmsFacade {
 
       this._recentDocs.set(recentDocs);
       this._studentsWithDocs.set(studentsWithDocs);
+      this._uploadableStudents.set(uploadableStudents);
       this._instructorsWithDocs.set(instructorsWithDocs);
       this._schoolDocs.set(schoolDocs);
     } catch (err) {
-      this._error.set(
-        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar documentos',
-      );
+      // El error de PostgREST es un objeto plano, no un Error: el sanitizer acepta ambos.
+      this._error.set(this.sanitizer.sanitize(err).message || 'Error al cargar documentos');
     }
   }
 
