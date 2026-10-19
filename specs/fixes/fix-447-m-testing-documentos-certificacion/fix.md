@@ -118,6 +118,7 @@ consultan a medida que aparecen.
 | `fix-464-m-regenerar-certificado` | S17 — no se podía regenerar un certificado ya generado | Cerrado 2026-10-19 |
 | `fix-465-m-certificados-profesional-en-piloto` | Derivado de S21 — Certificados Prof. estaba en el recorte del piloto por error; se habilita (elegibilidad de secretaria solo por pago mientras dure el recorte) | Cerrado 2026-10-19 |
 | `fix-466-m-confirmacion-previa-certificados` | Confirmaciones como modal (prácticas incompletas, asistencia, regenerar, email); deuda con la convención de 0010-i también en Profesional; la asistencia nunca bloquea; botón de la ficha Prof. en el piloto | Cerrado 2026-10-19 |
+| `fix-467-m-certificado-profesional-promocion-finalizada` | El certificado Profesional solo se emite desde el último día de la promoción (admin y secretaria; edge function + ficha) | Cerrado 2026-10-19 |
 
 ### Observaciones (sin track)
 

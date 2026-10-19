@@ -1,7 +1,8 @@
 # Fix: El certificado Profesional solo se emite con la promoción terminada
 > id: fix-467-m-certificado-profesional-promocion-finalizada
 > refs: fix-447-m-testing-documentos-certificacion · fix-466-m · fix-332-m
-> status: in_progress
+> status: done
+> closed: 2026-10-19
 > created: 2026-10-19
 
 ## Root Cause
@@ -54,4 +55,6 @@ de la finalización.
 - [x] `/verify` como admin: ficha de un alumno de la promoción 279 (termina 2026-10-26) →
   "Certificado (desde 26-10-2026)" deshabilitado; ficha de la promoción 277 (terminada) →
   "Generar Certificado" habilitado. Consola sin errores.
-- [ ] Despliegue de `generate-certificate-professional-pdf`
+- [x] Despliegue de `generate-certificate-professional-pdf` (Matías, 2026-10-19). Verificado:
+  llamarla como admin para la matrícula 7003 (promoción 279, termina 2026-10-26) responde 400
+  `PROMOCION_EN_CURSO` con "La promoción termina el 26-10-2026…"; no se generó nada.
