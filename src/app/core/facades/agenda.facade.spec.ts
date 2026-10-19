@@ -300,6 +300,22 @@ describe('AgendaFacade', () => {
     });
   });
 
+  describe('nombre de un instructor desactivado — hotfix-097-b (B11)', () => {
+    it('el mapa de nombres no filtra por activos; el filtro de instructores sí', async () => {
+      supabaseSpy.setResult('instructors', [
+        { id: 9, users: { first_names: 'Inés', paternal_last_name: 'Inactiva' } },
+      ]);
+      await facade.initialize();
+
+      const instructores = supabaseSpy.client.from('instructors');
+      const filtrosActivo = instructores.eq.mock.calls.filter(
+        ([col, val]: [string, unknown]) => col === 'active' && val === true,
+      );
+      // Solo loadInstructors (el picker); el mapa de nombres ya no.
+      expect(filtrosActivo).toHaveLength(1);
+    });
+  });
+
   describe('vehicleDocWarning — fix-164-m', () => {
     it('expone vehicleDocWarning por slot según vehicle_documents', async () => {
       supabaseSpy.setResult('v_class_b_schedule_availability', [
