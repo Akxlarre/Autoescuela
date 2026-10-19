@@ -145,7 +145,8 @@ test('E10: salir sin red termina en /login y no deja una sesión fantasma', asyn
   await salir(page);
   await page.unroute('**/auth/v1/logout**');
   await page.goto('/app/secretaria/dashboard');
-  await expect(page).toHaveURL(/\/login$/, CARGA);
+  // Sin sesión: al login (con la pantalla pedida en returnUrl desde hotfix-096-b).
+  await expect(page).toHaveURL(/\/login(\?returnUrl=[^&]+)?$/, CARGA);
 });
 
 // ── F. Acceso por URL ────────────────────────────────────────────────────────────────────────
