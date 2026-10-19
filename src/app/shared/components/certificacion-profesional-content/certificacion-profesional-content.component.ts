@@ -18,6 +18,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import { withAllOption } from '@core/utils/filter-options.utils';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
@@ -279,24 +280,26 @@ const PAGE_SIZE = 10;
                     <th class="micro-label text-left px-4 py-2">Alumno</th>
                     <th class="micro-label text-left px-4 py-2">RUT</th>
                     <th class="micro-label text-left px-4 py-2">Promoción</th>
-                    <th
-                      class="micro-label text-center px-4 py-2"
-                      title="Asistencia a clases teóricas (mínimo 75%)"
-                    >
-                      Teoría
-                    </th>
-                    <th
-                      class="micro-label text-center px-4 py-2"
-                      title="Asistencia a clases prácticas (recomendado 100%)"
-                    >
-                      Práctica
-                    </th>
-                    <th
-                      class="micro-label text-center px-4 py-2"
-                      title="Promedio de módulos (mínimo 75 en escala MTT)"
-                    >
-                      Nota Prom.
-                    </th>
+                    @if (academicoVisible) {
+                      <th
+                        class="micro-label text-center px-4 py-2"
+                        title="Asistencia a clases teóricas (mínimo 75%)"
+                      >
+                        Teoría
+                      </th>
+                      <th
+                        class="micro-label text-center px-4 py-2"
+                        title="Asistencia a clases prácticas (recomendado 100%)"
+                      >
+                        Práctica
+                      </th>
+                      <th
+                        class="micro-label text-center px-4 py-2"
+                        title="Promedio de módulos (mínimo 75 en escala MTT)"
+                      >
+                        Nota Prom.
+                      </th>
+                    }
                     <th class="micro-label text-center px-4 py-2" title="Saldo pendiente de pago">
                       Pago
                     </th>
@@ -327,61 +330,66 @@ const PAGE_SIZE = 10;
                       <td class="px-4 py-2 text-xs text-text-muted max-w-40 truncate">
                         {{ alumno.promocion }}
                       </td>
-                      <!-- Teoría -->
-                      <td class="px-4 py-2 text-center">
-                        @if (alumno.pctAsistenciaTeoria === null) {
-                          <span class="text-xs text-text-muted">Sin registro</span>
-                        } @else {
-                          <app-badge
-                            [variant]="alumno.pctAsistenciaTeoria >= 75 ? 'success' : 'warning'"
-                          >
-                            <span class="inline-flex items-center gap-1">
-                              @if (!alumno.elegibilidad.teoria) {
-                                <app-icon name="alert-triangle" [size]="11" />
-                              }
-                              {{ alumno.pctAsistenciaTeoria }}%
-                            </span>
-                          </app-badge>
-                        }
-                      </td>
-                      <!-- Práctica -->
-                      <td class="px-4 py-2 text-center">
-                        @if (alumno.pctAsistenciaPractica === null) {
-                          <span class="text-xs text-text-muted">Sin registro</span>
-                        } @else {
-                          <app-badge
-                            [variant]="
-                              alumno.pctAsistenciaPractica >= 100
-                                ? 'success'
-                                : alumno.pctAsistenciaPractica >= 75
-                                  ? 'info'
-                                  : 'warning'
-                            "
-                          >
-                            <span class="inline-flex items-center gap-1">
-                              @if (alumno.pctAsistenciaPractica < 100) {
-                                <app-icon name="alert-circle" [size]="11" />
-                              }
-                              {{ alumno.pctAsistenciaPractica }}%
-                            </span>
-                          </app-badge>
-                        }
-                      </td>
-                      <!-- Nota promedio -->
-                      <td class="px-4 py-2 text-center">
-                        @if (alumno.notaPromedio === null) {
-                          <span class="text-xs text-text-muted">Sin notas</span>
-                        } @else {
-                          <app-badge [variant]="alumno.notaPromedio >= 75 ? 'success' : 'warning'">
-                            <span class="inline-flex items-center gap-1">
-                              @if (!alumno.elegibilidad.nota) {
-                                <app-icon name="x-circle" [size]="11" />
-                              }
-                              {{ alumno.notaPromedio | number: '1.1-1' }}
-                            </span>
-                          </app-badge>
-                        }
-                      </td>
+                      <!-- fix-465-m: sin asistencia ni notas en el piloto (se llevan en el libro de clases) -->
+                      @if (academicoVisible) {
+                        <!-- Teoría -->
+                        <td class="px-4 py-2 text-center">
+                          @if (alumno.pctAsistenciaTeoria === null) {
+                            <span class="text-xs text-text-muted">Sin registro</span>
+                          } @else {
+                            <app-badge
+                              [variant]="alumno.pctAsistenciaTeoria >= 75 ? 'success' : 'warning'"
+                            >
+                              <span class="inline-flex items-center gap-1">
+                                @if (!alumno.elegibilidad.teoria) {
+                                  <app-icon name="alert-triangle" [size]="11" />
+                                }
+                                {{ alumno.pctAsistenciaTeoria }}%
+                              </span>
+                            </app-badge>
+                          }
+                        </td>
+                        <!-- Práctica -->
+                        <td class="px-4 py-2 text-center">
+                          @if (alumno.pctAsistenciaPractica === null) {
+                            <span class="text-xs text-text-muted">Sin registro</span>
+                          } @else {
+                            <app-badge
+                              [variant]="
+                                alumno.pctAsistenciaPractica >= 100
+                                  ? 'success'
+                                  : alumno.pctAsistenciaPractica >= 75
+                                    ? 'info'
+                                    : 'warning'
+                              "
+                            >
+                              <span class="inline-flex items-center gap-1">
+                                @if (alumno.pctAsistenciaPractica < 100) {
+                                  <app-icon name="alert-circle" [size]="11" />
+                                }
+                                {{ alumno.pctAsistenciaPractica }}%
+                              </span>
+                            </app-badge>
+                          }
+                        </td>
+                        <!-- Nota promedio -->
+                        <td class="px-4 py-2 text-center">
+                          @if (alumno.notaPromedio === null) {
+                            <span class="text-xs text-text-muted">Sin notas</span>
+                          } @else {
+                            <app-badge
+                              [variant]="alumno.notaPromedio >= 75 ? 'success' : 'warning'"
+                            >
+                              <span class="inline-flex items-center gap-1">
+                                @if (!alumno.elegibilidad.nota) {
+                                  <app-icon name="x-circle" [size]="11" />
+                                }
+                                {{ alumno.notaPromedio | number: '1.1-1' }}
+                              </span>
+                            </app-badge>
+                          }
+                        </td>
+                      }
                       <!-- Pago -->
                       <td class="px-4 py-2 text-center">
                         @if (alumno.pagoCorrecto) {
@@ -621,46 +629,48 @@ const PAGE_SIZE = 10;
                   </div>
 
                   <div class="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="text-text-muted">Teoría</span>
-                      @if (alumno.pctAsistenciaTeoria === null) {
-                        <span class="text-text-muted">Sin registro</span>
-                      } @else {
-                        <app-badge
-                          [variant]="alumno.pctAsistenciaTeoria >= 75 ? 'success' : 'warning'"
-                        >
-                          {{ alumno.pctAsistenciaTeoria }}%
-                        </app-badge>
-                      }
-                    </div>
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="text-text-muted">Práctica</span>
-                      @if (alumno.pctAsistenciaPractica === null) {
-                        <span class="text-text-muted">Sin registro</span>
-                      } @else {
-                        <app-badge
-                          [variant]="
-                            alumno.pctAsistenciaPractica >= 100
-                              ? 'success'
-                              : alumno.pctAsistenciaPractica >= 75
-                                ? 'info'
-                                : 'warning'
-                          "
-                        >
-                          {{ alumno.pctAsistenciaPractica }}%
-                        </app-badge>
-                      }
-                    </div>
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="text-text-muted">Nota</span>
-                      @if (alumno.notaPromedio === null) {
-                        <span class="text-text-muted">Sin notas</span>
-                      } @else {
-                        <app-badge [variant]="alumno.notaPromedio >= 75 ? 'success' : 'warning'">
-                          {{ alumno.notaPromedio | number: '1.1-1' }}
-                        </app-badge>
-                      }
-                    </div>
+                    @if (academicoVisible) {
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-text-muted">Teoría</span>
+                        @if (alumno.pctAsistenciaTeoria === null) {
+                          <span class="text-text-muted">Sin registro</span>
+                        } @else {
+                          <app-badge
+                            [variant]="alumno.pctAsistenciaTeoria >= 75 ? 'success' : 'warning'"
+                          >
+                            {{ alumno.pctAsistenciaTeoria }}%
+                          </app-badge>
+                        }
+                      </div>
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-text-muted">Práctica</span>
+                        @if (alumno.pctAsistenciaPractica === null) {
+                          <span class="text-text-muted">Sin registro</span>
+                        } @else {
+                          <app-badge
+                            [variant]="
+                              alumno.pctAsistenciaPractica >= 100
+                                ? 'success'
+                                : alumno.pctAsistenciaPractica >= 75
+                                  ? 'info'
+                                  : 'warning'
+                            "
+                          >
+                            {{ alumno.pctAsistenciaPractica }}%
+                          </app-badge>
+                        }
+                      </div>
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-text-muted">Nota</span>
+                        @if (alumno.notaPromedio === null) {
+                          <span class="text-text-muted">Sin notas</span>
+                        } @else {
+                          <app-badge [variant]="alumno.notaPromedio >= 75 ? 'success' : 'warning'">
+                            {{ alumno.notaPromedio | number: '1.1-1' }}
+                          </app-badge>
+                        }
+                      </div>
+                    }
                     <div class="flex items-center justify-between gap-2">
                       <span class="text-text-muted">Pago</span>
                       @if (alumno.pagoCorrecto) {
@@ -942,6 +952,9 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
   }
 
   readonly skeletonRows = Array.from({ length: 6 });
+
+  /** fix-465-m: mientras el piloto recorte Profesional no hay asistencia ni notas que mostrar. */
+  protected readonly academicoVisible = !isBlockedInPilot('clase-profesional-recorte');
 
   // ── Computed ──
   readonly filteredAlumnos = computed(() => {

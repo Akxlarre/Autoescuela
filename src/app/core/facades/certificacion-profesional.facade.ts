@@ -1,6 +1,8 @@
 import { chileYear } from '@core/utils/chile-time.utils';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { todayIso } from '@core/utils/date.utils';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
+import { isEligibleForProfessionalCertificate } from '@core/utils/certificacion-profesional.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
@@ -36,7 +38,8 @@ const NOTA_MIN = 75;
  * Criterios de elegibilidad según rol:
  *   Admin: elegible=true siempre — sin chequeo de asistencia ni pago.
  *   Secretaria:
- *     1. Asistencia teórica >= 75 % (bloqueante)
+ *     1. Asistencia teórica >= 75 % (bloqueante; fix-465-m: no aplica mientras el piloto
+ *        recorte Profesional, porque la asistencia se lleva a mano en el libro de clases)
  *     2. Pago completo, pending_balance <= 0 (bloqueante)
  *     [Nota promedio] → informativo: se muestra pero NO bloquea.
  *     [Asistencia práctica = 100 %] → flexible: confirmation prompt si < 100.
@@ -193,6 +196,8 @@ export class CertificacionProfesionalFacade {
   private notifyCertificateReady(
     alumno: Pick<CertificacionProfesionalAlumnoRow, 'enrollmentId' | 'studentId' | 'curso'>,
   ): void {
+    // fix-465-m: en el piloto el alumno no tiene portal (fix-393-m no lo invita).
+    if (isBlockedInPilot('alumno')) return;
     this.resolveStudentUserId(alumno.studentId)
       .then((userId) => {
         if (!userId) return;
@@ -622,7 +627,11 @@ export class CertificacionProfesionalFacade {
         pagoCorrecto,
         notaPromedio,
         elegibilidad,
-        elegible: isAdmin ? true : elegibilidad.teoria && elegibilidad.pago,
+        elegible: isEligibleForProfessionalCertificate(
+          isAdmin,
+          elegibilidad,
+          !isBlockedInPilot('clase-profesional-recorte'),
+        ),
         certificadoId: cert?.id ?? null,
         certificadoFolio:
           cert && hasPdf && certYear

@@ -331,8 +331,10 @@ export const routes: Routes = [
               ),
           },
           {
+            // fix-465-m: habilitada en el piloto (los alumnos de promociones finalizadas necesitan
+            // su certificado aunque la asistencia y las notas se lleven a mano).
             path: 'clase-profesional/certificados',
-            canActivate: [professionalBranchGuard, pilotPhaseGuard('clase-profesional-recorte')],
+            canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/admin/profesional-certificados/admin-profesional-certificados.component').then(
                 (m) => m.AdminProfesionalCertificadosComponent,
@@ -566,8 +568,10 @@ export const routes: Routes = [
               ),
           },
           {
+            // fix-465-m: habilitada en el piloto (los alumnos de promociones finalizadas necesitan
+            // su certificado aunque la asistencia y las notas se lleven a mano).
             path: 'profesional/certificados',
-            canActivate: [professionalBranchGuard, pilotPhaseGuard('clase-profesional-recorte')],
+            canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/secretaria/profesional-certificados/secretaria-profesional-certificados.component').then(
                 (m) => m.SecretariaProfesionalCertificadosComponent,

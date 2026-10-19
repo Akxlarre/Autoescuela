@@ -5,6 +5,7 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
 import { CertificacionProfesionalFacade } from '@core/facades/certificacion-profesional.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 
 /**
  * GenerarPendientesProfDrawerComponent — Smart / Drawer.
@@ -46,7 +47,9 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
           />
         } @else {
           @if (pendientesElegibles().length > 0) {
-            <div class="rounded-lg border divide-y divide-border-subtle overflow-hidden border-border-subtle">
+            <div
+              class="rounded-lg border divide-y divide-border-subtle overflow-hidden border-border-subtle"
+            >
               @for (alumno of pendientesElegibles(); track alumno.enrollmentId) {
                 <div class="flex items-center gap-3 px-4 py-2.5">
                   <app-icon name="file-check" [size]="14" class="text-success shrink-0" />
@@ -69,7 +72,9 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
           @if (pendientesNoElegibles().length > 0) {
             <div>
               <p class="micro-label mb-2">No elegibles — no se generará certificado</p>
-              <div class="rounded-lg border divide-y divide-border-subtle overflow-hidden border-border-subtle">
+              <div
+                class="rounded-lg border divide-y divide-border-subtle overflow-hidden border-border-subtle"
+              >
                 @for (alumno of pendientesNoElegibles(); track alumno.enrollmentId) {
                   <div class="flex items-center gap-3 px-4 py-2.5">
                     <app-icon name="x-circle" [size]="14" class="text-warning shrink-0" />
@@ -77,11 +82,13 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                       {{ alumno.nombre }}
                     </span>
                     <span class="text-xs text-text-muted shrink-0">
-                      @if (!alumno.elegibilidad.teoria) {
-                        Teoría &lt;75% ·
-                      }
-                      @if (!alumno.elegibilidad.nota) {
-                        Nota &lt;75 ·
+                      @if (academicoVisible) {
+                        @if (!alumno.elegibilidad.teoria) {
+                          Teoría &lt;75% ·
+                        }
+                        @if (!alumno.elegibilidad.nota) {
+                          Nota &lt;75 ·
+                        }
                       }
                       @if (!alumno.elegibilidad.pago) {
                         Pago pendiente
@@ -127,6 +134,9 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 export class GenerarPendientesProfDrawerComponent {
   protected readonly facade = inject(CertificacionProfesionalFacade);
   protected readonly drawer = inject(LayoutDrawerFacadeService);
+
+  /** fix-465-m: en el piloto no hay asistencia ni notas; el único motivo posible es el pago. */
+  protected readonly academicoVisible = !isBlockedInPilot('clase-profesional-recorte');
 
   protected readonly pendientesCount = computed(
     () => this.facade.alumnos().filter((a) => a.certificadoStatus === 'pendiente').length,
