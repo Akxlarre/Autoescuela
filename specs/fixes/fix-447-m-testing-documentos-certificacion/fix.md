@@ -53,7 +53,7 @@ consultan a medida que aparecen.
 - [x] Revisión de las 26 sospechas en código
 - [x] S26 → `fix-448-m` · S7 → `fix-449-m` · S10 → `fix-450-m` · S5 → `fix-451-m` · S6 → `fix-452-m` · S9 → `fix-454-m` · fechas UTC → `fix-453-m`
 - [x] S16 → `fix-455-m` · S12 → `fix-457-m`
-- [ ] S19 → `fix-456-m`: falta aplicar la migración y verificar
+- [x] S19 → `fix-456-m` (DMS + RLS) y `fix-458-m` (Base Alumnos)
 - [ ] S14, S18 (abiertas en código)
 - [ ] S8, S13, S15, S17, S20–S22, S24, S25 (sin revisar)
 - [ ] Casos A…S del checklist en navegador
@@ -81,7 +81,7 @@ consultan a medida que aparecen.
 | S14 — criterios de elegibilidad / pago | Pago cerrado (`0010-i`, habilitación con motivo); botón y edge usan `completed` (`fix-262-m`). **Abierta**: la lista de la secretaria sigue filtrando `certificate_enabled` (trigger clase #12) | `certificacion-clase-b.facade.ts:576` |
 | S16 — errores tragados | ❌ → corregida en `fix-455-m` (toasts de carga y borrado; email: pendiente en certificación) | `dms.facade.ts:847-866` |
 | S18 — folio con carrera | **Abierta** (`certErr` se ignora) | `generate-certificate-b-pdf/index.ts:281-303` |
-| S19 — sede por la del alumno | ❌ confirmada (Samuel Merino, #0008) → `fix-456-m`: cliente listo; RLS de `students` en migración pendiente de aplicar | `dms.facade.ts:818,825` |
+| S19 — sede por la del alumno | ❌ confirmada (Samuel Merino, #0008) → corregida en `fix-456-m` (DMS + RLS `20261018120000`, aplicada) y `fix-458-m` (Base Alumnos) | `dms.facade.ts:818,825` |
 | S23 — filtro Estado sin "Todos" | Cerrada (`0022-m`, placeholder "Todos los estados") → regresión | `certificacion-clase-b-content.component.ts:108,749` |
 | S8, S13, S15, S17, S20–S22, S24, S25 | Sin revisar en código; se verifican en navegador | — |
 
@@ -97,7 +97,8 @@ consultan a medida que aparecen.
 | `fix-453-m-fechas-dms-hora-chile` | Hallazgo nuevo — fechas del DMS (y pre-inscritos) en UTC vía `| slice: 0 : 10`; ARCH-27 lo detecta ahora | Cerrado 2026-10-18 |
 | `fix-454-m-borrar-documento-borra-archivo` | S9 / F05 — borrar un documento dejaba el archivo en Storage | Cerrado 2026-10-18 |
 | `fix-455-m-dms-errores-visibles` | S16 / A07 — errores de carga y borrado del DMS invisibles | Cerrado 2026-10-18 |
-| `fix-456-m-dms-sede-de-la-matricula` | S19 / B17 — el DMS y la RLS de `students` usaban la sede del alumno, no la de la matrícula | Abierto: migración `20261018120000` pendiente de aplicar |
+| `fix-456-m-dms-sede-de-la-matricula` | S19 / B17 — el DMS y la RLS de `students` usaban la sede del alumno, no la de la matrícula | Cerrado 2026-10-18 |
+| `fix-458-m-base-alumnos-sede-de-la-matricula` | Hallazgo al verificar 456 — Base Alumnos filtraba y mostraba la sede por `users.branch_id` | Cerrado 2026-10-18 |
 | `fix-457-m-dms-sin-tope-1000-filas` | S12 / B16 — el DMS perdía filas pasadas las 1.000 | Cerrado 2026-10-18 |
 
 ### Observaciones (sin track)
