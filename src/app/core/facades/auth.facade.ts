@@ -341,10 +341,12 @@ export class AuthFacade {
     return result;
   }
 
-  logout(options: { redirect?: boolean } = {}): void {
+  logout(options: { redirect?: boolean } = {}): Promise<void> {
     const { redirect = true } = options;
     this.disposeRealtime();
-    this.supabase.signOut();
+    // hotfix-091-b (E10): se navega recién cuando la sesión quedó cerrada; antes se navegaba al
+    // tiro y el guard volvía a leer la sesión todavía guardada (sobre todo sin red).
+    const cierre = this.supabase.signOut();
     // La sede activa vive en `localStorage` bajo una clave sin namespacing por usuario, y
     // `BranchFacade` la re-lee al construirse, antes de que se sepa quién se autenticó. Si no
     // se limpia acá, en una PC compartida —el mostrador— el próximo usuario hereda la sede del
@@ -352,9 +354,11 @@ export class AuthFacade {
     // sin selector con el que darse cuenta (fix-168-b, fix-171-b).
     this.branchFacade.reset();
     this._currentUser.set(null);
-    if (redirect) {
-      this.router.navigate(['/']);
-    }
+    return cierre
+      .catch(() => undefined)
+      .then(() => {
+        if (redirect) this.router.navigate(['/']);
+      });
   }
 
   setUser(user: User | null): void {

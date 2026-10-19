@@ -35,6 +35,33 @@ describe('SupabaseService', () => {
     result.catch(() => {});
   });
 
+  describe('signOut (hotfix-091-b, E10)', () => {
+    const storageKey = () => (service.client.auth as unknown as { storageKey: string }).storageKey;
+
+    afterEach(() => localStorage.clear());
+
+    it('si el servidor no responde, borra igual la sesión guardada en el navegador', async () => {
+      localStorage.setItem(storageKey(), '{"access_token":"x"}');
+      vi.spyOn(service.client.auth, 'signOut').mockResolvedValue({
+        error: new Error('Failed to fetch'),
+      } as never);
+
+      await service.signOut();
+
+      expect(localStorage.getItem(storageKey())).toBeNull();
+    });
+
+    it('si el servidor responde bien, no toca nada más', async () => {
+      localStorage.setItem('otra-clave', 'sigue');
+      vi.spyOn(service.client.auth, 'signOut').mockResolvedValue({ error: null } as never);
+
+      const { error } = await service.signOut();
+
+      expect(error).toBeNull();
+      expect(localStorage.getItem('otra-clave')).toBe('sigue');
+    });
+  });
+
   it('signIn() should be a function', () => {
     expect(typeof service.signIn).toBe('function');
   });
