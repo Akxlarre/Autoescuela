@@ -252,10 +252,6 @@ export class AdminAlumnoDetalleFacade {
   readonly progresoPracticaProf = this._progresoPracticaProf.asReadonly();
   readonly notaPromedioProf = this._notaPromedioProf.asReadonly();
   readonly elegibilidadProf = this._elegibilidadProf.asReadonly();
-  readonly elegibleProf = computed(() => {
-    const e = this._elegibilidadProf();
-    return e.teoria && e.pago && e.nota;
-  });
 
   readonly instructores = this._instructores.asReadonly();
   readonly scheduleGrid = this._scheduleGrid.asReadonly();

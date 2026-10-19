@@ -229,10 +229,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
               <tbody>
                 @for (alumno of pagedAlumnos(); track alumno.enrollmentId) {
                   <!-- Fila principal -->
-                  <tr
-                    class="border-b border-(--border-default) last:border-b-0 transition-colors"
-                    [class.bg-[var(--bg-subtle)]]="pendingConfirmId() === alumno.enrollmentId"
-                  >
+                  <tr class="border-b border-(--border-default) last:border-b-0 transition-colors">
                     <td class="px-4 py-2 font-medium text-text-primary">
                       {{ alumno.nombre }}
                     </td>
@@ -393,62 +390,6 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                       </td>
                     </tr>
                   }
-
-                  <!-- Fila de confirmación inline — visible solo si el admin bypassea prácticas incompletas -->
-                  @if (pendingConfirmId() === alumno.enrollmentId) {
-                    <tr class="border-b border-(--border-default)">
-                      <td colspan="9" class="px-4 py-3">
-                        <div
-                          class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3 bg-warning-subtle border border-warning"
-                        >
-                          <app-icon
-                            name="alert-triangle"
-                            [size]="18"
-                            class="text-warning shrink-0"
-                          />
-                          <p class="text-sm flex-1 text-text-secondary">
-                            <span class="font-semibold text-warning">Prácticas incompletas:</span>
-                            {{ alumno.nombre }} lleva
-                            <strong
-                              >{{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }}</strong
-                            >
-                            clases prácticas completadas. ¿Confirmar generación del certificado de
-                            todos modos?
-                          </p>
-                          <div class="flex items-center gap-2 shrink-0">
-                            <button
-                              class="group inline-flex items-center justify-center font-semibold transition-all active:scale-95 btn-primary btn-sm disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
-                              data-llm-action="confirm-generate-certificate-partial-practicas"
-                              [disabled]="generatingId() !== null"
-                              [appStableWidth]="generatingId() === pendingConfirmId()"
-                              (click)="confirmarGenerar()"
-                            >
-                              @if (generatingId() === pendingConfirmId()) {
-                                <app-icon name="loader-2" [size]="13" class="animate-spin" />
-                                Generando...
-                              } @else {
-                                <span class="group-hover:hidden flex items-center gap-1.5">
-                                  <app-icon name="check" [size]="13" />
-                                  Confirmar de todos modos
-                                </span>
-                                <span class="hidden group-hover:flex items-center gap-1.5">
-                                  <app-icon name="mouse-pointer-click" [size]="13" />
-                                  Confirmar de todos modos
-                                </span>
-                              }
-                            </button>
-                            <button
-                              class="btn-ghost btn-sm"
-                              data-llm-action="cancel-generate-certificate"
-                              (click)="cancelarGenerar()"
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  }
                 }
               </tbody>
             </table>
@@ -462,10 +403,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
               <div
                 class="card flex flex-col gap-2.5"
                 appCardHover
-                [class.border-brand]="
-                  pendingConfirmId() === alumno.enrollmentId ||
-                  emailConfirmId() === alumno.enrollmentId
-                "
+                [class.border-brand]="emailConfirmId() === alumno.enrollmentId"
               >
                 <div class="flex items-start justify-between gap-2">
                   <div class="min-w-0">
@@ -605,36 +543,6 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                     </div>
                   </div>
                 }
-
-                <!-- Confirmación inline — bypass prácticas incompletas -->
-                @if (pendingConfirmId() === alumno.enrollmentId) {
-                  <div
-                    class="flex flex-col gap-2 rounded-lg px-3 py-2.5 bg-warning-subtle border border-warning"
-                  >
-                    <p class="text-xs text-text-secondary m-0">
-                      <span class="font-semibold text-warning">Prácticas incompletas:</span> lleva
-                      {{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }}. ¿Confirmar de todos
-                      modos?
-                    </p>
-                    <div class="flex items-center gap-2">
-                      <button
-                        class="flex-1 inline-flex items-center justify-center font-semibold btn-primary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                        data-llm-action="confirm-generate-certificate-partial-practicas"
-                        [disabled]="generatingId() !== null"
-                        (click)="confirmarGenerar()"
-                      >
-                        @if (generatingId() === pendingConfirmId()) {
-                          <app-icon name="loader-2" [size]="12" class="animate-spin" />
-                          Generando...
-                        } @else {
-                          <app-icon name="check" [size]="12" />
-                          Confirmar
-                        }
-                      </button>
-                      <button class="btn-ghost btn-sm" (click)="cancelarGenerar()">Cancelar</button>
-                    </div>
-                  </div>
-                }
               </div>
             }
           </div>
@@ -722,9 +630,8 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   readonly isAdmin = input(false);
 
   // ── Outputs ──
+  /** fix-466-m: el facade confirma con un modal (avisos, deuda) y decide el bypass admin. */
   readonly generarCertificado = output<number>();
-  /** fix-011-i (H-025): bypass admin explícito — el consumidor debe pasar force=true al facade. */
-  readonly generarCertificadoForzado = output<number>();
   readonly verCertificado = output<{ storagePath: string; nombre: string }>();
   readonly enviarEmail = output<number>();
   /** fix-464-m: reemitir el PDF de un certificado ya generado (conserva el folio). */
@@ -738,8 +645,6 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   readonly estadoFilter = signal<EstadoFilter>(null);
   readonly searchQuery = signal('');
   readonly currentPageAlumnos = signal(0);
-  /** ID de la matrícula esperando confirmación para generar (teoría incompleta). */
-  readonly pendingConfirmId = signal<number | null>(null);
   /** ID de la matrícula esperando confirmación para enviar email. */
   readonly emailConfirmId = signal<number | null>(null);
 
@@ -880,41 +785,18 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   // ── Handlers de generación ──
 
   /**
-   * Punto de entrada del botón "Generar".
-   * - Prácticas completas (12/12) → emite directamente.
-   * - Prácticas incompletas + admin → abre la fila de confirmación inline (bypass).
-   * - Prácticas incompletas + secretaria → bloqueado, no emite (checkeo obligatorio).
-   */
-  /**
    * fix-011-i (H-025): secretaría nunca puede saltarse el gate de prácticas —
    * el botón queda deshabilitado (antes: clickeaba y no pasaba nada, sin feedback).
-   * Admin no se bloquea acá: su click abre la fila de confirmación de bypass.
+   * Admin no se bloquea acá: el modal del facade le avisa las prácticas que faltan (fix-466-m).
    */
   isBlockedForRow(alumno: CertificacionAlumnoRow): boolean {
     return !this.isAdmin() && alumno.clasesCompletadas < alumno.clasesTotales;
   }
 
+  /** Botón "Generar": la confirmación (y el bypass admin) la resuelve el facade (fix-466-m). */
   onClickGenerar(alumno: CertificacionAlumnoRow): void {
-    if (alumno.clasesCompletadas >= alumno.clasesTotales) {
-      this.generarCertificado.emit(alumno.enrollmentId);
-      return;
-    }
-    if (!this.isAdmin()) return;
-    this.pendingConfirmId.set(alumno.enrollmentId);
-  }
-
-  /** Confirmó generar a pesar de prácticas incompletas (bypass admin). */
-  confirmarGenerar(): void {
-    const id = this.pendingConfirmId();
-    if (id !== null) {
-      this.generarCertificadoForzado.emit(id);
-      this.pendingConfirmId.set(null);
-    }
-  }
-
-  /** Canceló la confirmación de generación. */
-  cancelarGenerar(): void {
-    this.pendingConfirmId.set(null);
+    if (this.isBlockedForRow(alumno)) return;
+    this.generarCertificado.emit(alumno.enrollmentId);
   }
 
   /** Abre la confirmación inline de envío de email. */

@@ -6,7 +6,7 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
-import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { CertificadoAutorizacionFacade } from '@core/facades/certificado-autorizacion.facade';
 import type { CertificacionAlumnoRow } from '@core/models/ui/certificacion-clase-b.model';
 
 // fix-463-m: el piloto se controla por test; por defecto el portal del alumno está habilitado.
@@ -23,7 +23,7 @@ describe('CertificacionClaseBFacade', () => {
   let branchFacadeSpy: any;
   let authFacadeSpy: any;
   let notificationsSpy: any;
-  let confirmSpy: any;
+  let autorizacionSpy: any;
 
   const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
@@ -105,9 +105,10 @@ describe('CertificacionClaseBFacade', () => {
       notifyUsers: vi.fn().mockResolvedValue(undefined),
       notifyRole: vi.fn().mockResolvedValue(undefined),
     };
-    confirmSpy = {
-      confirm: vi.fn().mockResolvedValue(false),
-      confirmWithReason: vi.fn().mockResolvedValue(null),
+    // fix-466-m: el modal previo a emitir vive en CertificadoAutorizacionFacade (su propio spec).
+    autorizacionSpy = {
+      confirmarEmision: vi.fn().mockResolvedValue(true),
+      autorizarDeuda: vi.fn().mockResolvedValue(false),
     };
 
     TestBed.configureTestingModule({
@@ -119,7 +120,7 @@ describe('CertificacionClaseBFacade', () => {
         { provide: BranchFacade, useValue: branchFacadeSpy },
         { provide: AuthFacade, useValue: authFacadeSpy },
         { provide: NotificationsFacade, useValue: notificationsSpy },
-        { provide: ConfirmModalService, useValue: confirmSpy },
+        { provide: CertificadoAutorizacionFacade, useValue: autorizacionSpy },
       ],
     });
 
@@ -432,6 +433,22 @@ describe('CertificacionClaseBFacade', () => {
   });
 
   describe('generarCertificado()', () => {
+    beforeEach(() => {
+      (facade as any)._alumnos.set([makeAlumnoRow({ enrollmentId: 42 })]);
+    });
+
+    it('fix-466-m: confirma antes de emitir y, si se cancela, no invoca la generación', async () => {
+      autorizacionSpy.confirmarEmision.mockResolvedValueOnce(false);
+      await facade.generarCertificado(42);
+      expect(autorizacionSpy.confirmarEmision).toHaveBeenCalledWith({
+        enrollmentId: 42,
+        nombre: 'Juan López',
+        accion: 'generar',
+        practicasIncompletas: null,
+      });
+      expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
+    });
+
     it('invoca la Edge Function con el enrollment_id correcto y force=false por defecto', async () => {
       await facade.generarCertificado(42);
       expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(
@@ -440,12 +457,24 @@ describe('CertificacionClaseBFacade', () => {
       );
     });
 
-    it('fix-011-i: propaga force=true al bypass admin (H-025)', async () => {
-      await facade.generarCertificado(42, true);
+    it('fix-011-i/fix-466-m: admin con prácticas incompletas avisa en el modal y va con force', async () => {
+      (facade as any)._alumnos.set([makeAlumnoRow({ enrollmentId: 42, clasesCompletadas: 9 })]);
+      await facade.generarCertificado(42);
+      expect(autorizacionSpy.confirmarEmision).toHaveBeenCalledWith(
+        expect.objectContaining({ practicasIncompletas: { completadas: 9, requeridas: 12 } }),
+      );
       expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(
         'generate-certificate-b-pdf',
         { body: { enrollment_id: 42, force: true } },
       );
+    });
+
+    it('fix-466-m: la secretaria con prácticas incompletas no llega ni al modal', async () => {
+      authFacadeSpy.currentUser.mockReturnValue({ role: 'secretary', branchId: 1 });
+      (facade as any)._alumnos.set([makeAlumnoRow({ enrollmentId: 42, clasesCompletadas: 9 })]);
+      await facade.generarCertificado(42);
+      expect(autorizacionSpy.confirmarEmision).not.toHaveBeenCalled();
+      expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
     });
 
     it('muestra toast de éxito y abre DMS viewer cuando la Edge Function responde ok', async () => {
@@ -509,6 +538,8 @@ describe('CertificacionClaseBFacade', () => {
   });
 
   // ── Spec 0010-i (AC8, AC-E5): certificado con deuda ───────────────────────
+  // El modal con motivo y el registro de la habilitación se prueban en
+  // certificado-autorizacion.facade.spec.ts; acá, el respaldo cuando la función rechaza.
   describe('certificado con deuda (spec 0010-i)', () => {
     const deuda = () => ({
       data: null,
@@ -523,58 +554,31 @@ describe('CertificacionClaseBFacade', () => {
       }),
     });
 
-    let overrideInsert: any;
     beforeEach(() => {
-      authFacadeSpy.currentUser.mockReturnValue({ role: 'secretary', branchId: 1, dbId: 77 });
-      overrideInsert = {
-        insert: vi.fn().mockReturnThis(),
-        select: vi.fn().mockResolvedValue({ data: [{ id: 1 }], error: null }),
-      };
-      supabaseSpy.client.from = mockFromByTable({ enrollment_payment_overrides: overrideInsert });
+      (facade as any)._alumnos.set([makeAlumnoRow({ enrollmentId: 42 })]);
     });
 
-    it('pide confirmación con el saldo y, si se cancela, no registra ni reintenta', async () => {
+    it('si la función rechaza por deuda y no se autoriza, no reintenta ni muestra error', async () => {
       supabaseSpy.client.functions.invoke.mockResolvedValueOnce(deuda());
-      confirmSpy.confirmWithReason.mockResolvedValueOnce(null);
 
       await facade.generarCertificado(42);
 
-      expect(confirmSpy.confirmWithReason).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: expect.stringContaining('$180.000'),
-          reason: expect.objectContaining({ minLength: 5 }),
-        }),
+      expect(autorizacionSpy.autorizarDeuda).toHaveBeenCalledWith(
+        42,
+        'El alumno tiene un saldo pendiente de $180.000.',
       );
-      expect(overrideInsert.insert).not.toHaveBeenCalled();
       expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledTimes(1);
       expect(toastSpy.error).not.toHaveBeenCalled();
     });
 
-    it('con motivo registra la habilitación "certificado" y reintenta (AC8)', async () => {
+    it('si se autoriza la deuda, reintenta y emite (AC8)', async () => {
       supabaseSpy.client.functions.invoke.mockResolvedValueOnce(deuda());
-      confirmSpy.confirmWithReason.mockResolvedValueOnce('Paga el viernes');
+      autorizacionSpy.autorizarDeuda.mockResolvedValueOnce(true);
 
       await facade.generarCertificado(42);
 
-      expect(overrideInsert.insert).toHaveBeenCalledWith({
-        enrollment_id: 42,
-        kind: 'certificado',
-        reason: 'Paga el viernes',
-        created_by: 77,
-      });
       expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledTimes(2);
       expect(toastSpy.success).toHaveBeenCalledWith('Certificado generado correctamente');
-    });
-
-    it('si la habilitación no se guarda, no reintenta y muestra el error', async () => {
-      supabaseSpy.client.functions.invoke.mockResolvedValueOnce(deuda());
-      confirmSpy.confirmWithReason.mockResolvedValueOnce('Paga el viernes');
-      overrideInsert.select.mockResolvedValueOnce({ data: null, error: { code: '42501' } });
-
-      await facade.generarCertificado(42);
-
-      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledTimes(1);
-      expect(toastSpy.error).toHaveBeenCalled();
     });
 
     it('"Generar pendientes" salta a los alumnos con deuda y lo informa (AC-E5)', async () => {
@@ -588,20 +592,23 @@ describe('CertificacionClaseBFacade', () => {
 
       await facade.generarPendientes();
 
-      expect(confirmSpy.confirmWithReason).not.toHaveBeenCalled();
+      expect(autorizacionSpy.autorizarDeuda).not.toHaveBeenCalled();
+      expect(autorizacionSpy.confirmarEmision).not.toHaveBeenCalled();
       expect(toastSpy.warning).toHaveBeenCalledWith(expect.stringContaining('1 con deuda'));
     });
   });
 
   describe('regenerarCertificado() (fix-464-m)', () => {
     it('si se cancela la confirmación, no invoca la generación', async () => {
+      autorizacionSpy.confirmarEmision.mockResolvedValueOnce(false);
       await facade.regenerarCertificado(42);
-      expect(confirmSpy.confirm).toHaveBeenCalled();
+      expect(autorizacionSpy.confirmarEmision).toHaveBeenCalledWith(
+        expect.objectContaining({ enrollmentId: 42, accion: 'regenerar' }),
+      );
       expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
     });
 
     it('admin: confirma, regenera con force y abre el visor', async () => {
-      confirmSpy.confirm.mockResolvedValueOnce(true);
       await facade.regenerarCertificado(42);
       expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(
         'generate-certificate-b-pdf',
@@ -612,7 +619,6 @@ describe('CertificacionClaseBFacade', () => {
 
     it('secretaria: regenera sin force', async () => {
       authFacadeSpy.currentUser.mockReturnValue({ role: 'secretary', branchId: 1 });
-      confirmSpy.confirm.mockResolvedValueOnce(true);
       await facade.regenerarCertificado(42);
       expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(
         'generate-certificate-b-pdf',
@@ -721,7 +727,7 @@ describe('CertificacionClaseBFacade', () => {
       });
       expect(facade.alumnos()).toEqual([]);
 
-      await facade.generarCertificado(42);
+      await facade.generarCertificado(42, { nombre: 'Juan', completadas: 12, requeridas: 12 });
       await flushMicrotasks();
       await flushMicrotasks();
 
@@ -746,7 +752,9 @@ describe('CertificacionClaseBFacade', () => {
         },
       });
 
-      await expect(facade.generarCertificado(42)).resolves.toBeUndefined();
+      await expect(
+        facade.generarCertificado(42, { nombre: 'Juan', completadas: 12, requeridas: 12 }),
+      ).resolves.toBeUndefined();
       await flushMicrotasks();
 
       expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();

@@ -35,6 +35,7 @@ import {
   wrapLines as wrap,
 } from '../_shared/pdf-utils.ts';
 import { substituteTokens } from '../_shared/template-tokens.ts';
+import { checkCertificateDebt, overrideCounterFrom } from '../_shared/certificate-debt.ts';
 
 // ─── CORS ───
 const corsHeaders = {
@@ -122,6 +123,7 @@ Deno.serve(async (req: Request) => {
         `
         id,
         branch_id,
+        pending_balance,
         students!inner(
           id,
           users!inner(first_names, paternal_last_name, maternal_last_name, rut)
@@ -138,6 +140,15 @@ Deno.serve(async (req: Request) => {
     if (enrollmentErr || !enrollment) {
       return jsonRes({ error: `Enrollment ${enrollment_id} no encontrado` }, 404);
     }
+
+    // 1.1 fix-466-m: misma convención de deuda que Clase B (spec 0010-i, AC8) — con saldo, solo se
+    //     emite si hay una habilitación `certificado` registrada con motivo. Vale para todo rol.
+    const debt = await checkCertificateDebt(
+      overrideCounterFrom(supabase),
+      enrollment_id,
+      enrollment.pending_balance,
+    );
+    if (!debt.ok) return jsonRes(debt.body, debt.status);
 
     const u = enrollment.students.users;
     const fullName = [u.paternal_last_name, u.maternal_last_name, u.first_names]

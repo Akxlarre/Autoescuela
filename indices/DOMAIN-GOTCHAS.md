@@ -1917,6 +1917,25 @@
   alguna matrícula en ella (`20261018120000`).
 - **Fuente:** `specs/fixes/fix-456-m-dms-sede-de-la-matricula`, `specs/fixes/fix-458-m-base-alumnos-sede-de-la-matricula` (Base Alumnos: `scopeStudentsToBranch()` en `core/utils/branch-scope.utils.ts`).
 
+### DG-116 — Emitir un certificado tiene tres capas: no invocar `generate-certificate-*-pdf` directo
+
+- **Trampa:** emitir un certificado (Clase B o Profesional) llamando a la edge function desde un
+  facade o componente nuevo, o usar `CertificacionProfesionalAlumnoRow.elegible` como "se puede
+  emitir".
+- **Realidad:** (1) toda emisión individual pasa por `CertificadoAutorizacionFacade.confirmarEmision()`:
+  un modal siempre, con avisos (prácticas, asistencia) que nunca bloquean; (2) con saldo pendiente,
+  el mismo modal pide el motivo y registra la habilitación `certificado` en
+  `enrollment_payment_overrides`; (3) ambas edge functions la exigen vía
+  `supabase/functions/_shared/certificate-debt.ts` (409 `DEUDA_PENDIENTE` sin ella, para cualquier
+  rol). `elegible` en Profesional solo significa "pago al día" y filtra "Generar pendientes"; el lote
+  nunca pide motivos y salta a los que tienen deuda. En Clase B, las prácticas incompletas sí
+  bloquean a la secretaria (el admin sigue con `force`).
+- **Regla de aplicabilidad:** cualquier botón o flujo nuevo que genere o regenere un certificado
+  llama a `generarCertificado()` / `regenerarCertificado()` del facade de su licencia (que ya
+  confirman), nunca a la edge function directo. Un gate de saldo nuevo en otra edge function reusa
+  `checkCertificateDebt()`.
+- **Fuente:** `specs/fixes/fix-466-m-confirmacion-previa-certificados`, spec `0010-i` (AC8, AC-E5).
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

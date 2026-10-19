@@ -2,7 +2,9 @@ import { chileYear } from '@core/utils/chile-time.utils';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { todayIso } from '@core/utils/date.utils';
 import { isBlockedInPilot } from '@core/config/pilot-phase.config';
-import { isEligibleForProfessionalCertificate } from '@core/utils/certificacion-profesional.utils';
+import { CertificadoAutorizacionFacade } from '@core/facades/certificado-autorizacion.facade';
+import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
+import { bulkCertificateSummary } from '@core/utils/certificate-confirmation.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
@@ -35,14 +37,12 @@ const NOTA_MIN = 75;
  *   selectPromocion(id) → carga cursos de esa promoción.
  *   selectCurso(id) → carga alumnos del curso y evalúa elegibilidad.
  *
- * Criterios de elegibilidad según rol:
- *   Admin: elegible=true siempre — sin chequeo de asistencia ni pago.
- *   Secretaria:
- *     1. Asistencia teórica >= 75 % (bloqueante; fix-465-m: no aplica mientras el piloto
- *        recorte Profesional, porque la asistencia se lleva a mano en el libro de clases)
- *     2. Pago completo, pending_balance <= 0 (bloqueante)
- *     [Nota promedio] → informativo: se muestra pero NO bloquea.
- *     [Asistencia práctica = 100 %] → flexible: confirmation prompt si < 100.
+ * Emisión (fix-466-m, igual para admin y secretaria):
+ *   - Siempre con un modal de confirmación previo (CertificadoAutorizacionFacade).
+ *   - Asistencia teórica < 75 % y práctica < 100 % → avisos en el modal, nunca bloquean.
+ *   - Deuda → convención de la spec 0010-i: motivo obligatorio y habilitación registrada; la
+ *     edge function la exige. "Generar pendientes" solo toma a los que tienen el pago al día.
+ *   [Nota promedio] → informativa: se muestra pero no bloquea.
  *
  * Promociones visibles: status='finished' O end_date=hoy (ambos roles).
  *
@@ -56,6 +56,7 @@ export class CertificacionProfesionalFacade {
   private readonly toast = inject(ToastService);
   private readonly dmsViewer = inject(DmsViewerService);
   private readonly notifications = inject(NotificationsFacade);
+  private readonly autorizacion = inject(CertificadoAutorizacionFacade);
 
   // ── Estado privado ──
   private readonly _promociones = signal<PromocionCertOption[]>([]);
@@ -173,8 +174,33 @@ export class CertificacionProfesionalFacade {
 
   // ── Acciones de certificado ──
 
-  async generarCertificado(enrollmentId: number): Promise<void> {
-    const result = await this.invokeGenerateCertificate(enrollmentId);
+  /**
+   * fix-466-m: siempre se confirma antes de emitir. La asistencia solo avisa en el modal (nunca
+   * bloquea); la deuda sigue la convención de la spec 0010-i (motivo + habilitación registrada).
+   * `fueraDeLista` = datos del alumno cuando se genera desde la ficha.
+   */
+  async generarCertificado(
+    enrollmentId: number,
+    fueraDeLista?: { nombre: string; pctTeoria: number | null; pctPractica: number | null },
+  ): Promise<void> {
+    const enLista = this._alumnos().find((a) => a.enrollmentId === enrollmentId);
+    const datos = enLista
+      ? {
+          nombre: enLista.nombre,
+          pctTeoria: enLista.pctAsistenciaTeoria,
+          pctPractica: enLista.pctAsistenciaPractica,
+        }
+      : fueraDeLista;
+    if (!datos) return;
+
+    const confirmado = await this.autorizacion.confirmarEmision({
+      enrollmentId,
+      accion: 'generar',
+      ...datos,
+    });
+    if (!confirmado) return;
+
+    const result = await this.invokeConAutorizacionDeDeuda(enrollmentId);
     if (!result) return;
     this.toast.success('Certificado profesional generado correctamente');
     const alumno = this._alumnos().find((a) => a.enrollmentId === enrollmentId);
@@ -190,7 +216,7 @@ export class CertificacionProfesionalFacade {
 
   /**
    * Notifica al alumno que su certificado quedó disponible en el portal (AC7).
-   * Solo se llama al generar (no en `descargarPdf`/`enviarEmail`, para no duplicar).
+   * Solo se llama al generar (no en `enviarEmail`, para no duplicar).
    * Fire-and-forget: un fallo nunca rompe el flujo de generación (AC-E1).
    */
   private notifyCertificateReady(
@@ -235,12 +261,6 @@ export class CertificacionProfesionalFacade {
     }
   }
 
-  async descargarPdf(enrollmentId: number): Promise<void> {
-    const result = await this.invokeGenerateCertificate(enrollmentId);
-    if (!result) return;
-    this.dmsViewer.openByUrl(result.url, 'Certificado Clase Profesional');
-  }
-
   async enviarEmail(enrollmentId: number): Promise<void> {
     this._sendingEmailId.set(enrollmentId);
     try {
@@ -270,6 +290,9 @@ export class CertificacionProfesionalFacade {
     this._generatingPendientes.set(true);
     let generados = 0;
     const errores: string[] = [];
+    // Spec 0010-i (AC-E5): el lote no pide motivos; si el saldo cambió y la función rechaza por
+    // deuda, ese alumno se emite uno a uno desde su fila.
+    const conDeuda: string[] = [];
 
     for (const alumno of elegibles) {
       this._generatingId.set(alumno.enrollmentId);
@@ -278,7 +301,9 @@ export class CertificacionProfesionalFacade {
           'generate-certificate-professional-pdf',
           { body: { enrollment_id: alumno.enrollmentId } },
         );
-        if (error || !data?.pdfUrl) {
+        if (error && (await readEdgeFunctionError(error))?.code === 'DEUDA_PENDIENTE') {
+          conDeuda.push(alumno.nombre);
+        } else if (error || !data?.pdfUrl) {
           errores.push(alumno.nombre);
         } else {
           generados++;
@@ -292,15 +317,9 @@ export class CertificacionProfesionalFacade {
     this._generatingId.set(null);
     this._generatingPendientes.set(false);
 
-    if (errores.length === 0) {
-      this.toast.success(
-        `${generados} certificado${generados !== 1 ? 's' : ''} generado${generados !== 1 ? 's' : ''} correctamente`,
-      );
-    } else {
-      this.toast.warning(
-        `${generados} generado${generados !== 1 ? 's' : ''}, ${errores.length} con error`,
-      );
-    }
+    const resumen = bulkCertificateSummary(generados, conDeuda.length, errores.length);
+    if (resumen.ok) this.toast.success(resumen.message);
+    else this.toast.warning(resumen.message);
 
     const cursoId = this._selectedCursoId();
     if (cursoId !== null) {
@@ -463,7 +482,6 @@ export class CertificacionProfesionalFacade {
   private async fetchAlumnos(promotionCourseId: number): Promise<void> {
     const token = ++this._alumnosFetchToken;
     const branchId = this.getActiveBranchId();
-    const isAdmin = this.authFacade.currentUser()?.role === 'admin';
 
     // Promotion info from already-loaded _promociones (no extra query)
     const promoId = this._selectedPromocionId();
@@ -627,11 +645,8 @@ export class CertificacionProfesionalFacade {
         pagoCorrecto,
         notaPromedio,
         elegibilidad,
-        elegible: isEligibleForProfessionalCertificate(
-          isAdmin,
-          elegibilidad,
-          !isBlockedInPilot('clase-profesional-recorte'),
-        ),
+        // fix-466-m: solo filtra "Generar pendientes"; uno a uno se emite igual (con motivo).
+        elegible: pagoCorrecto,
         certificadoId: cert?.id ?? null,
         certificadoFolio:
           cert && hasPdf && certYear
@@ -722,9 +737,34 @@ export class CertificacionProfesionalFacade {
     this._log.set(rows);
   }
 
-  private async invokeGenerateCertificate(
+  /**
+   * Spec 0010-i (AC8): si la función rechaza por deuda (el saldo cambió después del modal), pide
+   * el motivo, registra la habilitación y reintenta una vez.
+   */
+  private async invokeConAutorizacionDeDeuda(
     enrollmentId: number,
   ): Promise<{ url: string; path: string } | null> {
+    const result = await this.invokeGenerateCertificate(enrollmentId);
+    if (!result || !('deuda' in result)) return result;
+
+    const habilitado = await this.autorizacion.autorizarDeuda(enrollmentId, result.deuda);
+    if (!habilitado) return null;
+
+    const retry = await this.invokeGenerateCertificate(enrollmentId);
+    if (retry && 'deuda' in retry) {
+      this.toast.error(retry.deuda);
+      return null;
+    }
+    return retry;
+  }
+
+  /**
+   * URL del PDF, `{ deuda }` si la función rechazó por saldo pendiente (sin toast: el caller pide
+   * el motivo) o null ante cualquier otro error (con toast; un 4xx muestra el motivo de negocio).
+   */
+  private async invokeGenerateCertificate(
+    enrollmentId: number,
+  ): Promise<{ url: string; path: string } | { deuda: string } | null> {
     this._generatingId.set(enrollmentId);
     try {
       const { data, error } = await this.supabase.client.functions.invoke(
@@ -732,7 +772,16 @@ export class CertificacionProfesionalFacade {
         { body: { enrollment_id: enrollmentId } },
       );
       if (error || !data?.pdfUrl) {
-        this.toast.error('No se pudo generar el certificado profesional');
+        const respuesta = error ? await readEdgeFunctionError(error) : null;
+        if (respuesta?.code === 'DEUDA_PENDIENTE') {
+          return { deuda: respuesta.message ?? 'El alumno tiene un saldo pendiente.' };
+        }
+        const esRechazo =
+          respuesta?.status != null && respuesta.status >= 400 && respuesta.status < 500;
+        this.toast.error(
+          (esRechazo ? respuesta?.message : null) ??
+            'No se pudo generar el certificado profesional',
+        );
         return null;
       }
       return { url: data.pdfUrl as string, path: data.pdfPath as string };

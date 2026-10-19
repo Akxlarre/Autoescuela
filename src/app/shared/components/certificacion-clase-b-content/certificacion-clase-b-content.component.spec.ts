@@ -49,35 +49,19 @@ describe('CertificacionClaseBContentComponent — bypass de prácticas incomplet
     component.onClickGenerar(alumno);
 
     expect(emitSpy).toHaveBeenCalledWith(alumno.enrollmentId);
-    expect(component.pendingConfirmId()).toBeNull();
   });
 
-  it('con prácticas incompletas y admin, abre la confirmación en vez de emitir de inmediato', () => {
+  it('fix-466-m: con prácticas incompletas y admin, emite (el modal del facade avisa y fuerza)', () => {
     stubIsAdmin(component, true);
     const emitSpy = vi.spyOn(component.generarCertificado, 'emit');
     const alumno = makeAlumno({ clasesCompletadas: 1, clasesTotales: 12 });
 
     component.onClickGenerar(alumno);
 
-    expect(emitSpy).not.toHaveBeenCalled();
-    expect(component.pendingConfirmId()).toBe(alumno.enrollmentId);
+    expect(emitSpy).toHaveBeenCalledWith(alumno.enrollmentId);
   });
 
-  it('fix-011-i: confirmarGenerar tras el bypass admin emite generarCertificadoForzado (no el output normal) y limpia el estado', () => {
-    stubIsAdmin(component, true);
-    const emitSpy = vi.spyOn(component.generarCertificado, 'emit');
-    const forzadoSpy = vi.spyOn(component.generarCertificadoForzado, 'emit');
-    const alumno = makeAlumno({ clasesCompletadas: 1, clasesTotales: 12 });
-
-    component.onClickGenerar(alumno);
-    component.confirmarGenerar();
-
-    expect(forzadoSpy).toHaveBeenCalledWith(alumno.enrollmentId);
-    expect(emitSpy).not.toHaveBeenCalled();
-    expect(component.pendingConfirmId()).toBeNull();
-  });
-
-  it('con prácticas incompletas y secretaria (no admin), bloquea sin emitir ni abrir confirmación', () => {
+  it('con prácticas incompletas y secretaria (no admin), bloquea sin emitir', () => {
     stubIsAdmin(component, false);
     const emitSpy = vi.spyOn(component.generarCertificado, 'emit');
     const alumno = makeAlumno({ clasesCompletadas: 1, clasesTotales: 12 });
@@ -85,7 +69,6 @@ describe('CertificacionClaseBContentComponent — bypass de prácticas incomplet
     component.onClickGenerar(alumno);
 
     expect(emitSpy).not.toHaveBeenCalled();
-    expect(component.pendingConfirmId()).toBeNull();
   });
 
   describe('isBlockedForRow — fix-011-i (H-025)', () => {

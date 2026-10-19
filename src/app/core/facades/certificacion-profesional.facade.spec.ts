@@ -6,6 +6,7 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
+import { CertificadoAutorizacionFacade } from '@core/facades/certificado-autorizacion.facade';
 import type { CertificacionProfesionalAlumnoRow } from '@core/models/ui/certificacion-profesional.model';
 
 // fix-465-m: el piloto se controla por test; por defecto el portal del alumno está habilitado.
@@ -22,6 +23,7 @@ describe('CertificacionProfesionalFacade', () => {
   let branchFacadeSpy: any;
   let authFacadeSpy: any;
   let notificationsSpy: any;
+  let autorizacionSpy: any;
 
   const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
@@ -90,6 +92,11 @@ describe('CertificacionProfesionalFacade', () => {
       notifyUsers: vi.fn().mockResolvedValue(undefined),
       notifyRole: vi.fn().mockResolvedValue(undefined),
     };
+    // fix-466-m: el modal previo a emitir vive en CertificadoAutorizacionFacade (su propio spec).
+    autorizacionSpy = {
+      confirmarEmision: vi.fn().mockResolvedValue(true),
+      autorizarDeuda: vi.fn().mockResolvedValue(false),
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -100,6 +107,7 @@ describe('CertificacionProfesionalFacade', () => {
         { provide: BranchFacade, useValue: branchFacadeSpy },
         { provide: AuthFacade, useValue: authFacadeSpy },
         { provide: NotificationsFacade, useValue: notificationsSpy },
+        { provide: CertificadoAutorizacionFacade, useValue: autorizacionSpy },
       ],
     });
 
@@ -165,6 +173,66 @@ describe('CertificacionProfesionalFacade', () => {
   });
 
   describe('generarCertificado()', () => {
+    beforeEach(() => {
+      (facade as any)._alumnos.set([
+        makeAlumnoRow({ enrollmentId: 42 }),
+        makeAlumnoRow({ enrollmentId: 99 }),
+      ]);
+    });
+
+    it('fix-466-m: confirma antes de emitir y, si se cancela, no invoca la generación', async () => {
+      (facade as any)._alumnos.set([
+        makeAlumnoRow({ enrollmentId: 42, pctAsistenciaTeoria: 60, pctAsistenciaPractica: null }),
+      ]);
+      autorizacionSpy.confirmarEmision.mockResolvedValueOnce(false);
+
+      await facade.generarCertificado(42);
+
+      expect(autorizacionSpy.confirmarEmision).toHaveBeenCalledWith(
+        expect.objectContaining({
+          enrollmentId: 42,
+          accion: 'generar',
+          pctTeoria: 60,
+          pctPractica: null,
+        }),
+      );
+      expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
+    });
+
+    it('fix-466-m: desde la ficha (fuera de la lista) confirma con los datos que recibe', async () => {
+      await facade.generarCertificado(7, { nombre: 'Ana', pctTeoria: null, pctPractica: 80 });
+      expect(autorizacionSpy.confirmarEmision).toHaveBeenCalledWith({
+        enrollmentId: 7,
+        accion: 'generar',
+        nombre: 'Ana',
+        pctTeoria: null,
+        pctPractica: 80,
+      });
+    });
+
+    it('fix-466-m: si la función rechaza por deuda, autoriza con motivo y reintenta (spec 0010-i)', async () => {
+      const deuda = {
+        data: null,
+        error: Object.assign(new Error('Edge Function returned a non-2xx status code'), {
+          context: new Response(
+            JSON.stringify({ error: 'Saldo pendiente de $50.000.', code: 'DEUDA_PENDIENTE' }),
+            { status: 409 },
+          ),
+        }),
+      };
+      supabaseSpy.client.functions.invoke.mockResolvedValueOnce(deuda);
+      autorizacionSpy.autorizarDeuda.mockResolvedValueOnce(true);
+
+      await facade.generarCertificado(42);
+
+      expect(autorizacionSpy.autorizarDeuda).toHaveBeenCalledWith(
+        42,
+        'Saldo pendiente de $50.000.',
+      );
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledTimes(2);
+      expect(toastSpy.success).toHaveBeenCalled();
+    });
+
     it('invoca la Edge Function con el enrollment_id correcto', async () => {
       await facade.generarCertificado(42);
       expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(

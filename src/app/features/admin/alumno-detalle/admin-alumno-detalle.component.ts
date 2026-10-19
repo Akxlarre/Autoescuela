@@ -121,9 +121,9 @@ export function resolveListadoLabel(
 export type CertificadoBAction = 'generate' | 'confirm-forced' | 'blocked';
 
 /**
- * Con las prácticas completas se genera directo. Si faltan, solo el admin puede seguir: confirma
- * y el pedido va con force (la Edge Function rechaza el bypass sin él — fix-289-m). La secretaria
- * queda bloqueada.
+ * Si faltan prácticas, solo el admin puede seguir (el pedido va con force; la Edge Function
+ * rechaza el bypass sin él — fix-289-m). La secretaria queda bloqueada. Desde fix-466-m toda
+ * emisión pasa por el modal de CertificadoAutorizacionFacade, que avisa lo que falta.
  */
 export function resolveCertificadoBAction(
   completadas: number,
@@ -1442,11 +1442,9 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
           loading: isViewingCert,
           disabled: isViewingCert,
         };
-      } else if (!this.academicoProfVisible) {
-        // fix-332-m (D12): los criterios (asistencia, nota) salen de módulos bloqueados en el
-        // piloto; el botón saldría siempre "Certificado (1/3 criterios)" deshabilitado.
-        certAction = null;
-      } else if (this.facade.elegibleProf()) {
+      } else {
+        // fix-466-m: ningún criterio académico bloquea (ni en el piloto); el modal del facade
+        // avisa la asistencia baja y pide motivo si hay deuda (spec 0010-i).
         certAction = {
           id: 'generar-certificado',
           label: isGeneratingCert ? 'Generando...' : 'Generar Certificado',
@@ -1454,16 +1452,6 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
           primary: false,
           loading: isGeneratingCert,
           disabled: isGeneratingCert,
-        };
-      } else {
-        const e = this.facade.elegibilidadProf();
-        const metCount = [e.teoria, e.pago, e.nota].filter(Boolean).length;
-        certAction = {
-          id: 'generar-certificado',
-          label: `Certificado (${metCount}/3 criterios)`,
-          icon: 'file-text',
-          primary: false,
-          disabled: true,
         };
       }
     } else {
@@ -1864,19 +1852,13 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
         }
         return;
       }
-      // Práctica incompleta: advertencia (criterio flexible, no bloquea)
-      if (!this.facade.elegibilidadProf().practica) {
-        const pct = this.facade.progresoPracticaProf().pct ?? 0;
-        const confirmed = await this.confirmModal.confirm({
-          title: 'Asistencia práctica incompleta',
-          message: `${alumno.nombre} registra ${pct}% de asistencia práctica. ¿Deseas generar el certificado de todas formas?`,
-          severity: 'warn',
-          confirmLabel: 'Generar',
-          cancelLabel: 'Cancelar',
-        });
-        if (!confirmed) return;
-      }
-      await this.certProfFacade.generarCertificado(alumno.enrollmentId);
+      // fix-466-m: el facade confirma con un modal (avisos de asistencia, deuda con motivo).
+      // Sin módulos académicos (piloto) no hay porcentajes que avisar.
+      await this.certProfFacade.generarCertificado(alumno.enrollmentId, {
+        nombre: alumno.nombre,
+        pctTeoria: this.academicoProfVisible ? this.facade.progresoTeoriaProf().pct : null,
+        pctPractica: this.academicoProfVisible ? this.facade.progresoPracticaProf().pct : null,
+      });
       await this.facade.refresh();
     } else {
       // Clase B
@@ -1899,18 +1881,14 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
       // Solo el admin ve el botón habilitado con prácticas incompletas — la secretaria
       // nunca llega aquí (acción deshabilitada en heroActions).
       if (action === 'blocked') return;
-      if (action === 'confirm-forced') {
-        const confirmed = await this.confirmModal.confirm({
-          title: 'Prácticas incompletas',
-          message: `${alumno.nombre} lleva ${progreso.completadas}/${progreso.requeridas} clases prácticas completadas. ¿Deseas generar el certificado de todas formas?`,
-          severity: 'warn',
-          confirmLabel: 'Generar',
-          cancelLabel: 'Cancelar',
-        });
-        if (!confirmed) return;
-      }
 
-      await this.certFacade.generarCertificado(alumno.enrollmentId, action === 'confirm-forced');
+      // fix-466-m: el facade confirma con un modal (prácticas que faltan, deuda con motivo) y
+      // aplica el bypass admin cuando faltan prácticas.
+      await this.certFacade.generarCertificado(alumno.enrollmentId, {
+        nombre: alumno.nombre,
+        completadas: progreso.completadas,
+        requeridas: progreso.requeridas,
+      });
       await this.facade.refresh();
     }
   }

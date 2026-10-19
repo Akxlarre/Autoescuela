@@ -5,7 +5,6 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
 import { CertificacionProfesionalFacade } from '@core/facades/certificacion-profesional.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
-import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 
 /**
  * GenerarPendientesProfDrawerComponent — Smart / Drawer.
@@ -71,7 +70,7 @@ import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 
           @if (pendientesNoElegibles().length > 0) {
             <div>
-              <p class="micro-label mb-2">No elegibles — no se generará certificado</p>
+              <p class="micro-label mb-2">Con saldo pendiente — emítelos uno a uno desde su fila</p>
               <div
                 class="rounded-lg border divide-y divide-border-subtle overflow-hidden border-border-subtle"
               >
@@ -81,19 +80,7 @@ import { isBlockedInPilot } from '@core/config/pilot-phase.config';
                     <span class="text-sm flex-1 truncate text-text-muted">
                       {{ alumno.nombre }}
                     </span>
-                    <span class="text-xs text-text-muted shrink-0">
-                      @if (academicoVisible) {
-                        @if (!alumno.elegibilidad.teoria) {
-                          Teoría &lt;75% ·
-                        }
-                        @if (!alumno.elegibilidad.nota) {
-                          Nota &lt;75 ·
-                        }
-                      }
-                      @if (!alumno.elegibilidad.pago) {
-                        Pago pendiente
-                      }
-                    </span>
+                    <span class="text-xs text-text-muted shrink-0">Pago pendiente</span>
                   </div>
                 }
               </div>
@@ -134,9 +121,6 @@ import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 export class GenerarPendientesProfDrawerComponent {
   protected readonly facade = inject(CertificacionProfesionalFacade);
   protected readonly drawer = inject(LayoutDrawerFacadeService);
-
-  /** fix-465-m: en el piloto no hay asistencia ni notas; el único motivo posible es el pago. */
-  protected readonly academicoVisible = !isBlockedInPilot('clase-profesional-recorte');
 
   protected readonly pendientesCount = computed(
     () => this.facade.alumnos().filter((a) => a.certificadoStatus === 'pendiente').length,

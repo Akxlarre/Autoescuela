@@ -52,7 +52,7 @@
 | `src/app/core/utils/cuadratura-medio-pago.utils.ts` | `medioDePagoLabel` |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
 | `src/app/core/utils/date.utils.ts` | `todayIso`, `notAfterTodayValidator`, `monthsAgoIso`, `formatDayMonthYear`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP` |
-| `src/app/core/utils/certificacion-profesional.utils.ts` | `isEligibleForProfessionalCertificate` |
+| `src/app/core/utils/certificate-confirmation.utils.ts` | `PCT_TEORIA_MINIMA`, `PCT_PRACTICA_RECOMENDADA`, `certificateWarnings`, `buildCertificateConfirmation`, `bulkCertificateSummary` |
 | `src/app/core/utils/db-error.utils.ts` | `MENSAJE_PAGO_PENDIENTE_CLASE_7`, `NoRowsAffectedError`, `assertWriteOk`, `toFriendlyDbMessage` |
 | `src/app/core/utils/deudor-label.utils.ts` | `describeMatriculaDeudor` |
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
