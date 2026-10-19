@@ -48,6 +48,16 @@ consultan a medida que aparecen.
 - Subir documentos dentro del wizard de matrícula (`023`), la ficha del alumno (`024b`),
   asistencia/notas de prácticas (`027`) y documentos de vehículos (`ASG-i-032`).
 
+## Progreso
+
+- [x] Revisión de las 26 sospechas en código
+- [x] S26 → `fix-448-m` · S7 → `fix-449-m` · S10 → `fix-450-m`
+- [ ] S5, S6, S9, S12, S14, S16, S18, S19 (abiertas en código)
+- [ ] S8, S13, S15, S17, S20–S22, S24, S25 (sin revisar)
+- [ ] Casos A…S del checklist en navegador
+- [ ] Playwright: subida + visualización de documento; certificado no elegible bloqueado
+- [ ] Test de regresión del track → `/fix-close`
+
 ## Resultados
 
 ### Sospechas revisadas en código (2026-10-18, sin navegador)
