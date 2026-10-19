@@ -1,7 +1,8 @@
 # Fix: Dos certificados generados a la vez chocan en el folio (o se duplican)
 > id: fix-461-m-folio-certificado-atomico
 > refs: fix-447-m-testing-documentos-certificacion (S18, casos M14 / Q04)
-> status: open
+> status: done
+> closed: 2026-10-19
 > created: 2026-10-18
 
 ## Root Cause
@@ -48,7 +49,14 @@ suman 1 e insertan. Todo fuera de una transacción y sin lock:
 - [x] Edge functions B y Profesional llaman a `issue_certificate` y responden 500 si falla.
   `lint:arch` 0 errores (`deno check` no corre en este equipo por dependencias npm, igual que en
   fix-448-m).
-- [ ] Matías aplica `20261018140000_fix461_issue_certificate_atomico.sql` y despliega
-  `generate-certificate-b-pdf` y `generate-certificate-professional-pdf` (en ese orden: la función
-  nueva necesita la RPC).
-- [ ] Test SQL contra la BD real + generar un certificado real (folio + email).
+- [x] Matías aplicó `20261018140000_fix461_issue_certificate_atomico.sql` y desplegó
+  `generate-certificate-b-pdf` (v29) y `generate-certificate-professional-pdf` (v24) (2026-10-19).
+- [x] Test SQL contra la BD real: pasa (I1–I4).
+- [x] Generación real como admin, tres llamadas simultáneas (#0005 dos veces, #0006 una): las tres
+  responden 200; queda un solo certificado por matrícula (#0006 folio 3, #0005 folio 4, ambos
+  `issued_date` 2026-10-19), y #0005 tiene 2 entradas en `certificate_issuance_log`. Antes, la
+  doble llamada habría creado dos certificados y la otra habría chocado con el folio.
+- [x] `send-certificate-email` para ambas: 200 (encuentra el registro). Alumnos sembrados
+  (`@test-data.local`); los certificados de prueba quedan en la BD de dev.
+- Profesional no se ejerció en vivo (oculto en el piloto); usa la misma RPC y el mismo manejo de
+  error.

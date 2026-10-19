@@ -55,7 +55,7 @@ consultan a medida que aparecen.
 - [x] S16 → `fix-455-m` · S12 → `fix-457-m`
 - [x] S19 → `fix-456-m` (DMS + RLS) y `fix-458-m` (Base Alumnos)
 - [x] S14 → `fix-459-m` + `fix-460-m`
-- [ ] S18 (abierta en código)
+- [x] S18 → `fix-461-m`
 - [ ] S8, S13, S15, S17, S20–S22, S24, S25 (sin revisar)
 - [ ] Casos A…S del checklist en navegador
 - [ ] Playwright: subida + visualización de documento; certificado no elegible bloqueado
@@ -81,7 +81,7 @@ consultan a medida que aparecen.
 | S12 — tope de 1.000 filas | → corregida en `fix-457-m` (paginación con `fetchAllPages`) | `dms.facade.ts:811-843` |
 | S14 — criterios de elegibilidad / pago | Pago cerrado (`0010-i`, habilitación con motivo); botón y edge usan `completed` (`fix-262-m`). ❌ confirmada (70 habilitadas por sede, 8 cumplen) → corregida en `fix-459-m` (lista) y `fix-460-m` (trigger + backfill del flag) | `certificacion-clase-b.facade.ts:576` |
 | S16 — errores tragados | ❌ → corregida en `fix-455-m` (toasts de carga y borrado; email: pendiente en certificación) | `dms.facade.ts:847-866` |
-| S18 — folio con carrera | **Abierta** (`certErr` se ignora) | `generate-certificate-b-pdf/index.ts:281-303` |
+| S18 — folio con carrera | ❌ (`certErr` se ignoraba; `(enrollment_id, type)` no era único) → corregida en `fix-461-m` (RPC `issue_certificate` con lock + índice único), verificada con 3 generaciones simultáneas | `generate-certificate-b-pdf/index.ts:267-285` |
 | S19 — sede por la del alumno | ❌ confirmada (Samuel Merino, #0008) → corregida en `fix-456-m` (DMS + RLS `20261018120000`, aplicada) y `fix-458-m` (Base Alumnos) | `dms.facade.ts:818,825` |
 | S23 — filtro Estado sin "Todos" | Cerrada (`0022-m`, placeholder "Todos los estados") → regresión | `certificacion-clase-b-content.component.ts:108,749` |
 | S8, S13, S15, S17, S20–S22, S24, S25 | Sin revisar en código; se verifican en navegador | — |
@@ -103,6 +103,7 @@ consultan a medida que aparecen.
 | `fix-460-m-certificate-enabled-recalculado` | S14 — el flag se prendía con la clase #12 y nunca bajaba (dashboard, portal) | Cerrado 2026-10-18 |
 | `fix-458-m-base-alumnos-sede-de-la-matricula` | Hallazgo al verificar 456 — Base Alumnos filtraba y mostraba la sede por `users.branch_id` | Cerrado 2026-10-18 |
 | `fix-457-m-dms-sin-tope-1000-filas` | S12 / B16 — el DMS perdía filas pasadas las 1.000 | Cerrado 2026-10-18 |
+| `fix-461-m-folio-certificado-atomico` | S18 / M14 / Q04 — dos generaciones a la vez chocaban en el folio o duplicaban el certificado | Cerrado 2026-10-19 |
 
 ### Observaciones (sin track)
 
