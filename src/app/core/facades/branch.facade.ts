@@ -143,6 +143,18 @@ export class BranchFacade {
     await (this._loadPromise ?? this.loadBranches());
   }
 
+  /**
+   * "Conmutar Sede" del menú (hotfix-098-b): elige la sede con Clase Profesional y la devuelve, o
+   * `null` si no hay. Espera la lista real: tras un F5 `branches()` es el reemplazo de una sede
+   * sacado de localStorage, sin `hasProfessional`, y la búsqueda fallaba a veces.
+   */
+  async switchToProfessionalBranch(): Promise<BranchOption | null> {
+    await this.ensureBranchesLoaded();
+    const proBranch = this.branches().find((b) => b.hasProfessional) ?? null;
+    if (proBranch) this.selectBranch(proBranch.id);
+    return proBranch;
+  }
+
   private async fetchBranches(): Promise<void> {
     this._isLoading.set(true);
     this._error.set(null);

@@ -196,9 +196,9 @@ export class SidebarComponent {
       });
 
       if (confirmed) {
-        const proBranch = this.branchFacade.branches().find((b) => b.hasProfessional);
+        // hotfix-098-b: espera la lista real de sedes antes de buscar la Profesional.
+        const proBranch = await this.branchFacade.switchToProfessionalBranch();
         if (proBranch) {
-          this.branchFacade.selectBranch(proBranch.id);
           this.toast.success(`Cambiado exitosamente a la sede: ${proBranch.name}`);
           // fix-334-m (D13): además de conmutar, abrir el ítem que se cliqueó.
           this.layout.closeSidebar();
