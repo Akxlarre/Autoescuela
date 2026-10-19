@@ -6,6 +6,8 @@ import { AgendaFacade } from '@core/facades/agenda.facade';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { Router } from '@angular/router';
+import { studentFichaUrl } from '@core/utils/agenda-week.utils';
 import { StatBoxComponent, StatBoxVariant } from '@shared/components/stat-box/stat-box.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
@@ -170,6 +172,17 @@ type StatusConfig = {
               Deshacer inasistencia
             </button>
           }
+          <!-- hotfix-095-b (E11): atajo a la ficha, donde se reprograma y se ve todo -->
+          @if (s.studentId) {
+            <button
+              class="btn-secondary flex items-center justify-center gap-2"
+              (click)="verFicha(s.studentId, s.enrollmentId)"
+              data-llm-action="ver-ficha-alumno-detalle"
+            >
+              <app-icon name="user" [size]="14" />
+              Ver ficha del alumno
+            </button>
+          }
           <button class="btn-secondary" (click)="close()" data-llm-action="close-slot-detail">
             Cerrar detalle
           </button>
@@ -204,6 +217,7 @@ export class AgendaSlotDetailDrawerComponent {
   protected readonly asistencia = inject(AsistenciaClaseBFacade);
   private readonly dashboardFacade = inject(DashboardFacade);
   private readonly drawer = inject(LayoutDrawerFacadeService);
+  private readonly router = inject(Router);
 
   /** fix-377-m: deshace la falta (confirmación en el facade) y refresca "Clases Actuales". */
   protected async undoAbsence(sessionId: number): Promise<void> {
@@ -286,5 +300,13 @@ export class AgendaSlotDetailDrawerComponent {
   close(): void {
     this.facade.setSelectedSlot(null);
     this.drawer.back();
+  }
+
+  /** hotfix-095-b (E11): cierra el detalle (y la Agenda si venía en un drawer) y abre la ficha. */
+  protected verFicha(studentId: number, enrollmentId: number | undefined): void {
+    const url = studentFichaUrl(this.router.url, studentId, enrollmentId);
+    this.facade.setSelectedSlot(null);
+    this.drawer.close();
+    void this.router.navigateByUrl(url);
   }
 }

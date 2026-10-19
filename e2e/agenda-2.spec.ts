@@ -4,6 +4,7 @@
  * checklist. Solo lectura: no siembra ni modifica clases.
  */
 import type { Page } from '@playwright/test';
+import { getAdminClient } from './support/supabase-admin';
 import { expect, test } from './support/fixtures';
 
 test.describe.configure({ mode: 'default', timeout: 120_000 });
@@ -186,6 +187,44 @@ test('E08: con teclado, Tab + Enter sobre un horario abre el detalle', async ({ 
   await slot.focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('app-agenda-slot-detail-drawer')).toBeVisible(CARGA);
+});
+
+test('E11 (hotfix-095-b): desde el detalle de una clase se abre la ficha del alumno', async ({
+  pageAs,
+}) => {
+  // La próxima clase agendada real (solo lectura).
+  const sb = await getAdminClient();
+  const { data } = await sb
+    .from('class_b_sessions')
+    .select('id, instructor_id, scheduled_at')
+    .eq('status', 'scheduled')
+    .gte('scheduled_at', new Date().toISOString())
+    .order('scheduled_at')
+    .limit(1);
+  const clase = data?.[0];
+  test.skip(!clase, 'No hay clases agendadas desde hoy');
+  const { data: ins } = await sb
+    .from('instructors')
+    .select('users!inner(first_names, paternal_last_name)')
+    .eq('id', clase!.instructor_id)
+    .single();
+  const u = (ins as any).users;
+
+  const page = await pageAs('admin');
+  await abrirAgenda(page);
+  await elegirInstructor(page, `${u.first_names} ${u.paternal_last_name}`);
+  const conAlumno = page.locator('app-agenda-slot').filter({ has: page.locator('.slot-student') });
+  for (let i = 0; i < 8 && (await conAlumno.count()) === 0; i++) {
+    await page.locator('[data-llm-action="next-week"]').click();
+    await expect(grid(page)).toBeVisible(CARGA);
+    await page.waitForTimeout(1_000);
+  }
+  await conAlumno.first().click();
+  const detalle = page.locator('app-agenda-slot-detail-drawer');
+  await expect(detalle).toBeVisible(CARGA);
+  await detalle.locator('[data-llm-action="ver-ficha-alumno-detalle"]').click();
+  await expect(page).toHaveURL(/\/app\/admin\/alumnos\/\d+\?enrollment=\d+$/, CARGA);
+  await expect(detalle).toHaveCount(0);
 });
 
 // ── P. Visual ───────────────────────────────────────────────────────────────────────────────
