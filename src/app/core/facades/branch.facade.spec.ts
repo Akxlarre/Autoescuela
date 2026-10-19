@@ -399,6 +399,17 @@ describe('BranchFacade', () => {
       expect(JSON.parse(persisted()!).id).toBe(2);
     });
 
+    it('H08/H09 (hotfix-098-b): conmutar a Profesional con la lista todavía cargando igual encuentra la sede', async () => {
+      // Tras un F5: branches() es el reemplazo de una sede sacado de localStorage, sin Profesional.
+      const { facade: f } = buildFacade({ id: 1, name: 'Autoescuela Chillán' });
+      void f.loadBranches();
+
+      const sede = await f.switchToProfessionalBranch();
+
+      expect(sede?.id).toBe(2);
+      expect(f.selectedBranchId()).toBe(2);
+    });
+
     it('ensureBranchesLoaded() reutiliza la carga en curso y no consulta dos veces', async () => {
       const { facade: f, from } = buildFacade({ id: 1, name: 'Autoescuela Chillán' });
 
