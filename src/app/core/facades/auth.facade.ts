@@ -262,7 +262,13 @@ export class AuthFacade {
     }
   }
 
-  async login(email: string, password: string): Promise<{ error: Error | null }> {
+  async login(
+    email: string,
+    password: string,
+    rememberMe = true,
+  ): Promise<{ error: Error | null }> {
+    // fix-229-b (A19): la preferencia se guarda antes de crear la sesión.
+    this.supabase.setRememberSession(rememberMe);
     const { data, error } = await this.supabase.signIn(email, password);
     if (error) return { error: new Error(mapAuthError(error)) };
 
@@ -347,6 +353,8 @@ export class AuthFacade {
     // hotfix-091-b (E10): se navega recién cuando la sesión quedó cerrada; antes se navegaba al
     // tiro y el guard volvía a leer la sesión todavía guardada (sobre todo sin red).
     const cierre = this.supabase.signOut();
+    // fix-229-b: el próximo login parte sin preferencia guardada.
+    this.supabase.setRememberSession(true);
     // La sede activa vive en `localStorage` bajo una clave sin namespacing por usuario, y
     // `BranchFacade` la re-lee al construirse, antes de que se sepa quién se autenticó. Si no
     // se limpia acá, en una PC compartida —el mostrador— el próximo usuario hereda la sede del
