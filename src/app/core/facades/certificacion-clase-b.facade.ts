@@ -11,9 +11,9 @@ import { formatRut } from '@core/utils/rut.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
+import { bulkCertificateSummary } from '@core/utils/certificate-confirmation.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
-import { assertWriteOk, toFriendlyDbMessage } from '@core/utils/db-error.utils';
-import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { CertificadoAutorizacionFacade } from '@core/facades/certificado-autorizacion.facade';
 import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 import type {
   CertificacionAlumnoRow,
@@ -40,7 +40,7 @@ export class CertificacionClaseBFacade {
   private readonly toast = inject(ToastService);
   private readonly dmsViewer = inject(DmsViewerService);
   private readonly notifications = inject(NotificationsFacade);
-  private readonly confirmModal = inject(ConfirmModalService);
+  private readonly autorizacion = inject(CertificadoAutorizacionFacade);
 
   // ── Estado privado ──
   private readonly _alumnos = signal<CertificacionAlumnoRow[]>([]);
@@ -143,10 +143,32 @@ export class CertificacionClaseBFacade {
    * persiste el PATH en `enrollments.certificate_b_pdf_url` y abre el visor
    * con la signed URL devuelta directamente por la Edge Function (TTL 1h).
    */
-  async generarCertificado(enrollmentId: number, force = false): Promise<void> {
-    // Spec 0010-i (AC8): con deuda, se emite solo si quien genera confirma con motivo. La
-    // habilitación queda registrada (y avisa a los admins) y recién ahí se reintenta.
-    const result = await this.invokeConAutorizacionDeDeuda(enrollmentId, force);
+  async generarCertificado(
+    enrollmentId: number,
+    fueraDeLista?: { nombre: string; completadas: number; requeridas: number },
+  ): Promise<void> {
+    // fix-466-m: con las clases completas se emite directo. Si faltan, solo el admin puede seguir:
+    // confirma el aviso en un modal y el pedido va con `force`. La deuda la confirma el modal de la
+    // spec 0010-i cuando la edge function la rechaza.
+    const enLista = this._alumnos().find((a) => a.enrollmentId === enrollmentId);
+    const datos = enLista
+      ? {
+          nombre: enLista.nombre,
+          completadas: enLista.clasesCompletadas,
+          requeridas: enLista.clasesTotales,
+        }
+      : fueraDeLista;
+    if (!datos) return;
+    const incompletas = datos.completadas < datos.requeridas;
+    if (incompletas && this.authFacade.currentUser()?.role !== 'admin') return;
+
+    const confirmado = await this.autorizacion.confirmarAvisos({
+      nombre: datos.nombre,
+      practicasIncompletas: { completadas: datos.completadas, requeridas: datos.requeridas },
+    });
+    if (!confirmado) return;
+
+    const result = await this.invokeConAutorizacionDeDeuda(enrollmentId, incompletas);
     if (!result) return;
     this.toast.success('Certificado generado correctamente');
     const alumno = this._alumnos().find((a) => a.enrollmentId === enrollmentId);
@@ -242,14 +264,7 @@ export class CertificacionClaseBFacade {
    * función lo ignora igual.
    */
   async regenerarCertificado(enrollmentId: number): Promise<void> {
-    const confirmado = await this.confirmModal.confirm({
-      title: 'Regenerar certificado',
-      message:
-        'Se volverá a generar el PDF con los datos del alumno y la plantilla actuales. El folio no cambia.',
-      severity: 'warn',
-      confirmLabel: 'Regenerar',
-    });
-    if (!confirmado) return;
+    if (!(await this.autorizacion.confirmarRegeneracion())) return;
 
     const force = this.authFacade.currentUser()?.role === 'admin';
     const result = await this.invokeConAutorizacionDeDeuda(enrollmentId, force);
@@ -270,7 +285,7 @@ export class CertificacionClaseBFacade {
     const result = await this.invokeGenerateCertificate(enrollmentId, force);
     if (!result || !('deuda' in result)) return result;
 
-    const habilitado = await this.autorizarCertificadoConDeuda(enrollmentId, result.deuda);
+    const habilitado = await this.autorizacion.autorizarDeuda(enrollmentId, result.deuda);
     if (!habilitado) return null;
 
     const retry = await this.invokeGenerateCertificate(enrollmentId, force);
@@ -279,53 +294,6 @@ export class CertificacionClaseBFacade {
       return null;
     }
     return retry;
-  }
-
-  /**
-   * Spec 0010-i (AC8): pide confirmación con motivo y registra la habilitación `certificado`.
-   * Devuelve true solo si quedó guardada (la Edge Function la exige para emitir con deuda).
-   */
-  private async autorizarCertificadoConDeuda(
-    enrollmentId: number,
-    mensajeDeuda: string,
-  ): Promise<boolean> {
-    const motivo = await this.confirmModal.confirmWithReason({
-      title: 'Certificado con deuda',
-      message: `${mensajeDeuda}\n¿Emitir el certificado igual? Quedará registrado quién lo autorizó y por qué, y se avisará a los administradores.`,
-      severity: 'warn',
-      confirmLabel: 'Emitir igual',
-      reason: {
-        label: 'Motivo',
-        placeholder: 'Ej. Paga el viernes, acordado con el admin',
-        minLength: 5,
-      },
-    });
-    if (motivo === null) return false;
-
-    const createdBy = this.authFacade.currentUser()?.dbId ?? null;
-    if (createdBy === null) {
-      this.toast.error('No se pudo identificar tu usuario. Vuelve a iniciar sesión.');
-      return false;
-    }
-
-    try {
-      assertWriteOk(
-        await this.supabase.client
-          .from('enrollment_payment_overrides')
-          .insert({
-            enrollment_id: enrollmentId,
-            kind: 'certificado',
-            reason: motivo,
-            created_by: createdBy,
-          })
-          .select('id'),
-        { requireRows: true },
-      );
-      return true;
-    } catch (err) {
-      this.toast.error(toFriendlyDbMessage(err, 'No se pudo registrar la autorización'));
-      return false;
-    }
   }
 
   /**
@@ -380,7 +348,16 @@ export class CertificacionClaseBFacade {
     return data.signedUrl;
   }
 
+  /** fix-466-m: confirma con un modal (antes, una fila dentro de la tabla). */
   async enviarEmail(enrollmentId: number): Promise<void> {
+    const alumno = this._alumnos().find((a) => a.enrollmentId === enrollmentId);
+    const confirmado = await this.autorizacion.confirmarEnvioEmail({
+      nombre: alumno?.nombre ?? 'este alumno',
+      email: alumno?.email || null,
+      yaEnviado: alumno?.emailEnviado ?? false,
+    });
+    if (!confirmado) return;
+
     this._sendingEmailId.set(enrollmentId);
     try {
       const { data, error } = await this.supabase.client.functions.invoke(
@@ -434,18 +411,9 @@ export class CertificacionClaseBFacade {
     this._generatingId.set(null);
     this._generatingPendientes.set(false);
 
-    if (errores.length === 0 && conDeuda.length === 0) {
-      this.toast.success(
-        `${generados} certificado${generados !== 1 ? 's' : ''} generado${generados !== 1 ? 's' : ''} correctamente`,
-      );
-    } else {
-      const partes = [`${generados} generado${generados !== 1 ? 's' : ''}`];
-      if (conDeuda.length > 0) {
-        partes.push(`${conDeuda.length} con deuda (emítelos uno a uno)`);
-      }
-      if (errores.length > 0) partes.push(`${errores.length} con error`);
-      this.toast.warning(partes.join(', '));
-    }
+    const resumen = bulkCertificateSummary(generados, conDeuda.length, errores.length);
+    if (resumen.ok) this.toast.success(resumen.message);
+    else this.toast.warning(resumen.message);
 
     void this.refreshSilently();
   }

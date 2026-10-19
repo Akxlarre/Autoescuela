@@ -1,4 +1,4 @@
-import { chileParts, formatChilePattern } from '../_shared/chile-time.ts';
+import { chileParts, chileToday, formatChilePattern } from '../_shared/chile-time.ts';
 // supabase/functions/generate-certificate-professional-pdf/index.ts
 //
 // Edge Function: generate-certificate-professional-pdf
@@ -35,6 +35,8 @@ import {
   wrapLines as wrap,
 } from '../_shared/pdf-utils.ts';
 import { substituteTokens } from '../_shared/template-tokens.ts';
+import { checkCertificateDebt, overrideCounterFrom } from '../_shared/certificate-debt.ts';
+import { checkPromotionFinished } from '../_shared/promotion-certificate.ts';
 
 // ─── CORS ───
 const corsHeaders = {
@@ -122,6 +124,7 @@ Deno.serve(async (req: Request) => {
         `
         id,
         branch_id,
+        pending_balance,
         students!inner(
           id,
           users!inner(first_names, paternal_last_name, maternal_last_name, rut)
@@ -138,6 +141,25 @@ Deno.serve(async (req: Request) => {
     if (enrollmentErr || !enrollment) {
       return jsonRes({ error: `Enrollment ${enrollment_id} no encontrado` }, 404);
     }
+
+    // 1.0 fix-467-m: nunca antes del último día de la promoción, para cualquier rol. Va antes de la
+    //     deuda: no tiene sentido pedir un motivo si igual no se puede emitir.
+    // El join es a una sola fila (FK), aunque el cliente lo tipa como arreglo.
+    const promotionCourse = enrollment.promotion_courses as unknown as {
+      professional_promotions: { end_date: string | null } | null;
+    } | null;
+    const promotionEnd = promotionCourse?.professional_promotions?.end_date ?? null;
+    const promotion = checkPromotionFinished(promotionEnd, chileToday());
+    if (!promotion.ok) return jsonRes(promotion.body, promotion.status);
+
+    // 1.1 fix-466-m: misma convención de deuda que Clase B (spec 0010-i, AC8) — con saldo, solo se
+    //     emite si hay una habilitación `certificado` registrada con motivo. Vale para todo rol.
+    const debt = await checkCertificateDebt(
+      overrideCounterFrom(supabase),
+      enrollment_id,
+      enrollment.pending_balance,
+    );
+    if (!debt.ok) return jsonRes(debt.body, debt.status);
 
     const u = enrollment.students.users;
     const fullName = [u.paternal_last_name, u.maternal_last_name, u.first_names]

@@ -40,7 +40,6 @@ import {
   type DocumentType,
 } from '@core/models/ui/document-content-template.model';
 import type { BranchOption } from '@core/models/ui/branch.model';
-import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 import { editableDocumentTypes } from '@core/utils/document-template-options.utils';
 
 interface DocumentTypeOption {
@@ -839,14 +838,10 @@ export class DmsListContentComponent {
     return this.templateIsGeneratingPreview() && this.pendingTemplateAction() === action;
   }
 
-  /** Filtra Profesional si la sede no lo dicta (AC8) y el certificado Profesional en el piloto
-   * (fix-463-m). */
+  /** Filtra Profesional si la sede no lo dicta (AC8). */
   readonly templateDocumentTypeOptions = computed<DocumentTypeOption[]>(() => {
     const branch = this.templateBranches().find((b) => b.id === this.selectedTemplateBranchId());
-    const allowed = editableDocumentTypes(
-      branch?.hasProfessional ?? false,
-      isBlockedInPilot('clase-profesional-recorte'),
-    );
+    const allowed = editableDocumentTypes(branch?.hasProfessional ?? false);
     return ALL_DOCUMENT_TYPE_OPTIONS.filter((o) => allowed.includes(o.value));
   });
 

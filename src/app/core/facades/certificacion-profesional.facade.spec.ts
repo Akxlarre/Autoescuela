@@ -6,7 +6,14 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
+import { CertificadoAutorizacionFacade } from '@core/facades/certificado-autorizacion.facade';
 import type { CertificacionProfesionalAlumnoRow } from '@core/models/ui/certificacion-profesional.model';
+
+// fix-465-m: el piloto se controla por test; por defecto el portal del alumno está habilitado.
+const pilot = vi.hoisted(() => ({ alumnoBloqueado: false }));
+vi.mock('@core/config/pilot-phase.config', () => ({
+  isBlockedInPilot: (module: string) => module === 'alumno' && pilot.alumnoBloqueado,
+}));
 
 describe('CertificacionProfesionalFacade', () => {
   let facade: CertificacionProfesionalFacade;
@@ -16,6 +23,7 @@ describe('CertificacionProfesionalFacade', () => {
   let branchFacadeSpy: any;
   let authFacadeSpy: any;
   let notificationsSpy: any;
+  let autorizacionSpy: any;
 
   const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
@@ -57,6 +65,7 @@ describe('CertificacionProfesionalFacade', () => {
   });
 
   beforeEach(() => {
+    pilot.alumnoBloqueado = false;
     supabaseSpy = {
       client: {
         from: vi.fn().mockReturnValue(makeQuery({ data: [], error: null })),
@@ -83,6 +92,13 @@ describe('CertificacionProfesionalFacade', () => {
       notifyUsers: vi.fn().mockResolvedValue(undefined),
       notifyRole: vi.fn().mockResolvedValue(undefined),
     };
+    // fix-466-m: el modal previo a emitir vive en CertificadoAutorizacionFacade (su propio spec).
+    autorizacionSpy = {
+      confirmarAvisos: vi.fn().mockResolvedValue(true),
+      confirmarRegeneracion: vi.fn().mockResolvedValue(true),
+      confirmarEnvioEmail: vi.fn().mockResolvedValue(true),
+      autorizarDeuda: vi.fn().mockResolvedValue(false),
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -93,6 +109,7 @@ describe('CertificacionProfesionalFacade', () => {
         { provide: BranchFacade, useValue: branchFacadeSpy },
         { provide: AuthFacade, useValue: authFacadeSpy },
         { provide: NotificationsFacade, useValue: notificationsSpy },
+        { provide: CertificadoAutorizacionFacade, useValue: autorizacionSpy },
       ],
     });
 
@@ -158,6 +175,59 @@ describe('CertificacionProfesionalFacade', () => {
   });
 
   describe('generarCertificado()', () => {
+    beforeEach(() => {
+      (facade as any)._alumnos.set([
+        makeAlumnoRow({ enrollmentId: 42 }),
+        makeAlumnoRow({ enrollmentId: 99 }),
+      ]);
+    });
+
+    it('fix-466-m: pasa la asistencia al aviso y, si se cancela, no invoca la generación', async () => {
+      (facade as any)._alumnos.set([
+        makeAlumnoRow({ enrollmentId: 42, pctAsistenciaTeoria: 60, pctAsistenciaPractica: null }),
+      ]);
+      autorizacionSpy.confirmarAvisos.mockResolvedValueOnce(false);
+
+      await facade.generarCertificado(42);
+
+      expect(autorizacionSpy.confirmarAvisos).toHaveBeenCalledWith(
+        expect.objectContaining({ pctTeoria: 60, pctPractica: null }),
+      );
+      expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
+    });
+
+    it('fix-466-m: desde la ficha (fuera de la lista) avisa con los datos que recibe', async () => {
+      await facade.generarCertificado(7, { nombre: 'Ana', pctTeoria: null, pctPractica: 80 });
+      expect(autorizacionSpy.confirmarAvisos).toHaveBeenCalledWith({
+        nombre: 'Ana',
+        pctTeoria: null,
+        pctPractica: 80,
+      });
+    });
+
+    it('fix-466-m: si la función rechaza por deuda, autoriza con motivo y reintenta (spec 0010-i)', async () => {
+      const deuda = {
+        data: null,
+        error: Object.assign(new Error('Edge Function returned a non-2xx status code'), {
+          context: new Response(
+            JSON.stringify({ error: 'Saldo pendiente de $50.000.', code: 'DEUDA_PENDIENTE' }),
+            { status: 409 },
+          ),
+        }),
+      };
+      supabaseSpy.client.functions.invoke.mockResolvedValueOnce(deuda);
+      autorizacionSpy.autorizarDeuda.mockResolvedValueOnce(true);
+
+      await facade.generarCertificado(42);
+
+      expect(autorizacionSpy.autorizarDeuda).toHaveBeenCalledWith(
+        42,
+        'Saldo pendiente de $50.000.',
+      );
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledTimes(2);
+      expect(toastSpy.success).toHaveBeenCalled();
+    });
+
     it('invoca la Edge Function con el enrollment_id correcto', async () => {
       await facade.generarCertificado(42);
       expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(
@@ -231,6 +301,13 @@ describe('CertificacionProfesionalFacade', () => {
   // Antes "acciones de placeholder": estos métodos ya son implementaciones reales
   // (no muestran toast.info). Actualizado en hotfix-016.
   describe('acciones reales', () => {
+    it('fix-466-m: enviarEmail confirma con un modal y, si se cancela, no envía', async () => {
+      autorizacionSpy.confirmarEnvioEmail.mockResolvedValueOnce(false);
+      await facade.enviarEmail(1);
+      expect(autorizacionSpy.confirmarEnvioEmail).toHaveBeenCalled();
+      expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
+    });
+
     it('enviarEmail invoca la Edge Function y muestra toast de éxito', async () => {
       await facade.enviarEmail(1);
       expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith('send-certificate-email', {
@@ -318,6 +395,24 @@ describe('CertificacionProfesionalFacade', () => {
 
       expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith([900], expect.any(Object));
       expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith([901], expect.any(Object));
+    });
+
+    it('fix-465-m: con el portal del alumno en piloto, generar no lo notifica', async () => {
+      pilot.alumnoBloqueado = true;
+      (facade as any)._alumnos.set([makeAlumnoRow({ enrollmentId: 42, studentId: 5 })]);
+      const studentsHandler = {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: { user_id: 900 }, error: null }),
+          }),
+        }),
+      };
+      supabaseSpy.client.from = mockFromByTable({ students: studentsHandler });
+
+      await facade.generarCertificado(42);
+      await flushMicrotasks();
+
+      expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
     });
   });
 });

@@ -30,6 +30,7 @@ import {
   wrapLines as wrap,
 } from '../_shared/pdf-utils.ts';
 import { substituteTokens } from '../_shared/template-tokens.ts';
+import { checkCertificateDebt, overrideCounterFrom } from '../_shared/certificate-debt.ts';
 import {
   authErrorResponse,
   denyIfEnrollmentOutOfScope,
@@ -180,31 +181,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 1.6 Spec 0010-i (AC8): con deuda, el certificado exige una habilitación explícita con motivo
-    //     (enrollment_payment_overrides, kind 'certificado'), que la secretaria o el admin registran
-    //     al confirmar en la UI. El bypass `force` de clases incompletas NO salta este gate: son dos
-    //     decisiones distintas. `code` permite a la UI pedir la confirmación en vez de un error.
-    const pendingBalance = Number(enrollment.pending_balance ?? 0);
-    if (pendingBalance > 0) {
-      const { count: overrides, error: overrideErr } = await supabase
-        .from('enrollment_payment_overrides')
-        .select('id', { count: 'exact', head: true })
-        .eq('enrollment_id', enrollment_id)
-        .eq('kind', 'certificado');
-
-      if (overrideErr) {
-        return jsonRes({ error: `Error al validar el saldo: ${overrideErr.message}` }, 500);
-      }
-      if (!overrides) {
-        return jsonRes(
-          {
-            error: `El alumno tiene un saldo pendiente de $${new Intl.NumberFormat('es-CL').format(pendingBalance)}.`,
-            code: 'DEUDA_PENDIENTE',
-          },
-          409,
-        );
-      }
-    }
+    // 1.6 Spec 0010-i (AC8): con deuda, el certificado exige una habilitación con motivo. El bypass
+    //     `force` de clases incompletas NO salta este gate. Mismo helper que Profesional (fix-466-m).
+    const debt = await checkCertificateDebt(
+      overrideCounterFrom(supabase),
+      enrollment_id,
+      enrollment.pending_balance,
+    );
+    if (!debt.ok) return jsonRes(debt.body, debt.status);
 
     const u = enrollment.students.users;
     const fullName = [u.paternal_last_name, u.maternal_last_name, u.first_names]

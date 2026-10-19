@@ -12,6 +12,11 @@ export interface EnrollmentSummary {
   branchId: number | null;
   licenseGroup: 'class_b' | 'professional';
   promotionCourseId: number | null;
+  /**
+   * Fecha de término ('YYYY-MM-DD') de la promoción de una matrícula Profesional; null en Clase B.
+   * El certificado Profesional se emite desde ese día (fix-467-m).
+   */
+  promotionEndDate: string | null;
   createdAt: string;
   /** `enrollments.status` crudo (active, completed, pending_payment, cancelled…). fix-263-m. */
   status: string;

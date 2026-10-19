@@ -18,6 +18,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import { withAllOption } from '@core/utils/filter-options.utils';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
@@ -279,24 +280,26 @@ const PAGE_SIZE = 10;
                     <th class="micro-label text-left px-4 py-2">Alumno</th>
                     <th class="micro-label text-left px-4 py-2">RUT</th>
                     <th class="micro-label text-left px-4 py-2">Promoción</th>
-                    <th
-                      class="micro-label text-center px-4 py-2"
-                      title="Asistencia a clases teóricas (mínimo 75%)"
-                    >
-                      Teoría
-                    </th>
-                    <th
-                      class="micro-label text-center px-4 py-2"
-                      title="Asistencia a clases prácticas (recomendado 100%)"
-                    >
-                      Práctica
-                    </th>
-                    <th
-                      class="micro-label text-center px-4 py-2"
-                      title="Promedio de módulos (mínimo 75 en escala MTT)"
-                    >
-                      Nota Prom.
-                    </th>
+                    @if (academicoVisible) {
+                      <th
+                        class="micro-label text-center px-4 py-2"
+                        title="Asistencia a clases teóricas (mínimo 75%)"
+                      >
+                        Teoría
+                      </th>
+                      <th
+                        class="micro-label text-center px-4 py-2"
+                        title="Asistencia a clases prácticas (recomendado 100%)"
+                      >
+                        Práctica
+                      </th>
+                      <th
+                        class="micro-label text-center px-4 py-2"
+                        title="Promedio de módulos (mínimo 75 en escala MTT)"
+                      >
+                        Nota Prom.
+                      </th>
+                    }
                     <th class="micro-label text-center px-4 py-2" title="Saldo pendiente de pago">
                       Pago
                     </th>
@@ -309,7 +312,6 @@ const PAGE_SIZE = 10;
                     <!-- Fila principal -->
                     <tr
                       class="border-b border-(--border-default) last:border-b-0 transition-colors"
-                      [class.bg-[var(--bg-subtle)]]="pendingConfirmId() === alumno.enrollmentId"
                     >
                       <td class="px-4 py-2 font-medium text-text-primary">
                         <div class="flex items-center gap-1.5">
@@ -327,61 +329,66 @@ const PAGE_SIZE = 10;
                       <td class="px-4 py-2 text-xs text-text-muted max-w-40 truncate">
                         {{ alumno.promocion }}
                       </td>
-                      <!-- Teoría -->
-                      <td class="px-4 py-2 text-center">
-                        @if (alumno.pctAsistenciaTeoria === null) {
-                          <span class="text-xs text-text-muted">Sin registro</span>
-                        } @else {
-                          <app-badge
-                            [variant]="alumno.pctAsistenciaTeoria >= 75 ? 'success' : 'warning'"
-                          >
-                            <span class="inline-flex items-center gap-1">
-                              @if (!alumno.elegibilidad.teoria) {
-                                <app-icon name="alert-triangle" [size]="11" />
-                              }
-                              {{ alumno.pctAsistenciaTeoria }}%
-                            </span>
-                          </app-badge>
-                        }
-                      </td>
-                      <!-- Práctica -->
-                      <td class="px-4 py-2 text-center">
-                        @if (alumno.pctAsistenciaPractica === null) {
-                          <span class="text-xs text-text-muted">Sin registro</span>
-                        } @else {
-                          <app-badge
-                            [variant]="
-                              alumno.pctAsistenciaPractica >= 100
-                                ? 'success'
-                                : alumno.pctAsistenciaPractica >= 75
-                                  ? 'info'
-                                  : 'warning'
-                            "
-                          >
-                            <span class="inline-flex items-center gap-1">
-                              @if (alumno.pctAsistenciaPractica < 100) {
-                                <app-icon name="alert-circle" [size]="11" />
-                              }
-                              {{ alumno.pctAsistenciaPractica }}%
-                            </span>
-                          </app-badge>
-                        }
-                      </td>
-                      <!-- Nota promedio -->
-                      <td class="px-4 py-2 text-center">
-                        @if (alumno.notaPromedio === null) {
-                          <span class="text-xs text-text-muted">Sin notas</span>
-                        } @else {
-                          <app-badge [variant]="alumno.notaPromedio >= 75 ? 'success' : 'warning'">
-                            <span class="inline-flex items-center gap-1">
-                              @if (!alumno.elegibilidad.nota) {
-                                <app-icon name="x-circle" [size]="11" />
-                              }
-                              {{ alumno.notaPromedio | number: '1.1-1' }}
-                            </span>
-                          </app-badge>
-                        }
-                      </td>
+                      <!-- fix-465-m: sin asistencia ni notas en el piloto (se llevan en el libro de clases) -->
+                      @if (academicoVisible) {
+                        <!-- Teoría -->
+                        <td class="px-4 py-2 text-center">
+                          @if (alumno.pctAsistenciaTeoria === null) {
+                            <span class="text-xs text-text-muted">Sin registro</span>
+                          } @else {
+                            <app-badge
+                              [variant]="alumno.pctAsistenciaTeoria >= 75 ? 'success' : 'warning'"
+                            >
+                              <span class="inline-flex items-center gap-1">
+                                @if (!alumno.elegibilidad.teoria) {
+                                  <app-icon name="alert-triangle" [size]="11" />
+                                }
+                                {{ alumno.pctAsistenciaTeoria }}%
+                              </span>
+                            </app-badge>
+                          }
+                        </td>
+                        <!-- Práctica -->
+                        <td class="px-4 py-2 text-center">
+                          @if (alumno.pctAsistenciaPractica === null) {
+                            <span class="text-xs text-text-muted">Sin registro</span>
+                          } @else {
+                            <app-badge
+                              [variant]="
+                                alumno.pctAsistenciaPractica >= 100
+                                  ? 'success'
+                                  : alumno.pctAsistenciaPractica >= 75
+                                    ? 'info'
+                                    : 'warning'
+                              "
+                            >
+                              <span class="inline-flex items-center gap-1">
+                                @if (alumno.pctAsistenciaPractica < 100) {
+                                  <app-icon name="alert-circle" [size]="11" />
+                                }
+                                {{ alumno.pctAsistenciaPractica }}%
+                              </span>
+                            </app-badge>
+                          }
+                        </td>
+                        <!-- Nota promedio -->
+                        <td class="px-4 py-2 text-center">
+                          @if (alumno.notaPromedio === null) {
+                            <span class="text-xs text-text-muted">Sin notas</span>
+                          } @else {
+                            <app-badge
+                              [variant]="alumno.notaPromedio >= 75 ? 'success' : 'warning'"
+                            >
+                              <span class="inline-flex items-center gap-1">
+                                @if (!alumno.elegibilidad.nota) {
+                                  <app-icon name="x-circle" [size]="11" />
+                                }
+                                {{ alumno.notaPromedio | number: '1.1-1' }}
+                              </span>
+                            </app-badge>
+                          }
+                        </td>
+                      }
                       <!-- Pago -->
                       <td class="px-4 py-2 text-center">
                         @if (alumno.pagoCorrecto) {
@@ -420,11 +427,8 @@ const PAGE_SIZE = 10;
                             <button
                               class="group inline-flex items-center justify-center font-semibold transition-all active:scale-95 btn-primary btn-sm disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
                               data-llm-action="generate-professional-certificate"
-                              [disabled]="generatingId() !== null || !alumno.elegible"
+                              [disabled]="generatingId() !== null"
                               [appStableWidth]="generatingId() === alumno.enrollmentId"
-                              [title]="
-                                !alumno.elegible ? 'El alumno no cumple todos los requisitos' : ''
-                              "
                               (click)="onClickGenerar(alumno)"
                             >
                               @if (generatingId() === alumno.enrollmentId) {
@@ -477,104 +481,6 @@ const PAGE_SIZE = 10;
                         </div>
                       </td>
                     </tr>
-
-                    <!-- Fila de confirmación inline — envío de email -->
-                    @if (emailConfirmId() === alumno.enrollmentId) {
-                      <tr class="border-b border-(--border-default)">
-                        <td colspan="9" class="px-4 py-3">
-                          <div
-                            class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3 bg-brand/8 border border-brand/30"
-                          >
-                            <app-icon name="send" [size]="18" class="text-brand shrink-0" />
-                            <p class="text-sm flex-1 text-text-secondary">
-                              Se enviará el certificado de
-                              <strong class="text-text-primary">{{ alumno.nombre }}</strong>
-                              @if (alumno.email) {
-                                al correo
-                                <strong class="text-brand">{{ alumno.email }}</strong
-                                >.
-                              }
-                              @if (alumno.emailEnviado) {
-                                <span class="text-text-muted"> (ya fue enviado anteriormente)</span>
-                              }
-                            </p>
-                            <div class="flex items-center gap-2 shrink-0">
-                              <button
-                                class="inline-flex items-center font-semibold transition-all active:scale-95 btn-primary btn-sm"
-                                data-llm-action="confirm-send-professional-certificate-email"
-                                (click)="confirmarEmail()"
-                              >
-                                <app-icon name="send" [size]="13" />
-                                Confirmar envío
-                              </button>
-                              <button
-                                class="btn-ghost btn-sm"
-                                data-llm-action="cancel-send-professional-certificate-email"
-                                (click)="cancelarEmail()"
-                              >
-                                Cancelar
-                              </button>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    }
-
-                    <!-- Fila de confirmación inline — práctica < 100 % -->
-                    @if (pendingConfirmId() === alumno.enrollmentId) {
-                      <tr class="border-b border-(--border-default)">
-                        <td colspan="9" class="px-4 pb-3 pt-0">
-                          <div
-                            class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3 bg-warning-subtle border border-warning"
-                          >
-                            <app-icon
-                              name="alert-triangle"
-                              [size]="18"
-                              class="text-warning shrink-0"
-                            />
-                            <p class="text-sm flex-1 text-text-secondary">
-                              <span class="font-semibold text-warning">
-                                Asistencia práctica incompleta:
-                              </span>
-                              {{ alumno.nombre }} registra
-                              <strong>{{ alumno.pctAsistenciaPractica ?? 0 }}%</strong>
-                              de asistencia a clases prácticas. ¿Confirmar generación del
-                              certificado de todos modos?
-                            </p>
-                            <div class="flex items-center gap-2 shrink-0">
-                              <button
-                                class="group inline-flex items-center justify-center font-semibold transition-all active:scale-95 btn-primary btn-sm disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
-                                data-llm-action="confirm-generate-professional-certificate-partial-practice"
-                                [disabled]="generatingId() !== null"
-                                [appStableWidth]="generatingId() === pendingConfirmId()"
-                                (click)="confirmarGenerar()"
-                              >
-                                @if (generatingId() === pendingConfirmId()) {
-                                  <app-icon name="loader-2" [size]="13" class="animate-spin" />
-                                  Generando...
-                                } @else {
-                                  <span class="group-hover:hidden flex items-center gap-1.5">
-                                    <app-icon name="check" [size]="13" />
-                                    Confirmar de todos modos
-                                  </span>
-                                  <span class="hidden group-hover:flex items-center gap-1.5">
-                                    <app-icon name="mouse-pointer-click" [size]="13" />
-                                    Confirmar de todos modos
-                                  </span>
-                                }
-                              </button>
-                              <button
-                                class="btn-ghost btn-sm"
-                                data-llm-action="cancel-generate-professional-certificate"
-                                (click)="cancelarGenerar()"
-                              >
-                                Cancelar
-                              </button>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    }
                   }
                 </tbody>
               </table>
@@ -585,14 +491,7 @@ const PAGE_SIZE = 10;
               class="mobile-view show-on-squeeze flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-2"
             >
               @for (alumno of pagedAlumnos(); track alumno.enrollmentId) {
-                <div
-                  class="card flex flex-col gap-2.5"
-                  appCardHover
-                  [class.border-brand]="
-                    pendingConfirmId() === alumno.enrollmentId ||
-                    emailConfirmId() === alumno.enrollmentId
-                  "
-                >
+                <div class="card flex flex-col gap-2.5" appCardHover>
                   <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
                       <div class="flex items-center gap-1.5">
@@ -621,46 +520,48 @@ const PAGE_SIZE = 10;
                   </div>
 
                   <div class="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="text-text-muted">Teoría</span>
-                      @if (alumno.pctAsistenciaTeoria === null) {
-                        <span class="text-text-muted">Sin registro</span>
-                      } @else {
-                        <app-badge
-                          [variant]="alumno.pctAsistenciaTeoria >= 75 ? 'success' : 'warning'"
-                        >
-                          {{ alumno.pctAsistenciaTeoria }}%
-                        </app-badge>
-                      }
-                    </div>
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="text-text-muted">Práctica</span>
-                      @if (alumno.pctAsistenciaPractica === null) {
-                        <span class="text-text-muted">Sin registro</span>
-                      } @else {
-                        <app-badge
-                          [variant]="
-                            alumno.pctAsistenciaPractica >= 100
-                              ? 'success'
-                              : alumno.pctAsistenciaPractica >= 75
-                                ? 'info'
-                                : 'warning'
-                          "
-                        >
-                          {{ alumno.pctAsistenciaPractica }}%
-                        </app-badge>
-                      }
-                    </div>
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="text-text-muted">Nota</span>
-                      @if (alumno.notaPromedio === null) {
-                        <span class="text-text-muted">Sin notas</span>
-                      } @else {
-                        <app-badge [variant]="alumno.notaPromedio >= 75 ? 'success' : 'warning'">
-                          {{ alumno.notaPromedio | number: '1.1-1' }}
-                        </app-badge>
-                      }
-                    </div>
+                    @if (academicoVisible) {
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-text-muted">Teoría</span>
+                        @if (alumno.pctAsistenciaTeoria === null) {
+                          <span class="text-text-muted">Sin registro</span>
+                        } @else {
+                          <app-badge
+                            [variant]="alumno.pctAsistenciaTeoria >= 75 ? 'success' : 'warning'"
+                          >
+                            {{ alumno.pctAsistenciaTeoria }}%
+                          </app-badge>
+                        }
+                      </div>
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-text-muted">Práctica</span>
+                        @if (alumno.pctAsistenciaPractica === null) {
+                          <span class="text-text-muted">Sin registro</span>
+                        } @else {
+                          <app-badge
+                            [variant]="
+                              alumno.pctAsistenciaPractica >= 100
+                                ? 'success'
+                                : alumno.pctAsistenciaPractica >= 75
+                                  ? 'info'
+                                  : 'warning'
+                            "
+                          >
+                            {{ alumno.pctAsistenciaPractica }}%
+                          </app-badge>
+                        }
+                      </div>
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-text-muted">Nota</span>
+                        @if (alumno.notaPromedio === null) {
+                          <span class="text-text-muted">Sin notas</span>
+                        } @else {
+                          <app-badge [variant]="alumno.notaPromedio >= 75 ? 'success' : 'warning'">
+                            {{ alumno.notaPromedio | number: '1.1-1' }}
+                          </app-badge>
+                        }
+                      </div>
+                    }
                     <div class="flex items-center justify-between gap-2">
                       <span class="text-text-muted">Pago</span>
                       @if (alumno.pagoCorrecto) {
@@ -679,8 +580,7 @@ const PAGE_SIZE = 10;
                       <button
                         class="flex-1 inline-flex items-center justify-center font-semibold transition-all active:scale-95 btn-primary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
                         data-llm-action="generate-professional-certificate"
-                        [disabled]="generatingId() !== null || !alumno.elegible"
-                        [title]="!alumno.elegible ? 'El alumno no cumple todos los requisitos' : ''"
+                        [disabled]="generatingId() !== null"
                         (click)="onClickGenerar(alumno)"
                       >
                         @if (generatingId() === alumno.enrollmentId) {
@@ -724,67 +624,6 @@ const PAGE_SIZE = 10;
                       </button>
                     }
                   </div>
-
-                  <!-- Confirmación inline — envío de email -->
-                  @if (emailConfirmId() === alumno.enrollmentId) {
-                    <div
-                      class="flex flex-col gap-2 rounded-lg px-3 py-2.5 bg-brand/8 border border-brand/30"
-                    >
-                      <p class="text-xs text-text-secondary m-0">
-                        Se enviará el certificado
-                        @if (alumno.email) {
-                          al correo <strong class="text-brand">{{ alumno.email }}</strong
-                          >.
-                        }
-                        @if (alumno.emailEnviado) {
-                          <span class="text-text-muted"> (ya fue enviado anteriormente)</span>
-                        }
-                      </p>
-                      <div class="flex items-center gap-2">
-                        <button
-                          class="flex-1 inline-flex items-center justify-center font-semibold btn-primary btn-sm"
-                          data-llm-action="confirm-send-professional-certificate-email"
-                          (click)="confirmarEmail()"
-                        >
-                          <app-icon name="send" [size]="12" />
-                          Confirmar envío
-                        </button>
-                        <button class="btn-ghost btn-sm" (click)="cancelarEmail()">Cancelar</button>
-                      </div>
-                    </div>
-                  }
-
-                  <!-- Confirmación inline — práctica < 100% -->
-                  @if (pendingConfirmId() === alumno.enrollmentId) {
-                    <div
-                      class="flex flex-col gap-2 rounded-lg px-3 py-2.5 bg-warning-subtle border border-warning"
-                    >
-                      <p class="text-xs text-text-secondary m-0">
-                        <span class="font-semibold text-warning">Práctica incompleta:</span>
-                        {{ alumno.pctAsistenciaPractica ?? 0 }}% de asistencia. ¿Confirmar de todos
-                        modos?
-                      </p>
-                      <div class="flex items-center gap-2">
-                        <button
-                          class="flex-1 inline-flex items-center justify-center font-semibold btn-primary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                          data-llm-action="confirm-generate-professional-certificate-partial-practice"
-                          [disabled]="generatingId() !== null"
-                          (click)="confirmarGenerar()"
-                        >
-                          @if (generatingId() === pendingConfirmId()) {
-                            <app-icon name="loader-2" [size]="12" class="animate-spin" />
-                            Generando...
-                          } @else {
-                            <app-icon name="check" [size]="12" />
-                            Confirmar
-                          }
-                        </button>
-                        <button class="btn-ghost btn-sm" (click)="cancelarGenerar()">
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  }
                 </div>
               }
             </div>
@@ -885,8 +724,6 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
   readonly estadoFilter = signal<EstadoFilter>(null);
   readonly searchQuery = signal('');
   readonly currentPageAlumnos = signal(0);
-  readonly pendingConfirmId = signal<number | null>(null);
-  readonly emailConfirmId = signal<number | null>(null);
 
   protected readonly PAGE_SIZE = PAGE_SIZE;
 
@@ -942,6 +779,9 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
   }
 
   readonly skeletonRows = Array.from({ length: 6 });
+
+  /** fix-465-m: mientras el piloto recorte Profesional no hay asistencia ni notas que mostrar. */
+  protected readonly academicoVisible = !isBlockedInPilot('clase-profesional-recorte');
 
   // ── Computed ──
   readonly filteredAlumnos = computed(() => {
@@ -1010,41 +850,17 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
 
   // ── Handlers de generación ──
 
+  /**
+   * fix-466-m: el facade confirma con un modal (avisos de asistencia, deuda con motivo). Ni la
+   * asistencia ni la deuda deshabilitan el botón.
+   */
   onClickGenerar(alumno: CertificacionProfesionalAlumnoRow): void {
-    const pct = alumno.pctAsistenciaPractica;
-    if (pct === null || pct >= 100) {
-      this.generarCertificado.emit(alumno.enrollmentId);
-      return;
-    }
-    this.pendingConfirmId.set(alumno.enrollmentId);
+    this.generarCertificado.emit(alumno.enrollmentId);
   }
 
-  confirmarGenerar(): void {
-    const id = this.pendingConfirmId();
-    if (id !== null) {
-      this.generarCertificado.emit(id);
-      this.pendingConfirmId.set(null);
-    }
-  }
-
-  cancelarGenerar(): void {
-    this.pendingConfirmId.set(null);
-  }
-
+  /** fix-466-m: el facade confirma el envío con un modal (antes, una fila inline). */
   onClickEmail(alumno: CertificacionProfesionalAlumnoRow): void {
-    this.emailConfirmId.set(alumno.enrollmentId);
-  }
-
-  confirmarEmail(): void {
-    const id = this.emailConfirmId();
-    if (id !== null) {
-      this.enviarEmail.emit(id);
-      this.emailConfirmId.set(null);
-    }
-  }
-
-  cancelarEmail(): void {
-    this.emailConfirmId.set(null);
+    this.enviarEmail.emit(alumno.enrollmentId);
   }
 
   ngAfterViewInit(): void {

@@ -1917,6 +1917,31 @@
   alguna matrícula en ella (`20261018120000`).
 - **Fuente:** `specs/fixes/fix-456-m-dms-sede-de-la-matricula`, `specs/fixes/fix-458-m-base-alumnos-sede-de-la-matricula` (Base Alumnos: `scopeStudentsToBranch()` en `core/utils/branch-scope.utils.ts`).
 
+### DG-116 — Emitir un certificado tiene tres capas: no invocar `generate-certificate-*-pdf` directo
+
+- **Trampa:** emitir un certificado (Clase B o Profesional) llamando a la edge function desde un
+  facade o componente nuevo, o usar `CertificacionProfesionalAlumnoRow.elegible` como "se puede
+  emitir".
+- **Realidad:** (1) los facades de cada licencia (`generarCertificado()`, `regenerarCertificado()`,
+  `enviarEmail()`) abren los modales que correspondan vía `CertificadoAutorizacionFacade`: avisos que
+  nunca bloquean (prácticas incompletas del admin en Clase B; teoría < 75 % y práctica < 100 % en
+  Profesional), regenerar y envío de email; (2) con saldo pendiente la edge function responde
+  `DEUDA_PENDIENTE` y recién ahí el modal de la spec 0010-i pide el motivo, registra la habilitación
+  `certificado` en `enrollment_payment_overrides` y se reintenta; (3) ambas edge functions la exigen
+  vía `supabase/functions/_shared/certificate-debt.ts` (409 sin ella, para cualquier rol). `elegible`
+  en Profesional solo significa "pago al día" y filtra "Generar pendientes"; el lote nunca pide
+  motivos y salta a los que tienen deuda. En Clase B, las prácticas incompletas sí bloquean a la
+  secretaria (el admin sigue con `force`).
+  En Profesional, el equivalente es la promoción terminada: nunca se emite antes del último día
+  (`end_date ≤ hoy en Chile`), para ningún rol (fix-467-m). Se compara la fecha, no el estado:
+  la promoción pasa a `finished` recién el día siguiente (cron `auto_transition_promotion_status`).
+  App: `promotionAllowsCertificate()`; edge: `_shared/promotion-certificate.ts`.
+- **Regla de aplicabilidad:** cualquier botón o flujo nuevo que genere o regenere un certificado
+  llama a `generarCertificado()` / `regenerarCertificado()` del facade de su licencia (que ya
+  confirman y manejan `DEUDA_PENDIENTE`), nunca a la edge function directo. Un gate de saldo nuevo en otra edge function reusa
+  `checkCertificateDebt()`.
+- **Fuente:** `specs/fixes/fix-466-m-confirmacion-previa-certificados`, spec `0010-i` (AC8, AC-E5).
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

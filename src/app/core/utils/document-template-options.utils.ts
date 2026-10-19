@@ -11,16 +11,9 @@ const ALL_DOCUMENT_TYPES: readonly DocumentType[] = [
  * Tipos de documento que el editor de plantillas ofrece para una sede (spec 0016-m).
  *
  * - Sin Profesional en la sede → solo los de Clase B (AC8).
- * - fix-463-m: mientras el piloto recorte Profesional, el certificado Profesional no se emite, así
- *   que tampoco se ofrece su plantilla. El contrato Profesional sí se usa (matrícula profesional).
+ * - fix-465-m: el certificado Profesional se emite también en el piloto, así que su plantilla se
+ *   ofrece siempre en la sede con Profesional (fix-463-m la había sacado).
  */
-export function editableDocumentTypes(
-  hasProfessional: boolean,
-  professionalCertificatesBlocked: boolean,
-): DocumentType[] {
-  return ALL_DOCUMENT_TYPES.filter((type) => {
-    if (!type.includes('professional')) return true;
-    if (!hasProfessional) return false;
-    return !(type === 'certificate_professional' && professionalCertificatesBlocked);
-  });
+export function editableDocumentTypes(hasProfessional: boolean): DocumentType[] {
+  return ALL_DOCUMENT_TYPES.filter((type) => hasProfessional || !type.includes('professional'));
 }
