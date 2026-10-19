@@ -326,7 +326,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Token | Usos | Valor |
 |-------|------|-------|
 | `--ds-brand` | 445 | `#38bdf8` |
-| `--text-muted` | 383 | `rgba(255, 255, 255, 0.55)` |
+| `--text-muted` | 387 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 264 | `var(--color-primary-text)` |
 | `--state-error` | 247 | `#f87171` |
 | `--text-secondary` | 230 | `rgba(255, 255, 255, 0.78)` |
@@ -342,8 +342,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--duration-fast` | 54 | `200ms` |
 | `--font-display` | 53 | `'Bricolage Grotesque', system-ui, sans-serif` |
 | `--text-xs` | 52 | `0.75rem` |
-| `--bg-subtle` | 50 | `rgba(255, 255, 255, 0.1)` |
 | `--color-primary-muted` | 47 | `rgba(56, 189, 248, 0.15)` |
+| `--bg-subtle` | 46 | `rgba(255, 255, 255, 0.1)` |
 | `--color-success` | 39 | `—` |
 | `--color-primary-text` | 39 | `#ffffff` |
 | `--border-muted` | 36 | `var(--border-subtle)` |
@@ -355,8 +355,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
+| `.item-title` | 197 | `src/styles/tokens/_variables.scss` |
 | `.micro-label` | 195 | `src/styles/tokens/_variables.scss` |
-| `.item-title` | 194 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 24 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 14 | `src/styles/tokens/_variables.scss` |
 | `.surface-glass` | 13 | `src/styles/tokens/_variables.scss` |
@@ -460,7 +460,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 47 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 877 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 867 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
