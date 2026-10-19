@@ -25,7 +25,7 @@ import type {
  *
  * Query: enrollments (license_group='class_b', status='active'|'completed').
  * Admin: sin filtro certificate_enabled — puede certificar cualquier alumno activo/completado.
- * Secretaria: solo alumnos con certificate_enabled=true (trigger al completar clase #12).
+ * Secretaria: los que completaron todas las clases del curso o ya tienen certificado (fix-459-m).
  * JOIN v_student_progress_b para pct_theory_attendance.
  * JOIN certificates + certificate_issuance_log para estado y log.
  *
@@ -549,9 +549,8 @@ export class CertificacionClaseBFacade {
     const branchId = this.getActiveBranchId();
     const isAdmin = this.authFacade.currentUser()?.role === 'admin';
 
-    // Step 1: Enrollments para certificado.
-    // Admin: todos los activos/completados (sin restricción de certificate_enabled).
-    // Secretaria: solo los habilitados por el trigger (12 prácticas completadas).
+    // Step 1: Enrollments para certificado (activos/completados). El filtro de la secretaria se
+    // aplica después de contar las clases (fix-459-m), no con `certificate_enabled`.
     let enrollmentQuery = this.supabase.client
       .from('enrollments')
       .select(
@@ -571,10 +570,6 @@ export class CertificacionClaseBFacade {
       .in('status', ['active', 'completed'])
       // Refuerzo Clase B (6 clases) nunca es candidato a certificado — spec 0006-m.
       .eq('courses.is_reinforcement', false);
-
-    if (!isAdmin) {
-      enrollmentQuery = enrollmentQuery.eq('certificate_enabled', true);
-    }
 
     if (branchId !== null) {
       enrollmentQuery = enrollmentQuery.eq('branch_id', branchId);
@@ -677,8 +672,16 @@ export class CertificacionClaseBFacade {
       } satisfies CertificacionAlumnoRow;
     });
 
+    // fix-459-m: la secretaria ve lo que el botón y `generate-certificate-b-pdf` consideran
+    // elegible (todas las clases del curso completadas) y lo ya certificado, para verlo o
+    // reenviarlo. Antes usaba `certificate_enabled`, que el trigger prende con la clase #12
+    // completada aunque falten otras.
+    const visibles = isAdmin
+      ? rows
+      : rows.filter((r) => r.certificadoId !== null || r.clasesCompletadas >= r.clasesTotales);
+
     // Pendientes primero, luego por nombre.
-    rows.sort((a, b) => {
+    visibles.sort((a, b) => {
       if (a.certificadoStatus !== b.certificadoStatus) {
         return a.certificadoStatus === 'pendiente' ? -1 : 1;
       }
@@ -686,7 +689,7 @@ export class CertificacionClaseBFacade {
     });
 
     if (!this.certGuard.isCurrent(token)) return;
-    this._alumnos.set(rows);
+    this._alumnos.set(visibles);
   }
 
   private async fetchLog(token: number): Promise<void> {

@@ -349,6 +349,79 @@ describe('CertificacionClaseBFacade', () => {
     });
   });
 
+  // fix-459-m: la secretaria ve lo mismo que el botón y la edge function consideran elegible.
+  describe('fetchAlumnos — lista de la secretaria (fix-459-m)', () => {
+    const enrollment = (id: number, extra: Record<string, unknown> = {}) => ({
+      id,
+      branch_id: 1,
+      certificate_b_pdf_url: null,
+      courses: { name: 'Clase B', type: 'class_b', practical_hours: 9.0 },
+      students: {
+        id: id * 10,
+        users: {
+          first_names: `N${id}`,
+          paternal_last_name: `A${id}`,
+          maternal_last_name: '',
+          rut: `${id}-0`,
+          email: '',
+        },
+      },
+      certificates: [],
+      ...extra,
+    });
+
+    function mockData(sessionsPerEnrollment: Record<number, number>) {
+      const enrollmentsQuery = makeAwaitableQuery({
+        data: [
+          enrollment(1), // 12/12 → elegible
+          enrollment(2), // 11/12 → no
+          enrollment(3, {
+            // 5/12 pero ya tiene certificado (generado por el admin con bypass)
+            certificate_b_pdf_url: 'certificates/3/c.pdf',
+            certificates: [
+              { id: 30, folio: 7, status: 'issued', created_at: '2026-10-01T12:00:00Z' },
+            ],
+          }),
+        ],
+        error: null,
+      });
+      const sessions = Object.entries(sessionsPerEnrollment).flatMap(([id, n]) =>
+        Array.from({ length: n }, () => ({ enrollment_id: Number(id) })),
+      );
+      supabaseSpy.client.from = mockFromByTable({
+        enrollments: enrollmentsQuery,
+        v_student_progress_b: makeAwaitableQuery({ data: [], error: null }),
+        class_b_sessions: makeAwaitableQuery({ data: sessions, error: null }),
+        certificate_issuance_log: makeAwaitableQuery({ data: [], error: null }),
+      });
+      return enrollmentsQuery;
+    }
+
+    const ids = () =>
+      facade
+        .alumnos()
+        .map((a) => a.enrollmentId)
+        .sort();
+
+    it('secretaria: ve 12/12 y los que ya tienen certificado; no 11/12; no filtra por certificate_enabled', async () => {
+      authFacadeSpy.currentUser.mockReturnValue({ role: 'secretary', branchId: 1 });
+      const q = mockData({ 1: 12, 2: 11, 3: 5 });
+
+      await facade.initialize();
+
+      expect(ids()).toEqual([1, 3]);
+      expect(q.eq).not.toHaveBeenCalledWith('certificate_enabled', true);
+    });
+
+    it('admin: ve todos, cumplan o no', async () => {
+      mockData({ 1: 12, 2: 11, 3: 5 });
+
+      await facade.initialize();
+
+      expect(ids()).toEqual([1, 2, 3]);
+    });
+  });
+
   describe('generarCertificado()', () => {
     it('invoca la Edge Function con el enrollment_id correcto y force=false por defecto', async () => {
       await facade.generarCertificado(42);
