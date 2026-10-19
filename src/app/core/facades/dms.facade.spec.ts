@@ -13,6 +13,7 @@ function makeBuilder(result: { data: any; error: any }): any {
   const b: any = {};
   b.select = vi.fn(() => b);
   b.eq = vi.fn(() => b);
+  b.or = vi.fn(() => b);
   b.order = vi.fn(() => b);
   b.delete = vi.fn(() => b);
   b.update = vi.fn(() => b);
@@ -340,6 +341,22 @@ describe('DmsFacade', () => {
       await localFacade.initialize();
 
       expect(instructorsBuilder.eq).toHaveBeenCalledWith('users.branch_id', 2);
+    });
+
+    it('fetchAllData() (fix-451-m): documentos de la escuela con sede incluyen los de ambas sedes (NULL)', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade({
+        role: 'admin',
+        selectedBranchId: 2,
+      });
+      const schoolBuilder = makeBuilder({ data: [], error: null });
+      localSupabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'school_documents' ? schoolBuilder : makeBuilder({ data: [], error: null }),
+      );
+
+      await localFacade.initialize();
+
+      expect(schoolBuilder.or).toHaveBeenCalledWith('branch_id.is.null,branch_id.eq.2');
+      expect(schoolBuilder.eq).not.toHaveBeenCalledWith('branch_id', 2);
     });
 
     it('fetchAllData(): admin con branchId===null no filtra instructores por sede', async () => {

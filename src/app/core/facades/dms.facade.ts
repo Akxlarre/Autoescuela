@@ -812,7 +812,10 @@ export class DmsFacade {
         `,
         )
         .order('created_at', { ascending: false });
-      if (branchId !== null) schoolDocsQuery = schoolDocsQuery.eq('branch_id', branchId);
+      // fix-451-m: branch_id NULL = "ambas sedes" (así se suben todos); `.eq` los excluía.
+      if (branchId !== null) {
+        schoolDocsQuery = schoolDocsQuery.or(`branch_id.is.null,branch_id.eq.${branchId}`);
+      }
 
       let studentsQuery: any = this.supabase.client.from('students').select(
         `
