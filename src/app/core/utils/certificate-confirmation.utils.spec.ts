@@ -1,77 +1,71 @@
 import {
+  buildEmailConfirmation,
+  buildWarningConfirmation,
   bulkCertificateSummary,
-  buildCertificateConfirmation,
   certificateWarnings,
-  type CertificateConfirmationInput,
 } from './certificate-confirmation.utils';
-
-function input(
-  overrides: Partial<CertificateConfirmationInput> = {},
-): CertificateConfirmationInput {
-  return { nombre: 'Pérez Soto Ana', accion: 'generar', saldoPendiente: 0, ...overrides };
-}
 
 describe('certificateWarnings', () => {
   it('sin datos académicos ni prácticas pendientes: sin avisos', () => {
-    expect(certificateWarnings(input())).toEqual([]);
-    expect(certificateWarnings(input({ pctTeoria: null, pctPractica: null }))).toEqual([]);
+    expect(certificateWarnings({ nombre: 'Ana' })).toEqual([]);
+    expect(certificateWarnings({ nombre: 'Ana', pctTeoria: null, pctPractica: null })).toEqual([]);
   });
 
   it('prácticas incompletas de Clase B', () => {
     expect(
-      certificateWarnings(input({ practicasIncompletas: { completadas: 9, requeridas: 12 } })),
+      certificateWarnings({
+        nombre: 'Ana',
+        practicasIncompletas: { completadas: 9, requeridas: 12 },
+      }),
     ).toEqual(['Lleva 9/12 clases prácticas completadas.']);
   });
 
   it('asistencia bajo el mínimo: avisa, en el orden teoría → práctica', () => {
-    expect(certificateWarnings(input({ pctTeoria: 60, pctPractica: 80 }))).toEqual([
+    expect(certificateWarnings({ nombre: 'Ana', pctTeoria: 60, pctPractica: 80 })).toEqual([
       'Asistencia teórica de 60 % (mínimo 75 %).',
       'Asistencia práctica de 80 % (recomendado 100 %).',
     ]);
   });
 
   it('asistencia en o sobre el mínimo: sin aviso', () => {
-    expect(certificateWarnings(input({ pctTeoria: 75, pctPractica: 100 }))).toEqual([]);
+    expect(certificateWarnings({ nombre: 'Ana', pctTeoria: 75, pctPractica: 100 })).toEqual([]);
   });
 });
 
-describe('buildCertificateConfirmation', () => {
-  it('sin deuda ni avisos: confirmación simple', () => {
-    const c = buildCertificateConfirmation(input());
-    expect(c.title).toBe('Generar certificado');
-    expect(c.message).toBe('¿Generar el certificado de Pérez Soto Ana?');
-    expect(c.severity).toBe('info');
-    expect(c.requiresReason).toBe(false);
+describe('buildWarningConfirmation (fix-466-m)', () => {
+  it('sin avisos: null (se genera directo, sin modal)', () => {
+    expect(buildWarningConfirmation({ nombre: 'Ana' })).toBeNull();
+    expect(
+      buildWarningConfirmation({
+        nombre: 'Ana',
+        practicasIncompletas: { completadas: 12, requeridas: 12 },
+      }),
+    ).toBeNull();
   });
 
-  it('regenerar: aclara que se conserva el folio', () => {
-    const c = buildCertificateConfirmation(input({ accion: 'regenerar' }));
-    expect(c.title).toBe('Regenerar certificado');
-    expect(c.confirmLabel).toBe('Regenerar');
-    expect(c.message).toContain('se conserva el folio');
+  it('con avisos: modal de advertencia que los lista', () => {
+    const modal = buildWarningConfirmation({ nombre: 'Ana Pérez', pctTeoria: 50 });
+    expect(modal).toEqual({
+      title: 'Generar certificado',
+      message:
+        'Ana Pérez:\n• Asistencia teórica de 50 % (mínimo 75 %).\n\n¿Generar el certificado de todos modos?',
+      severity: 'warn',
+      confirmLabel: 'Generar de todos modos',
+    });
+  });
+});
+
+describe('buildEmailConfirmation (fix-466-m)', () => {
+  it('nombra al alumno y el correo', () => {
+    expect(
+      buildEmailConfirmation({ nombre: 'Ana', email: 'ana@test.com', yaEnviado: false }).message,
+    ).toBe('Se enviará el certificado de Ana al correo ana@test.com.');
   });
 
-  it('con avisos: los lista y sube la severidad, sin pedir motivo', () => {
-    const c = buildCertificateConfirmation(input({ pctTeoria: 50 }));
-    expect(c.severity).toBe('warn');
-    expect(c.message).toContain('• Asistencia teórica de 50 % (mínimo 75 %).');
-    expect(c.requiresReason).toBe(false);
-  });
-
-  it('spec 0010-i: con deuda sin autorizar pide motivo y muestra el monto', () => {
-    const c = buildCertificateConfirmation(input({ saldoPendiente: 125000 }));
-    expect(c.requiresReason).toBe(true);
-    expect(c.severity).toBe('warn');
-    expect(c.message).toContain('saldo pendiente de $125.000');
-    expect(c.message).toContain('se avisará a los administradores');
-  });
-
-  it('con deuda ya autorizada antes: no vuelve a pedir motivo', () => {
-    const c = buildCertificateConfirmation(
-      input({ saldoPendiente: 125000, deudaAutorizada: true }),
+  it('avisa si ya se había enviado y tolera correo vacío', () => {
+    expect(buildEmailConfirmation({ nombre: 'Ana', email: null, yaEnviado: true }).message).toBe(
+      'Se enviará el certificado de Ana.\n\nYa fue enviado anteriormente.',
     );
-    expect(c.requiresReason).toBe(false);
-    expect(c.message).toContain('ya se autorizó');
   });
 });
 

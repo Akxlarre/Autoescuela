@@ -94,7 +94,9 @@ describe('CertificacionProfesionalFacade', () => {
     };
     // fix-466-m: el modal previo a emitir vive en CertificadoAutorizacionFacade (su propio spec).
     autorizacionSpy = {
-      confirmarEmision: vi.fn().mockResolvedValue(true),
+      confirmarAvisos: vi.fn().mockResolvedValue(true),
+      confirmarRegeneracion: vi.fn().mockResolvedValue(true),
+      confirmarEnvioEmail: vi.fn().mockResolvedValue(true),
       autorizarDeuda: vi.fn().mockResolvedValue(false),
     };
 
@@ -180,30 +182,23 @@ describe('CertificacionProfesionalFacade', () => {
       ]);
     });
 
-    it('fix-466-m: confirma antes de emitir y, si se cancela, no invoca la generación', async () => {
+    it('fix-466-m: pasa la asistencia al aviso y, si se cancela, no invoca la generación', async () => {
       (facade as any)._alumnos.set([
         makeAlumnoRow({ enrollmentId: 42, pctAsistenciaTeoria: 60, pctAsistenciaPractica: null }),
       ]);
-      autorizacionSpy.confirmarEmision.mockResolvedValueOnce(false);
+      autorizacionSpy.confirmarAvisos.mockResolvedValueOnce(false);
 
       await facade.generarCertificado(42);
 
-      expect(autorizacionSpy.confirmarEmision).toHaveBeenCalledWith(
-        expect.objectContaining({
-          enrollmentId: 42,
-          accion: 'generar',
-          pctTeoria: 60,
-          pctPractica: null,
-        }),
+      expect(autorizacionSpy.confirmarAvisos).toHaveBeenCalledWith(
+        expect.objectContaining({ pctTeoria: 60, pctPractica: null }),
       );
       expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
     });
 
-    it('fix-466-m: desde la ficha (fuera de la lista) confirma con los datos que recibe', async () => {
+    it('fix-466-m: desde la ficha (fuera de la lista) avisa con los datos que recibe', async () => {
       await facade.generarCertificado(7, { nombre: 'Ana', pctTeoria: null, pctPractica: 80 });
-      expect(autorizacionSpy.confirmarEmision).toHaveBeenCalledWith({
-        enrollmentId: 7,
-        accion: 'generar',
+      expect(autorizacionSpy.confirmarAvisos).toHaveBeenCalledWith({
         nombre: 'Ana',
         pctTeoria: null,
         pctPractica: 80,
@@ -306,6 +301,13 @@ describe('CertificacionProfesionalFacade', () => {
   // Antes "acciones de placeholder": estos métodos ya son implementaciones reales
   // (no muestran toast.info). Actualizado en hotfix-016.
   describe('acciones reales', () => {
+    it('fix-466-m: enviarEmail confirma con un modal y, si se cancela, no envía', async () => {
+      autorizacionSpy.confirmarEnvioEmail.mockResolvedValueOnce(false);
+      await facade.enviarEmail(1);
+      expect(autorizacionSpy.confirmarEnvioEmail).toHaveBeenCalled();
+      expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
+    });
+
     it('enviarEmail invoca la Edge Function y muestra toast de éxito', async () => {
       await facade.enviarEmail(1);
       expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith('send-certificate-email', {

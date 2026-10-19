@@ -147,8 +147,9 @@ export class CertificacionClaseBFacade {
     enrollmentId: number,
     fueraDeLista?: { nombre: string; completadas: number; requeridas: number },
   ): Promise<void> {
-    // fix-466-m: siempre se confirma antes de emitir (avisos + deuda con motivo, spec 0010-i).
-    // Con prácticas incompletas solo el admin puede seguir, y el pedido va con `force`.
+    // fix-466-m: con las clases completas se emite directo. Si faltan, solo el admin puede seguir:
+    // confirma el aviso en un modal y el pedido va con `force`. La deuda la confirma el modal de la
+    // spec 0010-i cuando la edge function la rechaza.
     const enLista = this._alumnos().find((a) => a.enrollmentId === enrollmentId);
     const datos = enLista
       ? {
@@ -161,13 +162,9 @@ export class CertificacionClaseBFacade {
     const incompletas = datos.completadas < datos.requeridas;
     if (incompletas && this.authFacade.currentUser()?.role !== 'admin') return;
 
-    const confirmado = await this.autorizacion.confirmarEmision({
-      enrollmentId,
+    const confirmado = await this.autorizacion.confirmarAvisos({
       nombre: datos.nombre,
-      accion: 'generar',
-      practicasIncompletas: incompletas
-        ? { completadas: datos.completadas, requeridas: datos.requeridas }
-        : null,
+      practicasIncompletas: { completadas: datos.completadas, requeridas: datos.requeridas },
     });
     if (!confirmado) return;
 
@@ -267,13 +264,7 @@ export class CertificacionClaseBFacade {
    * función lo ignora igual.
    */
   async regenerarCertificado(enrollmentId: number): Promise<void> {
-    const alumno = this._alumnos().find((a) => a.enrollmentId === enrollmentId);
-    const confirmado = await this.autorizacion.confirmarEmision({
-      enrollmentId,
-      nombre: alumno?.nombre ?? 'este alumno',
-      accion: 'regenerar',
-    });
-    if (!confirmado) return;
+    if (!(await this.autorizacion.confirmarRegeneracion())) return;
 
     const force = this.authFacade.currentUser()?.role === 'admin';
     const result = await this.invokeConAutorizacionDeDeuda(enrollmentId, force);
@@ -357,7 +348,16 @@ export class CertificacionClaseBFacade {
     return data.signedUrl;
   }
 
+  /** fix-466-m: confirma con un modal (antes, una fila dentro de la tabla). */
   async enviarEmail(enrollmentId: number): Promise<void> {
+    const alumno = this._alumnos().find((a) => a.enrollmentId === enrollmentId);
+    const confirmado = await this.autorizacion.confirmarEnvioEmail({
+      nombre: alumno?.nombre ?? 'este alumno',
+      email: alumno?.email || null,
+      yaEnviado: alumno?.emailEnviado ?? false,
+    });
+    if (!confirmado) return;
+
     this._sendingEmailId.set(enrollmentId);
     try {
       const { data, error } = await this.supabase.client.functions.invoke(

@@ -175,8 +175,9 @@ export class CertificacionProfesionalFacade {
   // ── Acciones de certificado ──
 
   /**
-   * fix-466-m: siempre se confirma antes de emitir. La asistencia solo avisa en el modal (nunca
-   * bloquea); la deuda sigue la convención de la spec 0010-i (motivo + habilitación registrada).
+   * fix-466-m: sin avisos se emite directo. Teoría < 75 % o práctica < 100 % abren un modal de aviso
+   * que nunca bloquea (sin asistencia registrada, como en el piloto, no hay aviso). La deuda sigue la
+   * convención de la spec 0010-i: modal con motivo cuando la edge function la rechaza.
    * `fueraDeLista` = datos del alumno cuando se genera desde la ficha.
    */
   async generarCertificado(
@@ -193,12 +194,7 @@ export class CertificacionProfesionalFacade {
       : fueraDeLista;
     if (!datos) return;
 
-    const confirmado = await this.autorizacion.confirmarEmision({
-      enrollmentId,
-      accion: 'generar',
-      ...datos,
-    });
-    if (!confirmado) return;
+    if (!(await this.autorizacion.confirmarAvisos(datos))) return;
 
     const result = await this.invokeConAutorizacionDeDeuda(enrollmentId);
     if (!result) return;
@@ -261,7 +257,16 @@ export class CertificacionProfesionalFacade {
     }
   }
 
+  /** fix-466-m: confirma con un modal (antes, una fila dentro de la tabla). */
   async enviarEmail(enrollmentId: number): Promise<void> {
+    const alumno = this._alumnos().find((a) => a.enrollmentId === enrollmentId);
+    const confirmado = await this.autorizacion.confirmarEnvioEmail({
+      nombre: alumno?.nombre ?? 'este alumno',
+      email: alumno?.email || null,
+      yaEnviado: alumno?.emailEnviado ?? false,
+    });
+    if (!confirmado) return;
+
     this._sendingEmailId.set(enrollmentId);
     try {
       const { error } = await this.supabase.client.functions.invoke('send-certificate-email', {

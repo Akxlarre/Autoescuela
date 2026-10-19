@@ -12,105 +12,90 @@ describe('CertificadoAutorizacionFacade (fix-466-m)', () => {
     confirmWithReason: ReturnType<typeof vi.fn>;
   };
   let toast: { error: ReturnType<typeof vi.fn> };
-  let insertSpy: ReturnType<typeof vi.fn>;
+  let overrides: { insert: ReturnType<typeof vi.fn>; select: ReturnType<typeof vi.fn> };
 
-  /** Mock de `from()` con el saldo y la cantidad de habilitaciones previas. */
-  function mockDb(pendingBalance: number, overrides: number) {
-    insertSpy = vi.fn().mockReturnValue({
-      select: vi.fn().mockResolvedValue({ data: [{ id: 1 }], error: null }),
-    });
-    return vi.fn().mockImplementation((table: string) => {
-      if (table === 'enrollments') {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: vi
-                .fn()
-                .mockResolvedValue({ data: { pending_balance: pendingBalance }, error: null }),
-            }),
-          }),
-        };
-      }
-      return {
-        select: () => ({
-          eq: () => ({ eq: vi.fn().mockResolvedValue({ count: overrides, error: null }) }),
-        }),
-        insert: insertSpy,
-      };
-    });
-  }
-
-  function setup(pendingBalance: number, overrides = 0) {
+  beforeEach(() => {
     confirmModal = {
       confirm: vi.fn().mockResolvedValue(true),
       confirmWithReason: vi.fn().mockResolvedValue('Paga el viernes'),
     };
     toast = { error: vi.fn() };
+    overrides = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockResolvedValue({ data: [{ id: 1 }], error: null }),
+    };
     TestBed.configureTestingModule({
       providers: [
         CertificadoAutorizacionFacade,
-        {
-          provide: SupabaseService,
-          useValue: { client: { from: mockDb(pendingBalance, overrides) } },
-        },
+        { provide: SupabaseService, useValue: { client: { from: vi.fn(() => overrides) } } },
         { provide: AuthFacade, useValue: { currentUser: () => ({ dbId: 77 }) } },
         { provide: ConfirmModalService, useValue: confirmModal },
         { provide: ToastService, useValue: toast },
       ],
     });
     facade = TestBed.inject(CertificadoAutorizacionFacade);
-  }
-
-  const request = { enrollmentId: 42, nombre: 'Ana Pérez', accion: 'generar' as const };
-
-  it('sin deuda: confirmación simple, sin motivo ni registro', async () => {
-    setup(0);
-    await expect(facade.confirmarEmision(request)).resolves.toBe(true);
-    expect(confirmModal.confirm).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Generar certificado', confirmLabel: 'Generar' }),
-    );
-    expect(confirmModal.confirmWithReason).not.toHaveBeenCalled();
-    expect(insertSpy).not.toHaveBeenCalled();
   });
 
-  it('cancelar el modal devuelve false', async () => {
-    setup(0);
-    confirmModal.confirm.mockResolvedValue(false);
-    await expect(facade.confirmarEmision(request)).resolves.toBe(false);
-  });
+  describe('confirmarAvisos()', () => {
+    it('sin avisos: true sin abrir ningún modal', async () => {
+      await expect(facade.confirmarAvisos({ nombre: 'Ana', pctTeoria: null })).resolves.toBe(true);
+      expect(confirmModal.confirm).not.toHaveBeenCalled();
+    });
 
-  it('spec 0010-i: con deuda sin habilitación pide motivo y la registra', async () => {
-    setup(90000);
-    await expect(facade.confirmarEmision(request)).resolves.toBe(true);
-    expect(confirmModal.confirmWithReason).toHaveBeenCalledWith(
-      expect.objectContaining({ message: expect.stringContaining('$90.000') }),
-    );
-    expect(insertSpy).toHaveBeenCalledWith({
-      enrollment_id: 42,
-      kind: 'certificado',
-      reason: 'Paga el viernes',
-      created_by: 77,
+    it('con avisos: abre el modal y devuelve lo que se elija', async () => {
+      confirmModal.confirm.mockResolvedValueOnce(false);
+      const input = { nombre: 'Ana', practicasIncompletas: { completadas: 9, requeridas: 12 } };
+      await expect(facade.confirmarAvisos(input)).resolves.toBe(false);
+      expect(confirmModal.confirm).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.stringContaining('9/12') }),
+      );
     });
   });
 
-  it('con deuda y sin motivo (cancelado): no registra y devuelve false', async () => {
-    setup(90000);
-    confirmModal.confirmWithReason.mockResolvedValue(null);
-    await expect(facade.confirmarEmision(request)).resolves.toBe(false);
-    expect(insertSpy).not.toHaveBeenCalled();
+  it('confirmarRegeneracion(): modal de fix-464-m', async () => {
+    await facade.confirmarRegeneracion();
+    expect(confirmModal.confirm).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Regenerar certificado', confirmLabel: 'Regenerar' }),
+    );
   });
 
-  it('con deuda ya autorizada: confirmación simple, sin volver a pedir motivo', async () => {
-    setup(90000, 1);
-    await expect(facade.confirmarEmision(request)).resolves.toBe(true);
-    expect(confirmModal.confirmWithReason).not.toHaveBeenCalled();
-    expect(confirmModal.confirm).toHaveBeenCalled();
-    expect(insertSpy).not.toHaveBeenCalled();
+  it('confirmarEnvioEmail(): modal con el correo', async () => {
+    await facade.confirmarEnvioEmail({ nombre: 'Ana', email: 'ana@test.com', yaEnviado: false });
+    expect(confirmModal.confirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Enviar certificado',
+        message: expect.stringContaining('ana@test.com'),
+      }),
+    );
   });
 
-  it('autorizarDeuda (respaldo) pide motivo y registra', async () => {
-    setup(0);
-    await expect(facade.autorizarDeuda(42, 'Saldo de $5.000')).resolves.toBe(true);
-    expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({ kind: 'certificado' }));
+  describe('autorizarDeuda() (spec 0010-i)', () => {
+    it('pide motivo con el saldo y registra la habilitación', async () => {
+      await expect(facade.autorizarDeuda(42, 'Saldo pendiente de $180.000.')).resolves.toBe(true);
+      expect(confirmModal.confirmWithReason).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('$180.000'),
+          reason: expect.objectContaining({ minLength: 5 }),
+        }),
+      );
+      expect(overrides.insert).toHaveBeenCalledWith({
+        enrollment_id: 42,
+        kind: 'certificado',
+        reason: 'Paga el viernes',
+        created_by: 77,
+      });
+    });
+
+    it('si se cancela, no registra', async () => {
+      confirmModal.confirmWithReason.mockResolvedValueOnce(null);
+      await expect(facade.autorizarDeuda(42, 'Saldo')).resolves.toBe(false);
+      expect(overrides.insert).not.toHaveBeenCalled();
+    });
+
+    it('si la habilitación no se guarda, devuelve false y muestra el error', async () => {
+      overrides.select.mockResolvedValueOnce({ data: null, error: { code: '42501' } });
+      await expect(facade.autorizarDeuda(42, 'Saldo')).resolves.toBe(false);
+      expect(toast.error).toHaveBeenCalled();
+    });
   });
 });

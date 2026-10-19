@@ -1,4 +1,4 @@
-# Fix: Confirmación previa al generar certificados (Clase B y Profesional)
+# Fix: Confirmaciones al generar certificados (Clase B y Profesional)
 > id: fix-466-m-confirmacion-previa-certificados
 > refs: fix-447-m-testing-documentos-certificacion · fix-465-m · spec 0010-i (AC8, AC-E5)
 > status: in_progress
@@ -6,74 +6,81 @@
 
 ## Root Cause
 
-Hay tres reglas de emisión que no estaban unificadas entre Clase B y Profesional:
+Las reglas de emisión no estaban unificadas entre Clase B y Profesional:
 
-1. **Generar no pedía confirmación.** En Clase B, con las clases completas, "Generar" emitía de
-   inmediato; "Regenerar" también. En Profesional solo se confirmaba si la práctica estaba bajo
-   100 %, con una fila inline. Matías: siempre debe haber un modal antes de emitir.
-2. **La deuda solo se controlaba en Clase B.** La spec 0010-i (AC8) dejó una convención: con saldo
-   pendiente, quien genera (admin o secretaria) confirma con un motivo, queda registrado en
-   `enrollment_payment_overrides` (`kind = 'certificado'`) y se avisa a los admins. La edge function
-   `generate-certificate-b-pdf` lo exige. Profesional no tenía nada de eso: el admin emitía con
-   deuda sin dejar registro, y la secretaria quedaba bloqueada sin vía de excepción.
-3. **La asistencia bloqueaba en Profesional.** La secretaria necesitaba teoría ≥ 75 %, y la ficha
-   del alumno exigía teoría, pago y nota. Decisión de Matías: la asistencia nunca bloquea; cuando
-   vuelva el módulo (al levantar el piloto) y el alumno esté bajo el mínimo, se avisa en el modal.
+1. **La deuda solo se controlaba en Clase B.** La spec 0010-i (AC8, Ignacio) dejó una convención:
+   si la edge function rechaza por saldo pendiente (`DEUDA_PENDIENTE`), un modal pide el motivo,
+   se registra la habilitación en `enrollment_payment_overrides` (`kind = 'certificado'`), se avisa
+   a los admins y se reintenta. Vale para admin y secretaria. Profesional no tenía nada: el admin
+   emitía con deuda sin dejar registro, y la secretaria quedaba bloqueada sin vía de excepción.
+2. **La asistencia bloqueaba en Profesional.** La secretaria necesitaba teoría ≥ 75 %, y la ficha
+   exigía teoría, pago y nota (en el piloto el botón ni aparecía, fix-332-m). Decisión de Matías:
+   la asistencia nunca bloquea; si al levantar el piloto un alumno está bajo el mínimo, se avisa.
+3. **Las confirmaciones eran filas inline dentro de la tabla** (prácticas incompletas del admin en
+   Clase B, práctica < 100 % en Profesional, envío de email), distintas de los modales de la ficha.
+   Matías: que todas sean modales.
+
+## Decisiones (Matías, 2026-10-19)
+
+- No hay un modal "siempre antes de emitir". Solo se confirma cuando hay algo que avisar.
+- Se mantienen las confirmaciones que existían, convertidas a modal: prácticas incompletas (admin,
+  Clase B), práctica < 100 % (Profesional), envío de email. Se suma teoría < 75 % (Profesional),
+  que solo aparece cuando hay asistencia registrada (no en el piloto).
+- "Regenerar" mantiene su modal. El drawer de "Generar pendientes" se queda igual.
+- Deuda: convención de Ignacio en ambas licencias, solo cuando la edge function rechaza.
+- Ficha Profesional: el botón aparece también en el piloto y sigue las reglas de la lista.
 
 ## ACs Afectados
 
-- AC propio — "Generar" y "Regenerar" (lista B, lista Prof. y ficha del alumno) abren siempre un
-  modal de confirmación antes de emitir. "Generar pendientes" se queda con su drawer actual, que
-  ya funciona como confirmación.
-- AC propio — el modal lista los avisos que correspondan: prácticas incompletas en Clase B (solo
-  admin puede seguir), teoría bajo 75 % y práctica bajo 100 % en Profesional (solo si hay registros).
-  Ningún aviso de asistencia bloquea.
-- AC propio — con saldo pendiente, el mismo modal muestra el monto y pide el motivo obligatorio de
-  0010-i, tanto para admin como para secretaria, en Clase B y Profesional. Si la deuda ya se había
-  autorizado antes, no se vuelve a pedir el motivo.
-- AC propio — `generate-certificate-professional-pdf` rechaza con `DEUDA_PENDIENTE` (409) una
-  matrícula con saldo sin habilitación, igual que la de Clase B (helper compartido).
-- AC propio — "Generar pendientes" en Profesional omite a los alumnos con deuda (0010-i AC-E5):
-  se emiten uno a uno desde su fila.
+- AC propio — Clase B: con las clases completas, "Generar" emite directo. Admin con clases
+  incompletas → modal de aviso (lista y ficha). Secretaria → botón deshabilitado, sin cambios.
+- AC propio — Profesional: sin avisos, "Generar" emite directo; con práctica < 100 % o teoría < 75 %
+  → modal de aviso que nunca bloquea. Ni la asistencia ni la deuda deshabilitan el botón.
+- AC propio — Deuda (ambas): si la edge function responde `DEUDA_PENDIENTE`, modal de 0010-i con
+  motivo, se registra la habilitación y se reintenta. `generate-certificate-professional-pdf` exige
+  la habilitación igual que la de Clase B (helper compartido).
+- AC propio — "Generar pendientes" en Profesional toma solo a los que tienen el pago al día y, como
+  en Clase B, salta y cuenta a los que la función rechace por deuda.
+- AC propio — Envío de email (lista B y Prof.): modal en vez de fila inline.
+- AC propio — Ficha Profesional: "Generar Certificado" visible también en el piloto, con las reglas
+  de la lista.
 
 ## Cambio
 
-- `core/utils/certificate-confirmation.utils.ts` (nuevo, puro): avisos y texto del modal.
-- `core/facades/certificado-autorizacion.facade.ts` (nuevo): lee el saldo y si ya hay
-  habilitación, muestra el modal, registra la habilitación con motivo. Reemplaza la lógica de
-  deuda que vivía en `CertificacionClaseBFacade`.
-- `CertificacionClaseBFacade` / `CertificacionProfesionalFacade`: `generarCertificado()` (y
-  `regenerarCertificado()` en B) confirman antes de invocar; Profesional reintenta tras autorizar
-  la deuda, como B.
-- Profesional: `elegible` pasa a ser "pago al día" (solo filtra el lote); se elimina
-  `isEligibleForProfessionalCertificate` (fix-465-m).
-- `certificacion-clase-b-content` / `certificacion-profesional-content`: se quitan las filas de
-  confirmación inline de "Generar" (la del email se queda); en Profesional, la deuda ya no
-  deshabilita el botón.
-- Ficha del alumno: delega la confirmación al facade. En Profesional, el botón "Generar
-  Certificado" deja de depender de los criterios académicos y aparece también en el piloto.
+- `core/utils/certificate-confirmation.utils.ts` (nuevo, puro): avisos, modal de avisos (`null` si
+  no hay), modal de email, resumen del lote.
+- `core/facades/certificado-autorizacion.facade.ts` (nuevo): `confirmarAvisos()`,
+  `confirmarRegeneracion()`, `confirmarEnvioEmail()` y `autorizarDeuda()` (la lógica de 0010-i
+  que vivía en `CertificacionClaseBFacade`, ahora compartida con Profesional).
+- `CertificacionClaseBFacade` / `CertificacionProfesionalFacade`: generar, regenerar y enviar email
+  confirman con ese facade; Profesional reintenta tras autorizar la deuda, como B.
+- Profesional: `elegible` = pago al día (solo filtra el lote); se elimina
+  `isEligibleForProfessionalCertificate` (fix-465-m) y `descargarPdf()` (sin callers).
+- `certificacion-clase-b-content` / `certificacion-profesional-content`: sin filas inline.
+- Ficha del alumno: delega las confirmaciones al facade.
 - `supabase/functions/_shared/certificate-debt.ts` (nuevo) + ambas edge functions. **Requiere
   desplegar `generate-certificate-b-pdf` y `generate-certificate-professional-pdf`.**
 
 ## Test de Regresión
 
-- `certificate-confirmation.utils.spec.ts` — avisos, monto, motivo requerido o no.
-- `certificado-autorizacion.facade.spec.ts` — sin deuda: confirm simple; con deuda sin
-  habilitación: pide motivo y registra; con habilitación previa: no pide motivo; cancelar: false.
-- `certificacion-clase-b.facade.spec.ts` / `certificacion-profesional.facade.spec.ts` — cancelar
-  el modal no invoca la edge function; Prof. con `DEUDA_PENDIENTE` autoriza y reintenta.
+- `certificate-confirmation.utils.spec.ts` — avisos, modal o `null`, email, resumen.
+- `certificado-autorizacion.facade.spec.ts` — sin avisos no abre modal; con avisos sí; email;
+  deuda: motivo y registro.
+- `certificacion-clase-b.facade.spec.ts` / `certificacion-profesional.facade.spec.ts` — sin avisos
+  no confirma; cancelar no invoca; `DEUDA_PENDIENTE` autoriza y reintenta; email confirma antes.
 - `supabase/functions/_shared/certificate-debt.test.ts` — con y sin saldo y habilitación.
 
 ## Progreso
 
-- [x] Tests: util 11/11, `CertificadoAutorizacionFacade` 6/6, facade B 41/41, facade Prof. 25/25,
-  contenido B 8/8, `certificate-debt.test.ts` (Deno) 4/4.
-- [x] `npm run lint:arch` 0 errores (186 advertencias, igual que antes); `npm run test:ci` 4405 verdes.
-  `deno check` de las dos edge functions: los mismos 12 errores de tipos preexistentes, ninguno nuevo.
-- [x] `/verify`: lista Prof. (secretaria sede 2, alumno con $90.000 de saldo) → botón habilitado y
-  modal con el monto y motivo obligatorio; lista B (secretaria) → modal simple "¿Generar…?"; ficha
-  Prof. como admin, en el piloto → aparece "Generar Certificado" y abre el modal con deuda. Se
-  canceló en todos los casos (sin habilitaciones nuevas). Consola sin errores.
-- Eliminado `CertificacionProfesionalFacade.descargarPdf()`: sin callers y re-emitía sin confirmar.
+- [x] Ajuste a lo decidido (sin modal "siempre"; filas → modales; email con modal). La primera
+  versión de este fix (commit `a01dc81f`) abría un modal antes de toda emisión y pedía el motivo de
+  deuda por adelantado; Matías lo descartó y se corrigió en el commit siguiente.
+- [x] `npm run lint:arch` 0 errores (186 advertencias, igual que antes). `npm run test:ci`: 4408
+  verdes; 1 falla intermitente ajena (`promociones.facade.spec.ts` AC3, timeout de 5 s; pasa en 2 de
+  3 corridas sueltas). Specs del fix: 146/146.
+- [x] `/verify` como admin: lista B (tarjetas) → "Generar" con 7/12 abre el modal de aviso; email
+  y "Regenerar" abren sus modales; ninguna fila inline. Lista Prof. → "Generar" visible para un
+  alumno con deuda (no se apretó: emitiría de verdad mientras la función no esté desplegada). Ficha
+  Prof. → "Generar Certificado" visible en el piloto. Todo cancelado; consola sin errores.
 - [ ] Despliegue de `generate-certificate-b-pdf` y `generate-certificate-professional-pdf`. Hasta
-  entonces, Profesional valida la deuda solo en la UI.
+  entonces, Profesional emite con deuda sin pedir motivo (la función desplegada no la revisa).

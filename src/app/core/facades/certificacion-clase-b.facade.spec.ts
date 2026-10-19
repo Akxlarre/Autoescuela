@@ -107,7 +107,9 @@ describe('CertificacionClaseBFacade', () => {
     };
     // fix-466-m: el modal previo a emitir vive en CertificadoAutorizacionFacade (su propio spec).
     autorizacionSpy = {
-      confirmarEmision: vi.fn().mockResolvedValue(true),
+      confirmarAvisos: vi.fn().mockResolvedValue(true),
+      confirmarRegeneracion: vi.fn().mockResolvedValue(true),
+      confirmarEnvioEmail: vi.fn().mockResolvedValue(true),
       autorizarDeuda: vi.fn().mockResolvedValue(false),
     };
 
@@ -437,15 +439,19 @@ describe('CertificacionClaseBFacade', () => {
       (facade as any)._alumnos.set([makeAlumnoRow({ enrollmentId: 42 })]);
     });
 
-    it('fix-466-m: confirma antes de emitir y, si se cancela, no invoca la generación', async () => {
-      autorizacionSpy.confirmarEmision.mockResolvedValueOnce(false);
+    it('fix-466-m: con las clases completas pasa los datos al aviso (que no abre modal) y emite', async () => {
       await facade.generarCertificado(42);
-      expect(autorizacionSpy.confirmarEmision).toHaveBeenCalledWith({
-        enrollmentId: 42,
+      expect(autorizacionSpy.confirmarAvisos).toHaveBeenCalledWith({
         nombre: 'Juan López',
-        accion: 'generar',
-        practicasIncompletas: null,
+        practicasIncompletas: { completadas: 12, requeridas: 12 },
       });
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledTimes(1);
+    });
+
+    it('fix-466-m: si el admin cancela el aviso de prácticas incompletas, no invoca', async () => {
+      (facade as any)._alumnos.set([makeAlumnoRow({ enrollmentId: 42, clasesCompletadas: 9 })]);
+      autorizacionSpy.confirmarAvisos.mockResolvedValueOnce(false);
+      await facade.generarCertificado(42);
       expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
     });
 
@@ -460,7 +466,7 @@ describe('CertificacionClaseBFacade', () => {
     it('fix-011-i/fix-466-m: admin con prácticas incompletas avisa en el modal y va con force', async () => {
       (facade as any)._alumnos.set([makeAlumnoRow({ enrollmentId: 42, clasesCompletadas: 9 })]);
       await facade.generarCertificado(42);
-      expect(autorizacionSpy.confirmarEmision).toHaveBeenCalledWith(
+      expect(autorizacionSpy.confirmarAvisos).toHaveBeenCalledWith(
         expect.objectContaining({ practicasIncompletas: { completadas: 9, requeridas: 12 } }),
       );
       expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(
@@ -473,7 +479,7 @@ describe('CertificacionClaseBFacade', () => {
       authFacadeSpy.currentUser.mockReturnValue({ role: 'secretary', branchId: 1 });
       (facade as any)._alumnos.set([makeAlumnoRow({ enrollmentId: 42, clasesCompletadas: 9 })]);
       await facade.generarCertificado(42);
-      expect(autorizacionSpy.confirmarEmision).not.toHaveBeenCalled();
+      expect(autorizacionSpy.confirmarAvisos).not.toHaveBeenCalled();
       expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
     });
 
@@ -593,18 +599,16 @@ describe('CertificacionClaseBFacade', () => {
       await facade.generarPendientes();
 
       expect(autorizacionSpy.autorizarDeuda).not.toHaveBeenCalled();
-      expect(autorizacionSpy.confirmarEmision).not.toHaveBeenCalled();
+      expect(autorizacionSpy.confirmarAvisos).not.toHaveBeenCalled();
       expect(toastSpy.warning).toHaveBeenCalledWith(expect.stringContaining('1 con deuda'));
     });
   });
 
   describe('regenerarCertificado() (fix-464-m)', () => {
     it('si se cancela la confirmación, no invoca la generación', async () => {
-      autorizacionSpy.confirmarEmision.mockResolvedValueOnce(false);
+      autorizacionSpy.confirmarRegeneracion.mockResolvedValueOnce(false);
       await facade.regenerarCertificado(42);
-      expect(autorizacionSpy.confirmarEmision).toHaveBeenCalledWith(
-        expect.objectContaining({ enrollmentId: 42, accion: 'regenerar' }),
-      );
+      expect(autorizacionSpy.confirmarRegeneracion).toHaveBeenCalled();
       expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
     });
 
@@ -624,6 +628,36 @@ describe('CertificacionClaseBFacade', () => {
         'generate-certificate-b-pdf',
         { body: { enrollment_id: 42, force: false } },
       );
+    });
+  });
+
+  describe('enviarEmail() (fix-466-m)', () => {
+    beforeEach(() => {
+      (facade as any)._alumnos.set([
+        makeAlumnoRow({ enrollmentId: 42, certificadoStatus: 'generado', emailEnviado: true }),
+      ]);
+    });
+
+    it('confirma con un modal y, si se cancela, no envía', async () => {
+      autorizacionSpy.confirmarEnvioEmail.mockResolvedValueOnce(false);
+      await facade.enviarEmail(42);
+      expect(autorizacionSpy.confirmarEnvioEmail).toHaveBeenCalledWith({
+        nombre: 'Juan López',
+        email: 'juan@test.com',
+        yaEnviado: true,
+      });
+      expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
+    });
+
+    it('al confirmar, invoca send-certificate-email', async () => {
+      supabaseSpy.client.functions.invoke.mockResolvedValueOnce({
+        data: { success: true, recipientEmail: 'juan@test.com' },
+        error: null,
+      });
+      await facade.enviarEmail(42);
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith('send-certificate-email', {
+        body: { enrollment_id: 42 },
+      });
     });
   });
 

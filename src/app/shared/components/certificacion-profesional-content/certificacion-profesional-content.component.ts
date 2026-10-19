@@ -481,48 +481,6 @@ const PAGE_SIZE = 10;
                         </div>
                       </td>
                     </tr>
-
-                    <!-- Fila de confirmación inline — envío de email -->
-                    @if (emailConfirmId() === alumno.enrollmentId) {
-                      <tr class="border-b border-(--border-default)">
-                        <td colspan="9" class="px-4 py-3">
-                          <div
-                            class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3 bg-brand/8 border border-brand/30"
-                          >
-                            <app-icon name="send" [size]="18" class="text-brand shrink-0" />
-                            <p class="text-sm flex-1 text-text-secondary">
-                              Se enviará el certificado de
-                              <strong class="text-text-primary">{{ alumno.nombre }}</strong>
-                              @if (alumno.email) {
-                                al correo
-                                <strong class="text-brand">{{ alumno.email }}</strong
-                                >.
-                              }
-                              @if (alumno.emailEnviado) {
-                                <span class="text-text-muted"> (ya fue enviado anteriormente)</span>
-                              }
-                            </p>
-                            <div class="flex items-center gap-2 shrink-0">
-                              <button
-                                class="inline-flex items-center font-semibold transition-all active:scale-95 btn-primary btn-sm"
-                                data-llm-action="confirm-send-professional-certificate-email"
-                                (click)="confirmarEmail()"
-                              >
-                                <app-icon name="send" [size]="13" />
-                                Confirmar envío
-                              </button>
-                              <button
-                                class="btn-ghost btn-sm"
-                                data-llm-action="cancel-send-professional-certificate-email"
-                                (click)="cancelarEmail()"
-                              >
-                                Cancelar
-                              </button>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    }
                   }
                 </tbody>
               </table>
@@ -533,11 +491,7 @@ const PAGE_SIZE = 10;
               class="mobile-view show-on-squeeze flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-2"
             >
               @for (alumno of pagedAlumnos(); track alumno.enrollmentId) {
-                <div
-                  class="card flex flex-col gap-2.5"
-                  appCardHover
-                  [class.border-brand]="emailConfirmId() === alumno.enrollmentId"
-                >
+                <div class="card flex flex-col gap-2.5" appCardHover>
                   <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
                       <div class="flex items-center gap-1.5">
@@ -670,35 +624,6 @@ const PAGE_SIZE = 10;
                       </button>
                     }
                   </div>
-
-                  <!-- Confirmación inline — envío de email -->
-                  @if (emailConfirmId() === alumno.enrollmentId) {
-                    <div
-                      class="flex flex-col gap-2 rounded-lg px-3 py-2.5 bg-brand/8 border border-brand/30"
-                    >
-                      <p class="text-xs text-text-secondary m-0">
-                        Se enviará el certificado
-                        @if (alumno.email) {
-                          al correo <strong class="text-brand">{{ alumno.email }}</strong
-                          >.
-                        }
-                        @if (alumno.emailEnviado) {
-                          <span class="text-text-muted"> (ya fue enviado anteriormente)</span>
-                        }
-                      </p>
-                      <div class="flex items-center gap-2">
-                        <button
-                          class="flex-1 inline-flex items-center justify-center font-semibold btn-primary btn-sm"
-                          data-llm-action="confirm-send-professional-certificate-email"
-                          (click)="confirmarEmail()"
-                        >
-                          <app-icon name="send" [size]="12" />
-                          Confirmar envío
-                        </button>
-                        <button class="btn-ghost btn-sm" (click)="cancelarEmail()">Cancelar</button>
-                      </div>
-                    </div>
-                  }
                 </div>
               }
             </div>
@@ -799,7 +724,6 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
   readonly estadoFilter = signal<EstadoFilter>(null);
   readonly searchQuery = signal('');
   readonly currentPageAlumnos = signal(0);
-  readonly emailConfirmId = signal<number | null>(null);
 
   protected readonly PAGE_SIZE = PAGE_SIZE;
 
@@ -934,20 +858,9 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
     this.generarCertificado.emit(alumno.enrollmentId);
   }
 
+  /** fix-466-m: el facade confirma el envío con un modal (antes, una fila inline). */
   onClickEmail(alumno: CertificacionProfesionalAlumnoRow): void {
-    this.emailConfirmId.set(alumno.enrollmentId);
-  }
-
-  confirmarEmail(): void {
-    const id = this.emailConfirmId();
-    if (id !== null) {
-      this.enviarEmail.emit(id);
-      this.emailConfirmId.set(null);
-    }
-  }
-
-  cancelarEmail(): void {
-    this.emailConfirmId.set(null);
+    this.enviarEmail.emit(alumno.enrollmentId);
   }
 
   ngAfterViewInit(): void {
