@@ -90,6 +90,17 @@ export class CertificacionClaseBFacade {
     };
   });
 
+  /**
+   * fix-462-m: pendientes que "Generar pendientes" puede emitir sin bypass — todas las clases del
+   * curso completadas, mismo criterio que el botón y `generate-certificate-b-pdf`. El admin ve
+   * también a los que no cumplen; esos se emiten uno a uno, forzando con confirmación.
+   */
+  public readonly pendientesElegibles = computed(() =>
+    this._alumnos().filter(
+      (a) => a.certificadoStatus === 'pendiente' && a.clasesCompletadas >= a.clasesTotales,
+    ),
+  );
+
   // ── SWR: initialize ──
   async initialize(): Promise<void> {
     if (this._initialized) {
@@ -373,7 +384,7 @@ export class CertificacionClaseBFacade {
   }
 
   async generarPendientes(): Promise<void> {
-    const pendientes = this._alumnos().filter((a) => a.certificadoStatus === 'pendiente');
+    const pendientes = this.pendientesElegibles();
     if (pendientes.length === 0) return;
 
     this._generatingPendientes.set(true);

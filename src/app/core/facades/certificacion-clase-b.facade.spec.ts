@@ -608,6 +608,23 @@ describe('CertificacionClaseBFacade', () => {
       await facade.generarPendientes();
       expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
     });
+
+    it('fix-462-m: solo genera a los pendientes con todas las clases completadas', async () => {
+      (facade as any)._alumnos.set([
+        makeAlumnoRow({ enrollmentId: 1, clasesCompletadas: 12 }),
+        makeAlumnoRow({ enrollmentId: 2, clasesCompletadas: 8 }),
+        makeAlumnoRow({ enrollmentId: 3, certificadoStatus: 'generado' }),
+      ]);
+      expect(facade.pendientesElegibles().map((a) => a.enrollmentId)).toEqual([1]);
+
+      await facade.generarPendientes();
+
+      const invoke = supabaseSpy.client.functions.invoke;
+      expect(invoke).toHaveBeenCalledTimes(1);
+      expect(invoke).toHaveBeenCalledWith('generate-certificate-b-pdf', {
+        body: { enrollment_id: 1 },
+      });
+    });
   });
 
   describe('notificaciones de certificado (Spec 0024, AC7)', () => {

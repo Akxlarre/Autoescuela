@@ -803,8 +803,12 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
     return this.filteredAlumnos().slice(start, start + this.PAGE_SIZE);
   });
 
+  /** fix-462-m: los que "Generar pendientes" emite — mismo criterio que `pendientesElegibles`. */
   readonly pendientesCount = computed(
-    () => this.alumnos().filter((a) => a.certificadoStatus === 'pendiente').length,
+    () =>
+      this.alumnos().filter(
+        (a) => a.certificadoStatus === 'pendiente' && a.clasesCompletadas >= a.clasesTotales,
+      ).length,
   );
 
   /** Alumnos con certificado generado que aún no recibieron el correo. */
