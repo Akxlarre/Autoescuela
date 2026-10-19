@@ -51,7 +51,8 @@
 ### DG-008 — Sin `.order()`/`.limit()`, PostgREST trunca en silencio a 1000 filas
 - **Trampa:** asumir que una query sin límite explícito devuelve todas las filas.
 - **Realidad:** `supabase/config.toml` fija `max_rows = 1000`. PostgREST corta ahí sin lanzar error — invisible con pocos datos de prueba, silencioso a escala real.
-- **Fuente:** `specs/fixes/fix-053-b-ciclos-queries-limit`
+- **Regla de aplicabilidad:** un listado que debe traer todo pasa por `fetchAllPages()` (`core/utils/paged-fetch.utils.ts`) con orden estable e `id` de desempate.
+- **Fuente:** `specs/fixes/fix-053-b-ciclos-queries-limit`, `specs/fixes/fix-457-m-dms-sin-tope-1000-filas`
 
 ### DG-009 — Un campo "sede" en un listado puede ser un placeholder sin JOIN real
 - **Trampa:** asumir que el campo "sucursal" de una fila ya trae el nombre resuelto.

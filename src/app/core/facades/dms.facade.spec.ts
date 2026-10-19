@@ -14,6 +14,7 @@ function makeBuilder(result: { data: any; error: any }): any {
   b.select = vi.fn(() => b);
   b.eq = vi.fn(() => b);
   b.or = vi.fn(() => b);
+  b.range = vi.fn(() => b);
   b.order = vi.fn(() => b);
   b.delete = vi.fn(() => b);
   b.update = vi.fn(() => b);
@@ -550,6 +551,21 @@ describe('DmsFacade', () => {
       expect(localFacade.recentDocs().map((d) => d.fileName)).toEqual(['a.pdf']);
     });
 
+    it('fetchAllData() (fix-457-m): documentos de alumno, alumnos y documentos de instructor se paginan', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      const builders: Record<string, any> = {};
+      localSupabaseSpy.client.from = vi.fn((table: string) => {
+        builders[table] ??= makeBuilder({ data: [], error: null });
+        return builders[table];
+      });
+
+      await localFacade.initialize();
+
+      for (const table of ['v_dms_student_documents', 'students', 'instructor_documents']) {
+        expect(builders[table].range).toHaveBeenCalledWith(0, 999);
+      }
+    });
+
     it('fetchAllData() (fix-451-m): documentos de la escuela con sede incluyen los de ambas sedes (NULL)', async () => {
       const { localFacade, localSupabaseSpy } = setupFacade({
         role: 'admin',
@@ -1027,6 +1043,7 @@ describe('DmsFacade — request guard (spec 0005-m, AC1, AC4, AC-E1)', () => {
           eq: vi.fn(() => builder),
           order: vi.fn(() => builder),
           limit: vi.fn(() => builder),
+          range: vi.fn(() => builder),
           then: (resolve: any, reject: any) =>
             deferredForBatch(batchIndex).promise.then(resolve, reject),
         };

@@ -23,6 +23,7 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { fetchAllPages } from '@core/utils/paged-fetch.utils';
 
 // ─── Labels ──────────────────────────────────────────────────────────────────
 
@@ -868,14 +869,22 @@ export class DmsFacade {
       // fix-456-m: con sede, se filtra por la sede de la MATRÍCULA (spec 0007-m: puede diferir de la
       // del alumno). `!inner` deja solo alumnos con matrícula en esa sede y solo esas matrículas.
       const enrollmentsEmbed = branchId !== null ? 'enrollments!inner' : 'enrollments';
-      let studentsQuery: any = this.supabase.client.from('students').select(
-        `
+      // fix-457-m: alumnos, documentos de alumno y de instructor se paginan (DG-008: PostgREST
+      // corta en 1.000 sin avisar). Cada página arma su consulta, con `id` como desempate.
+      const studentsPage = (from: number, to: number) => {
+        let q: any = this.supabase.client
+          .from('students')
+          .select(
+            `
           id,
           users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, branch_id, branches(name)),
           ${enrollmentsEmbed}(id, number, created_at, branch_id, branches(name))
         `,
-      );
-      if (branchId !== null) studentsQuery = studentsQuery.eq('enrollments.branch_id', branchId);
+          )
+          .order('id');
+        if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
+        return q.range(from, to);
+      };
 
       let instructorsQuery: any = this.supabase.client
         .from('instructors')
@@ -886,20 +895,30 @@ export class DmsFacade {
 
       const [vDocsRes, schoolDocsRes, studentsRes, instructorsRes, instructorDocsRes] =
         await Promise.all([
-          this.supabase.client
-            .from('v_dms_student_documents')
-            .select('*')
-            .order('document_at', { ascending: false }),
+          // La vista junta varios orígenes cuyos id pueden repetirse: source + id desempatan.
+          fetchAllPages((from, to) =>
+            this.supabase.client
+              .from('v_dms_student_documents')
+              .select('*')
+              .order('document_at', { ascending: false })
+              .order('source')
+              .order('id')
+              .range(from, to),
+          ),
 
           schoolDocsQuery,
 
-          studentsQuery,
+          fetchAllPages(studentsPage),
 
           instructorsQuery,
 
-          this.supabase.client
-            .from('instructor_documents')
-            .select('id, instructor_id, type, file_name, storage_url, status, created_at'),
+          fetchAllPages((from, to) =>
+            this.supabase.client
+              .from('instructor_documents')
+              .select('id, instructor_id, type, file_name, storage_url, status, created_at')
+              .order('id')
+              .range(from, to),
+          ),
         ]);
 
       // fix-455-m: antes una consulta fallida se veía como "Sin documentos aún".
