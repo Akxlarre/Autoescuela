@@ -52,7 +52,9 @@ consultan a medida que aparecen.
 
 - [x] Revisión de las 26 sospechas en código
 - [x] S26 → `fix-448-m` · S7 → `fix-449-m` · S10 → `fix-450-m` · S5 → `fix-451-m` · S6 → `fix-452-m` · S9 → `fix-454-m` · fechas UTC → `fix-453-m`
-- [ ] S12, S14, S16, S18, S19 (abiertas en código)
+- [x] S16 → `fix-455-m` · S12 → `fix-457-m`
+- [ ] S19 → `fix-456-m`: falta aplicar la migración y verificar
+- [ ] S14, S18 (abiertas en código)
 - [ ] S8, S13, S15, S17, S20–S22, S24, S25 (sin revisar)
 - [ ] Casos A…S del checklist en navegador
 - [ ] Playwright: subida + visualización de documento; certificado no elegible bloqueado
@@ -75,11 +77,11 @@ consultan a medida que aparecen.
 | S9 — borrar no borra el archivo | ❌ → corregida en `fix-454-m` (borrar y insert fallido; contratos fuera) | `dms.facade.ts:629-643,736-742,782-785` |
 | S10 — sección vacía publicada → PDF en blanco | ❌ (`publish()` guardaba `''`; la edge usa `??`) → corregida en `fix-450-m`: no se publica con secciones vacías. Las 6 filas actuales están completas | `document-content-templates.facade.ts:79,105-120`; `generate-certificate-b-pdf/index.ts:529-588` |
 | S11 — fechas UTC | Cerrada (`0024-m`, `chile-time.ts`) → regresión. Fechas en blanco con bypass y clases no completadas: verificar en navegador | `generate-certificate-b-pdf/index.ts:1,221,413,431` |
-| S12 — tope de 1.000 filas | **Abierta** | `dms.facade.ts:811-843` |
+| S12 — tope de 1.000 filas | → corregida en `fix-457-m` (paginación con `fetchAllPages`) | `dms.facade.ts:811-843` |
 | S14 — criterios de elegibilidad / pago | Pago cerrado (`0010-i`, habilitación con motivo); botón y edge usan `completed` (`fix-262-m`). **Abierta**: la lista de la secretaria sigue filtrando `certificate_enabled` (trigger clase #12) | `certificacion-clase-b.facade.ts:576` |
-| S16 — errores tragados | **Abierta** en las cargas del DMS (no revisan `error`) | `dms.facade.ts:847-866` |
+| S16 — errores tragados | ❌ → corregida en `fix-455-m` (toasts de carga y borrado; email: pendiente en certificación) | `dms.facade.ts:847-866` |
 | S18 — folio con carrera | **Abierta** (`certErr` se ignora) | `generate-certificate-b-pdf/index.ts:281-303` |
-| S19 — sede por la del alumno | **Abierta** | `dms.facade.ts:818,825` |
+| S19 — sede por la del alumno | ❌ confirmada (Samuel Merino, #0008) → `fix-456-m`: cliente listo; RLS de `students` en migración pendiente de aplicar | `dms.facade.ts:818,825` |
 | S23 — filtro Estado sin "Todos" | Cerrada (`0022-m`, placeholder "Todos los estados") → regresión | `certificacion-clase-b-content.component.ts:108,749` |
 | S8, S13, S15, S17, S20–S22, S24, S25 | Sin revisar en código; se verifican en navegador | — |
 
@@ -94,6 +96,9 @@ consultan a medida que aparecen.
 | `fix-452-m-documento-escuela-subido-por` | S6 — todo documento de la escuela "Subido por Sistema" | Cerrado 2026-10-18 |
 | `fix-453-m-fechas-dms-hora-chile` | Hallazgo nuevo — fechas del DMS (y pre-inscritos) en UTC vía `| slice: 0 : 10`; ARCH-27 lo detecta ahora | Cerrado 2026-10-18 |
 | `fix-454-m-borrar-documento-borra-archivo` | S9 / F05 — borrar un documento dejaba el archivo en Storage | Cerrado 2026-10-18 |
+| `fix-455-m-dms-errores-visibles` | S16 / A07 — errores de carga y borrado del DMS invisibles | Cerrado 2026-10-18 |
+| `fix-456-m-dms-sede-de-la-matricula` | S19 / B17 — el DMS y la RLS de `students` usaban la sede del alumno, no la de la matrícula | Abierto: migración `20261018120000` pendiente de aplicar |
+| `fix-457-m-dms-sin-tope-1000-filas` | S12 / B16 — el DMS perdía filas pasadas las 1.000 | Cerrado 2026-10-18 |
 
 ### Observaciones (sin track)
 
