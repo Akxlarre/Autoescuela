@@ -9,6 +9,12 @@ import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import type { CertificacionAlumnoRow } from '@core/models/ui/certificacion-clase-b.model';
 
+// fix-463-m: el piloto se controla por test; por defecto el portal del alumno está habilitado.
+const pilot = vi.hoisted(() => ({ alumnoBloqueado: false }));
+vi.mock('@core/config/pilot-phase.config', () => ({
+  isBlockedInPilot: (module: string) => module === 'alumno' && pilot.alumnoBloqueado,
+}));
+
 describe('CertificacionClaseBFacade', () => {
   let facade: CertificacionClaseBFacade;
   let supabaseSpy: any;
@@ -628,6 +634,29 @@ describe('CertificacionClaseBFacade', () => {
   });
 
   describe('notificaciones de certificado (Spec 0024, AC7)', () => {
+    afterEach(() => {
+      pilot.alumnoBloqueado = false;
+    });
+
+    it('fix-463-m: con el portal del alumno en piloto, generar no lo notifica', async () => {
+      pilot.alumnoBloqueado = true;
+      (facade as any)._alumnos.set([makeAlumnoRow({ enrollmentId: 42, studentId: 5 })]);
+      supabaseSpy.client.from = mockFromByTable({
+        students: {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({ data: { user_id: 900 }, error: null }),
+            }),
+          }),
+        },
+      });
+
+      await facade.generarCertificado(42);
+      await flushMicrotasks();
+
+      expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+    });
+
     it('notifica al alumno tras generar un certificado individual', async () => {
       (facade as any)._alumnos.set([makeAlumnoRow({ enrollmentId: 42, studentId: 5 })]);
       const studentsHandler = {

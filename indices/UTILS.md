@@ -57,6 +57,7 @@
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
 | `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
+| `src/app/core/utils/document-template-options.utils.ts` | `editableDocumentTypes` |
 | `src/app/core/utils/drawer-navigation.utils.ts` | `isRouteChange` |
 | `src/app/core/utils/edge-function-error.utils.ts` | `EdgeFunctionError`, `readEdgeFunctionError`, `edgeFunctionUserMessage` |
 | `src/app/core/utils/egresado-status.utils.ts` | `EgresadoAccountStatus`, `getEgresadoAccountStatus` |

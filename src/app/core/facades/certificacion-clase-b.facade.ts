@@ -14,6 +14,7 @@ import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { assertWriteOk, toFriendlyDbMessage } from '@core/utils/db-error.utils';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 import type {
   CertificacionAlumnoRow,
   CertificacionKpis,
@@ -191,6 +192,8 @@ export class CertificacionClaseBFacade {
   private notifyCertificateReady(
     alumno: Pick<CertificacionAlumnoRow, 'enrollmentId' | 'studentId' | 'curso'>,
   ): void {
+    // fix-463-m: con el portal del alumno en piloto no hay portal donde verlo (ni cuenta, fix-393-m).
+    if (isBlockedInPilot('alumno')) return;
     this.resolveStudentUserId(alumno.studentId)
       .then((userId) => {
         if (!userId) return;
