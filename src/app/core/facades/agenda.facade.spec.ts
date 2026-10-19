@@ -273,6 +273,33 @@ describe('AgendaFacade', () => {
     });
   });
 
+  describe('studentId del slot — hotfix-095-b (E11)', () => {
+    it('la clase agendada trae el id del alumno para ir a su ficha', async () => {
+      supabaseSpy.setResult('class_b_sessions', [
+        {
+          id: 1,
+          instructor_id: 1,
+          vehicle_id: 1,
+          enrollment_id: 7,
+          class_number: 1,
+          scheduled_at: `${facade.weekStart()}T13:30:00Z`,
+          status: 'scheduled',
+          enrollments: {
+            student_id: 42,
+            students: { users: { first_names: 'Ana', paternal_last_name: 'Soto' } },
+          },
+        },
+      ]);
+
+      await facade.loadWeek();
+
+      const slots = facade.weekData()!.days.flatMap((d) => d.slots);
+      const clase = slots.find((s) => s.sessionId === 1)!;
+      expect(clase.studentId).toBe(42);
+      expect(clase.enrollmentId).toBe(7);
+    });
+  });
+
   describe('vehicleDocWarning — fix-164-m', () => {
     it('expone vehicleDocWarning por slot según vehicle_documents', async () => {
       supabaseSpy.setResult('v_class_b_schedule_availability', [

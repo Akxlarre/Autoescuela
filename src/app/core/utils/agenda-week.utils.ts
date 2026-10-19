@@ -44,3 +44,17 @@ export function initialMobileDayIndex(days: readonly { isToday: boolean }[]): nu
   const i = days.findIndex((d) => d.isToday);
   return i >= 0 ? i : 0;
 }
+
+/**
+ * Ficha del alumno desde el detalle de una clase de la Agenda (hotfix-095-b). El portal sale de la
+ * URL actual: la Agenda también se abre como drawer desde el dashboard de la secretaria.
+ */
+export function studentFichaUrl(
+  currentUrl: string,
+  studentId: number,
+  enrollmentId: number | undefined,
+): string {
+  const portal = currentUrl.startsWith('/app/secretaria') ? 'secretaria' : 'admin';
+  const base = `/app/${portal}/alumnos/${studentId}`;
+  return enrollmentId ? `${base}?enrollment=${enrollmentId}` : base;
+}

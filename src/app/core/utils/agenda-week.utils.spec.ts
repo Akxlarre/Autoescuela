@@ -1,4 +1,4 @@
-import { initialMobileDayIndex } from './agenda-week.utils';
+import { initialMobileDayIndex, studentFichaUrl } from './agenda-week.utils';
 
 describe('initialMobileDayIndex (hotfix-094-b, P03)', () => {
   const semana = (hoy: number | null) =>
@@ -15,5 +15,21 @@ describe('initialMobileDayIndex (hotfix-094-b, P03)', () => {
   it('otra semana o fin de semana → lunes', () => {
     expect(initialMobileDayIndex(semana(null))).toBe(0);
     expect(initialMobileDayIndex([])).toBe(0);
+  });
+});
+
+describe('studentFichaUrl (hotfix-095-b, E11)', () => {
+  it('desde el portal de la secretaria va a su ficha', () => {
+    expect(studentFichaUrl('/app/secretaria/agenda', 42, 7)).toBe(
+      '/app/secretaria/alumnos/42?enrollment=7',
+    );
+    expect(studentFichaUrl('/app/secretaria/dashboard', 42, 7)).toBe(
+      '/app/secretaria/alumnos/42?enrollment=7',
+    );
+  });
+
+  it('desde el admin va a la ficha del admin; sin matrícula, sin query', () => {
+    expect(studentFichaUrl('/app/admin/agenda', 42, 7)).toBe('/app/admin/alumnos/42?enrollment=7');
+    expect(studentFichaUrl('/app/admin/agenda', 42, undefined)).toBe('/app/admin/alumnos/42');
   });
 });

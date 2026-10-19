@@ -109,6 +109,7 @@ interface RawSession {
   km_end: number | null;
   notes: string | null;
   enrollments: {
+    student_id?: number;
     students: {
       users: { first_names: string; paternal_last_name: string };
     };
@@ -432,6 +433,7 @@ export class AgendaFacade {
         class_number, scheduled_at, status, km_start, km_end, notes,
         enrollments!inner (
           branch_id,
+          student_id,
           students!inner (
             users!inner ( first_names, paternal_last_name )
           )
@@ -590,6 +592,7 @@ export class AgendaFacade {
         vehicleDocWarning: this.vehicleDocWarningMap.get(s.vehicle_id) ?? null,
         sessionId: s.id,
         enrollmentId: s.enrollment_id,
+        studentId: s.enrollments?.student_id,
         studentName,
         classNumber: s.class_number ?? undefined,
         kmStart: s.km_start,

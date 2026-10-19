@@ -38,6 +38,8 @@ export interface AgendaSlot {
   // Solo presente cuando status !== 'available'
   sessionId?: number;
   enrollmentId?: number;
+  /** students.id, para ir a la ficha desde el detalle (hotfix-095-b). */
+  studentId?: number;
   studentName?: string;
   classNumber?: number;
   /** Kilometraje de inicio/fin — registrados al finalizar la clase (status 'completed'). */
