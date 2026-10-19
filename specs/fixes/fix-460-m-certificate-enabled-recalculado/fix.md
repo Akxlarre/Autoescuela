@@ -1,7 +1,8 @@
 # Fix: `certificate_enabled` se prende con la clase #12 aunque falten clases, y nunca se apaga
 > id: fix-460-m-certificate-enabled-recalculado
 > refs: fix-447-m-testing-documentos-certificacion (S14) · fix-459-m · fix-262-m · spec 0006-m
-> status: open
+> status: done
+> closed: 2026-10-18
 > created: 2026-10-18
 
 ## Root Cause
@@ -45,5 +46,11 @@ secretaria ya no lo usa (`fix-459-m`).
 - [x] Migración + test SQL. Contra la BD actual el test falla (C1: 124 matrículas con el flag
   distinto de la regla; C2: al revertir una clase el flag sigue en `true`). Ensayo migración + test
   con rollback → C1 y C2 ok; después la BD sigue igual (140 con flag, trigger viejo).
-- [ ] Matías aplica `20261018130000_fix460_certificate_enabled_recalculado.sql`.
-- [ ] Re-correr el test SQL y verificar la alerta del dashboard en el navegador.
+- [x] Matías aplicó `20261018130000_fix460_certificate_enabled_recalculado.sql` (2026-10-18).
+- [x] Test SQL contra la BD real: pasa (C1 y C2). `trg_enable_certificate_b` ya no tiene el
+  `WHEN class_number`; matrículas Clase B con flag: 140 → 16 (8 por sede, las mismas que muestra la
+  lista de certificados de `fix-459-m`).
+- [x] Navegador, secretaria sede 1 → dashboard: la alerta "listos para certificar" ya no aparece.
+  Es correcto: cuenta matrículas `active` con flag y sin PDF, y las 16 habilitadas están
+  `completed` (datos sembrados). Antes del fix habría contado las 124 activas con el flag prendido
+  por la clase #12.
