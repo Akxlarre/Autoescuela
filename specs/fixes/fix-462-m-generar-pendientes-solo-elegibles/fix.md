@@ -34,4 +34,4 @@ los no elegibles.
 ## Progreso
 
 - [x] Test rojo antes del cambio (el lote invocaba también al 8/12) → verde después. Specs de certificación 45/45; `lint:arch` 0 errores.
-- [ ] Navegador (admin, Certificación): contador y drawer — en la verificación conjunta del testing.
+- Navegador (admin, Certificación): contador y drawer — en la verificación conjunta del testing (fix-447-m).

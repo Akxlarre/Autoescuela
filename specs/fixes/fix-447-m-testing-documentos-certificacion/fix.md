@@ -56,7 +56,16 @@ consultan a medida que aparecen.
 - [x] S19 → `fix-456-m` (DMS + RLS) y `fix-458-m` (Base Alumnos)
 - [x] S14 → `fix-459-m` + `fix-460-m`
 - [x] S18 → `fix-461-m`
-- [ ] S8, S13, S15, S17, S20–S22, S24, S25 (sin revisar)
+- [x] Revisión en código de S8, S13, S15, S17, S20–S22, S24, S25 (2026-10-19)
+- [x] S15 → `fix-462-m` · S21 → `fix-463-m` · S17 → `fix-464-m`
+- [ ] Confirmadas en código, sin corregir aún:
+  - S13 — `send-certificate-email` dice "Conductores Chillán" fijo; usar `branches.name` de la matrícula (como `contract-email.ts`). El logo del PDF es el mismo del contrato en ambas sedes: consultar si es el institucional.
+  - S20 — editor de plantillas: si la carga falla queda el form de la sede anterior y "Publicar" escribe ahí; sin aviso de cambios sin publicar ni confirmación al publicar.
+  - S22 — "Descargar" del drawer abre una pestaña (`download` no aplica cross-origin); el visor modal no ofrece descarga para PDF/imagen.
+  - S24 — `v_dms_student_documents` muestra el contrato generado (`file_url`), no el escaneo firmado (`signed_contract_url`); tampoco certificado ni carnet. Requiere migración.
+  - S25 — secretaria multisede: `secretaria-documentos` y `secretaria-certificados` no recargan al cambiar de sede (el admin sí, con el guard de fix-195-b).
+  - S16 (resto) — `enviarEmail()` muestra un error genérico y pierde el motivo ("El alumno no tiene email…").
+  - S8 — no existe "reemplazar" documento; la secretaria no puede corregir un escaneo malo. **Decisión de negocio pendiente** (¿la secretaria puede reemplazar?).
 - [ ] Casos A…S del checklist en navegador
 - [ ] Playwright: subida + visualización de documento; certificado no elegible bloqueado
 - [ ] Test de regresión del track → `/fix-close`
@@ -104,6 +113,9 @@ consultan a medida que aparecen.
 | `fix-458-m-base-alumnos-sede-de-la-matricula` | Hallazgo al verificar 456 — Base Alumnos filtraba y mostraba la sede por `users.branch_id` | Cerrado 2026-10-18 |
 | `fix-457-m-dms-sin-tope-1000-filas` | S12 / B16 — el DMS perdía filas pasadas las 1.000 | Cerrado 2026-10-18 |
 | `fix-461-m-folio-certificado-atomico` | S18 / M14 / Q04 — dos generaciones a la vez chocaban en el folio o duplicaban el certificado | Cerrado 2026-10-19 |
+| `fix-462-m-generar-pendientes-solo-elegibles` | S15 — "Generar pendientes" incluía a los que no cumplen las clases | Cerrado 2026-10-19 |
+| `fix-463-m-certificacion-respeta-piloto` | S21 — aviso "disponible en tu portal" con el portal en piloto; Certificado Profesional en el editor | Cerrado 2026-10-19 |
+| `fix-464-m-regenerar-certificado` | S17 — no se podía regenerar un certificado ya generado | Cerrado 2026-10-19 |
 
 ### Observaciones (sin track)
 

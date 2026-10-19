@@ -186,7 +186,7 @@ export class CertificacionClaseBFacade {
 
   /**
    * Notifica al alumno que su certificado quedó disponible en el portal (AC7).
-   * Solo se llama al generar (no en `descargarPdf`/`enviarEmail`, para no duplicar).
+   * Solo se llama al generar (no al regenerar ni en `enviarEmail`, para no duplicar).
    * Fire-and-forget: un fallo nunca rompe el flujo de generación (AC-E1).
    */
   private notifyCertificateReady(
@@ -236,12 +236,26 @@ export class CertificacionClaseBFacade {
   }
 
   /**
-   * Re-invoca la Edge Function (upsert idempotente) y abre el visor.
-   * Botón PDF cuando el certificado ya fue generado.
+   * fix-464-m: vuelve a generar el PDF de un certificado ya emitido (nombre o plantilla
+   * corregidos). Conserva el folio: `issue_certificate` devuelve el registro existente. El admin
+   * regenera con `force` porque el original pudo emitirse con el bypass; para la secretaria la
+   * función lo ignora igual.
    */
-  async descargarPdf(enrollmentId: number): Promise<void> {
-    const result = await this.invokeConAutorizacionDeDeuda(enrollmentId);
+  async regenerarCertificado(enrollmentId: number): Promise<void> {
+    const confirmado = await this.confirmModal.confirm({
+      title: 'Regenerar certificado',
+      message:
+        'Se volverá a generar el PDF con los datos del alumno y la plantilla actuales. El folio no cambia.',
+      severity: 'warn',
+      confirmLabel: 'Regenerar',
+    });
+    if (!confirmado) return;
+
+    const force = this.authFacade.currentUser()?.role === 'admin';
+    const result = await this.invokeConAutorizacionDeDeuda(enrollmentId, force);
     if (!result) return;
+    this.toast.success('Certificado regenerado');
+    void this.refreshSilently();
     this.dmsViewer.openByUrl(result.url, 'Certificado Clase B');
   }
 

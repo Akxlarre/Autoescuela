@@ -34,6 +34,7 @@ import { EnviarMasivoDrawerComponent } from './drawers/enviar-masivo-drawer.comp
       (generarCertificadoForzado)="facade.generarCertificado($event, true)"
       (verCertificado)="facade.verCertificado($event.storagePath, $event.nombre)"
       (enviarEmail)="facade.enviarEmail($event)"
+      (regenerarCertificado)="facade.regenerarCertificado($event)"
       (abrirHistorialDrawer)="openHistorialDrawer()"
       (abrirGenerarPendientesDrawer)="openGenerarPendientesDrawer()"
       (abrirEnviarMasivoDrawer)="openEnviarMasivoDrawer()"

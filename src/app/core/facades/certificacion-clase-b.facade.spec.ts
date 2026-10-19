@@ -105,7 +105,10 @@ describe('CertificacionClaseBFacade', () => {
       notifyUsers: vi.fn().mockResolvedValue(undefined),
       notifyRole: vi.fn().mockResolvedValue(undefined),
     };
-    confirmSpy = { confirmWithReason: vi.fn().mockResolvedValue(null) };
+    confirmSpy = {
+      confirm: vi.fn().mockResolvedValue(false),
+      confirmWithReason: vi.fn().mockResolvedValue(null),
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -587,6 +590,34 @@ describe('CertificacionClaseBFacade', () => {
 
       expect(confirmSpy.confirmWithReason).not.toHaveBeenCalled();
       expect(toastSpy.warning).toHaveBeenCalledWith(expect.stringContaining('1 con deuda'));
+    });
+  });
+
+  describe('regenerarCertificado() (fix-464-m)', () => {
+    it('si se cancela la confirmación, no invoca la generación', async () => {
+      await facade.regenerarCertificado(42);
+      expect(confirmSpy.confirm).toHaveBeenCalled();
+      expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
+    });
+
+    it('admin: confirma, regenera con force y abre el visor', async () => {
+      confirmSpy.confirm.mockResolvedValueOnce(true);
+      await facade.regenerarCertificado(42);
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(
+        'generate-certificate-b-pdf',
+        { body: { enrollment_id: 42, force: true } },
+      );
+      expect(dmsViewerSpy.openByUrl).toHaveBeenCalled();
+    });
+
+    it('secretaria: regenera sin force', async () => {
+      authFacadeSpy.currentUser.mockReturnValue({ role: 'secretary', branchId: 1 });
+      confirmSpy.confirm.mockResolvedValueOnce(true);
+      await facade.regenerarCertificado(42);
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(
+        'generate-certificate-b-pdf',
+        { body: { enrollment_id: 42, force: false } },
+      );
     });
   });
 
