@@ -37,8 +37,14 @@ los ve en el DMS y, en cambio, aparecen en el DMS de la sede 2.
 - [x] Cliente (`dms.facade.ts`): filtro por `enrollments.branch_id` + documentos por matrícula.
   `dms.facade.spec.ts` 43/43 (el test nuevo falló antes). Admin con "Autoescuela Chillán" → Samuel
   aparece con #0008 y 2 docs (antes no).
-- [ ] **Secretaria sede 1: sigue sin verlo — lo bloquea la RLS.** `select_students`
-  (`20260723030000`) solo deja ver alumnos cuyo `users.branch_id` es la sede de la secretaria. Con
-  su token: `enrollments` #0008 → 1 fila, `v_dms_student_documents` de Samuel → 2 filas,
-  `students` id 84 → 0 filas. No es solo del DMS: un alumno re-matriculado en la otra sede es
-  invisible para esa secretaria en toda la app. Requiere migración (y decisión de Matías).
+- [x] **Secretaria: la bloqueaba la RLS.** `select_students` (`20260723030000`) solo dejaba ver
+  alumnos cuyo `users.branch_id` es la sede de la secretaria. Con su token: `enrollments` #0008 →
+  1 fila, `v_dms_student_documents` de Samuel → 2, `students` id 84 → 0. No era solo del DMS: un
+  alumno re-matriculado en la otra sede era invisible para esa secretaria en toda la app.
+  Matías (2026-10-18): un alumno matriculado en la sede de la secretaria es alumno de esa sede.
+  → migración `20261018120000_fix456_students_rls_sede_de_matricula.sql` (la secretaria ve también
+  a los alumnos con alguna matrícula en su sede). Test `supabase/tests/rls/fix-456-m-students-sede-de-matricula.sql`:
+  contra la policy actual falla (74/75); ensayo con la policy nueva y rollback → 75/75, 0 ajenos,
+  admin 211/211; nada persistió. DG-115.
+- [ ] Matías aplica la migración.
+- [ ] Re-correr el test SQL y verificar en navegador: secretaria sede 1 → Samuel con #0008.

@@ -1900,6 +1900,22 @@
   marca. El cliente no puede fijarla: PostgREST no expone `set_config` (comprobado: 404).
 - **Fuente:** `specs/fixes/fix-445-m-egreso-en-dia-con-caja-cerrada`, `fix-444-m`, `fix-051-i`.
 
+### DG-115 — "La sede del alumno" no existe como tal: un alumno es de cada sede donde tiene matrícula
+
+- **Trampa:** filtrar alumnos (o lo que cuelga de ellos) por sede con `users.branch_id`, ya sea en
+  una query (`.eq('users.branch_id', sede)`) o en una policy.
+- **Realidad:** `students` no tiene sede; `users.branch_id` es un único valor (la sede donde se
+  registró), pero cada matrícula tiene su `enrollments.branch_id` y puede ser de la otra sede
+  (spec 0007-m, re-matrícula). Un alumno de la sede 2 con matrícula activa en la sede 1 **también
+  es alumno de la sede 1**. Filtrar por `users.branch_id` lo hacía invisible para la secretaria de
+  la sede 1 (que sí podía leer su matrícula y sus documentos) y mostraba sus documentos en la sede
+  equivocada.
+- **Regla de aplicabilidad:** para "alumnos/documentos/datos de la sede X", filtrar por la sede de la
+  **matrícula** (`enrollments!inner` + `.eq('enrollments.branch_id', X)`; documentos por
+  `enrollment_id`). `select_students` deja ver a la secretaria los alumnos de su sede **o** con
+  alguna matrícula en ella (`20261018120000`).
+- **Fuente:** `specs/fixes/fix-456-m-dms-sede-de-la-matricula`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:
