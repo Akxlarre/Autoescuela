@@ -1,7 +1,8 @@
 # Fix: El DMS filtra los documentos de alumno por la sede del alumno, no por la de la matrícula
 > id: fix-456-m-dms-sede-de-la-matricula
 > refs: fix-447-m-testing-documentos-certificacion (S19, caso B17) · spec 0007-m
-> status: open
+> status: done
+> closed: 2026-10-18
 > created: 2026-10-18
 
 ## Root Cause
@@ -46,5 +47,7 @@ los ve en el DMS y, en cambio, aparecen en el DMS de la sede 2.
   a los alumnos con alguna matrícula en su sede). Test `supabase/tests/rls/fix-456-m-students-sede-de-matricula.sql`:
   contra la policy actual falla (74/75); ensayo con la policy nueva y rollback → 75/75, 0 ajenos,
   admin 211/211; nada persistió. DG-115.
-- [ ] Matías aplica la migración.
-- [ ] Re-correr el test SQL y verificar en navegador: secretaria sede 1 → Samuel con #0008.
+- [x] Matías aplicó la migración (2026-10-18).
+- [x] Test SQL contra la BD real: pasa (sin excepción); `pg_policies` confirma la cláusula nueva.
+  Navegador, secretaria sede 1 → DMS, buscar "Merino": Samuel José Merino, #0008, 2 docs.
+  Base Alumnos no lo mostraba (filtraba por `users.branch_id`) → `fix-458-m`.
