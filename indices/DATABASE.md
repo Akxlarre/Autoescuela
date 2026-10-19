@@ -235,7 +235,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 > esta sección refleja el SQL real.
 
 <!-- AUTO-GENERATED:BEGIN -->
-## Esquema efectivo (86 tablas, acumulado de las migraciones)
+## Esquema efectivo (87 tablas, acumulado de las migraciones)
 
 ### `absence_evidence` — 🔒 RLS
 
@@ -543,6 +543,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | delete_certificates | DELETE | `auth_user_role() = 'admin'` | — |
 | select_certificates | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 | insert_certificates | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+
+**Índices:** `certificates_enrollment_type_key`
 
 ### `class_b_exam_attempts` — 🔒 RLS
 
@@ -1215,6 +1217,25 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | insert_fixed_expenses | INSERT | — | `auth_user_role() = 'admin'` |
 | update_fixed_expenses | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_fixed_expenses | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `holidays` — 🔒 RLS
+
+> Spec 0052-b: feriados que no ofrecen horarios de Clase B. La llena la Edge Function sync-holidays '
+  '(cron mensual). scope=local: feriado de la comuna de las sedes (20 de agosto, Chillán).
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `date` PK | DATE | NO | — | — |
+| `name` | TEXT | NO | — | — |
+| `scope` | TEXT | NO | — | — |
+| `source` | TEXT | NO | — | — |
+| `updated_at` | TIMESTAMPTZ | NO | `now()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_holidays | SELECT | `true` | — |
 
 ### `instructor_advances` — 🔒 RLS
 
@@ -2179,12 +2200,6 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `voided_by` | INT | sí | — | → `users.id` |
 | `void_reason` | TEXT | sí | — | — |
 
-`status` admite `completed`, `pending` y `anulado` (fix-443-m, `20261016130000`). Una venta **no se
-borra: se anula** como un pago de matrícula (spec 0025-m). El trigger
-`trg_special_service_sales_guard_anulacion` (`guard_anulacion_venta_servicio()`) exige rol admin y
-motivo, fija `voided_by`/`voided_at`, deja `paid = false` (todas las sumas de ingresos filtran
-`paid = true`) y prohíbe "desanular" o modificar una anulada (salvo desvincular `service_id`).
-
 **Policies:**
 
 | Policy | Cmd | USING | WITH CHECK |
@@ -2192,8 +2207,6 @@ motivo, fija `voided_by`/`voided_at`, deja `paid = false` (todas las sumas de in
 | select_special_service_sales | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 | insert_special_service_sales | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
 | update_special_service_sales | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
-
-Sin policy de DELETE desde fix-443-m: nadie borra una venta desde la app.
 
 **Índices:** `idx_special_service_sales_branch_id`
 
@@ -2325,10 +2338,10 @@ Sin policy de DELETE desde fix-443-m: nadie borra una venta desde la app.
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_students | SELECT | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND ( (SELECT …` | — |
 | insert_students | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
 | update_students | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 | delete_students | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| select_students | SELECT | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND ( (SELECT …` | — |
 
 ### `task_replies` — 🔒 RLS
 
@@ -2525,7 +2538,7 @@ Sin policy de DELETE desde fix-443-m: nadie borra una venta desde la app.
 
 | Vista | Definida en |
 |-------|-------------|
-| `v_class_b_schedule_availability` | `20261015120000_fix224_vehiculo_no_operativo_sin_turnos.sql` |
+| `v_class_b_schedule_availability` | `20261019120000_spec0052_feriados.sql` |
 | `v_dms_student_documents` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_professional_attendance` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_student_progress_b` | `20260630000000_class_b_theory_cycles.sql` |
@@ -2582,11 +2595,14 @@ Sin policy de DELETE desde fix-443-m: nadie borra una venta desde la app.
 | `get_next_enrollment_number` | `(p_course_id integer)` |
 | `get_student_payment_status` | `(p_supabase_uid TEXT)` |
 | `guard_anulacion_pago` | `()` |
+| `guard_anulacion_venta_servicio` | `()` |
 | `guard_cierre_definitivo` | `()` |
+| `guard_egreso_en_caja_cerrada` | `()` |
 | `guard_movimiento_caja_cerrada` | `()` |
 | `guard_pago_en_caja_cerrada` | `()` |
 | `guard_venta_servicio_caja_cerrada` | `()` |
 | `instructor_enrollment_ids` | `()` |
+| `issue_certificate` | `(p_enrollment_id INT, p_student_id INT, p_type TEXT, p_issued_by INT)` |
 | `log_change` | `()` |
 | `mark_end_of_day_class_b_absences` | `()` |
 | `notify_class_b_completed` | `()` |
@@ -2604,9 +2620,11 @@ Sin policy de DELETE desde fix-443-m: nadie borra una venta desde la app.
 | `prevent_early_class_b_no_show` | `()` |
 | `prevent_student_double_booking_class_b_sessions` | `()` |
 | `prevent_vehicle_double_booking_class_b_sessions` | `()` |
+| `recalc_class_b_certificate_enabled` | `(p_enrollment_id INT)` |
 | `recalc_instructor_monthly_hours` | `(p_instructor_id INT, p_period TEXT)` |
 | `recalculate_enrollment_balance` | `()` |
 | `record_enrollment_payment` | `(p_enrollment_id integer, p_payment_method text, p_total_amount integer, p_discount_id integer DEFAULT NULL, p_discount_amount integer DEFAULT 0, p_is_deposit boolean DEFAULT false, p_document_number text DEFAULT NULL)` |
+| `registrar_ajuste_cuadratura` | `(p_cuadratura_id INT, p_tipo TEXT, p_monto INT, p_motivo TEXT, p_categoria TEXT DEFAULT NULL, p_vehiculo_id INT DEFAULT NULL)` |
 | `request_client_ip` | `()` |
 | `reschedule_class_b_sessions` | `(p_enrollment_id INT, p_instructor_id INT, p_items JSONB, p_reason TEXT, p_reason_other TEXT DEFAULT NULL)` |
 | `reserve_next_promotion_slot` | `(p_branch_id INT)` |

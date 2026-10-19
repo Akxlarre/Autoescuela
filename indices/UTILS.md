@@ -15,7 +15,7 @@
 | Archivo | Exports |
 |---------|---------|
 | `src/app/core/utils/age.utils.ts` | `isInvalidDate`, `getAgeStatus`, `calcAge`, `isMinor` |
-| `src/app/core/utils/agenda-week.utils.ts` | `addDaysToIso`, `isDateBeyondLimit`, `isNextWeekBeyondLimit` |
+| `src/app/core/utils/agenda-week.utils.ts` | `addDaysToIso`, `isDateBeyondLimit`, `isNextWeekBeyondLimit`, `initialMobileDayIndex`, `studentFichaUrl` |
 | `src/app/core/utils/alert-snooze.utils.ts` | `ALERT_SNOOZE_MS`, `AlertSnooze`, `AlertSnoozeMap`, `SnoozableAlert`, `snoozeKey`, `snoozeAlert`, `pruneSnoozes`, `filterSnoozedAlerts`, `parseSnoozes` |
 | `src/app/core/utils/alumno-profesional-status.utils.ts` | `SemaforoInfo`, `moduloPct`, `getSemaforo`, `getSemaforoBadgeVariant` |
 | `src/app/core/utils/alumno-status.utils.ts` | `ExpedienteStatus`, `TagSeverity`, `BadgeVariant`, `getExpedienteStatus`, `isAlumnoCursando`, `getAlumnoStatusSeverity`, `tagSeverityToBadgeVariant`, `getAlumnoStatusBadgeVariant` |
@@ -27,15 +27,16 @@
 | `src/app/core/utils/alumnos-sort.utils.ts` | `ALUMNO_SORT_OPTIONS`, `sortAlumnos`, `nextAlumnoSort`, `toggleAlumnoSortDirection` |
 | `src/app/core/utils/announcement-recipients.utils.ts` | `ANNOUNCEMENT_BATCH_SIZE`, `ANNOUNCEMENT_MAX_RECIPIENTS`, `ANNOUNCEMENT_WARN_RECIPIENTS`, `AnnouncementBatch`, `AnnouncementDraftError`, `AnnouncementDraftValidation`, `ExclusionCounts`, `buildBatches`, `validateAnnouncementDraft`, `countExclusions` |
 | `src/app/core/utils/announcement-template.utils.ts` | `TemplateDraftError`, `TemplateDraftValidation`, `renderTemplate`, `extractUsedVariables`, `isScheduledForValid`, `InsertionResult`, `insertAtCursor`, `validateTemplateDraft` |
-| `src/app/core/utils/anulacion-pago.utils.ts` | `formatAnulacionDetalle`, `resumenConAnulados`, `ingresoSeAnula` (pago y venta de servicio se anulan; curso singular se revierte, fix-443-m), `etiquetaAnularIngreso` |
+| `src/app/core/utils/anulacion-pago.utils.ts` | `ingresoSeAnula`, `etiquetaAnularIngreso`, `formatAnulacionDetalle`, `resumenConAnulados` |
 | `src/app/core/utils/archive-confirmation.utils.ts` | `ARCHIVE_CONFIRMATION_WORD`, `buildFutureClassesBlockMessage`, `CLASE_B_ARCHIVE_WARNING`, `isArchiveConfirmationText` |
 | `src/app/core/utils/auth-errors.utils.ts` | `mapAuthError` |
 | `src/app/core/utils/avatar-palette.ts` | `AvatarPaletteEntry`, `AVATAR_PALETTES`, `avatarPalette` |
-| `src/app/core/utils/beca.utils.ts` | `esBecaCompleta(totalPagado, saldoPendiente, cantidadPagos = 0)` — sin pagos ni saldo = beca 100 % (fix-057-i; la usan el Estado de Cuenta y la ficha del alumno) |
+| `src/app/core/utils/beca.utils.ts` | `esBecaCompleta` |
 | `src/app/core/utils/branch-scope-ui.utils.ts` | `isSedeDisabled`, `isBothBranchesVisible`, `isBothBranchesDisabled` |
-| `src/app/core/utils/branch-scope.utils.ts` | `NO_BRANCH_SCOPE`, `resolveBranchScope`, `canChooseBranch`, `scopeStudentsToBranch` (fix-458-m: alumnos de una sede por sus matrículas, DG-115) |
+| `src/app/core/utils/branch-scope.utils.ts` | `NO_BRANCH_SCOPE`, `resolveBranchScope`, `canChooseBranch`, `scopeStudentsToBranch` |
 | `src/app/core/utils/brand-text.utils.ts` | `resolveBrandText` |
 | `src/app/core/utils/carnet-menu.util.ts` | `CarnetMenuState`, `buildCarnetMenu` |
+| `src/app/core/utils/certificate-confirmation.utils.ts` | `PCT_TEORIA_MINIMA`, `PCT_PRACTICA_RECOMENDADA`, `CertificateWarningInput`, `CertificateModal`, `certificateWarnings`, `buildWarningConfirmation`, `buildEmailConfirmation`, `bulkCertificateSummary` |
 | `src/app/core/utils/chile-time.utils.ts` | `CHILE_TIME_ZONE`, `ChileInstant`, `ChileParts`, `InstantRange`, `chileParts`, `toChileDate`, `chileToday`, `chileMonth`, `chileYear`, `chileWallTimeToInstant`, `chileDayRange`, `chileRange`, `chileMonthRange`, `addDaysIso`, `addMonthsIso`, `monthDays`, `startOfMonthIso`, `endOfMonthIso`, `diffDaysIso`, `weekdayOfIso`, `mondayOfIso`, `calendarDateToIso`, `isoToCalendarDate`, `formatChileDate`, `formatChilePattern`, `formatChileTime`, `chileTimeOfDay` |
 | `src/app/core/utils/ciclo-select-groups.util.ts` | `CicloSelectGroup`, `cycleMoveTargets`, `groupCyclesByStatus` |
 | `src/app/core/utils/class-b-session-overdue.utils.ts` | `isSessionOverdue`, `isFromPreviousDay` |
@@ -52,8 +53,6 @@
 | `src/app/core/utils/cuadratura-medio-pago.utils.ts` | `medioDePagoLabel` |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
 | `src/app/core/utils/date.utils.ts` | `todayIso`, `notAfterTodayValidator`, `monthsAgoIso`, `formatDayMonthYear`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP` |
-| `src/app/core/utils/certificate-confirmation.utils.ts` | `PCT_TEORIA_MINIMA`, `PCT_PRACTICA_RECOMENDADA`, `certificateWarnings`, `buildWarningConfirmation`, `buildEmailConfirmation`, `bulkCertificateSummary` |
-| `src/app/core/utils/professional-certificate.utils.ts` | `promotionAllowsCertificate` |
 | `src/app/core/utils/db-error.utils.ts` | `MENSAJE_PAGO_PENDIENTE_CLASE_7`, `NoRowsAffectedError`, `assertWriteOk`, `toFriendlyDbMessage` |
 | `src/app/core/utils/deudor-label.utils.ts` | `describeMatriculaDeudor` |
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
@@ -106,6 +105,7 @@
 | `src/app/core/utils/notification.utils.ts` | `mapReferenceToNotificationType`, `mapNotificationDtoToUi`, `groupNotifications` |
 | `src/app/core/utils/odometer.utils.ts` | `OdometerFontTier`, `odometerDigitCount`, `odometerFontTier`, `KM_SUSPICIOUS_DELTA`, `kmWarning` |
 | `src/app/core/utils/optional-surname.utils.ts` | `isOptionalSurnameValid` |
+| `src/app/core/utils/paged-fetch.utils.ts` | `PageResult`, `POSTGREST_MAX_ROWS`, `fetchAllPages` |
 | `src/app/core/utils/password-policy.utils.ts` | `PASSWORD_MIN_LENGTH`, `PasswordContext`, `PasswordRequirementId`, `PasswordRequirement`, `PasswordStrength`, `PasswordEvaluation`, `evaluatePassword`, `passwordStrengthLabel` |
 | `src/app/core/utils/payment-concept.utils.ts` | `mapConcepto` |
 | `src/app/core/utils/payment-status.utils.ts` | `PAYMENT_STATUS_ANULADO`, `PAYMENT_STATUSES_QUE_SUMAN`, `paymentCuentaComoIngreso`, `soloPagosVigentes`, `paymentStatusLabel`, `paymentStatusVariant`, `PAYMENT_ANULACION_SELECT`, `PaymentAnulacionRow`, `mapAnulacionPago`, `enrollmentPaymentStatusLabel`, `enrollmentPaymentStatusVariant` |
@@ -113,6 +113,7 @@
 | `src/app/core/utils/period-window.utils.ts` | `PeriodWindow`, `PERIOD_WINDOW_MONTHS`, `DEFAULT_PERIOD_WINDOW`, `periodCutoffIso`, `PeriodWindowOptions`, `applyPeriodWindow` |
 | `src/app/core/utils/phone.utils.ts` | `DialCode`, `DIAL_CODES`, `validatePhone`, `hasMinimumPhoneLength`, `normalizePhone` |
 | `src/app/core/utils/professional-access.utils.ts` | `BranchProfessionalFlag`, `canAccessProfessional`, `canUnlockProfessional`, `visibleNavGroups` |
+| `src/app/core/utils/professional-certificate.utils.ts` | `promotionAllowsCertificate` |
 | `src/app/core/utils/professional-modules.ts` | `GRADE_MIN`, `GRADE_MAX`, `GRADE_PASS`, `MODULE_COUNT`, `getModuleNames`, `getModuleShortLabel`, `isPassing`, `roundGrade`, `calcAverage` |
 | `src/app/core/utils/professional-specializations.ts` | `SPEC_COLORS`, `SPEC_LABELS`, `SPECIALIZATION_OPTIONS`, `getSpecColor`, `getSpecLabel` |
 | `src/app/core/utils/promotion-code.utils.ts` | `PROMOTION_CADENCE_ANCHOR`, `PROMOTION_CODE_MAX_AHEAD`, `isValidPromotionCode`, `maxPromotionCode`, `suggestNextPromotionCode`, `promotionCodeError`, `promotionNameForCode`, `promotionLabel`, `promotionOptionStatus`, `sortPromotionGroupsByStart`, `isCadenceDate`, `promotionWriteErrorMessage` |
@@ -120,10 +121,11 @@
 | `src/app/core/utils/reagendamiento.utils.ts` | `isRazonReagendamientoCompleta`, `slotChocaConClases` |
 | `src/app/core/utils/realtime-scope.utils.ts` | `RealtimeRowChange`, `StudentRealtimeScope`, `isRealtimeEventForStudent` |
 | `src/app/core/utils/recipient-filter.utils.ts` | `BulkAction`, `filterRecipients`, `includedCount`, `applyBulkAction`, `onlyExcluded` |
-| `src/app/core/utils/paged-fetch.utils.ts` | `PageResult`, `POSTGREST_MAX_ROWS`, `fetchAllPages` — trae todas las filas por páginas de `range()` (DG-008: PostgREST corta en 1.000 sin avisar); la consulta necesita orden estable con `id` de desempate (fix-457-m) |
 | `src/app/core/utils/reenrollment.utils.ts` | `EnrollmentStatus`, `ReenrollmentVerdict`, `BLOCKING_STATUSES`, `HISTORICAL_STATUSES`, `evaluateReenrollment` |
+| `src/app/core/utils/remember-session.utils.ts` | `REMEMBER_KEY`, `ALIVE_COOKIE`, `shouldDiscardStoredSession`, `supabaseStorageKey` |
 | `src/app/core/utils/reportes-contables.utils.ts` | `PaymentRow`, `ExpenseRow`, `SingularSaleReportDto`, `mapSingularSaleToPaymentRow`, `SpecialServiceSaleReportDto`, `mapSpecialServiceSaleToPaymentRow`, `filterPaymentsByBranch`, `computeKpis`, `computeIngresosCategoria`, `computeGastosCategoria`, `computeEvolucionMensual`, `computeEvolucionRange`, `computeRentabilidadCursos`, `buildReporte` |
 | `src/app/core/utils/request-guard.utils.ts` | `RequestGuard`, `createRequestGuard` |
+| `src/app/core/utils/return-url.utils.ts` | `safeReturnUrl`, `loginQueryParams` |
 | `src/app/core/utils/rut.utils.ts` | `cleanRut`, `formatRut`, `normalizeRutForStorage`, `calculateRutDv`, `validateRut`, `formatRutTyping`, `completeRutDv` |
 | `src/app/core/utils/schedule-status.utils.ts` | `SessionStatus`, `StatusVisual`, `getStatusVisual`, `getStatusLabel`, `getDotStyle` |
 | `src/app/core/utils/schedule-week-days.utils.ts` | `filterVisibleWeekDays` |

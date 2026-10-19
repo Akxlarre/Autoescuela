@@ -140,3 +140,10 @@ O01, O04–O06.
 token de 1 h, suspensión, sesión invalidada desde otro equipo), C02–C13 (primer login, revisar
 vigencia tras `fix-182-b`), D03–D08, D10 (dominio), E09, G20–G30, G34, H04–H09, I06, J02, J05,
 J10, J11, K05–K08, K10, L03–L05, M01–M08 (borrador de matrícula), N02, N04, O01, O05.
+
+## Decisiones del owner (2026-10-19)
+
+| Caso | Decisión | Track |
+|---|---|---|
+| A18 | Después del login se vuelve a la pantalla pedida (solo rutas internas `/app/...`) | `hotfix-096-b` (#315) |
+| A19 | "Mantener sesión iniciada" se implementa: desmarcada, la sesión dura mientras el navegador esté abierto | `fix-229-b` (#317) |

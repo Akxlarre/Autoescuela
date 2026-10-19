@@ -129,3 +129,13 @@ sesión de admin/secretaria desde el 15-oct: Agenda y elección de horarios caí
 | D07 | anotado: al salir y volver se conserva el instructor elegido |
 | E08 | ✅ Tab + Enter sobre un horario abre el detalle |
 | P05, P06 | ✅ barra sin superposiciones a 820 px; con Tab se llega a todos los controles |
+
+## Decisiones del owner (2026-10-19)
+
+| Caso | Decisión | Track |
+|---|---|---|
+| P03 | En el celular la Agenda abre en el día de hoy | `hotfix-094-b` (#313) |
+| E11 | El detalle de una clase tiene "Ver ficha del alumno" | `hotfix-095-b` (#314) |
+| B11 | Desactivar un instructor con clases futuras avisa y pide reasignarlas (ya lo hacía `fix-205-b`); además la Agenda mostraba "#id" en sus clases | `hotfix-097-b` (#316) |
+| B15 / M09 | Los feriados no ofrecen horarios; lista sincronizada sola (mensual) e incluye el 20 de agosto de Chillán | spec `0052-b` (#318) |
+| C08 | El límite de semanas de la Agenda sigue siendo una preferencia por equipo (desde fix-228-b los horarios cubren los 4 meses igual) | — (queda así) |
