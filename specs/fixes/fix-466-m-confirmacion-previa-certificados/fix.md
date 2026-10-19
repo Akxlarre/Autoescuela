@@ -1,7 +1,8 @@
 # Fix: Confirmaciones al generar certificados (Clase B y Profesional)
 > id: fix-466-m-confirmacion-previa-certificados
 > refs: fix-447-m-testing-documentos-certificacion · fix-465-m · spec 0010-i (AC8, AC-E5)
-> status: in_progress
+> status: done
+> closed: 2026-10-19
 > created: 2026-10-19
 
 ## Root Cause
@@ -82,5 +83,7 @@ Las reglas de emisión no estaban unificadas entre Clase B y Profesional:
   y "Regenerar" abren sus modales; ninguna fila inline. Lista Prof. → "Generar" visible para un
   alumno con deuda (no se apretó: emitiría de verdad mientras la función no esté desplegada). Ficha
   Prof. → "Generar Certificado" visible en el piloto. Todo cancelado; consola sin errores.
-- [ ] Despliegue de `generate-certificate-b-pdf` y `generate-certificate-professional-pdf`. Hasta
-  entonces, Profesional emite con deuda sin pedir motivo (la función desplegada no la revisa).
+- [x] Despliegue de `generate-certificate-b-pdf` y `generate-certificate-professional-pdf` (Matías,
+  2026-10-19). Verificado: "Generar" en Profesional para un alumno con $90.000 de saldo → la función
+  responde 409 `DEUDA_PENDIENTE` y aparece el modal "Certificado con deuda" con motivo; cancelado,
+  el certificado sigue pendiente.

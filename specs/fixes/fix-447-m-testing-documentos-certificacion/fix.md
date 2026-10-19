@@ -117,7 +117,7 @@ consultan a medida que aparecen.
 | `fix-463-m-certificacion-respeta-piloto` | S21 — aviso "disponible en tu portal" con el portal en piloto; Certificado Profesional en el editor | Cerrado 2026-10-19 |
 | `fix-464-m-regenerar-certificado` | S17 — no se podía regenerar un certificado ya generado | Cerrado 2026-10-19 |
 | `fix-465-m-certificados-profesional-en-piloto` | Derivado de S21 — Certificados Prof. estaba en el recorte del piloto por error; se habilita (elegibilidad de secretaria solo por pago mientras dure el recorte) | Cerrado 2026-10-19 |
-| `fix-466-m-confirmacion-previa-certificados` | Confirmaciones como modal (prácticas incompletas, asistencia, regenerar, email); deuda con la convención de 0010-i también en Profesional; la asistencia nunca bloquea; botón de la ficha Prof. en el piloto | Implementado 2026-10-19; falta desplegar las 2 edge functions |
+| `fix-466-m-confirmacion-previa-certificados` | Confirmaciones como modal (prácticas incompletas, asistencia, regenerar, email); deuda con la convención de 0010-i también en Profesional; la asistencia nunca bloquea; botón de la ficha Prof. en el piloto | Cerrado 2026-10-19 |
 
 ### Observaciones (sin track)
 
