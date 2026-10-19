@@ -39,3 +39,11 @@ secretaria ya no lo usa (`fix-459-m`).
   la regla en todas las matrículas Clase B; completar/revertir una clase lo sube/baja (dentro de
   una transacción que aborta).
 - Navegador: la alerta del dashboard de la secretaria cuenta lo mismo que la lista de certificados.
+
+## Progreso
+
+- [x] Migración + test SQL. Contra la BD actual el test falla (C1: 124 matrículas con el flag
+  distinto de la regla; C2: al revertir una clase el flag sigue en `true`). Ensayo migración + test
+  con rollback → C1 y C2 ok; después la BD sigue igual (140 con flag, trigger viejo).
+- [ ] Matías aplica `20261018130000_fix460_certificate_enabled_recalculado.sql`.
+- [ ] Re-correr el test SQL y verificar la alerta del dashboard en el navegador.
