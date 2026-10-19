@@ -18,6 +18,9 @@ const ERROR_DICTIONARY: Record<string, string> = {
     'Los datos no cumplen los requisitos: verifica la fecha de nacimiento (el alumno debe tener al menos 17 años).',
   '42501': 'No tienes permisos para realizar esta acción en esta sede.',
   '22P02': 'El formato de los datos enviados es inválido.',
+  // hotfix-093-b (B07): token vencido o inválido en PostgREST (p. ej. tras suspender el equipo).
+  PGRST301: 'Tu sesión expiró. Recarga la página o vuelve a iniciar sesión.',
+  PGRST303: 'Tu sesión expiró. Recarga la página o vuelve a iniciar sesión.',
 
   // Custom Supabase Auth Errors
   AuthApiError: 'Error de autenticación.',
