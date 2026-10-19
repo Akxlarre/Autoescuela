@@ -51,8 +51,8 @@ consultan a medida que aparecen.
 ## Progreso
 
 - [x] Revisión de las 26 sospechas en código
-- [x] S26 → `fix-448-m` · S7 → `fix-449-m` · S10 → `fix-450-m`
-- [ ] S5, S6, S9, S12, S14, S16, S18, S19 (abiertas en código)
+- [x] S26 → `fix-448-m` · S7 → `fix-449-m` · S10 → `fix-450-m` · S5 → `fix-451-m` · S6 → `fix-452-m` · S9 → `fix-454-m` · fechas UTC → `fix-453-m`
+- [ ] S12, S14, S16, S18, S19 (abiertas en código)
 - [ ] S8, S13, S15, S17, S20–S22, S24, S25 (sin revisar)
 - [ ] Casos A…S del checklist en navegador
 - [ ] Playwright: subida + visualización de documento; certificado no elegible bloqueado
@@ -69,10 +69,10 @@ consultan a medida que aparecen.
 | S4 — ZIP de todas las sedes | Sede cerrada (`fix-430-m`); **abierta**: `type: 'professional'` sigue aceptándose en el piloto | `export-certificates-zip/index.ts:83,89` |
 | S26 — `send-certificate-email` con cualquier sesión | ❌ → corregida en `fix-448-m` (staff + sede), verificada tras el deploy | `send-certificate-email/index.ts` |
 | S26 — `preview`/`sample` a cualquiera | Cerrada (`requireStaff` cubre los 3 modos) | `generate-certificate-b-pdf/index.ts:79` |
-| S5 — documento institucional NULL no aparece con sede | **Abierta** | `dms.facade.ts:809` (`.eq` excluye NULL) |
-| S6 — "Subido por Sistema" (`auth_id`) | **Abierta** | `dms.facade.ts:765` |
+| S5 — documento institucional NULL no aparece con sede | ❌ confirmada (secretaria: RLS 1 fila, app 0) → corregida en `fix-451-m` | `dms.facade.ts:809` (`.eq` excluye NULL) |
+| S6 — "Subido por Sistema" (`auth_id`) | ❌ confirmada (0 filas con `uploaded_by`) → corregida en `fix-452-m` | `dms.facade.ts:765` |
 | S7 — primer documento de un alumno | ❌ confirmada en navegador (73/74; faltaba la matrícula #0081 sin documentos) → corregida en `fix-449-m` | `dms-upload-drawer.component.ts:287-296` |
-| S9 — borrar no borra el archivo | **Abierta** (ni al borrar ni si falla el insert) | `dms.facade.ts:629-643,736-742,782-785` |
+| S9 — borrar no borra el archivo | ❌ → corregida en `fix-454-m` (borrar y insert fallido; contratos fuera) | `dms.facade.ts:629-643,736-742,782-785` |
 | S10 — sección vacía publicada → PDF en blanco | ❌ (`publish()` guardaba `''`; la edge usa `??`) → corregida en `fix-450-m`: no se publica con secciones vacías. Las 6 filas actuales están completas | `document-content-templates.facade.ts:79,105-120`; `generate-certificate-b-pdf/index.ts:529-588` |
 | S11 — fechas UTC | Cerrada (`0024-m`, `chile-time.ts`) → regresión. Fechas en blanco con bypass y clases no completadas: verificar en navegador | `generate-certificate-b-pdf/index.ts:1,221,413,431` |
 | S12 — tope de 1.000 filas | **Abierta** | `dms.facade.ts:811-843` |
@@ -90,6 +90,10 @@ consultan a medida que aparecen.
 | `fix-448-m-email-certificado-solo-staff` | S26 — el correo del certificado aceptaba cualquier sesión y cualquier sede | Cerrado 2026-10-18 |
 | `fix-449-m-subir-primer-documento-alumno` | S7 / D03 — "Subir documento" no ofrecía a alumnos sin documentos | Cerrado 2026-10-18 |
 | `fix-450-m-plantilla-sin-secciones-vacias` | S10 / J12 — publicar con una sección vacía la dejaba en blanco en el PDF | Cerrado 2026-10-18 |
+| `fix-451-m-documentos-escuela-ambas-sedes` | S5 / I02 — documentos de la escuela "ambas sedes" invisibles con una sede elegida | Cerrado 2026-10-18 |
+| `fix-452-m-documento-escuela-subido-por` | S6 — todo documento de la escuela "Subido por Sistema" | Cerrado 2026-10-18 |
+| `fix-453-m-fechas-dms-hora-chile` | Hallazgo nuevo — fechas del DMS (y pre-inscritos) en UTC vía `| slice: 0 : 10`; ARCH-27 lo detecta ahora | Cerrado 2026-10-18 |
+| `fix-454-m-borrar-documento-borra-archivo` | S9 / F05 — borrar un documento dejaba el archivo en Storage | Cerrado 2026-10-18 |
 
 ### Observaciones (sin track)
 
