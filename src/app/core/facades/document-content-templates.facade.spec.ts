@@ -117,9 +117,37 @@ describe('DocumentContentTemplatesFacade', () => {
       expect(supabaseSpy.client.from).not.toHaveBeenCalledWith('document_templates');
     });
 
+    /** Llena todas las secciones del form cargado (publish() exige que ninguna quede vacía). */
+    function fillAllSections(): void {
+      for (const s of facade.form()?.sections ?? []) facade.updateSection(s.id, `Texto ${s.id}`);
+    }
+
+    it('no publica si hay secciones vacías y las nombra en el toast (fix-450-m)', async () => {
+      supabaseSpy.client.from.mockReturnValueOnce(makeSelectQuery({ data: null, error: null }));
+      await facade.load(2, 'certificate_b');
+      fillAllSections();
+      facade.updateSection('firma_cargo', '');
+      facade.updateSection('cierre', '   ');
+
+      const upsertSpy = vi.fn().mockResolvedValue({ data: null, error: null });
+      supabaseSpy.client.from.mockReturnValue({ upsert: upsertSpy });
+
+      const ok = await facade.publish();
+
+      expect(ok).toBe(false);
+      expect(upsertSpy).not.toHaveBeenCalled();
+      expect(toastSpy.error).toHaveBeenCalledWith(
+        'Hay secciones vacías',
+        expect.stringContaining('Firma — Cargo'),
+      );
+      expect(toastSpy.error.mock.calls[0][1]).toContain('Cierre');
+      expect(facade.isPublishing()).toBe(false);
+    });
+
     it('hace upsert con branch_id + document_type + content de las secciones', async () => {
       supabaseSpy.client.from.mockReturnValueOnce(makeSelectQuery({ data: null, error: null }));
       await facade.load(2, 'contract_b');
+      fillAllSections();
       facade.updateSection('primero', 'Texto editado por el admin');
 
       const upsertSpy = vi.fn().mockResolvedValue({ data: null, error: null });
@@ -143,6 +171,7 @@ describe('DocumentContentTemplatesFacade', () => {
     it('error del upsert setea el signal de error y devuelve false', async () => {
       supabaseSpy.client.from.mockReturnValueOnce(makeSelectQuery({ data: null, error: null }));
       await facade.load(2, 'contract_b');
+      fillAllSections();
 
       supabaseSpy.client.from.mockReturnValue({
         upsert: vi.fn().mockResolvedValue({ data: null, error: new Error('upsert failed') }),
