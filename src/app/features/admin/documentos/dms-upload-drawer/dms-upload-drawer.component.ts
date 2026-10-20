@@ -5,6 +5,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
@@ -410,6 +411,15 @@ export class DmsUploadDrawerComponent {
     effect(() => {
       const id = this.facade.preselectedEnrollmentId();
       if (id) this.selectedEnrollmentId.set(id);
+    });
+
+    // hotfix-164-m: la autorización del Art. 16 vale para ESTE tipo, alumno y matrícula; al
+    // cambiar cualquiera de ellos se desmarca (acto afirmativo, nunca heredado).
+    effect(() => {
+      this.selectedType();
+      this.selectedStudentId();
+      this.selectedEnrollmentId();
+      untracked(() => this.art16Accepted.set(false));
     });
 
     // Pre-seleccionar instructor si se recibe desde el facade
