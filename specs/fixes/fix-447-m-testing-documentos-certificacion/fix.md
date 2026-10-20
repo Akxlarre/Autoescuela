@@ -58,16 +58,11 @@ consultan a medida que aparecen.
 - [x] S18 → `fix-461-m`
 - [x] Revisión en código de S8, S13, S15, S17, S20–S22, S24, S25 (2026-10-19)
 - [x] S15 → `fix-462-m` · S21 → `fix-463-m` · S17 → `fix-464-m`
-- [ ] Confirmadas en código, sin corregir aún:
-  - S13 — `send-certificate-email` dice "Conductores Chillán" fijo; usar `branches.name` de la matrícula (como `contract-email.ts`). El logo del PDF es el mismo del contrato en ambas sedes: consultar si es el institucional.
-  - S20 — editor de plantillas: si la carga falla queda el form de la sede anterior y "Publicar" escribe ahí; sin aviso de cambios sin publicar ni confirmación al publicar.
-  - S22 — "Descargar" del drawer abre una pestaña (`download` no aplica cross-origin); el visor modal no ofrece descarga para PDF/imagen.
-  - S24 — `v_dms_student_documents` muestra el contrato generado (`file_url`), no el escaneo firmado (`signed_contract_url`); tampoco certificado ni carnet. Requiere migración.
-  - S25 — secretaria multisede: `secretaria-documentos` y `secretaria-certificados` no recargan al cambiar de sede (el admin sí, con el guard de fix-195-b).
-  - S16 (resto) — `enviarEmail()` muestra un error genérico y pierde el motivo ("El alumno no tiene email…").
-  - S8 — no existe "reemplazar" documento; la secretaria no puede corregir un escaneo malo. **Decisión de negocio pendiente** (¿la secretaria puede reemplazar?).
+- [x] S13 → `hotfix-159-m` · S16 (resto) → `hotfix-160-m` · S25 → `hotfix-161-m` · S22 → `fix-468-m` · S20 → `fix-469-m` · S24 → `fix-470-m` · S8 → `fix-471-m` (2026-10-20)
+- [x] Despliegue de `send-certificate-email` (v14, 2026-10-20 17:48) y migración `20261020140000` aplicados por Matías y verificados
+- [x] Verificados en navegador 161 y 468–471; hallazgo nuevo C08 → `fix-472-m`
 - [ ] Casos A…S del checklist en navegador
-- [ ] Playwright: subida + visualización de documento; certificado no elegible bloqueado
+- [x] Playwright: `e2e/documentos-certificacion.spec.ts` (7 tests: A01/A02/J20, C08/D16/G01/G04, F08, C05/C06, J13/J15/J16, L06/L07/P09, O04) — verde
 - [ ] Test de regresión del track → `/fix-close`
 
 ## Resultados
@@ -119,6 +114,22 @@ consultan a medida que aparecen.
 | `fix-465-m-certificados-profesional-en-piloto` | Derivado de S21 — Certificados Prof. estaba en el recorte del piloto por error; se habilita (elegibilidad de secretaria solo por pago mientras dure el recorte) | Cerrado 2026-10-19 |
 | `fix-466-m-confirmacion-previa-certificados` | Confirmaciones como modal (prácticas incompletas, asistencia, regenerar, email); deuda con la convención de 0010-i también en Profesional; la asistencia nunca bloquea; botón de la ficha Prof. en el piloto | Cerrado 2026-10-19 |
 | `fix-467-m-certificado-profesional-promocion-finalizada` | El certificado Profesional solo se emite desde el último día de la promoción (admin y secretaria; edge function + ficha) | Cerrado 2026-10-19 |
+
+| `hotfix-159-m-correo-certificado-con-nombre-de-la-sede` | S13 — el correo del certificado decía "Conductores Chillán" para ambas sedes | Cerrado 2026-10-20 |
+| `hotfix-160-m-envio-certificado-muestra-el-motivo` | S16 (resto) — enviar el certificado mostraba un error genérico | Cerrado 2026-10-20 |
+| `hotfix-161-m-secretaria-multisede-recarga-documentos-y-certificados` | S25 — Documentos y Certificados de la secretaria no recargaban al cambiar de sede | Cerrado 2026-10-20 |
+| `fix-468-m-descargar-documento-descarga` | S22 — "Descargar" abría una pestaña; el visor no ofrecía descarga | Cerrado 2026-10-20 |
+| `fix-469-m-editor-plantillas-cambios-sin-publicar` | S20 — carga fallida dejaba el form de otra sede; cambios perdidos sin aviso; publicar sin confirmar | Cerrado 2026-10-20 |
+| `fix-470-m-dms-contrato-firmado-y-certificados` | S24 — el DMS no mostraba el contrato firmado (online) ni los certificados | Cerrado 2026-10-20 |
+| `fix-471-m-reemplazar-documento-alumno` | S8 — no había forma de reemplazar un documento | Cerrado 2026-10-20 |
+| `fix-472-m-subir-documento-matricula-del-drawer` | C08 — "Subir documento" del drawer quedaba sin alumno (o con el del drawer anterior) si se presionaba mientras cargaba | Cerrado 2026-10-20 |
+
+### Decisiones de Matías
+
+| Fecha | Tema | Decisión |
+|---|---|---|
+| 2026-10-20 | S13 — logo del PDF del certificado | El mismo para ambas sedes; no se cambia |
+| 2026-10-20 | S8 — reemplazar documentos | La secretaria sí puede reemplazar un documento |
 
 ### Observaciones (sin track)
 
