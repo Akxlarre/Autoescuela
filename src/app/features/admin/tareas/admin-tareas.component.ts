@@ -9,6 +9,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -200,6 +201,8 @@ export class AdminTareasComponent implements OnInit, AfterViewInit {
     effect(() => {
       this.branchFacade.selectedBranchId();
       void this.facade.initialize();
+      // hotfix-106-b (S18): con la pestaña de comunicados abierta, también su historial.
+      if (untracked(() => this.canal()) === 'comunicados') void this.announcements.initialize();
     });
   }
 

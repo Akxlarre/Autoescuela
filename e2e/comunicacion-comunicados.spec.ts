@@ -146,6 +146,23 @@ test('L05 (S5, fix-232-b): la vista previa de un promocional trae cómo darse de
   expect(intentos).toEqual([]);
 });
 
+test('J14 (S19, hotfix-106-b): el admin con una sede elegida arriba abre el compositor en esa sede', async ({
+  pageAs,
+}) => {
+  const page = await pageAs('admin');
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      'autoescuela:selectedBranchId',
+      JSON.stringify({ id: 1, name: 'Autoescuela Chillán' }),
+    ),
+  );
+  const intentos: string[] = [];
+  await sinEnvios(page, intentos);
+  await abrirCompositor(page, 'admin');
+  await expect(page.locator('#a-branch')).toContainText('Autoescuela Chillán');
+  expect(intentos).toEqual([]);
+});
+
 test('L10: en la confirmación, "Revisar" no envía ni crea el comunicado', async ({ pageAs }) => {
   const sb = await getAdminClient();
   const { count: antes } = await sb
