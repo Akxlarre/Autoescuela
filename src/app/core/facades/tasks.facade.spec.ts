@@ -64,6 +64,7 @@ function createMockSupabase(responseData: unknown = null, responseError: unknown
   const channel: Record<string, any> = {
     on: vi.fn().mockReturnThis(),
     subscribe: vi.fn().mockReturnThis(),
+    httpSend: vi.fn().mockResolvedValue({ success: true }),
   };
   return {
     client: {
@@ -563,6 +564,30 @@ describe('TasksFacade', () => {
       expect(mockSupabase.client.rpc).toHaveBeenCalledWith('soft_delete_task', {
         p_task_id: 'uuid-1',
       });
+    });
+
+    it('S14 (hotfix-104-b): avisa por broadcast a la otra persona, no a quien eliminó', async () => {
+      mockSupabase.client.from.mockReturnValue(
+        createMockQueryBuilder([makeRawDbTask({ id: 'uuid-1', from_user_id: 10, to_user_id: 20 })]),
+      );
+      await facade.initialize(); // ADMIN_USER (dbId 10) es el emisor
+      mockSupabase.client.channel.mockClear();
+      mockSupabase.client.rpc.mockResolvedValue({ data: true, error: null });
+      await facade.softDelete('uuid-1');
+      const topics = mockSupabase.client.channel.mock.calls.map((c: unknown[]) => c[0]);
+      expect(topics).toEqual(['tasks-received-20']);
+      expect(mockSupabase._channel.httpSend).toHaveBeenCalledWith('task-deleted', {
+        id: 'uuid-1',
+      });
+    });
+
+    it('S14: los canales propios escuchan el aviso de tarea eliminada', async () => {
+      await facade.initialize();
+      const broadcast = mockSupabase._channel.on.mock.calls.filter(
+        (c: unknown[]) => c[0] === 'broadcast',
+      );
+      expect(broadcast).toHaveLength(2);
+      expect(broadcast[0][1]).toEqual({ event: 'task-deleted' });
     });
 
     it('returns false when RPC returns false (permission denied)', async () => {

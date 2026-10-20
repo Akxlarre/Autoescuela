@@ -52,6 +52,9 @@ type RawTaskRow = Task & {
   reply_count: Array<{ count: number }>;
 };
 
+/** Broadcast de tarea eliminada (hotfix-104-b): el soft delete no llega por postgres_changes. */
+const TASK_DELETED_EVENT = 'task-deleted';
+
 @Injectable({ providedIn: 'root' })
 export class TasksFacade {
   private supabase = inject(SupabaseService);
@@ -356,12 +359,14 @@ export class TasksFacade {
   }
 
   async softDelete(taskId: string): Promise<boolean> {
+    const task = this._tasks().find((t) => t.id === taskId);
     try {
       const { data, error } = await this.supabase.client.rpc('soft_delete_task', {
         p_task_id: taskId,
       });
       if (error) throw error;
       if (!data) return false;
+      if (task) this.broadcastDeleted(task);
       await this.refreshSilently();
       return true;
     } catch {
@@ -475,6 +480,7 @@ export class TasksFacade {
         { event: '*', schema: 'public', table: 'tasks', filter: `from_user_id=eq.${dbId}` },
         () => this.refreshSilently(),
       )
+      .on('broadcast', { event: TASK_DELETED_EVENT }, () => this.refreshSilently())
       .subscribe();
 
     this._receivedChannel = this.supabase.client
@@ -484,7 +490,28 @@ export class TasksFacade {
         { event: '*', schema: 'public', table: 'tasks', filter: `to_user_id=eq.${dbId}` },
         () => this.refreshSilently(),
       )
+      .on('broadcast', { event: TASK_DELETED_EVENT }, () => this.refreshSilently())
       .subscribe();
+  }
+
+  /**
+   * hotfix-104-b (S14): el soft delete deja la fila invisible por RLS para la otra persona, así
+   * que Realtime no le entrega el UPDATE. Se le avisa por broadcast (REST, sin unirse al canal)
+   * en los mismos canales que ya escucha. Best-effort: si falla, la verá al recargar.
+   */
+  private broadcastDeleted(task: Pick<Task, 'id' | 'from_user_id' | 'to_user_id'>): void {
+    const me = this.auth.currentUser()?.dbId;
+    const topics = [
+      task.to_user_id !== me ? `tasks-received-${task.to_user_id}` : null,
+      task.from_user_id !== me ? `tasks-sent-${task.from_user_id}` : null,
+    ].filter((t): t is string => t !== null);
+    for (const topic of topics) {
+      const channel = this.supabase.client.channel(topic);
+      void channel
+        .httpSend(TASK_DELETED_EVENT, { id: task.id })
+        .catch(() => undefined)
+        .finally(() => void this.supabase.client.removeChannel(channel));
+    }
   }
 
   private disposeRealtime(): void {
