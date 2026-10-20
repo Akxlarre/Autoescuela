@@ -68,3 +68,40 @@ piloto); el historial no distingue eliminadas ni navega al clic **por diseño** 
 2026-09-04). S15: la pre-inscripción ya no navega a una ruta bloqueada desde `fix-328-m`; los tipos
 sin ruta solo cierran el panel (H06/H07, por diseño). H03: "Nueva matrícula" usa el `studentId`, la
 ruta correcta de la ficha.
+
+## Tercera tanda — comunicados a alumnos (2026-10-20)
+
+`e2e/comunicacion-comunicados.spec.ts`: **8/8 en verde**. No envía nada: el envío de
+`send-announcement` queda interceptado (solo pasa la vista previa) y ningún caso confirma un envío.
+
+| Casos | Resultado |
+|---|---|
+| J01, J02, J12 | ✅ la secretaria abre el compositor; sin tipo no se puede enviar; no ve selector de sede |
+| J04 | ✅ promocional deja fuera a quien no consintió, con aviso. Sede A hoy: operativo 68, promocional 0 ("68 alumno(s) del segmento quedan fuera por no tener consentimiento promocional vigente") |
+| K04, K06 | ✅ la vista previa resuelve `{{nombre}}` ("Ana Pérez") y muestra `<b>`/`<script>` del cuerpo como texto |
+| K10 | ✅ "Plantillas de Comunicado" en Ajustes del admin, no en el de la secretaria |
+| L10 | ✅ "Revisar" en la confirmación no envía ni crea el comunicado |
+| M02, M03 | ✅ fecha pasada → "La fecha de envío tiene que ser futura." y botón deshabilitado; destildar "Programar" vuelve al envío inmediato |
+| N07 | ✅ historial vacío: "Todavía no enviaste comunicados" |
+| O06 | ✅ `dispatch-scheduled-announcements` con el token de una secretaria → 401 |
+| O07 | ✅ la secretaria no puede insertar comunicados de otra sede ni sin sede (RLS) |
+
+## Sospechas — estado (2026-10-20)
+
+| # | Estado |
+|---|---|
+| S1, S3 | Resueltas antes por `fix-361-m` (ASG-i-057): el dispatcher reanuda desde el primer pendiente y rescata envíos inmediatos a medias |
+| S2 | Resuelta antes por `fix-362-m`: cancelar revisa que se haya cancelado |
+| S4 | Resuelta antes por `fix-361-m`: se excluyen archivados (servidor y vista previa) |
+| S5 | ✅ Confirmada en el código: el correo promocional no trae forma de darse de baja — **decisión** |
+| S6 | ✅ Confirmada en el código: el correo dice "Conductores Chillán" / logo "CC" para todas las sedes (`_shared/announcement-send.ts:81-93`) — pendiente (requiere desplegar la Edge Function) |
+| S7 | Por confirmar con el owner (toasts "enviado al alumno" sobre notificaciones que nadie verá en el piloto) — **decisión** |
+| S8, S9, S10, S11, S14, S16, S17 (G04/G05) | ❌ → corregidas: #328, #329, #331, #333, #332, #335 |
+| S12 | ✅ Confirmada en la BD (`tasks_insert` no considera `both_branches`, el picker sí), **latente**: hoy no hay instructores activos con "ambas sedes" — **decisión** (ajustar la policy o el picker) |
+| S13 | Latente: solo aplica a un admin con `branch_id`; hoy el único admin no tiene sede |
+| S15 | Resuelta antes por `fix-328-m`; los tipos sin ruta solo cierran el panel |
+| S18–S19 | Pendientes de revisar |
+| S20 | ✅ Confirmada en el código: `send-announcement` no revisa el estado (un cancelado llamado a mano se enviaría). O04 (otra sede → 403) sí está — pendiente (requiere desplegar la Edge Function) |
+| S21 | **Decisión** (secretaria puede crear notificaciones para cualquier usuario; admin lee todas) |
+| S22 | Parcial: `updateStatus` revisa error; eliminar sin permiso sigue sin mensaje; "Editar" siempre deshabilitado |
+| S23 (nuevo) | ❌ → `hotfix-102-b` (#330) |
