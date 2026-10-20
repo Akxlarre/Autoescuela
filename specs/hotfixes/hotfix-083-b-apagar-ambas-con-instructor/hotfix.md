@@ -1,7 +1,7 @@
 # Hotfix: quitar "Ambas sedes" a un vehículo con instructor pide confirmación
 > id: hotfix-083-b-apagar-ambas-con-instructor
 > refs: ASG-i-032 (checklist 032, G09; decisión del owner 2026-10-16)
-> status: closed
+> status: done
 > created: 2026-10-16
 
 ## Problema

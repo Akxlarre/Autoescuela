@@ -1,7 +1,7 @@
 # Hotfix: el detalle de una clase en la Agenda tiene "Ver ficha del alumno"
 > id: hotfix-095-b-agenda-ver-ficha
 > refs: ASG-i-026 (checklist 026, E11; decisión del owner 2026-10-19)
-> status: closed
+> status: done
 > created: 2026-10-19
 
 ## Problema

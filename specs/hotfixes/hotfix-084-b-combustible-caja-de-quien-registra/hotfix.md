@@ -1,7 +1,7 @@
 # Hotfix: el combustible de un vehículo "Ambas" queda en la caja de quien lo registra
 > id: hotfix-084-b-combustible-caja-de-quien-registra
 > refs: ASG-i-032 (checklist 032, O03; decisión del owner 2026-10-16)
-> status: closed
+> status: done
 > created: 2026-10-16
 
 ## Problema

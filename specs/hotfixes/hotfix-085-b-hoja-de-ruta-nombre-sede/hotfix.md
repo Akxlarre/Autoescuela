@@ -1,7 +1,7 @@
 # Hotfix: la Hoja de Ruta lleva el nombre de la sede del vehículo
 > id: hotfix-085-b-hoja-de-ruta-nombre-sede
 > refs: ASG-i-032 (checklist 032, P03; decisión del owner 2026-10-16)
-> status: closed
+> status: done
 > created: 2026-10-16
 
 ## Problema

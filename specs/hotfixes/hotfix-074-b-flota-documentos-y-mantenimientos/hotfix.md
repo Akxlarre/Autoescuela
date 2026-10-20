@@ -1,7 +1,7 @@
 # Hotfix: Documentos por vencer en verde, historial "vacío" cuando falla, umbral de 14 días y KPIs mal rotulados
 > id: hotfix-074-b-flota-documentos-y-mantenimientos
 > refs: ASG-i-032 (checklist 032, S8, S9, S14 y S15; decisiones 5 y 7 del owner, 2026-10-12)
-> status: closed
+> status: done
 > created: 2026-10-12
 
 ## Problema

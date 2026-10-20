@@ -1,7 +1,7 @@
 # Hotfix: El selector de sede de Ajustes se salta los bloqueos del topbar
 > id: hotfix-063-b-ajustes-selector-sede-respeta-bloqueos
 > refs: ASG-i-037 (sospecha S15, caso A10 del checklist 037; confirmada en fix-190-b)
-> status: closed
+> status: done
 > created: 2026-10-06
 
 ## Problema

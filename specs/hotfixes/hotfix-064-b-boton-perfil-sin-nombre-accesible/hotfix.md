@@ -1,7 +1,7 @@
 # Hotfix: El botón de perfil del topbar no tiene nombre accesible
 > id: hotfix-064-b-boton-perfil-sin-nombre-accesible
 > refs: ASG-i-037 (caso Y03 del checklist 037; encontrado por `e2e/transversal-shell.spec.ts`)
-> status: closed
+> status: done
 > created: 2026-10-06
 
 ## Problema

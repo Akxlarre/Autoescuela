@@ -1,7 +1,7 @@
 # Hotfix: Mantenimientos muestra montos en formato inglés y fechas crudas
 > id: hotfix-086-b-mantenimientos-formato-chileno
 > refs: ASG-i-032 (checklist 032, M10, L08 y L09)
-> status: closed
+> status: done
 > created: 2026-10-16
 
 ## Problema

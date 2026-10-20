@@ -1,7 +1,7 @@
 # Hotfix: El buscador de Flota no filtra nada y el filtro "Tipo" adivina por la marca
 > id: hotfix-073-b-flota-busqueda-y-filtro-tipo
 > refs: ASG-i-032 (checklist 032, S4 y S20; decisión 8 del owner, 2026-10-12)
-> status: closed
+> status: done
 > created: 2026-10-12
 
 ## Problema

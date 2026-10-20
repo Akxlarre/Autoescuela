@@ -1,7 +1,7 @@
 # Hotfix: "Conmutar Sede" a veces dice "No se encontró una sede profesional disponible"
 > id: hotfix-098-b-conmutar-sede-espera-sedes
 > refs: ASG-i-022 (checklist 022, H08 / H09)
-> status: closed
+> status: done
 > created: 2026-10-19
 
 ## Problema

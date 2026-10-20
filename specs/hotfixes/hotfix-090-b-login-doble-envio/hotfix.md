@@ -1,7 +1,7 @@
 # Hotfix: un doble clic en "Iniciar Sesión" manda dos logins
 > id: hotfix-090-b-login-doble-envio
 > refs: ASG-i-022 (checklist 022, A12)
-> status: closed
+> status: done
 > created: 2026-10-16
 
 ## Problema

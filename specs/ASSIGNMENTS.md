@@ -86,7 +86,6 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `i` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
 | ASG-i-029 | Testing: Contabilidad | `i` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
-| ASG-i-032 | Testing: Flota y mantenimientos | `b` | fix | P1 | i | Funcional · Media |
 | ASG-i-035 | Testing: Tareas, notificaciones y comunicados | `b` | fix | P1 | i | Integración · Media |
 | ASG-i-036 | Testing: Auditoría y Configuración web | `i` | fix | P2 | i | Funcional · Baja |
 
@@ -272,9 +271,7 @@
 | ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
 | ASG-i-034 | Testing: Gestión de instructores, secretarias y usuarios | `b` | [fix-197-b-testing-instructores-secretarias-usuarios](fixes/fix-197-b-testing-instructores-secretarias-usuarios/fix.md) | 2026-10-07 |
-| ASG-i-032 | Testing: Flota, documentos de vehículo y mantenimientos | `b` | [fix-220-b-testing-flota-mantenimientos](fixes/fix-220-b-testing-flota-mantenimientos/fix.md) | 2026-10-12 |
 | ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `i` | [0010-i-clase-7-bloqueada-sin-segundo-pago](specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | 2026-10-13 |
-| ASG-i-064 | Arreglar el test de mantenciones de vehículo (falta `basePath` en la ruta simulada) | `b` | [hotfix-076-b-test-mantenimientos-basepath](hotfixes/hotfix-076-b-test-mantenimientos-basepath/hotfix.md) | 2026-10-15 |
 | ASG-i-033 | Testing: Documentos (DMS), plantillas y certificación Clase B | `m` | [fix-447-m-testing-documentos-certificacion](fixes/fix-447-m-testing-documentos-certificacion/fix.md) | 2026-10-18 |
 <!-- AUTO-GENERATED:END -->
 
@@ -435,6 +432,7 @@
 | ASG-i-049 | Pagos duplicados (doble Enter) y sobrepago con pagos simultáneos | [fix-045-i-pagos-duplicados-y-sobrepago](fixes/fix-045-i-pagos-duplicados-y-sobrepago/fix.md) | 2026-10-10 |
 | ASG-i-052 | "Borrar horarios" y "Reactivar" cambian clases en masa sin confirmación | [fix-364-m-acciones-masivas-clases-sin-confirmacion](fixes/fix-364-m-acciones-masivas-clases-sin-confirmacion/fix.md) | 2026-10-10 |
 | ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo (2 faltas cancelan la matrícula) | [hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b](hotfixes/hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b/hotfix.md) | 2026-10-10 |
+| ASG-i-032 | Testing: Flota, documentos de vehículo y mantenimientos | [fix-220-b-testing-flota-mantenimientos](fixes/fix-220-b-testing-flota-mantenimientos/fix.md) | 2026-10-12 |
 | ASG-i-050 | Matrícula queda activa aunque el mensaje dice "no se confirmó" | [fix-046-i-matricula-activa-sin-consentimiento](fixes/fix-046-i-matricula-activa-sin-consentimiento/fix.md) | 2026-10-12 |
 | ASG-i-051 | Ventas de servicios especiales fuera de Reportes y Dashboard; efectivo registrado como tarjeta | [fix-047-i-servicios-especiales-como-ingreso](fixes/fix-047-i-servicios-especiales-como-ingreso/fix.md) | 2026-10-12 |
 | ASG-i-027 | Testing: Asistencia Clase B, inasistencias y penalización | [fix-366-m-testing-asistencia-clase-b](fixes/fix-366-m-testing-asistencia-clase-b/fix.md) | 2026-10-13 |
@@ -443,6 +441,7 @@
 | ASG-i-028 | Testing: Pagos, abonos y descuentos | [fix-048-i-testing-pagos-y-descuentos](fixes/fix-048-i-testing-pagos-y-descuentos/fix.md) | 2026-10-14 |
 | ASG-i-030 | Testing: Dashboards (admin, ejecutivo y secretaria) | [fix-395-m-testing-dashboards](fixes/fix-395-m-testing-dashboards/fix.md) | 2026-10-14 |
 | ASG-i-031 | Testing: Servicios especiales | [fix-429-m-testing-servicios-especiales](fixes/fix-429-m-testing-servicios-especiales/fix.md) | 2026-10-15 |
+| ASG-i-064 | Arreglar el test de mantenciones de vehículo (falta `basePath` en la ruta simulada) | [hotfix-076-b-test-mantenimientos-basepath](hotfixes/hotfix-076-b-test-mantenimientos-basepath/hotfix.md) | 2026-10-15 |
 <!-- AUTO-GENERATED:END -->
 
 ---

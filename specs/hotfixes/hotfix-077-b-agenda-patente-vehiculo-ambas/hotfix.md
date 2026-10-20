@@ -1,7 +1,7 @@
 # Hotfix: la Agenda muestra "V36" en vez de la patente de un vehículo de la otra sede
 > id: hotfix-077-b-agenda-patente-vehiculo-ambas
 > refs: ASG-i-032 (checklist 032, S12)
-> status: closed
+> status: done
 > created: 2026-10-15
 
 ## Problema

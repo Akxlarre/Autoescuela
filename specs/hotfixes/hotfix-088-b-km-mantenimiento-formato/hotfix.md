@@ -1,7 +1,7 @@
 # Hotfix: el km del formulario de servicio se muestra "1,200"
 > id: hotfix-088-b-km-mantenimiento-formato
 > refs: ASG-i-032 (checklist 032, M01 / M06)
-> status: closed
+> status: done
 > created: 2026-10-16
 
 ## Problema

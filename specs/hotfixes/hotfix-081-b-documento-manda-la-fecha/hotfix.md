@@ -1,7 +1,7 @@
 # Hotfix: el estado de un documento de vehículo lo decide su fecha
 > id: hotfix-081-b-documento-manda-la-fecha
 > refs: ASG-i-032 (checklist 032, I07; decisión del owner 2026-10-16)
-> status: closed
+> status: done
 > created: 2026-10-16
 
 ## Problema

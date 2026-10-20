@@ -1,7 +1,7 @@
 # Hotfix: Flota se ordena por patente y tiene un KPI "De Baja"
 > id: hotfix-080-b-flota-orden-y-kpi-baja
 > refs: ASG-i-032 (checklist 032, B11 y C04; decisiones del owner 2026-10-16)
-> status: closed
+> status: done
 > created: 2026-10-16
 
 ## Problema

@@ -1,7 +1,7 @@
 # Hotfix: Crear un instructor práctico sin vehículo no avisa que no aparecerá en la Agenda
 > id: hotfix-065-b-instructor-sin-vehiculo-aviso
 > refs: ASG-i-034 (sospecha S8, confirmada en fix-197-b)
-> status: closed
+> status: done
 > created: 2026-10-07
 
 ## Problema

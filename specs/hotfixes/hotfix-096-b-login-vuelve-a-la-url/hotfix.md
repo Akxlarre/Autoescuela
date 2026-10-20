@@ -1,7 +1,7 @@
 # Hotfix: después del login se vuelve a la pantalla que se intentó abrir
 > id: hotfix-096-b-login-vuelve-a-la-url
 > refs: ASG-i-022 (checklist 022, A18; decisión del owner 2026-10-19)
-> status: closed
+> status: done
 > created: 2026-10-19
 
 ## Problema

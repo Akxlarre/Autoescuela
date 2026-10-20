@@ -1,7 +1,7 @@
 # Hotfix: sesión expirada al guardar → "Ha ocurrido un error procesando la solicitud (PGRST303)"
 > id: hotfix-093-b-sesion-expirada-mensaje
 > refs: ASG-i-022 (checklist 022, B07)
-> status: closed
+> status: done
 > created: 2026-10-19
 
 ## Problema
