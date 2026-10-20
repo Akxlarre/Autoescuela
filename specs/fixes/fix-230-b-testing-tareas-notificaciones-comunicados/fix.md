@@ -46,3 +46,25 @@ limpieza manual.
 | **D13, E04 (S14)** | ❌ → `hotfix-104-b` (#333): la tarea eliminada seguía del lado del destinatario. Ahora desaparece en vivo (broadcast) |
 | **G07 (S16)** | ❌ → `hotfix-103-b` (#332): `/notificaciones` de admin y secretaria eran una maqueta "PLANO". Redirigen al inicio (decisión del owner) |
 | B02 | ✅ la observación no guarda fecha límite |
+
+## Segunda tanda — campana, panel e historial (2026-10-20)
+
+`e2e/comunicacion-notificaciones.spec.ts`: **6/6 en verde** después del fix. Siembra notificaciones
+E2E- para `secretaria@test.com` y las borra al terminar; "Eliminar todas" restaura en `finally` las
+que la cuenta tenía activas (verificado: 9 activas / 1 eliminada antes y después). Efecto que queda:
+"Marcar todo como leído" deja leídas las notificaciones reales de esa cuenta de prueba.
+
+| Casos | Resultado |
+|---|---|
+| F01, F02, F03, H02 | ✅ llega en vivo (badge +1 y toast), aparece primera en el panel; al hacer clic queda leída y navega a `/app/secretaria/observaciones` |
+| F05 | ✅ 3 no leídas del mismo tipo el mismo día → "3 certificados listos"; se expande con las 3; "marcar grupo leído" baja el badge en 3 |
+| F04 | ✅ "Marcar todo como leído" → badge 0 y persiste al recargar |
+| **G05, G04 (S17)** | ❌ → `hotfix-105-b` (#335): con el historial abierto, "marcar todo como leído" no lo actualizaba y una notificación nueva no aparecía. Corregido |
+| F07, F09, F10, G01 | ✅ eliminar una → no vuelve al recargar; "Eliminar todas" con confirmación → panel vacío con "Ver todas"; en el historial siguen las dos |
+| F15 | ✅ cerrar sesión y entrar con otra cuenta en el mismo navegador: no se ven las notificaciones de la anterior |
+
+S17, resto: el badge cuenta sobre las últimas 50 y el historial trae 200 (límite aceptable para el
+piloto); el historial no distingue eliminadas ni navega al clic **por diseño** (decisión del owner
+2026-09-04). S15: la pre-inscripción ya no navega a una ruta bloqueada desde `fix-328-m`; los tipos
+sin ruta solo cierran el panel (H06/H07, por diseño). H03: "Nueva matrícula" usa el `studentId`, la
+ruta correcta de la ficha.
