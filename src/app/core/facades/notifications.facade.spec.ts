@@ -559,6 +559,89 @@ describe('NotificationsFacade', () => {
     });
   });
 
+  describe('historial al día (hotfix-105-b, S17)', () => {
+    const dto = (id: number, read = false) => ({
+      id,
+      recipient_id: 1,
+      type: 'system',
+      subject: `N${id}`,
+      message: 'm',
+      read,
+      sent_at: null,
+      sent_ok: true,
+      send_error: null,
+      reference_type: null,
+      reference_id: null,
+      created_at: '2026-10-20T10:00:00Z',
+      deleted_at: null,
+    });
+
+    const cargarAmbas = async () => {
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(
+        mockSelectChain([dto(1), dto(2)]),
+      );
+      await facade.loadNotifications();
+      await facade.loadHistorial();
+    };
+
+    it('G05: "marcar todo como leído" también marca el historial', async () => {
+      await cargarAmbas();
+      const chain: any = { update: vi.fn() };
+      chain.update.mockReturnValue(chain);
+      chain.eq = vi.fn().mockReturnValueOnce(chain).mockResolvedValueOnce({ error: null });
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(chain);
+
+      await facade.markAllAsRead();
+
+      expect(facade.historial().every((n) => n.read)).toBe(true);
+    });
+
+    it('G05: si falla, el historial vuelve a como estaba', async () => {
+      await cargarAmbas();
+      const chain: any = { update: vi.fn() };
+      chain.update.mockReturnValue(chain);
+      chain.eq = vi
+        .fn()
+        .mockReturnValueOnce(chain)
+        .mockResolvedValueOnce({ error: { message: 'x' } });
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(chain);
+
+      await facade.markAllAsRead();
+
+      expect(facade.historial().every((n) => !n.read)).toBe(true);
+    });
+
+    it('G05: "marcar grupo leído" también marca esas filas del historial', async () => {
+      await cargarAmbas();
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue({
+        update: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ error: null }),
+      });
+
+      await facade.markManyAsRead(['1']);
+
+      expect(facade.historial().find((n) => n.id === '1')?.read).toBe(true);
+      expect(facade.historial().find((n) => n.id === '2')?.read).toBe(false);
+    });
+
+    it('G04: la notificación que llega en vivo se agrega al historial ya cargado', async () => {
+      await cargarAmbas();
+      let alLlegar: ((payload: { new: unknown }) => void) | undefined;
+      (supabaseSpy.client.channel as ReturnType<typeof vi.fn>).mockReturnValue({
+        on: vi.fn((_type: string, _filter: unknown, cb: (p: { new: unknown }) => void) => {
+          alLlegar = cb;
+          return { subscribe: vi.fn() };
+        }),
+      });
+      (facade as any).subscribeRealtime(1);
+
+      alLlegar?.({ new: dto(3) });
+
+      expect(facade.historial()[0].id).toBe('3');
+      expect(facade.historial()).toHaveLength(3);
+    });
+  });
+
   describe('loadHistorial (AC4)', () => {
     it('incluye notificaciones eliminadas, sin filtrar deleted_at', async () => {
       const mockData = [

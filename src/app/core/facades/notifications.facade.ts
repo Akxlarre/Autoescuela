@@ -197,9 +197,11 @@ export class NotificationsFacade {
 
     // Guardar estado previo para rollback
     const prev = this._notifications();
+    const prevHistorial = this._historial();
 
-    // Optimistic update
+    // Optimistic update — también el historial abierto (hotfix-105-b, S17).
     this._notifications.update((list) => list.map((n) => ({ ...n, read: true })));
+    this._historial.update((list) => list.map((n) => ({ ...n, read: true })));
 
     const { error } = await this.supabase.client
       .from('notifications')
@@ -210,6 +212,7 @@ export class NotificationsFacade {
     if (error) {
       console.error('[NotificationsFacade] markAllAsRead error:', error);
       this._notifications.set(prev);
+      this._historial.set(prevHistorial);
     }
   }
 
@@ -242,10 +245,13 @@ export class NotificationsFacade {
 
     const idSet = new Set(ids);
     const prev = this._notifications();
+    const prevHistorial = this._historial();
 
-    this._notifications.update((list) =>
-      list.map((n) => (idSet.has(n.id) ? { ...n, read: true } : n)),
-    );
+    const marcar = (list: NotificationUi[]) =>
+      list.map((n) => (idSet.has(n.id) ? { ...n, read: true } : n));
+    this._notifications.update(marcar);
+    // hotfix-105-b (S17): el historial abierto también refleja lo leído.
+    this._historial.update(marcar);
 
     const { error } = await this.supabase.client
       .from('notifications')
@@ -255,6 +261,7 @@ export class NotificationsFacade {
     if (error) {
       console.error('[NotificationsFacade] markManyAsRead error:', error);
       this._notifications.set(prev);
+      this._historial.set(prevHistorial);
     }
   }
 
@@ -405,6 +412,8 @@ export class NotificationsFacade {
         (payload) => {
           const newNotif = mapNotificationDtoToUi(payload.new as NotificationDto);
           this._notifications.update((list) => [newNotif, ...list]);
+          // hotfix-105-b (S17): si el historial ya se cargó, la nueva también aparece ahí.
+          if (this._historial().length > 0) this._historial.update((list) => [newNotif, ...list]);
           this.toast.info(newNotif.title, newNotif.message);
         },
       )
