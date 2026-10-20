@@ -22,7 +22,6 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-061 | Dashboard ejecutivo: medir todo el negocio, no solo Clase B | `cualquiera` | spec | P2 | i | **Después del piloto.** Hoy cuenta solo ingresos de Clase B (spec 0044-b); se dejó así en `fix-047-i`. Criterio de ingreso: solo `paid` (060 descartada, `pending` va sin fecha) |
 | ASG-i-063 | Cerrar una matrícula y reiniciar el curso (Clase B) | `cualquiera` | spec | P1 | i | **Decisión de negocio primero.** Cerrar con motivo; deuda: perdonar o mantener; ¿también la secretaria? (el admin es el dueño y no siempre está) |
-| ASG-i-065 | Revisión de accesibilidad con axe en los tests e2e | `cualquiera` | spec | P2 | i | Mejora de herramientas, no un fix. Empezar solo reportando; después fallar con problemas graves nuevos. Ya encontró: gris `text-muted` con contraste 2.56:1 |
 | ASG-b-100 | QA visual del portal del Instructor cuando se levante la fase piloto | `cualquiera` | fix | P2 | b | Bloqueada hasta que se levante la fase. `ASG-i-012` dejó este portal fuera de alcance. Incluye cerrar AC1b de `fix-169-b`. ⚠️ `instructor@test.com` tiene 0 alumnos — hay que sembrar datos antes |
 
 ### Tanda testing profundo del piloto por módulo — 2026-09-29
@@ -271,6 +270,7 @@
 | ASG-i-034 | Testing: Gestión de instructores, secretarias y usuarios | `b` | [fix-197-b-testing-instructores-secretarias-usuarios](fixes/fix-197-b-testing-instructores-secretarias-usuarios/fix.md) | 2026-10-07 |
 | ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `i` | [0010-i-clase-7-bloqueada-sin-segundo-pago](specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | 2026-10-13 |
 | ASG-i-033 | Testing: Documentos (DMS), plantillas y certificación Clase B | `m` | [fix-447-m-testing-documentos-certificacion](fixes/fix-447-m-testing-documentos-certificacion/fix.md) | 2026-10-18 |
+| ASG-i-065 | Revisión de accesibilidad con axe en los tests e2e | `b` | [0054-b-axe-accesibilidad-en-e2e](specs/0054-b-axe-accesibilidad-en-e2e/spec.md) | 2026-10-20 |
 <!-- AUTO-GENERATED:END -->
 
 ---

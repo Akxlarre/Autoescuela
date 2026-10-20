@@ -1,14 +1,14 @@
 # Asignación ASG-i-065 — Revisión de accesibilidad con axe en los tests e2e
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** cualquiera
 > **tipo_sugerido:** spec
 > **priority:** P2
 > **created:** 2026-10-17
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-10-20
+> **resulting_track:** 0054-b-axe-accesibilidad-en-e2e
 
 ---
 
