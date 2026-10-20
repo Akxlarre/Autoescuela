@@ -1,7 +1,7 @@
 # Hotfix: "demasiados intentos" de Supabase se muestra como un error genérico
 > id: hotfix-089-b-login-demasiados-intentos
 > refs: ASG-i-022 (checklist 022, A15 / sospecha S13)
-> status: closed
+> status: done
 > created: 2026-10-16
 
 ## Problema

@@ -1,7 +1,7 @@
 # Hotfix: No hay forma de filtrar los instructores con la licencia ya vencida
 > id: hotfix-069-b-filtro-licencias-vencidas
 > refs: ASG-i-034 (caso B06, §5) — decisión del owner 2026-10-07: "Por vencer" no incluye las vencidas; filtro aparte "Vencidas"
-> status: closed
+> status: done
 > created: 2026-10-07
 
 ## Problema

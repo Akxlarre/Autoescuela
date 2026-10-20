@@ -1,7 +1,7 @@
 # Hotfix: una secretaria sin sede asignada no puede operar
 > id: hotfix-099-b-aviso-secretaria-sin-sede
 > refs: ASG-i-022 (checklist 022, H07)
-> status: closed
+> status: done
 > created: 2026-10-19
 
 ## Problema

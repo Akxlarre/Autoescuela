@@ -1,7 +1,7 @@
 # Hotfix: `/app/admin/usuarios` es una página en blanco a la que se llega desde el dashboard
 > id: hotfix-066-b-eliminar-pagina-usuarios
 > refs: ASG-i-034 (sospecha S17, confirmada en fix-197-b) — decisión del owner 2026-10-07: eliminarla
-> status: closed
+> status: done
 > created: 2026-10-07
 
 ## Problema

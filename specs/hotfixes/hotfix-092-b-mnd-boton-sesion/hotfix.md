@@ -1,7 +1,7 @@
 # Hotfix: "Módulo no disponible" muestra "Volver al inicio de sesión" a un admin al recargar
 > id: hotfix-092-b-mnd-boton-sesion
 > refs: ASG-i-022 (checklist 022, J04 / sospecha S16)
-> status: closed
+> status: done
 > created: 2026-10-19
 
 ## Problema

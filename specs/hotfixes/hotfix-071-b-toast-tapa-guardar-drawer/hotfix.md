@@ -1,7 +1,7 @@
 # Hotfix: El toast de éxito tapa el botón Guardar del drawer
 > id: hotfix-071-b-toast-tapa-guardar-drawer
 > refs: ASG-i-034 (manuales grupo 1, caso E12) — hallazgo 2
-> status: closed
+> status: done
 > created: 2026-10-09
 
 ## Problema

@@ -1,7 +1,7 @@
 # Hotfix: cerrar sesión sin red deja la sesión abierta
 > id: hotfix-091-b-salir-sin-red
 > refs: ASG-i-022 (checklist 022, E10)
-> status: closed
+> status: done
 > created: 2026-10-19
 
 ## Problema

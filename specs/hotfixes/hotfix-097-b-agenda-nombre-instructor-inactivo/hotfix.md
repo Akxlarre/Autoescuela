@@ -1,7 +1,7 @@
 # Hotfix: la Agenda muestra "#237" en las clases de un instructor desactivado
 > id: hotfix-097-b-agenda-nombre-instructor-inactivo
 > refs: ASG-i-026 (checklist 026, B11)
-> status: closed
+> status: done
 > created: 2026-10-19
 
 ## Problema

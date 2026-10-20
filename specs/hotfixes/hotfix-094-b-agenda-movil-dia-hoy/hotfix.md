@@ -1,7 +1,7 @@
 # Hotfix: en el celular la Agenda abre en el lunes, no en el día de hoy
 > id: hotfix-094-b-agenda-movil-dia-hoy
 > refs: ASG-i-026 (checklist 026, P03; decisión del owner 2026-10-19)
-> status: closed
+> status: done
 > created: 2026-10-19
 
 ## Problema

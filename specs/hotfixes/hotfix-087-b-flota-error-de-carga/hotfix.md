@@ -1,7 +1,7 @@
 # Hotfix: si falla la carga de la flota se ve "No se encontraron vehículos"
 > id: hotfix-087-b-flota-error-de-carga
 > refs: ASG-i-032 (checklist 032, A08)
-> status: closed
+> status: done
 > created: 2026-10-16
 
 ## Problema
