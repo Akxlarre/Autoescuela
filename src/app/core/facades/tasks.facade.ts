@@ -15,7 +15,7 @@ import type {
   CreateTaskPayload,
   RecipientOption,
 } from '@core/models/ui/task.model';
-import { canSendTo, isOverdue, mapTaskDtoToRow } from '@core/utils/task.utils';
+import { canSendTo, dueDateToInstant, isOverdue, mapTaskDtoToRow } from '@core/utils/task.utils';
 
 // Maps currentUser().role (runtime value = DB roles.name) → TaskFromRole
 // DB seed stores 'secretary' (English), not 'secretaria'
@@ -227,7 +227,7 @@ export class TasksFacade {
     };
 
     if (payload.type === 'task' && payload.due_date) {
-      insertPayload['due_date'] = payload.due_date;
+      insertPayload['due_date'] = dueDateToInstant(payload.due_date);
     }
 
     try {
