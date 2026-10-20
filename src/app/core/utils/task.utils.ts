@@ -1,3 +1,4 @@
+import { chileWallTimeToInstant } from './chile-time.utils';
 import type { Task, TaskFromRole, TaskToRole } from '@core/models/dto/task.model';
 import type { TaskRow } from '@core/models/ui/task.model';
 
@@ -14,9 +15,23 @@ export function canSendTo(fromRole: TaskFromRole, toRole: TaskToRole): boolean {
   return ALLOWED[fromRole]?.includes(toRole) ?? false;
 }
 
-export function isOverdue(dueDate: string | null, now: Date): boolean {
-  if (!dueDate) return false;
+/**
+ * Una tarea completada nunca está vencida (S10, hotfix-100-b): antes salía "Vencida" y contaba
+ * en el KPI aunque ya estuviera hecha.
+ */
+export function isOverdue(dueDate: string | null, now: Date, status?: Task['status']): boolean {
+  if (!dueDate || status === 'completed') return false;
   return new Date(dueDate) < now;
+}
+
+/**
+ * Instante que se guarda en `tasks.due_date` (timestamptz) para una fecha límite elegida como
+ * día `AAAA-MM-DD`: las 23:59 de ese día en Chile (S9, hotfix-100-b). Guardar el día tal cual
+ * era medianoche UTC = 21:00 del día anterior en Chile — se mostraba un día antes y salía
+ * "Vencida" desde la noche previa.
+ */
+export function dueDateToInstant(day: string): string {
+  return chileWallTimeToInstant(day, '23:59');
 }
 
 export function canEditTask(task: Task, currentUserId: number): boolean {
@@ -65,7 +80,7 @@ export function mapTaskDtoToRow(
     senderName,
     recipientName,
     replyCount,
-    isOverdue: isOverdue(dto.due_date, now),
+    isOverdue: isOverdue(dto.due_date, now, dto.status),
     ageInDays,
     recipientInactive,
     canEdit: canEditTask(dto, currentUserId),

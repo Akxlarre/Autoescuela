@@ -1,6 +1,8 @@
+import { toChileDate } from './chile-time.utils';
 import {
   canSendTo,
   isOverdue,
+  dueDateToInstant,
   canEditTask,
   canChangeStatus,
   canDeleteTask,
@@ -83,6 +85,31 @@ describe('isOverdue', () => {
 
   it('retorna true cuando due_date es exactamente igual a now (borde)', () => {
     expect(isOverdue(NOW.toISOString(), NOW)).toBe(false);
+  });
+
+  it('S10 (hotfix-100-b): una tarea completada nunca está vencida', () => {
+    expect(isOverdue('2026-05-17T00:00:00Z', NOW, 'completed')).toBe(false);
+    expect(isOverdue('2026-05-17T00:00:00Z', NOW, 'in_progress')).toBe(true);
+  });
+});
+
+// ─── dueDateToInstant (S9, hotfix-100-b) ────────────────────────────────────
+
+describe('dueDateToInstant', () => {
+  it('el día elegido termina a las 23:59 de Chile (verano, UTC-3)', () => {
+    expect(dueDateToInstant('2026-10-20')).toBe('2026-10-21T02:59:00.000Z');
+  });
+
+  it('en invierno (UTC-4)', () => {
+    expect(dueDateToInstant('2026-06-15')).toBe('2026-06-16T03:59:00.000Z');
+  });
+
+  it('se muestra como el mismo día y no está vencida durante ese día en Chile', () => {
+    const due = dueDateToInstant('2026-10-20');
+    expect(toChileDate(due)).toBe('2026-10-20');
+    // 21:30 del 20 en Chile = 00:30 UTC del 21: antes era "Vencida".
+    expect(isOverdue(due, new Date('2026-10-21T00:30:00Z'))).toBe(false);
+    expect(isOverdue(due, new Date('2026-10-21T03:01:00Z'))).toBe(true);
   });
 });
 
