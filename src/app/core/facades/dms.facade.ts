@@ -26,6 +26,7 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { fetchAllPages } from '@core/utils/paged-fetch.utils';
 import { isDeletableStudentDoc } from '@core/utils/dms-documents.utils';
+import { validateDocumentFile } from '@core/utils/document-file-validation.util';
 
 // ─── Labels ──────────────────────────────────────────────────────────────────
 
@@ -644,6 +645,57 @@ export class DmsFacade {
     }
 
     await this.refreshSilently();
+  }
+
+  /**
+   * fix-471-m: reemplaza el archivo de un documento subido (admin y secretaria). Sube a una ruta
+   * nueva (el CDN cachea por ruta y el reemplazo puede cambiar de extensión), apunta la fila al
+   * archivo nuevo y borra el anterior. La secretaria no puede borrar del bucket: ahí el archivo
+   * viejo queda sin referencia (removeStoredFile solo registra el fallo).
+   */
+  async replaceStudentDocument(docId: string, file: File): Promise<boolean> {
+    try {
+      const invalid = validateDocumentFile(file);
+      if (invalid) throw new Error(invalid);
+
+      const { data: current, error: readError } = await this.supabase.client
+        .from('student_documents')
+        .select('id, enrollment_id, type, storage_url')
+        .eq('id', parseInt(docId, 10))
+        .single();
+      if (readError) throw readError;
+
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'pdf';
+      const newPath = `students/${current.enrollment_id}/${Date.now()}_${current.type}.${ext}`;
+      const { error: uploadError } = await this.supabase.client.storage
+        .from('documents')
+        .upload(newPath, file);
+      if (uploadError) throw uploadError;
+
+      const { data: updated, error: updateError } = await this.supabase.client
+        .from('student_documents')
+        .update({
+          storage_url: newPath,
+          file_name: file.name,
+          uploaded_at: new Date().toISOString(),
+          status: 'pending',
+        })
+        .eq('id', current.id)
+        .select('id');
+      if (updateError || !updated?.length) {
+        await this.removeStoredFile(newPath);
+        throw updateError ?? new Error('No tienes permiso para modificar este documento.');
+      }
+
+      if (current.storage_url) await this.removeStoredFile(current.storage_url);
+      this.toast.success('Documento reemplazado');
+      await this.refreshSilently();
+      return true;
+    } catch (err) {
+      const message = this.sanitizer.sanitize(err).message || 'Error desconocido';
+      this.toast.error('No se pudo reemplazar el documento', message);
+      return false;
+    }
   }
 
   async deleteStudentDocument(docId: string, source: DmsStudentDocSource): Promise<void> {

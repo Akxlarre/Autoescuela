@@ -989,6 +989,88 @@ describe('DmsFacade', () => {
       );
     });
 
+    describe('replaceStudentDocument() (fix-471-m)', () => {
+      const pdf = () => new File(['nuevo'], 'carnet-bueno.pdf', { type: 'application/pdf' });
+
+      function setupReplace(updateResult: { data: any; error: any }) {
+        const ctx = setupFacade({ role: 'secretary', branchId: 1 });
+        const current = makeBuilder({
+          data: {
+            id: 9,
+            enrollment_id: 200,
+            type: 'cedula_identidad',
+            storage_url: 'students/200/old.jpg',
+          },
+          error: null,
+        });
+        const update = makeBuilder(updateResult);
+        let call = 0;
+        ctx.localSupabaseSpy.client.from = vi.fn((table: string) => {
+          if (table !== 'student_documents') return makeBuilder({ data: [], error: null });
+          call++;
+          return call === 1
+            ? current
+            : call === 2
+              ? update
+              : makeBuilder({ data: [], error: null });
+        });
+        const bucket = ctx.localSupabaseSpy.client.storage.from();
+        return { ...ctx, update, bucket };
+      }
+
+      it('sube a una ruta nueva, actualiza la fila y borra el archivo anterior', async () => {
+        const { localFacade, update, bucket, localToast } = setupReplace({
+          data: [{ id: 9 }],
+          error: null,
+        });
+
+        const ok = await localFacade.replaceStudentDocument('9', pdf());
+
+        expect(ok).toBe(true);
+        const newPath = bucket.upload.mock.calls[0][0] as string;
+        expect(newPath).toMatch(/^students\/200\/\d+_cedula_identidad\.pdf$/);
+        expect(update.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            storage_url: newPath,
+            file_name: 'carnet-bueno.pdf',
+            status: 'pending',
+          }),
+        );
+        expect(update.eq).toHaveBeenCalledWith('id', 9);
+        expect(bucket.remove).toHaveBeenCalledWith(['students/200/old.jpg']);
+        expect(localToast.success).toHaveBeenCalled();
+      });
+
+      it('archivo inválido: no sube nada y muestra el motivo', async () => {
+        const { localFacade, bucket, localToast } = setupReplace({
+          data: [{ id: 9 }],
+          error: null,
+        });
+        const exe = new File(['x'], 'virus.exe', { type: 'application/x-msdownload' });
+
+        const ok = await localFacade.replaceStudentDocument('9', exe);
+
+        expect(ok).toBe(false);
+        expect(bucket.upload).not.toHaveBeenCalled();
+        expect(localToast.error).toHaveBeenCalledWith(
+          'No se pudo reemplazar el documento',
+          'Solo se permiten archivos PDF, JPG, PNG o WEBP.',
+        );
+      });
+
+      it('si la fila no se actualizó (RLS: 0 filas), borra el archivo nuevo y no el viejo', async () => {
+        const { localFacade, bucket, localToast } = setupReplace({ data: [], error: null });
+
+        const ok = await localFacade.replaceStudentDocument('9', pdf());
+
+        expect(ok).toBe(false);
+        const newPath = bucket.upload.mock.calls[0][0];
+        expect(bucket.remove).toHaveBeenCalledWith([newPath]);
+        expect(bucket.remove).not.toHaveBeenCalledWith(['students/200/old.jpg']);
+        expect(localToast.error).toHaveBeenCalled();
+      });
+    });
+
     it('uploadStudentDocument() (AC4): sin enrollmentId, cae al fallback de la última matrícula del alumno', async () => {
       const { localFacade, localSupabaseSpy } = setupFacade();
       const docsBuilder = makeBuilder({ data: [], error: null });
