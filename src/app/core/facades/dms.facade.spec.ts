@@ -978,6 +978,47 @@ describe('DmsFacade', () => {
       await loading;
     });
 
+    it('fix-472-m (seguimiento): otra matrícula del mismo alumno no muestra los documentos de la anterior', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      localSupabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'v_dms_student_documents'
+          ? makeBuilder({
+              data: [
+                {
+                  id: '1',
+                  source: 'student_document',
+                  student_id: 1,
+                  enrollment_id: 100,
+                  type: 'cedula_identidad',
+                  file_name: 'c.jpg',
+                  file_url: 'x',
+                  status: 'approved',
+                  document_at: '2026-10-01',
+                  managed_by: null,
+                },
+              ],
+              error: null,
+            })
+          : makeBuilder({
+              data: {
+                id: 1,
+                users: { id: 10, rut: '1-9', first_names: 'Ana', paternal_last_name: 'A' },
+              },
+              error: null,
+            }),
+      );
+      await localFacade.loadStudentDocuments(1, 100);
+      expect(localFacade.studentDocs()).toHaveLength(1);
+
+      const pending = new Promise<{ data: any; error: any }>(() => {});
+      const slow = makeBuilder({ data: [], error: null });
+      slow.then = (res: any, rej?: any) => pending.then(res, rej);
+      localSupabaseSpy.client.from = vi.fn(() => slow);
+      void localFacade.loadStudentDocuments(1, 200);
+
+      expect(localFacade.studentDocs()).toEqual([]);
+    });
+
     it('fix-472-m: la respuesta tardía de un alumno anterior no pisa al actual', async () => {
       const { localFacade, localSupabaseSpy } = setupFacade();
       let releaseA!: () => void;

@@ -518,7 +518,9 @@ export class DmsFacade {
       studentId,
       enrollmentId: enrollmentId ?? null,
     });
-    if (!sameStudent) this._studentDocs.set([]);
+    // Seguimiento: también al cambiar de matrícula del mismo alumno (si no, por un momento se
+    // ven los documentos de la otra matrícula y el selector de tipos filtra con ellos).
+    if (!sameStudent || previous.enrollmentId !== (enrollmentId ?? null)) this._studentDocs.set([]);
     try {
       let vDocsQuery: any = this.supabase.client
         .from('v_dms_student_documents')

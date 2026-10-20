@@ -40,3 +40,13 @@ preseleccionar alumno y matrícula, así que:
 
 - [x] Tests rojos → verdes
 - [x] E2E C08 verde
+
+## Seguimiento (2026-10-20)
+
+Al cambiar de matrícula **del mismo alumno** (selector "Matrícula" de "Subir documento"),
+`studentDetail` ya apunta a la nueva pero `studentDocs` seguía con los de la anterior hasta que
+respondía la consulta: por un momento se ocultaban los tipos subidos en la OTRA matrícula. Ahora
+los documentos se vacían también cuando cambia la matrícula (no solo el alumno). Hallado con la
+suite E2E (D05/D08).
+
+- [x] Test: mismo alumno, otra matrícula → `studentDocs` vacío mientras carga
