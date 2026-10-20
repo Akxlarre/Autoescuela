@@ -575,6 +575,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                         optionLabel="name"
                         optionValue="id"
                         placeholder="Sede"
+                        [disabled]="templateHasUnsavedChanges()"
                         appendTo="body"
                         [style]="{ 'min-width': '180px', height: '36px' }"
                         data-llm-action="select-document-template-branch"
@@ -586,6 +587,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                         optionLabel="label"
                         optionValue="value"
                         placeholder="Tipo de documento"
+                        [disabled]="templateHasUnsavedChanges()"
                         appendTo="body"
                         [style]="{ 'min-width': '200px', height: '36px' }"
                         data-llm-action="select-document-template-type"
@@ -643,6 +645,25 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                       />
                       Publicar
                     </button>
+                    @if (templateHasUnsavedChanges()) {
+                      <button
+                        type="button"
+                        class="btn-ghost btn-sm"
+                        data-llm-action="discard-document-template-changes"
+                        [disabled]="templateIsPublishing()"
+                        (click)="templateDiscardRequested.emit()"
+                      >
+                        <app-icon name="rotate-ccw" [size]="14" />
+                        Descartar cambios
+                      </button>
+                      <span
+                        class="text-xs text-text-secondary flex items-center gap-1.5"
+                        data-llm-description="the template has edits that are not published yet"
+                      >
+                        <app-icon name="circle-alert" [size]="14" class="text-warning" />
+                        Cambios sin publicar: publica o descarta para cambiar de sede o documento.
+                      </span>
+                    }
                   </div>
 
                   <!-- Secciones editables (scroll interno) -->
@@ -754,6 +775,8 @@ export class DmsListContentComponent {
   readonly templateIsLoading = input<boolean>(false);
   readonly templateIsPublishing = input<boolean>(false);
   readonly templateIsGeneratingPreview = input<boolean>(false);
+  /** fix-469-m: borrador distinto de lo publicado → bloquea los selectores y ofrece descartar. */
+  readonly templateHasUnsavedChanges = input<boolean>(false);
 
   // ── Outputs ───────────────────────────────────────────────────────────────
   readonly uploadStudentDoc = output<void>();
@@ -774,6 +797,7 @@ export class DmsListContentComponent {
     documentType: DocumentType;
   }>();
   readonly templatePublishRequested = output<void>();
+  readonly templateDiscardRequested = output<void>();
 
   readonly activeTab = signal<DmsTab>('students');
   readonly studentSearch = signal('');

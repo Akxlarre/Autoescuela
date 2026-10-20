@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { ToastService } from '@core/services/ui/toast.service';
@@ -44,9 +44,18 @@ export class DocumentContentTemplatesFacade {
   private readonly _isPublishing = signal(false);
   private readonly _isGeneratingPreview = signal(false);
   private readonly _error = signal<string | null>(null);
+  /** fix-469-m: contenido publicado de la sede+tipo del form, para saber si hay un borrador. */
+  private readonly _publishedContent = signal<Record<string, string>>({});
 
   // ── 2. ESTADO EXPUESTO (Público, Solo lectura) ────────────────────────────
   readonly form = this._form.asReadonly();
+  /** fix-469-m: el form difiere de lo publicado (cambios que se perderían al cambiar o salir). */
+  readonly hasUnsavedChanges = computed(() => {
+    const form = this._form();
+    if (!form) return false;
+    const published = this._publishedContent();
+    return form.sections.some((s) => s.body !== (published[s.id] ?? ''));
+  });
   readonly isLoading = this._isLoading.asReadonly();
   readonly isPublishing = this._isPublishing.asReadonly();
   readonly isGeneratingPreview = this._isGeneratingPreview.asReadonly();
@@ -62,6 +71,9 @@ export class DocumentContentTemplatesFacade {
     const requestToken = this.loadGuard.next();
     this._isLoading.set(true);
     this._error.set(null);
+    // fix-469-m: si esta carga falla, no debe quedar el form de otra sede/tipo (Publicar
+    // escribiría ahí, con los selectores mostrando la sede nueva).
+    this._form.set(null);
 
     try {
       const { data, error } = await this.supabase.client
@@ -78,6 +90,7 @@ export class DocumentContentTemplatesFacade {
       const sections: DocumentTemplateSection[] = DOCUMENT_TEMPLATE_SECTIONS[documentType].map(
         (meta) => ({ ...meta, body: savedContent[meta.id] ?? '' }),
       );
+      this._publishedContent.set(savedContent);
       this._form.set({ branchId, documentType, sections });
     } catch (err) {
       if (!this.loadGuard.isCurrent(requestToken)) return;
@@ -134,6 +147,7 @@ export class DocumentContentTemplatesFacade {
 
       if (error) throw error;
 
+      this._publishedContent.set(this.sectionsToContent(form.sections));
       this.toast.success(
         'Plantilla publicada',
         'Los próximos documentos generados usarán este contenido.',
@@ -166,6 +180,17 @@ export class DocumentContentTemplatesFacade {
    * borrador: la Edge Function lee el `content` real de `document_templates`. */
   async viewPublished(branchId: number, documentType: DocumentType): Promise<string | null> {
     return this.generatePdfBase64(branchId, documentType, 'sample');
+  }
+
+  /** fix-469-m: vuelve las secciones al texto publicado. */
+  discardChanges(): void {
+    const form = this._form();
+    if (!form) return;
+    const published = this._publishedContent();
+    this._form.set({
+      ...form,
+      sections: form.sections.map((s) => ({ ...s, body: published[s.id] ?? '' })),
+    });
   }
 
   clearError(): void {

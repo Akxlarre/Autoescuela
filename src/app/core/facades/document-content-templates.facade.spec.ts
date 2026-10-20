@@ -108,6 +108,72 @@ describe('DocumentContentTemplatesFacade', () => {
       await facade.load(2, 'contract_b');
       expect(facade.isLoading()).toBe(false);
     });
+
+    it('fix-469-m: si la carga de otra sede falla, no queda el form de la sede anterior', async () => {
+      await facade.load(2, 'contract_b');
+      expect(facade.form()?.branchId).toBe(2);
+
+      supabaseSpy.client.from.mockReturnValue(
+        makeSelectQuery({ data: null, error: new Error('network down') }),
+      );
+      await facade.load(1, 'contract_b');
+
+      expect(facade.form()).toBeNull();
+    });
+  });
+
+  describe('cambios sin publicar (fix-469-m)', () => {
+    beforeEach(async () => {
+      supabaseSpy.client.from.mockReturnValue(
+        makeSelectQuery({ data: { content: { primero: 'Publicado' } }, error: null }),
+      );
+      await facade.load(2, 'contract_b');
+    });
+
+    const primero = () => facade.form()?.sections.find((s) => s.id === 'primero')?.body;
+
+    it('recién cargado no hay cambios', () => {
+      expect(facade.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('editar una sección marca cambios; volver al texto publicado los quita', () => {
+      facade.updateSection('primero', 'Editado');
+      expect(facade.hasUnsavedChanges()).toBe(true);
+      facade.updateSection('primero', 'Publicado');
+      expect(facade.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('discardChanges() vuelve al texto publicado', () => {
+      facade.updateSection('primero', 'Editado');
+      facade.discardChanges();
+      expect(primero()).toBe('Publicado');
+      expect(facade.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('tras publicar, el borrador pasa a ser lo publicado', async () => {
+      for (const s of facade.form()?.sections ?? []) facade.updateSection(s.id, `Texto ${s.id}`);
+      expect(facade.hasUnsavedChanges()).toBe(true);
+      supabaseSpy.client.from.mockReturnValue({
+        upsert: vi.fn().mockResolvedValue({ data: null, error: null }),
+      });
+
+      await facade.publish();
+
+      expect(facade.hasUnsavedChanges()).toBe(false);
+      facade.discardChanges();
+      expect(primero()).toBe('Texto primero');
+    });
+
+    it('si publicar falla, los cambios siguen pendientes', async () => {
+      for (const s of facade.form()?.sections ?? []) facade.updateSection(s.id, `Texto ${s.id}`);
+      supabaseSpy.client.from.mockReturnValue({
+        upsert: vi.fn().mockResolvedValue({ data: null, error: new Error('upsert failed') }),
+      });
+
+      await facade.publish();
+
+      expect(facade.hasUnsavedChanges()).toBe(true);
+    });
   });
 
   describe('publish()', () => {
