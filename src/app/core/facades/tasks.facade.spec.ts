@@ -596,6 +596,14 @@ describe('TasksFacade', () => {
       expect(result).toBe(false);
     });
 
+    it('S22 (hotfix-107-b): sin permiso avisa en vez de no hacer nada', async () => {
+      mockSupabase.client.rpc.mockResolvedValue({ data: false, error: null });
+      await facade.softDelete('uuid-1');
+      expect(mockToast.warning).toHaveBeenCalledWith(
+        'No puedes eliminar esta tarea: ya no está pendiente o no la creaste tú.',
+      );
+    });
+
     it('returns false on RPC error', async () => {
       mockSupabase.client.rpc.mockResolvedValue({ data: null, error: { message: 'Error' } });
       const result = await facade.softDelete('uuid-1');
