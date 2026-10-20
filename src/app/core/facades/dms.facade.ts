@@ -254,6 +254,8 @@ export class DmsFacade {
   private _lastBranchId: number | null | undefined = undefined;
   /** Descarta respuestas de fetchAllData() fuera de orden (spec 0005-m). */
   private readonly dmsGuard = createRequestGuard();
+  /** fix-472-m: abrir el drawer de A y luego el de B; la respuesta tardía de A se descarta. */
+  private readonly studentDocsGuard = createRequestGuard();
 
   // Sub-ruta: detalle de alumno
   private readonly _studentDetail = signal<{
@@ -492,7 +494,20 @@ export class DmsFacade {
   // ── Tab 1 — Documentos del Alumno ───────────────────────────────────────────
 
   async loadStudentDocuments(studentId: number, enrollmentId?: number): Promise<void> {
+    const token = this.studentDocsGuard.next();
     this._studentDocsLoading.set(true);
+    // fix-472-m: el drawer apunta a este alumno y matrícula desde ya. "Subir documento" lee
+    // studentDetail; si se fijaba recién al responder, se presionaba mientras cargaba y quedaba
+    // sin alumno, o con el del drawer anterior (subida a la matrícula equivocada).
+    const previous = this._studentDetail();
+    const sameStudent = previous?.studentId === studentId;
+    this._studentDetail.set({
+      name: sameStudent ? previous.name : '',
+      rut: sameStudent ? previous.rut : '',
+      studentId,
+      enrollmentId: enrollmentId ?? null,
+    });
+    if (!sameStudent) this._studentDocs.set([]);
     try {
       let vDocsQuery: any = this.supabase.client
         .from('v_dms_student_documents')
@@ -518,6 +533,7 @@ export class DmsFacade {
             ? rawStudent.users[0]
             : rawStudent.users
           : null;
+        if (!this.studentDocsGuard.isCurrent(token)) return;
         if (user) {
           this._studentDetail.set({
             name: buildStudentDisplayName({
@@ -544,6 +560,7 @@ export class DmsFacade {
             ? rawStudent.users[0]
             : rawStudent.users
           : null;
+        if (!this.studentDocsGuard.isCurrent(token)) return;
         if (user) {
           this._studentDetail.set({
             name: buildStudentDisplayName({
@@ -559,13 +576,14 @@ export class DmsFacade {
         this._studentDocs.set([]);
       }
     } catch (err) {
+      if (!this.studentDocsGuard.isCurrent(token)) return;
       this._error.set(
         err instanceof Error
           ? this.sanitizer.sanitize(err).message
           : 'Error al cargar documentos del alumno',
       );
     } finally {
-      this._studentDocsLoading.set(false);
+      if (this.studentDocsGuard.isCurrent(token)) this._studentDocsLoading.set(false);
     }
   }
 

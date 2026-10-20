@@ -932,6 +932,64 @@ describe('DmsFacade', () => {
       );
     });
 
+    it('fix-472-m: studentDetail apunta al alumno nuevo antes de que respondan las consultas', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      localSupabaseSpy.client.from = vi.fn(() => makeBuilder({ data: [], error: null }));
+      await localFacade.loadStudentDocuments(1, 100);
+
+      let release!: () => void;
+      const pending = new Promise<{ data: any; error: any }>((resolve) => {
+        release = () => resolve({ data: [], error: null });
+      });
+      const slow = makeBuilder({ data: [], error: null });
+      slow.then = (res: any, rej?: any) => pending.then(res, rej);
+      localSupabaseSpy.client.from = vi.fn(() => slow);
+
+      const loading = localFacade.loadStudentDocuments(2, 200);
+      expect(localFacade.studentDetail()).toEqual(
+        expect.objectContaining({ studentId: 2, enrollmentId: 200 }),
+      );
+      release();
+      await loading;
+    });
+
+    it('fix-472-m: la respuesta tardía de un alumno anterior no pisa al actual', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      let releaseA!: () => void;
+      const pendingA = new Promise<{ data: any; error: any }>((resolve) => {
+        releaseA = () =>
+          resolve({
+            data: {
+              id: 1,
+              users: { id: 10, rut: '1-9', first_names: 'Ana', paternal_last_name: 'A' },
+            },
+            error: null,
+          });
+      });
+      const slowA = makeBuilder({ data: [], error: null });
+      slowA.then = (res: any, rej?: any) => pendingA.then(res, rej);
+      localSupabaseSpy.client.from = vi.fn(() => slowA);
+      const loadingA = localFacade.loadStudentDocuments(1, 100);
+
+      localSupabaseSpy.client.from = vi.fn(() =>
+        makeBuilder({
+          data: {
+            id: 2,
+            users: { id: 20, rut: '2-7', first_names: 'Bea', paternal_last_name: 'B' },
+          },
+          error: null,
+        }),
+      );
+      await localFacade.loadStudentDocuments(2, 200);
+      releaseA();
+      await loadingA;
+
+      expect(localFacade.studentDetail()).toEqual(
+        expect.objectContaining({ studentId: 2, enrollmentId: 200 }),
+      );
+      expect(localFacade.studentDocsLoading()).toBe(false);
+    });
+
     it('loadStudentEnrollmentOptions(studentId) (AC-E2): devuelve TODAS las matrículas del alumno, no solo las que ya tienen documentos', async () => {
       const { localFacade, localSupabaseSpy } = setupFacade();
       const enrollmentsBuilder = makeBuilder({
