@@ -20,6 +20,7 @@ import {
   DRY_RUN_MARK,
   summarizeRecipients,
 } from './announcement-progress.ts';
+import { chileYear } from './chile-time.ts';
 
 /** `{{variable}}` con espacios opcionales. Espeja `core/utils/announcement-template.utils.ts`. */
 const PLACEHOLDER = /\{\{\s*([a-zA-Z_]+)\s*\}\}/g;
@@ -47,8 +48,48 @@ export function renderTemplate(text: string, values: Record<string, string>): st
   return text.replace(PLACEHOLDER, (_m, key: string) => values[key] ?? '');
 }
 
-export function buildEmailHtml(subject: string, body: string): string {
+/** Marca del correo: la sede del destinatario (fix-232-b). */
+export interface EmailBrand {
+  /** Nombre de la sede; vacío si no se conoce. */
+  sede: string;
+  /** Correo de contacto de la sede; vacío si no se conoce. */
+  correoSede: string;
+  /** Promocional: lleva el pie para darse de baja (Ley 21.719, Art. 12). */
+  promocional: boolean;
+}
+
+const GENERIC_BRAND = 'Escuela de conductores';
+
+/** Iniciales para el logo del correo: "Autoescuela Chillán" → "AC". */
+export function brandInitials(name: string): string {
+  const letters = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join('');
+  return letters || 'AE';
+}
+
+/**
+ * Pie de baja de un comunicado promocional (fix-232-b, S5). En el piloto el alumno no puede
+ * entrar a su portal para revocar el consentimiento: se le dice cómo pedirlo. La revocación la
+ * registra admin/secretaría desde la ficha del alumno.
+ */
+function unsubscribeFooter(correoSede: string): string {
+  const canal = correoSede
+    ? `avísanos en la escuela o escríbenos a ${escapeHtml(correoSede)}`
+    : 'avísanos en la escuela';
+  return `<p class="footer-text footer-unsubscribe">Si no quieres recibir más promociones, ${canal} y dejamos de enviártelas.</p>`;
+}
+
+export function buildEmailHtml(subject: string, body: string, brand: EmailBrand): string {
   const safeBody = escapeHtml(body).replace(/\n/g, '<br>');
+  // fix-232-b (S6): antes el logo, el nombre y el pie decían "Conductores Chillán" para todas
+  // las sedes.
+  const brandName = escapeHtml(brand.sede || GENERIC_BRAND);
+  const initials = escapeHtml(brandInitials(brand.sede));
+  const year = chileYear();
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -73,13 +114,14 @@ export function buildEmailHtml(subject: string, body: string): string {
     .footer-divider { width: 40px; height: 2px; background: linear-gradient(to right, #0ea5e9, #6366f1); border-radius: 2px; margin: 0 auto 14px; }
     .footer-brand { font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 6px; }
     .footer-text { font-size: 12px; color: #94a3b8; line-height: 1.6; }
+    .footer-unsubscribe { color: #64748b; margin-bottom: 8px; }
   </style>
 </head>
 <body>
 <div class="email-wrapper">
   <div class="email-header">
-    <div class="logo-badge"><span>CC</span></div>
-    <p class="company-name">Conductores Chillán</p>
+    <div class="logo-badge"><span>${initials}</span></div>
+    <p class="company-name">${brandName}</p>
   </div>
   <div class="email-body">
     <p class="greeting">Comunicado</p>
@@ -89,8 +131,9 @@ export function buildEmailHtml(subject: string, body: string): string {
   </div>
   <div class="email-footer">
     <div class="footer-divider"></div>
-    <p class="footer-brand">Conductores Chillán</p>
-    <p class="footer-text">Este correo fue enviado automáticamente. Por favor no responder.<br>© 2026 Conductores Chillán. Todos los derechos reservados.</p>
+    <p class="footer-brand">${brandName}</p>
+    ${brand.promocional ? unsubscribeFooter(brand.correoSede) : ''}
+    <p class="footer-text">Este correo fue enviado automáticamente. Por favor no responder.<br>© ${year} ${brandName}. Todos los derechos reservados.</p>
   </div>
 </div>
 </body>
@@ -230,7 +273,7 @@ export interface SendBatchResult {
 }
 
 const RECIPIENT_BATCH_COLUMNS =
-  'id, user_id, email, email_sent_ok, notification_id, users!inner(first_names, paternal_last_name, branches:branch_id(name))';
+  'id, user_id, email, email_sent_ok, notification_id, users!inner(first_names, paternal_last_name, branches:branch_id(name, email))';
 
 /**
  * Materializa los destinatarios solo si todavía no existen, y devuelve cuántos hay.
@@ -464,7 +507,11 @@ async function processRecipients(service, announcement, batch, dryRun: boolean) 
       // El HTML se arma también en dry-run: así el escapado y la sustitución se
       // ejercitan igual, y un error de plantilla no queda escondido hasta el primer
       // envío real.
-      const html = buildEmailHtml(subject, body);
+      const html = buildEmailHtml(subject, body, {
+        sede: recipient.users?.branches?.name ?? '',
+        correoSede: recipient.users?.branches?.email ?? '',
+        promocional: announcement.kind === 'promocional',
+      });
       if (dryRun) {
         sent++;
         await service

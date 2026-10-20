@@ -429,7 +429,8 @@ export class AnnouncementsFacade {
       const { data, error } = await this.supabase.client.functions.invoke('send-announcement', {
         body: {
           previewOnly: true,
-          preview: { subject: draft.subject, body: draft.body },
+          // fix-232-b: con el tipo, la vista previa muestra el pie de baja de los promocionales.
+          preview: { subject: draft.subject, body: draft.body, kind: draft.kind },
         },
       });
 

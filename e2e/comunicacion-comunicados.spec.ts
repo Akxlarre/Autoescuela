@@ -122,6 +122,27 @@ test('K04 + K06: la vista previa resuelve {{nombre}} y muestra el HTML del cuerp
   await expect(frame.locator('body')).toContainText('<b>negrita</b>');
   await expect(frame.locator('b')).toHaveCount(0);
   await expect(frame.locator('script')).toHaveCount(0);
+  // fix-232-b (S6): la marca es la de la sede (ejemplo: Autoescuela Chillán), no "Conductores".
+  await expect(frame.locator('.logo-badge')).toHaveText('AC');
+  await expect(frame.locator('body')).not.toContainText('Conductores Chillán');
+  await expect(frame.locator('body')).not.toContainText('Si no quieres recibir más promociones');
+  expect(intentos).toEqual([]);
+});
+
+test('L05 (S5, fix-232-b): la vista previa de un promocional trae cómo darse de baja', async ({
+  pageAs,
+}) => {
+  const page = await pageAs('admin');
+  const intentos: string[] = [];
+  await sinEnvios(page, intentos);
+  await abrirCompositor(page, 'admin');
+  await tipo(page, /^Promocional/);
+  await seccion(page, 'Mensaje');
+  await page.locator('#a-subject').fill('Promo e2e');
+  await page.locator('#a-body').fill('Cuerpo de prueba');
+  await page.locator('[data-llm-action="previsualizar-comunicado"]').click();
+  const frame = page.frameLocator('iframe').first();
+  await expect(frame.locator('body')).toContainText('Si no quieres recibir más promociones', CARGA);
   expect(intentos).toEqual([]);
 });
 

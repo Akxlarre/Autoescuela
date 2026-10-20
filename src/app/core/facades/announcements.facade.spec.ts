@@ -86,9 +86,7 @@ describe('AnnouncementsFacade', () => {
       }),
       functions: {
         invoke: (name: string, options: any) =>
-          options?.body?.finalize === true
-            ? finalizeSpy(name, options)
-            : invokeSpy(name, options),
+          options?.body?.finalize === true ? finalizeSpy(name, options) : invokeSpy(name, options),
       },
     };
   }
@@ -674,6 +672,14 @@ describe('AnnouncementsFacade', () => {
       // Los marcadores los resuelve el servidor: mandarlos ya sustituidos desde acá
       // haría que el preview muestre algo distinto de lo que se va a guardar.
       expect(invokeSpy.mock.calls[0][1].body.preview.body).toBe('Hola {{nombre}}');
+    });
+
+    it('fix-232-b · manda el tipo, para que el promocional muestre el pie de baja', async () => {
+      invokeSpy.mockResolvedValue({ data: { html: '<html></html>' }, error: null });
+
+      await facade.loadPreviewHtml({ ...DRAFT, kind: 'promocional' });
+
+      expect(invokeSpy.mock.calls[0][1].body.preview.kind).toBe('promocional');
     });
 
     // AC-E2 — un preview vacío no dice nada; mejor avisar que gastar un round-trip.
