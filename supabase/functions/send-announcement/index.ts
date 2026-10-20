@@ -37,6 +37,7 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { requireStaff } from '../_shared/staff-auth.ts';
 import {
   buildEmailHtml,
   finalizeAnnouncement,
@@ -64,34 +65,25 @@ Deno.serve(async (req: Request) => {
 
   try {
     // ── Autenticación ────────────────────────────────────────────────────────
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return jsonResponse({ error: 'No autorizado' }, 401);
-
-    const supabaseUser = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-    const {
-      data: { user },
-    } = await supabaseUser.auth.getUser();
-    if (!user) return jsonResponse({ error: 'No autorizado' }, 401);
+    // fix-235-b: helper compartido de autorización de staff.
+    const access = await requireStaff(req, ['admin', 'secretary']);
+    if (!access.ok) {
+      return jsonResponse(
+        {
+          error:
+            access.status === 403
+              ? 'Solo admin o secretaría pueden enviar comunicados'
+              : access.error,
+        },
+        access.status,
+      );
+    }
+    const callerRole = access.role;
 
     const service = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
-
-    const { data: caller } = await service
-      .from('users')
-      .select('id, branch_id, roles!inner(name)')
-      .eq('supabase_uid', user.id)
-      .maybeSingle();
-
-    const callerRole = caller?.roles?.name;
-    if (callerRole !== 'admin' && callerRole !== 'secretary') {
-      return jsonResponse({ error: 'Solo admin o secretaría pueden enviar comunicados' }, 403);
-    }
 
     // ── Body ─────────────────────────────────────────────────────────────────
     const { announcementId, offset, batchSize, dryRun, previewOnly, preview, finalize } =
@@ -140,7 +132,7 @@ Deno.serve(async (req: Request) => {
     if (!announcement) return jsonResponse({ error: 'Comunicado no encontrado' }, 400);
 
     // La RLS no protege al service_role: la autorización de sede se comprueba acá.
-    if (callerRole === 'secretary' && announcement.branch_id !== caller.branch_id) {
+    if (callerRole === 'secretary' && announcement.branch_id !== access.branchId) {
       return jsonResponse({ error: 'No puedes enviar comunicados de otra sede' }, 403);
     }
 

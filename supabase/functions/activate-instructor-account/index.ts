@@ -45,7 +45,8 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@6';
-import { authorizeInstructorReinvite } from '../_shared/user-edit-authz.ts';
+import { authorizeInstructorReinvite, editCallerFrom } from '../_shared/user-edit-authz.ts';
+import { requireStaff } from '../_shared/staff-auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -167,30 +168,15 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // ── Validar que el llamador es admin o secretaria ─────────────────────────
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return errorResponse('No autorizado', 401);
-
-    const supabaseUser = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-
-    const {
-      data: { user: caller },
-    } = await supabaseUser.auth.getUser();
-    if (!caller) return errorResponse('No autorizado', 401);
-
-    const { data: callerRow } = await supabaseAdmin
-      .from('users')
-      .select('id, branch_id, can_access_both_branches, roles(name)')
-      .eq('supabase_uid', caller.id)
-      .maybeSingle();
-
-    const callerRole = callerRow?.roles?.name;
-    if (callerRole !== 'admin' && callerRole !== 'secretary') {
-      return errorResponse('Solo administradores y secretarias pueden realizar esta acción', 403);
+    // ── Validar que el llamador es admin o secretaria (fix-235-b: helper compartido) ──
+    const access = await requireStaff(req, ['admin', 'secretary']);
+    if (!access.ok) {
+      return errorResponse(
+        access.status === 403
+          ? 'Solo administradores y secretarias pueden realizar esta acción'
+          : access.error,
+        access.status,
+      );
     }
 
     // ── Leer y validar body ───────────────────────────────────────────────────
@@ -217,18 +203,11 @@ Deno.serve(async (req: Request) => {
     const instructorRow = Array.isArray(targetUser.instructors)
       ? targetUser.instructors[0]
       : targetUser.instructors;
-    const authz = authorizeInstructorReinvite(
-      {
-        role: callerRole,
-        branchId: callerRow.branch_id ?? null,
-        bothBranches: !!callerRow.can_access_both_branches,
-      },
-      {
-        role: targetUser.roles?.name,
-        branchId: targetUser.branch_id ?? null,
-        bothBranches: !!instructorRow?.both_branches,
-      },
-    );
+    const authz = authorizeInstructorReinvite(editCallerFrom(access), {
+      role: targetUser.roles?.name,
+      branchId: targetUser.branch_id ?? null,
+      bothBranches: !!instructorRow?.both_branches,
+    });
     if (!authz.ok) return errorResponse(authz.message, authz.status);
 
     // Verificar que el email coincide (evita reenviar la invitación equivocada)
