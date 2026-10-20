@@ -30,6 +30,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@6';
 import { buildStaffInviteEmail } from '../_shared/staff-invite-email.ts';
+import { requireStaff } from '../_shared/staff-auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -59,37 +60,20 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // ── Validar que el llamador es admin ──────────────────────────────────────
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return errorResponse('No autorizado', 401);
-
-    const supabaseUser = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-
-    const {
-      data: { user: caller },
-    } = await supabaseUser.auth.getUser();
-    if (!caller) return errorResponse('No autorizado', 401);
-
-    const { data: callerRow } = await supabaseAdmin
-      .from('users')
-      .select('id, roles ( name )')
-      .eq('supabase_uid', caller.id)
-      .maybeSingle();
-
-    const callerRole = callerRow?.roles?.name;
-    if (callerRole !== 'admin') {
-      return errorResponse('Solo los administradores pueden crear secretarias', 403);
+    // ── Validar que el llamador es admin (fix-235-b: helper compartido) ────────
+    const access = await requireStaff(req, ['admin']);
+    if (!access.ok) {
+      return errorResponse(
+        access.status === 403 ? 'Solo los administradores pueden crear secretarias' : access.error,
+        access.status,
+      );
     }
 
     // Cliente con header de auditoría — propaga el user_id del caller al trigger
     const supabaseAudit = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-      { global: { headers: { 'x-audit-user-id': String(callerRow.id) } } },
+      { global: { headers: { 'x-audit-user-id': String(access.userId) } } },
     );
 
     // ── Leer body ─────────────────────────────────────────────────────────────

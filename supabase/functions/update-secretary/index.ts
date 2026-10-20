@@ -27,7 +27,12 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { EMAIL_TAKEN_MESSAGE, isEmailTakenError, isUniqueViolation } from '../_shared/email-errors.ts';
+import { requireStaff } from '../_shared/staff-auth.ts';
+import {
+  EMAIL_TAKEN_MESSAGE,
+  isEmailTakenError,
+  isUniqueViolation,
+} from '../_shared/email-errors.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -57,36 +62,20 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // ── Validar que el llamador es admin ──────────────────────────────────────
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return errorResponse('No autorizado', 401);
-
-    const supabaseUser = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-
-    const {
-      data: { user: caller },
-    } = await supabaseUser.auth.getUser();
-    if (!caller) return errorResponse('No autorizado', 401);
-
-    const { data: callerRow } = await supabaseAdmin
-      .from('users')
-      .select('id, roles ( name )')
-      .eq('supabase_uid', caller.id)
-      .maybeSingle();
-
-    if (callerRow?.roles?.name !== 'admin') {
-      return errorResponse('Solo los administradores pueden editar secretarias', 403);
+    // ── Validar que el llamador es admin (fix-235-b: helper compartido) ────────
+    const access = await requireStaff(req, ['admin']);
+    if (!access.ok) {
+      return errorResponse(
+        access.status === 403 ? 'Solo los administradores pueden editar secretarias' : access.error,
+        access.status,
+      );
     }
 
     // Cliente con header de auditoría — propaga el user_id del caller al trigger
     const supabaseAudit = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-      { global: { headers: { 'x-audit-user-id': String(callerRow.id) } } },
+      { global: { headers: { 'x-audit-user-id': String(access.userId) } } },
     );
 
     // ── Leer body ─────────────────────────────────────────────────────────────
@@ -117,7 +106,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Con el ban de fix-180-b, desactivarse a uno mismo dejaría al admin sin acceso.
-    if (!active && Number(userId) === callerRow.id) {
+    if (!active && Number(userId) === access.userId) {
       return errorResponse('No puedes desactivar tu propia cuenta', 400);
     }
 
@@ -193,7 +182,8 @@ Deno.serve(async (req: Request) => {
           emailTarget.supabase_uid,
           { email: emailTarget.email.trim().toLowerCase() },
         );
-        if (revertError) console.error('No se pudo revertir el email en Auth:', revertError.message);
+        if (revertError)
+          console.error('No se pudo revertir el email en Auth:', revertError.message);
       }
       if (isUniqueViolation(updateError)) return errorResponse(EMAIL_TAKEN_MESSAGE, 409);
       return errorResponse(`Error al actualizar la secretaria: ${updateError.message}`, 500);
@@ -209,9 +199,12 @@ Deno.serve(async (req: Request) => {
     // users.active por sí solo no impedía el login ni la renovación del token. Con ban, la
     // cuenta desactivada no puede entrar; reactivar lo quita. Idempotente ('none' = sin ban).
     if (authLink?.supabase_uid) {
-      const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(authLink?.supabase_uid, {
-        ban_duration: active ? 'none' : '876000h',
-      });
+      const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(
+        authLink?.supabase_uid,
+        {
+          ban_duration: active ? 'none' : '876000h',
+        },
+      );
       if (banError) {
         return errorResponse(
           `La secretaria se guardó, pero no se pudo ${active ? 'reactivar' : 'bloquear'} su acceso: ${banError.message}`,

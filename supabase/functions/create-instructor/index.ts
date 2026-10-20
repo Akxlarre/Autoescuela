@@ -48,7 +48,8 @@ import { chileToday, diffDaysIso, toChileDate } from '../_shared/chile-time.ts';
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@6';
-import { authorizeInstructorCreate } from '../_shared/user-edit-authz.ts';
+import { authorizeInstructorCreate, editCallerFrom } from '../_shared/user-edit-authz.ts';
+import { requireStaff } from '../_shared/staff-auth.ts';
 import {
   duplicateUserMessage,
   EMAIL_TAKEN_MESSAGE,
@@ -182,37 +183,23 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // ── Validar que el llamador es admin o secretary ────────────────────────
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return errorResponse('No autorizado', 401);
-
-    const supabaseUser = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-
-    const {
-      data: { user: caller },
-    } = await supabaseUser.auth.getUser();
-    if (!caller) return errorResponse('No autorizado', 401);
-
-    const { data: callerRow } = await supabaseAdmin
-      .from('users')
-      .select('id, branch_id, can_access_both_branches, roles ( name )')
-      .eq('supabase_uid', caller.id)
-      .maybeSingle();
-
-    const callerRole = callerRow?.roles?.name;
-    if (callerRole !== 'admin' && callerRole !== 'secretary') {
-      return errorResponse('Solo administradores y secretarias pueden crear instructores', 403);
+    // ── Validar que el llamador es admin o secretary (fix-235-b: helper compartido) ──
+    const access = await requireStaff(req, ['admin', 'secretary']);
+    if (!access.ok) {
+      return errorResponse(
+        access.status === 403
+          ? 'Solo administradores y secretarias pueden crear instructores'
+          : access.error,
+        access.status,
+      );
     }
+    const callerRole = access.role;
 
     // Cliente con header de auditoría — propaga el user_id del caller al trigger
     const supabaseAudit = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-      { global: { headers: { 'x-audit-user-id': String(callerRow.id) } } },
+      { global: { headers: { 'x-audit-user-id': String(access.userId) } } },
     );
 
     // ── Leer body ─────────────────────────────────────────────────────────────
@@ -255,14 +242,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // fix-198-b: la sede del body no se toma tal cual — una secretaria sin grant, solo la suya.
-    const authz = authorizeInstructorCreate(
-      {
-        role: callerRole,
-        branchId: callerRow.branch_id ?? null,
-        bothBranches: !!callerRow.can_access_both_branches,
-      },
-      Number(branchId),
-    );
+    const authz = authorizeInstructorCreate(editCallerFrom(access), Number(branchId));
     if (!authz.ok) return errorResponse(authz.message, authz.status);
 
     // ── Validar licencia no vencida ─────────────────────────────────────────
@@ -369,7 +349,7 @@ Deno.serve(async (req: Request) => {
         instructor_id: instructorRow.id,
         vehicle_id: vehicleId,
         start_date: chileToday(),
-        assigned_by: callerRow.id,
+        assigned_by: access.userId,
       });
 
       if (assignError) {

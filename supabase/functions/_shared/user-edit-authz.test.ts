@@ -9,8 +9,27 @@ import {
   authorizeInstructorEdit,
   authorizeInstructorReinvite,
   authorizeStudentProfileEdit,
+  editCallerFrom,
   type EditCaller,
 } from './user-edit-authz.ts';
+
+// ── editCallerFrom (fix-235-b) ──────────────────────────────────────────────
+
+Deno.test(
+  'editCallerFrom: convierte lo que resolvió requireStaff en el llamador de las reglas',
+  () => {
+    assertEquals(editCallerFrom({ role: 'secretary', branchId: 1, canAccessBothBranches: false }), {
+      role: 'secretary',
+      branchId: 1,
+      bothBranches: false,
+    });
+    assertEquals(editCallerFrom({ role: 'admin', branchId: null, canAccessBothBranches: false }), {
+      role: 'admin',
+      branchId: null,
+      bothBranches: false,
+    });
+  },
+);
 
 const admin: EditCaller = { role: 'admin', branchId: null, bothBranches: true };
 const sec1: EditCaller = { role: 'secretary', branchId: 1, bothBranches: false };

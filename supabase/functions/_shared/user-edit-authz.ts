@@ -18,6 +18,22 @@ export interface EditCaller {
   bothBranches: boolean;
 }
 
+/**
+ * El llamador de estas reglas, a partir de lo que ya resolvió `requireStaff()` (fix-235-b). Antes
+ * cada función cargaba a mano `users` + `roles` del llamador para armarlo.
+ */
+export function editCallerFrom(access: {
+  role: string;
+  branchId: number | null;
+  canAccessBothBranches: boolean;
+}): EditCaller {
+  return {
+    role: access.role,
+    branchId: access.branchId,
+    bothBranches: access.canAccessBothBranches,
+  };
+}
+
 export interface AuthzResult {
   ok: boolean;
   status: number;
@@ -119,7 +135,11 @@ export function authorizeInstructorCreate(
  */
 export function authorizeInstructorReinvite(
   caller: EditCaller,
-  target: { role: string | null | undefined; branchId: number | null; bothBranches: boolean } | null,
+  target: {
+    role: string | null | undefined;
+    branchId: number | null;
+    bothBranches: boolean;
+  } | null,
 ): AuthzResult {
   if (caller.role !== 'admin' && caller.role !== 'secretary') {
     return deny(403, 'Solo administradores y secretarias pueden realizar esta acción');
