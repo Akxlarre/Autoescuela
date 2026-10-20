@@ -58,16 +58,11 @@ consultan a medida que aparecen.
 - [x] S18 → `fix-461-m`
 - [x] Revisión en código de S8, S13, S15, S17, S20–S22, S24, S25 (2026-10-19)
 - [x] S15 → `fix-462-m` · S21 → `fix-463-m` · S17 → `fix-464-m`
-- [ ] Confirmadas en código, sin corregir aún:
-  - S13 — `send-certificate-email` dice "Conductores Chillán" fijo; usar `branches.name` de la matrícula (como `contract-email.ts`). El logo del PDF es el mismo del contrato en ambas sedes: consultar si es el institucional.
-  - S20 — editor de plantillas: si la carga falla queda el form de la sede anterior y "Publicar" escribe ahí; sin aviso de cambios sin publicar ni confirmación al publicar.
-  - S22 — "Descargar" del drawer abre una pestaña (`download` no aplica cross-origin); el visor modal no ofrece descarga para PDF/imagen.
-  - S24 — `v_dms_student_documents` muestra el contrato generado (`file_url`), no el escaneo firmado (`signed_contract_url`); tampoco certificado ni carnet. Requiere migración.
-  - S25 — secretaria multisede: `secretaria-documentos` y `secretaria-certificados` no recargan al cambiar de sede (el admin sí, con el guard de fix-195-b).
-  - S16 (resto) — `enviarEmail()` muestra un error genérico y pierde el motivo ("El alumno no tiene email…").
-  - S8 — no existe "reemplazar" documento; la secretaria no puede corregir un escaneo malo. **Decisión de negocio pendiente** (¿la secretaria puede reemplazar?).
-- [ ] Casos A…S del checklist en navegador
-- [ ] Playwright: subida + visualización de documento; certificado no elegible bloqueado
+- [x] S13 → `hotfix-159-m` · S16 (resto) → `hotfix-160-m` · S25 → `hotfix-161-m` · S22 → `fix-468-m` · S20 → `fix-469-m` · S24 → `fix-470-m` · S8 → `fix-471-m` (2026-10-20)
+- [x] Despliegue de `send-certificate-email` (v14, 2026-10-20 17:48) y migración `20261020140000` aplicados por Matías y verificados
+- [x] Verificados en navegador 161 y 468–471; hallazgo nuevo C08 → `fix-472-m`
+- [x] Casos A…S del checklist en navegador (ver "Casos del checklist en navegador")
+- [x] Playwright: `e2e/documentos-certificacion.spec.ts` (7 tests: A01/A02/J20, C08/D16/G01/G04, F08, C05/C06, J13/J15/J16, L06/L07/P09, O04) — verde
 - [ ] Test de regresión del track → `/fix-close`
 
 ## Resultados
@@ -95,6 +90,36 @@ consultan a medida que aparecen.
 | S23 — filtro Estado sin "Todos" | Cerrada (`0022-m`, placeholder "Todos los estados") → regresión | `certificacion-clase-b-content.component.ts:108,749` |
 | S8, S13, S15, S17, S20–S22, S24, S25 | Sin revisar en código; se verifican en navegador | — |
 
+### Casos del checklist en navegador (2026-10-20)
+
+Ejecutados con Playwright MCP y con las suites `e2e/documentos-certificacion.spec.ts` (7) y
+`e2e/documentos-certificacion-2.spec.ts` (4). ✅ = esperado; ❌ = bug → su track.
+
+| Sección | Resultado |
+|---|---|
+| A | ✅ A01–A06, A08, A09 (sin scroll del documento a 1600×900). ❌ A07 → `fix-473-m` |
+| B | ✅ B01–B04, B07, B08, B10–B12, B14, B15, B18. ❌ B05/B06 → `hotfix-162-m`; ❌ B09 → `hotfix-163-m`. B13: `fix-453-m`; B16: `fix-457-m`; B17: `fix-456-m` |
+| C | ✅ C01, C03, C07, C09, C10. ❌ C08 → `fix-472-m`. C05/C06 → `fix-470-m` (E2E) |
+| D | ✅ D01, D02, D04, D05, D07, D08, D09, D11, D16, D18, D20 (E2E). ❌ D10/D12/D13 → `fix-474-m`; seguimiento D05/D08 → `fix-472-m`. D03 → `fix-449-m` |
+| E | ✅ E01–E04 (consentimiento true/false registrado en `consents`), E07. ❌ E05 → `hotfix-164-m` |
+| F | ✅ F01–F03, F07, F10 (E2E), F09. F05 → `fix-454-m`; F06 → `fix-455-m`; F08 → `fix-471-m` |
+| G | ✅ G01, G03, G04, G05 (`fix-468-m`) |
+| H | ✅ H01 (0 docs incluidos, N° licencia y sede), H02, H05, H07, H08 (E2E), H10 |
+| I | ✅ I01–I04, I08 (E2E: "por Lola SECRETARIA", nunca "Sistema") |
+| J | ✅ J01, J02, J03 (Profesional visible en Conductores: piloto lo incluye desde `fix-465-m`), J04, J05, J07 (aviso de exceso), J08, J09 (`mode: sample`, sin content), J11/J19 (PDF se genera), J14, J17, J20. J10/J12/J13/J15/J16 → `fix-450-m` / `fix-469-m` |
+| K | ✅ K05/K06 en el PDF real (nombre en mayúsculas, RUT, "Chillán, 19 de OCTUBRE de 2026", encabezado de la sede); logo igual para ambas sedes (decisión) |
+| L | ✅ L01–L04, L06/L07 (E2E), L10, L12, L13, L14, L15, L17. ❌ L08 → `hotfix-165-m`. L05 → `fix-459-m` |
+| M | ✅ M06. M04/M14 → `fix-461-m`; M10 → `hotfix-160-m`; M13 → `fix-464-m`; M15 → `fix-463-m` |
+| N | ✅ N01 (solo elegibles), N05, N07 (ZIP de la sede 2: 5 PDF `CERT-2026-NNNN_APELLIDOS_NOMBRES.pdf`), N08 ("No hay certificados generados para exportar"), N11 (acción, fecha Chile, "Por …") |
+| O | ✅ O01, O02, O03 (A→B→A termina en A), O06. O04 → `hotfix-161-m` (E2E) |
+| P | ✅ P01–P04 (Storage y RLS: otra sede no se lista, no se firma, no se sube ni sobrescribe), P05/P08 (alumno e instructor: 403), P06 (403), P07, P09 (E2E), P11 (0 filas), P13 (400) |
+| R | Profesional habilitado en el piloto desde `fix-465-m`: R01–R03 ya no aplican; R04 ✅ |
+| S | ✅ S01 (oscuro: Plantillas y Certificación), S02 (375/768 sin scroll horizontal; Certificación en tarjetas), S03. ❌ S05/S06 → `hotfix-166-m` |
+
+No ejecutados, con motivo: M07/M08/M16 (correo real: los alumnos del seed tienen correos
+`@test-data.local`; el contenido del correo lo cubre `hotfix-159-m`); K01–K04 (publicar una
+plantilla real y emitir un certificado real deja folios y cambia el texto vigente).
+
 ## Fixes derivados
 
 | Track | Hallazgo | Estado |
@@ -119,6 +144,28 @@ consultan a medida que aparecen.
 | `fix-465-m-certificados-profesional-en-piloto` | Derivado de S21 — Certificados Prof. estaba en el recorte del piloto por error; se habilita (elegibilidad de secretaria solo por pago mientras dure el recorte) | Cerrado 2026-10-19 |
 | `fix-466-m-confirmacion-previa-certificados` | Confirmaciones como modal (prácticas incompletas, asistencia, regenerar, email); deuda con la convención de 0010-i también en Profesional; la asistencia nunca bloquea; botón de la ficha Prof. en el piloto | Cerrado 2026-10-19 |
 | `fix-467-m-certificado-profesional-promocion-finalizada` | El certificado Profesional solo se emite desde el último día de la promoción (admin y secretaria; edge function + ficha) | Cerrado 2026-10-19 |
+| `hotfix-159-m-correo-certificado-con-nombre-de-la-sede` | S13 — el correo del certificado decía "Conductores Chillán" para ambas sedes | Cerrado 2026-10-20 |
+| `hotfix-160-m-envio-certificado-muestra-el-motivo` | S16 (resto) — enviar el certificado mostraba un error genérico | Cerrado 2026-10-20 |
+| `hotfix-161-m-secretaria-multisede-recarga-documentos-y-certificados` | S25 — Documentos y Certificados de la secretaria no recargaban al cambiar de sede | Cerrado 2026-10-20 |
+| `fix-468-m-descargar-documento-descarga` | S22 — "Descargar" abría una pestaña; el visor no ofrecía descarga | Cerrado 2026-10-20 |
+| `fix-469-m-editor-plantillas-cambios-sin-publicar` | S20 — carga fallida dejaba el form de otra sede; cambios perdidos sin aviso; publicar sin confirmar | Cerrado 2026-10-20 |
+| `fix-470-m-dms-contrato-firmado-y-certificados` | S24 — el DMS no mostraba el contrato firmado (online) ni los certificados | Cerrado 2026-10-20 |
+| `fix-471-m-reemplazar-documento-alumno` | S8 — no había forma de reemplazar un documento | Cerrado 2026-10-20 |
+| `fix-472-m-subir-documento-matricula-del-drawer` | C08 — "Subir documento" del drawer quedaba sin alumno (o con el del drawer anterior) si se presionaba mientras cargaba | Cerrado 2026-10-20 |
+| `fix-473-m-dms-carga-fallida-sin-estado-vacio` | A07 — tras el toast, las listas seguían diciendo "Sin documentos aún" | Cerrado 2026-10-20 |
+| `hotfix-162-m-dms-busqueda-sin-tildes-y-rut-con-formato` | B05/B06 — "jose" no encontraba a José; RUT con puntos o sin guion daba 0 | Cerrado 2026-10-20 |
+| `hotfix-163-m-dms-buscar-vuelve-a-la-pagina-1` | B09 — buscar dejaba el paginador en la página actual | Cerrado 2026-10-20 |
+| `fix-474-m-validacion-archivos-documentos` | D10/D12/D13 — 0 bytes y .exe renombrado se aceptaban; un inválido dejaba el válido anterior | Cerrado 2026-10-20 |
+| `hotfix-164-m-autorizacion-certificado-medico-se-reinicia` | E05 — la autorización del Art. 16 quedaba marcada al cambiar tipo, alumno o matrícula | Cerrado 2026-10-20 |
+| `hotfix-165-m-certificacion-practicas-incompletas-no-en-verde` | L08 — "7/12" en verde | Cerrado 2026-10-20 |
+| `hotfix-166-m-zona-de-arrastre-accesible-con-teclado` | S05/S06 — la zona de arrastre no se usaba con teclado | Cerrado 2026-10-20 |
+
+### Decisiones de Matías
+
+| Fecha | Tema | Decisión |
+|---|---|---|
+| 2026-10-20 | S13 — logo del PDF del certificado | El mismo para ambas sedes; no se cambia |
+| 2026-10-20 | S8 — reemplazar documentos | La secretaria sí puede reemplazar un documento |
 
 ### Observaciones (sin track)
 

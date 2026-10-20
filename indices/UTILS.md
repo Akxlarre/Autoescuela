@@ -57,7 +57,9 @@
 | `src/app/core/utils/deudor-label.utils.ts` | `describeMatriculaDeudor` |
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
 | `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |
-| `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
+| `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` (tipo, vacío, 5 MB), `checkDocumentFile` (async: además la firma de los primeros bytes; fix-474-m), `isAllowedDocumentSignature` |
+| `src/app/core/utils/document-download.utils.ts` | `documentDownloadUrl` — URL de Storage con `download=<nombre>` para descargar de verdad (fix-468-m); `null` si no es de Storage |
+| `src/app/core/utils/dms-documents.utils.ts` | `isDeletableStudentDoc` — solo `student_document` y `digital_contract` se borran desde el DMS (fix-470-m) |
 | `src/app/core/utils/document-template-options.utils.ts` | `editableDocumentTypes` |
 | `src/app/core/utils/drawer-navigation.utils.ts` | `isRouteChange` |
 | `src/app/core/utils/edge-function-error.utils.ts` | `EdgeFunctionError`, `readEdgeFunctionError`, `edgeFunctionUserMessage` |

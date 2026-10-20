@@ -10,6 +10,7 @@ import type {
   StudentWithDocsRow,
   StudentEnrollmentOption,
   DmsStudentDocRow,
+  DmsStudentDocSource,
   InstructorWithDocsRow,
   DmsInstructorDocRow,
   SchoolDocRow,
@@ -24,6 +25,8 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { fetchAllPages } from '@core/utils/paged-fetch.utils';
+import { isDeletableStudentDoc } from '@core/utils/dms-documents.utils';
+import { checkDocumentFile } from '@core/utils/document-file-validation.util';
 
 // ─── Labels ──────────────────────────────────────────────────────────────────
 
@@ -39,6 +42,10 @@ const LABELS_TIPO_ALUMNO: Record<string, string> = {
   semep: 'SEMEP',
   carnet_inicial: 'Carnet Inicial (6 clases)',
   carnet_completo: 'Carnet Completo (12 clases)',
+  // fix-470-m: filas derivadas de la matrícula (source enrollment_file).
+  contract_signed: 'Contrato firmado',
+  certificado_b: 'Certificado Clase B',
+  certificado_profesional: 'Certificado Profesional',
   // Legacy — quedan solo para mostrar documentos ya subidos con estas claves antiguas
   // (dms-upload-drawer.component.ts ya no las ofrece como opción, DG-038).
   foto_licencia: 'Foto Licencia (legacy)',
@@ -244,9 +251,12 @@ export class DmsFacade {
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
   private _initialized = false;
+  private readonly _listsError = signal<string | null>(null);
   private _lastBranchId: number | null | undefined = undefined;
   /** Descarta respuestas de fetchAllData() fuera de orden (spec 0005-m). */
   private readonly dmsGuard = createRequestGuard();
+  /** fix-472-m: abrir el drawer de A y luego el de B; la respuesta tardía de A se descarta. */
+  private readonly studentDocsGuard = createRequestGuard();
 
   // Sub-ruta: detalle de alumno
   private readonly _studentDetail = signal<{
@@ -296,6 +306,8 @@ export class DmsFacade {
   readonly schoolDocs = this._schoolDocs.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  /** fix-473-m: la primera carga de las listas falló (null si cargaron o si es solo un SWR fallido). */
+  readonly listsError = this._listsError.asReadonly();
   readonly studentDetail = this._studentDetail.asReadonly();
   readonly studentDocs = this._studentDocs.asReadonly();
   readonly studentDocsLoading = this._studentDocsLoading.asReadonly();
@@ -346,6 +358,14 @@ export class DmsFacade {
     // fix-455-m: solo la primera carga avisa; el refresco silencioso (SWR) deja los datos stale.
     const loadError = this._error();
     if (loadError) this.toast.error('Error al cargar documentos', loadError);
+    // fix-473-m: sin datos que mostrar, las listas dicen que falló (no "Sin documentos aún").
+    this._listsError.set(loadError);
+  }
+
+  /** fix-473-m: "Reintentar" tras una primera carga fallida — vuelve a cargar con skeleton. */
+  async reload(): Promise<void> {
+    this._initialized = false;
+    await this.initialize();
   }
 
   private getActiveBranchId(): number | null {
@@ -485,7 +505,22 @@ export class DmsFacade {
   // ── Tab 1 — Documentos del Alumno ───────────────────────────────────────────
 
   async loadStudentDocuments(studentId: number, enrollmentId?: number): Promise<void> {
+    const token = this.studentDocsGuard.next();
     this._studentDocsLoading.set(true);
+    // fix-472-m: el drawer apunta a este alumno y matrícula desde ya. "Subir documento" lee
+    // studentDetail; si se fijaba recién al responder, se presionaba mientras cargaba y quedaba
+    // sin alumno, o con el del drawer anterior (subida a la matrícula equivocada).
+    const previous = this._studentDetail();
+    const sameStudent = previous?.studentId === studentId;
+    this._studentDetail.set({
+      name: sameStudent ? previous.name : '',
+      rut: sameStudent ? previous.rut : '',
+      studentId,
+      enrollmentId: enrollmentId ?? null,
+    });
+    // Seguimiento: también al cambiar de matrícula del mismo alumno (si no, por un momento se
+    // ven los documentos de la otra matrícula y el selector de tipos filtra con ellos).
+    if (!sameStudent || previous.enrollmentId !== (enrollmentId ?? null)) this._studentDocs.set([]);
     try {
       let vDocsQuery: any = this.supabase.client
         .from('v_dms_student_documents')
@@ -511,6 +546,7 @@ export class DmsFacade {
             ? rawStudent.users[0]
             : rawStudent.users
           : null;
+        if (!this.studentDocsGuard.isCurrent(token)) return;
         if (user) {
           this._studentDetail.set({
             name: buildStudentDisplayName({
@@ -537,6 +573,7 @@ export class DmsFacade {
             ? rawStudent.users[0]
             : rawStudent.users
           : null;
+        if (!this.studentDocsGuard.isCurrent(token)) return;
         if (user) {
           this._studentDetail.set({
             name: buildStudentDisplayName({
@@ -552,13 +589,14 @@ export class DmsFacade {
         this._studentDocs.set([]);
       }
     } catch (err) {
+      if (!this.studentDocsGuard.isCurrent(token)) return;
       this._error.set(
         err instanceof Error
           ? this.sanitizer.sanitize(err).message
           : 'Error al cargar documentos del alumno',
       );
     } finally {
-      this._studentDocsLoading.set(false);
+      if (this.studentDocsGuard.isCurrent(token)) this._studentDocsLoading.set(false);
     }
   }
 
@@ -640,27 +678,72 @@ export class DmsFacade {
     await this.refreshSilently();
   }
 
-  async deleteStudentDocument(
-    docId: string,
-    source: 'student_document' | 'digital_contract' | 'enrollment_license',
-  ): Promise<void> {
+  /**
+   * fix-471-m: reemplaza el archivo de un documento subido (admin y secretaria). Sube a una ruta
+   * nueva (el CDN cachea por ruta y el reemplazo puede cambiar de extensión), apunta la fila al
+   * archivo nuevo y borra el anterior. La secretaria no puede borrar del bucket: ahí el archivo
+   * viejo queda sin referencia (removeStoredFile solo registra el fallo).
+   */
+  async replaceStudentDocument(docId: string, file: File): Promise<boolean> {
+    try {
+      const invalid = await checkDocumentFile(file);
+      if (invalid) throw new Error(invalid);
+
+      const { data: current, error: readError } = await this.supabase.client
+        .from('student_documents')
+        .select('id, enrollment_id, type, storage_url')
+        .eq('id', parseInt(docId, 10))
+        .single();
+      if (readError) throw readError;
+
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'pdf';
+      const newPath = `students/${current.enrollment_id}/${Date.now()}_${current.type}.${ext}`;
+      const { error: uploadError } = await this.supabase.client.storage
+        .from('documents')
+        .upload(newPath, file);
+      if (uploadError) throw uploadError;
+
+      const { data: updated, error: updateError } = await this.supabase.client
+        .from('student_documents')
+        .update({
+          storage_url: newPath,
+          file_name: file.name,
+          uploaded_at: new Date().toISOString(),
+          status: 'pending',
+        })
+        .eq('id', current.id)
+        .select('id');
+      if (updateError || !updated?.length) {
+        await this.removeStoredFile(newPath);
+        throw updateError ?? new Error('No tienes permiso para modificar este documento.');
+      }
+
+      if (current.storage_url) await this.removeStoredFile(current.storage_url);
+      this.toast.success('Documento reemplazado');
+      await this.refreshSilently();
+      return true;
+    } catch (err) {
+      const message = this.sanitizer.sanitize(err).message || 'Error desconocido';
+      this.toast.error('No se pudo reemplazar el documento', message);
+      return false;
+    }
+  }
+
+  async deleteStudentDocument(docId: string, source: DmsStudentDocSource): Promise<void> {
     await this.withDeleteFeedback(async () => {
       if (source === 'enrollment_license') {
         // Fila sintética derivada de enrollments.license_*_url — no existe como registro
         // propio que borrar. El carnet se regenera/reemplaza desde la ficha del alumno.
         throw new Error('El Carnet no se puede eliminar desde el DMS. Ve a la ficha del alumno.');
       }
-      const numericId = parseInt(docId, 10);
-      if (source === 'student_document') {
-        await this.deleteRowAndFile('student_documents', numericId);
-      } else {
-        // El PDF del contrato lo genera el wizard de matrícula: fuera del alcance de fix-454-m.
-        const { error } = await this.supabase.client
-          .from('digital_contracts')
-          .delete()
-          .eq('id', numericId);
-        if (error) throw error;
+      if (!isDeletableStudentDoc(source)) {
+        // fix-470-m: contrato firmado y certificados, derivados de columnas de la matrícula.
+        // fix-475-m: el contrato tampoco se borra desde acá (decisión F04).
+        throw new Error(
+          'Este documento no se puede eliminar desde el DMS. Se gestiona en la ficha del alumno o en Certificación.',
+        );
       }
+      await this.deleteRowAndFile('student_documents', parseInt(docId, 10));
     });
     await this.refreshSilently();
   }
@@ -1083,6 +1166,7 @@ export class DmsFacade {
       // Respuesta fuera de orden: ya se disparó una fetch más reciente, descartar (spec 0005-m).
       if (!this.dmsGuard.isCurrent(requestToken)) return;
 
+      this._listsError.set(null);
       this._recentDocs.set(recentDocs);
       this._studentsWithDocs.set(studentsWithDocs);
       this._uploadableStudents.set(uploadableStudents);
@@ -1109,7 +1193,7 @@ export class DmsFacade {
       : 'Alumno';
     return {
       id: d.id,
-      source: d.source as 'student_document' | 'digital_contract' | 'enrollment_license',
+      source: d.source as DmsStudentDocSource,
       studentId: d.student_id,
       enrollmentId: d.enrollment_id,
       type: d.type ?? '',

@@ -3,7 +3,10 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { todayIso } from '@core/utils/date.utils';
 import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 import { CertificadoAutorizacionFacade } from '@core/facades/certificado-autorizacion.facade';
-import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
+import {
+  edgeFunctionUserMessage,
+  readEdgeFunctionError,
+} from '@core/utils/edge-function-error.utils';
 import { bulkCertificateSummary } from '@core/utils/certificate-confirmation.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -273,7 +276,10 @@ export class CertificacionProfesionalFacade {
         body: { enrollment_id: enrollmentId, type: 'professional' },
       });
       if (error) {
-        this.toast.error('Error al enviar el email del certificado');
+        // hotfix-160-m: el motivo del rechazo en vez de un genérico.
+        this.toast.error(
+          await edgeFunctionUserMessage(error, 'Error al enviar el email del certificado'),
+        );
         return;
       }
       this.toast.success('Email enviado correctamente');

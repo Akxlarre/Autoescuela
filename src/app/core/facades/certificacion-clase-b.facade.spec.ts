@@ -659,6 +659,19 @@ describe('CertificacionClaseBFacade', () => {
         body: { enrollment_id: 42 },
       });
     });
+
+    it('hotfix-160-m: si la función rechaza, el toast muestra su motivo', async () => {
+      supabaseSpy.client.functions.invoke.mockResolvedValueOnce({
+        data: null,
+        error: {
+          context: new Response(JSON.stringify({ error: 'El alumno no tiene email registrado' }), {
+            status: 400,
+          }),
+        },
+      });
+      await facade.enviarEmail(42);
+      expect(toastSpy.error).toHaveBeenCalledWith('El alumno no tiene email registrado');
+    });
   });
 
   describe('verCertificado()', () => {

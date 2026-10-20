@@ -4,8 +4,13 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { DocumentContentTemplatesFacade } from '@core/facades/document-content-templates.facade';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import type { DmsStudentDocSource } from '@core/models/ui/dms.model';
 import { DmsListContentComponent } from '@shared/components/dms-list-content/dms-list-content.component';
-import type { DocumentType } from '@core/models/ui/document-content-template.model';
+import {
+  DOCUMENT_TYPE_LABELS,
+  type DocumentType,
+} from '@core/models/ui/document-content-template.model';
 
 /**
  * AdminDocumentosComponent — Smart Page del Módulo DMS (Admin).
@@ -30,11 +35,14 @@ import type { DocumentType } from '@core/models/ui/document-content-template.mod
       [isLoading]="facade.isLoading()"
       [isAdmin]="isAdmin()"
       [showSedeColumn]="showSedeColumn()"
+      [loadError]="facade.listsError()"
+      (retryRequested)="facade.reload()"
       [templateBranches]="branchFacade.branches()"
       [templateForm]="templatesFacade.form()"
       [templateIsLoading]="templatesFacade.isLoading()"
       [templateIsPublishing]="templatesFacade.isPublishing()"
       [templateIsGeneratingPreview]="templatesFacade.isGeneratingPreview()"
+      [templateHasUnsavedChanges]="templatesFacade.hasUnsavedChanges()"
       (uploadStudentDoc)="openUploadStudentDrawer()"
       (uploadInstructorDoc)="openUploadInstructorDrawer()"
       (uploadSchoolDoc)="openUploadSchoolDrawer()"
@@ -48,6 +56,7 @@ import type { DocumentType } from '@core/models/ui/document-content-template.mod
       (templatePreviewRequested)="onTemplatePreview()"
       (templateViewPublishedRequested)="onTemplateViewPublished($event)"
       (templatePublishRequested)="onTemplatePublish()"
+      (templateDiscardRequested)="templatesFacade.discardChanges()"
     />
   `,
 })
@@ -57,6 +66,7 @@ export class AdminDocumentosComponent {
   readonly branchFacade = inject(BranchFacade);
   private readonly authFacade = inject(AuthFacade);
   private readonly dmsViewer = inject(DmsViewerService);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   // ── Computed ──────────────────────────────────────────────────────────────
   readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
@@ -112,10 +122,7 @@ export class AdminDocumentosComponent {
     });
     if (!confirmed) return;
     try {
-      await this.facade.deleteStudentDocument(
-        payload.id,
-        payload.source as 'student_document' | 'digital_contract',
-      );
+      await this.facade.deleteStudentDocument(payload.id, payload.source as DmsStudentDocSource);
     } catch (err) {
       console.error('Error al eliminar documento:', err);
     }
@@ -161,6 +168,19 @@ export class AdminDocumentosComponent {
   }
 
   async onTemplatePublish(): Promise<void> {
+    const form = this.templatesFacade.form();
+    if (!form) return;
+    // fix-469-m: publicar cambia lo que reciben los alumnos desde ya; se confirma nombrando qué y dónde.
+    const sede =
+      this.branchFacade.branches().find((b) => b.id === form.branchId)?.name ?? 'la sede';
+    const confirmado = await this.confirmModal.confirm({
+      title: '¿Publicar la plantilla?',
+      message: `Los próximos ${DOCUMENT_TYPE_LABELS[form.documentType]} que se generen en ${sede} usarán este texto.`,
+      severity: 'warn',
+      confirmLabel: 'Publicar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmado) return;
     await this.templatesFacade.publish();
   }
 

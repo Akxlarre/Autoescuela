@@ -5,6 +5,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
@@ -18,7 +19,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { INSTRUCTOR_DOC_TYPES } from '@core/utils/instructor-doc-types.util';
-import { validateDocumentFile } from '@core/utils/document-file-validation.util';
+import { checkDocumentFile } from '@core/utils/document-file-validation.util';
 
 type UploadMode = 'student' | 'school' | 'instructor';
 
@@ -194,7 +195,12 @@ type UploadMode = 'student' | 'school' | 'instructor';
               (dragleave)="isDragOver.set(false)"
               (drop)="onDrop($event)"
               data-llm-action="select-document-file"
+              role="button"
+              tabindex="0"
+              aria-label="Elegir el archivo del documento"
               (click)="fileInput.click()"
+              (keydown.enter)="fileInput.click()"
+              (keydown.space)="$event.preventDefault(); fileInput.click()"
             >
               <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-surface">
                 <app-icon name="upload" [size]="22"></app-icon>
@@ -212,7 +218,9 @@ type UploadMode = 'student' | 'school' | 'instructor';
               } @else {
                 <div>
                   <p class="font-medium text-sm m-0 text-text-primary">Arrastra tu archivo aquí</p>
-                  <p class="text-xs m-0 mt-1 text-text-secondary">PDF, JPG, PNG — máx. 5 MB</p>
+                  <p class="text-xs m-0 mt-1 text-text-secondary">
+                    PDF, JPG, PNG o WEBP — máx. 5 MB
+                  </p>
                 </div>
               }
             </div>
@@ -412,6 +420,15 @@ export class DmsUploadDrawerComponent {
       if (id) this.selectedEnrollmentId.set(id);
     });
 
+    // hotfix-164-m: la autorización del Art. 16 vale para ESTE tipo, alumno y matrícula; al
+    // cambiar cualquiera de ellos se desmarca (acto afirmativo, nunca heredado).
+    effect(() => {
+      this.selectedType();
+      this.selectedStudentId();
+      this.selectedEnrollmentId();
+      untracked(() => this.art16Accepted.set(false));
+    });
+
     // Pre-seleccionar instructor si se recibe desde el facade
     effect(() => {
       const id = this.facade.preselectedInstructorId();
@@ -486,10 +503,11 @@ export class DmsUploadDrawerComponent {
     if (file) this.validateAndSetFile(file);
   }
 
-  private validateAndSetFile(file: File): void {
-    const error = validateDocumentFile(file);
+  private async validateAndSetFile(file: File): Promise<void> {
+    const error = await checkDocumentFile(file);
     this.validationError.set(error);
-    if (!error) this.selectedFile.set(file);
+    // fix-474-m: un archivo inválido descarta el anterior; si no, "Subir" mandaba otro archivo.
+    this.selectedFile.set(error ? null : file);
   }
 
   async onSubmit(): Promise<void> {

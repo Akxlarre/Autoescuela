@@ -6,6 +6,7 @@ import { passwordRecoveryGuard } from '@core/guards/password-recovery.guard';
 import { hasRoleGuard } from '@core/guards/role.guard';
 import { roleRedirectGuard } from '@core/guards/role-redirect.guard';
 import { enrollmentDraftGuard } from '@core/guards/enrollment-draft.guard';
+import { documentTemplateDraftGuard } from '@core/guards/document-template-draft.guard';
 import { professionalBranchGuard } from '@core/guards/professional-branch.guard';
 import { pilotPhaseGuard } from '@core/guards/pilot-phase.guard';
 import { branchAssignedGuard } from '@core/guards/branch-assigned.guard';
@@ -277,6 +278,7 @@ export const routes: Routes = [
               import('./features/admin/documentos/admin-documentos.component').then(
                 (m) => m.AdminDocumentosComponent,
               ),
+            canDeactivate: [documentTemplateDraftGuard],
           },
           {
             path: 'secretarias',

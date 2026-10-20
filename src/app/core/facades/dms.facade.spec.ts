@@ -129,6 +129,26 @@ describe('DmsFacade', () => {
       expect(deleteSpy).not.toHaveBeenCalled();
     });
 
+    it('fix-470-m: rechaza eliminar el contrato firmado o un certificado (enrollment_file)', async () => {
+      const deleteSpy = vi.fn();
+      supabaseSpy.client.from = vi.fn().mockReturnValue({ delete: deleteSpy });
+
+      await expect(facade.deleteStudentDocument('cert-b-9', 'enrollment_file')).rejects.toThrow(
+        'no se puede eliminar desde el DMS',
+      );
+      expect(deleteSpy).not.toHaveBeenCalled();
+    });
+
+    it('fix-475-m: rechaza eliminar el contrato (digital_contract) sin tocar la BD', async () => {
+      const deleteSpy = vi.fn();
+      supabaseSpy.client.from = vi.fn().mockReturnValue({ delete: deleteSpy });
+
+      await expect(facade.deleteStudentDocument('7', 'digital_contract')).rejects.toThrow(
+        'no se puede eliminar desde el DMS',
+      );
+      expect(deleteSpy).not.toHaveBeenCalled();
+    });
+
     it('should call dmsViewer.openByUrl on openDocument', async () => {
       await facade.openDocument('storage/path/doc.pdf', 'File');
       expect(viewerSpy.openByUrl).toHaveBeenCalledWith('https://example.com/signed/doc', 'File');
@@ -429,6 +449,31 @@ describe('DmsFacade', () => {
         'Error al cargar documentos',
         expect.any(String),
       );
+    });
+
+    it('fix-473-m: primera carga fallida fija listsError; reload() correcto lo limpia', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      localSupabaseSpy.client.from = vi.fn(() =>
+        makeBuilder({ data: null, error: new Error('timeout') }),
+      );
+      await localFacade.initialize();
+      expect(localFacade.listsError()).not.toBeNull();
+
+      localSupabaseSpy.client.from = vi.fn(() => makeBuilder({ data: [], error: null }));
+      await localFacade.reload();
+      expect(localFacade.listsError()).toBeNull();
+    });
+
+    it('fix-473-m: un refresco silencioso fallido con datos cargados no fija listsError', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      localSupabaseSpy.client.from = vi.fn(() => makeBuilder({ data: [], error: null }));
+      await localFacade.initialize();
+
+      localSupabaseSpy.client.from = vi.fn(() =>
+        makeBuilder({ data: null, error: new Error('timeout') }),
+      );
+      await localFacade.refreshSilently();
+      expect(localFacade.listsError()).toBeNull();
     });
 
     it('refreshSilently() con una consulta fallida no muestra toast (SWR, fix-455-m)', async () => {
@@ -922,6 +967,105 @@ describe('DmsFacade', () => {
       );
     });
 
+    it('fix-472-m: studentDetail apunta al alumno nuevo antes de que respondan las consultas', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      localSupabaseSpy.client.from = vi.fn(() => makeBuilder({ data: [], error: null }));
+      await localFacade.loadStudentDocuments(1, 100);
+
+      let release!: () => void;
+      const pending = new Promise<{ data: any; error: any }>((resolve) => {
+        release = () => resolve({ data: [], error: null });
+      });
+      const slow = makeBuilder({ data: [], error: null });
+      slow.then = (res: any, rej?: any) => pending.then(res, rej);
+      localSupabaseSpy.client.from = vi.fn(() => slow);
+
+      const loading = localFacade.loadStudentDocuments(2, 200);
+      expect(localFacade.studentDetail()).toEqual(
+        expect.objectContaining({ studentId: 2, enrollmentId: 200 }),
+      );
+      release();
+      await loading;
+    });
+
+    it('fix-472-m (seguimiento): otra matrícula del mismo alumno no muestra los documentos de la anterior', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      localSupabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'v_dms_student_documents'
+          ? makeBuilder({
+              data: [
+                {
+                  id: '1',
+                  source: 'student_document',
+                  student_id: 1,
+                  enrollment_id: 100,
+                  type: 'cedula_identidad',
+                  file_name: 'c.jpg',
+                  file_url: 'x',
+                  status: 'approved',
+                  document_at: '2026-10-01',
+                  managed_by: null,
+                },
+              ],
+              error: null,
+            })
+          : makeBuilder({
+              data: {
+                id: 1,
+                users: { id: 10, rut: '1-9', first_names: 'Ana', paternal_last_name: 'A' },
+              },
+              error: null,
+            }),
+      );
+      await localFacade.loadStudentDocuments(1, 100);
+      expect(localFacade.studentDocs()).toHaveLength(1);
+
+      const pending = new Promise<{ data: any; error: any }>(() => {});
+      const slow = makeBuilder({ data: [], error: null });
+      slow.then = (res: any, rej?: any) => pending.then(res, rej);
+      localSupabaseSpy.client.from = vi.fn(() => slow);
+      void localFacade.loadStudentDocuments(1, 200);
+
+      expect(localFacade.studentDocs()).toEqual([]);
+    });
+
+    it('fix-472-m: la respuesta tardía de un alumno anterior no pisa al actual', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      let releaseA!: () => void;
+      const pendingA = new Promise<{ data: any; error: any }>((resolve) => {
+        releaseA = () =>
+          resolve({
+            data: {
+              id: 1,
+              users: { id: 10, rut: '1-9', first_names: 'Ana', paternal_last_name: 'A' },
+            },
+            error: null,
+          });
+      });
+      const slowA = makeBuilder({ data: [], error: null });
+      slowA.then = (res: any, rej?: any) => pendingA.then(res, rej);
+      localSupabaseSpy.client.from = vi.fn(() => slowA);
+      const loadingA = localFacade.loadStudentDocuments(1, 100);
+
+      localSupabaseSpy.client.from = vi.fn(() =>
+        makeBuilder({
+          data: {
+            id: 2,
+            users: { id: 20, rut: '2-7', first_names: 'Bea', paternal_last_name: 'B' },
+          },
+          error: null,
+        }),
+      );
+      await localFacade.loadStudentDocuments(2, 200);
+      releaseA();
+      await loadingA;
+
+      expect(localFacade.studentDetail()).toEqual(
+        expect.objectContaining({ studentId: 2, enrollmentId: 200 }),
+      );
+      expect(localFacade.studentDocsLoading()).toBe(false);
+    });
+
     it('loadStudentEnrollmentOptions(studentId) (AC-E2): devuelve TODAS las matrículas del alumno, no solo las que ya tienen documentos', async () => {
       const { localFacade, localSupabaseSpy } = setupFacade();
       const enrollmentsBuilder = makeBuilder({
@@ -977,6 +1121,89 @@ describe('DmsFacade', () => {
       expect(docsBuilder.insert).toHaveBeenCalledWith(
         expect.objectContaining({ enrollment_id: 200, type: 'contrato' }),
       );
+    });
+
+    describe('replaceStudentDocument() (fix-471-m)', () => {
+      const pdf = () =>
+        new File(['%PDF-1.4 nuevo'], 'carnet-bueno.pdf', { type: 'application/pdf' });
+
+      function setupReplace(updateResult: { data: any; error: any }) {
+        const ctx = setupFacade({ role: 'secretary', branchId: 1 });
+        const current = makeBuilder({
+          data: {
+            id: 9,
+            enrollment_id: 200,
+            type: 'cedula_identidad',
+            storage_url: 'students/200/old.jpg',
+          },
+          error: null,
+        });
+        const update = makeBuilder(updateResult);
+        let call = 0;
+        ctx.localSupabaseSpy.client.from = vi.fn((table: string) => {
+          if (table !== 'student_documents') return makeBuilder({ data: [], error: null });
+          call++;
+          return call === 1
+            ? current
+            : call === 2
+              ? update
+              : makeBuilder({ data: [], error: null });
+        });
+        const bucket = ctx.localSupabaseSpy.client.storage.from();
+        return { ...ctx, update, bucket };
+      }
+
+      it('sube a una ruta nueva, actualiza la fila y borra el archivo anterior', async () => {
+        const { localFacade, update, bucket, localToast } = setupReplace({
+          data: [{ id: 9 }],
+          error: null,
+        });
+
+        const ok = await localFacade.replaceStudentDocument('9', pdf());
+
+        expect(ok).toBe(true);
+        const newPath = bucket.upload.mock.calls[0][0] as string;
+        expect(newPath).toMatch(/^students\/200\/\d+_cedula_identidad\.pdf$/);
+        expect(update.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            storage_url: newPath,
+            file_name: 'carnet-bueno.pdf',
+            status: 'pending',
+          }),
+        );
+        expect(update.eq).toHaveBeenCalledWith('id', 9);
+        expect(bucket.remove).toHaveBeenCalledWith(['students/200/old.jpg']);
+        expect(localToast.success).toHaveBeenCalled();
+      });
+
+      it('archivo inválido: no sube nada y muestra el motivo', async () => {
+        const { localFacade, bucket, localToast } = setupReplace({
+          data: [{ id: 9 }],
+          error: null,
+        });
+        const exe = new File(['x'], 'virus.exe', { type: 'application/x-msdownload' });
+
+        const ok = await localFacade.replaceStudentDocument('9', exe);
+
+        expect(ok).toBe(false);
+        expect(bucket.upload).not.toHaveBeenCalled();
+        expect(localToast.error).toHaveBeenCalledWith(
+          'No se pudo reemplazar el documento',
+          'Solo se permiten archivos PDF, JPG, PNG o WEBP.',
+        );
+      });
+
+      it('si la fila no se actualizó (RLS: 0 filas), borra el archivo nuevo y no el viejo', async () => {
+        const { localFacade, bucket, localToast } = setupReplace({ data: [], error: null });
+
+        const ok = await localFacade.replaceStudentDocument('9', pdf());
+
+        expect(ok).toBe(false);
+        const newPath = bucket.upload.mock.calls[0][0];
+        expect(bucket.remove).toHaveBeenCalledWith([newPath]);
+        expect(bucket.remove).not.toHaveBeenCalledWith(['students/200/old.jpg']);
+        expect(localToast.error).toHaveBeenCalled();
+      });
     });
 
     it('uploadStudentDocument() (AC4): sin enrollmentId, cae al fallback de la última matrícula del alumno', async () => {

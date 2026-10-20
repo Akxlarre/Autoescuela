@@ -27,10 +27,22 @@ export interface StudentEnrollmentOption {
   branchName: string | null;
 }
 
+/**
+ * Origen de una fila de `v_dms_student_documents`.
+ * - `enrollment_license` = carnets, derivados de `enrollments.license_*_url`.
+ * - `enrollment_file` = contrato firmado (`digital_contracts.signed_contract_url`) y certificados
+ *   (`enrollments.certificate_*_pdf_url`), fix-470-m.
+ * Ninguna de las dos tiene registro propio que borrar desde el DMS.
+ */
+export type DmsStudentDocSource =
+  | 'student_document'
+  | 'digital_contract'
+  | 'enrollment_license'
+  | 'enrollment_file';
+
 export interface DmsStudentDocRow {
   id: string; // TEXT desde la vista
-  /** 'enrollment_license' = fila sintética derivada de enrollments.license_*_url (sin fila propia que borrar) */
-  source: 'student_document' | 'digital_contract' | 'enrollment_license';
+  source: DmsStudentDocSource;
   studentId: number;
   enrollmentId: number;
   type: string;

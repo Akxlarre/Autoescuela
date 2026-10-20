@@ -1,7 +1,17 @@
 import { TooltipModule } from 'primeng/tooltip';
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { DmsFacade } from '@core/facades/dms.facade';
+import type { DmsStudentDocSource } from '@core/models/ui/dms.model';
+import { isDeletableStudentDoc } from '@core/utils/dms-documents.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
@@ -69,7 +79,24 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                     {{ doc.typeLabel }} · {{ doc.documentAt | chileDate: 'yyyy-MM-dd' }}
                   </p>
                 </div>
-                @if (isAdmin() && doc.source !== 'enrollment_license') {
+                @if (doc.source === 'student_document') {
+                  <button
+                    aria-label="Reemplazar"
+                    type="button"
+                    class="text-xs shrink-0 w-8 h-8 flex items-center justify-center rounded-md cursor-pointer border-0 bg-transparent text-text-secondary hover:bg-subtle"
+                    pTooltip="Reemplazar archivo"
+                    data-llm-action="replace-student-document"
+                    [disabled]="replacingId() !== null"
+                    (click)="$event.stopPropagation(); onPickReplacement(doc.id, doc.typeLabel)"
+                  >
+                    <app-icon
+                      [name]="replacingId() === doc.id ? 'loader-circle' : 'refresh-cw'"
+                      [size]="16"
+                      [class.animate-spin]="replacingId() === doc.id"
+                    />
+                  </button>
+                }
+                @if (isAdmin() && isDeletable(doc.source)) {
                   <button
                     aria-label="Eliminar"
                     type="button"
@@ -86,6 +113,15 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
           </ul>
         }
       }
+
+      <input
+        #replacementInput
+        type="file"
+        class="hidden"
+        accept=".pdf,.jpg,.jpeg,.png,.webp"
+        data-llm-description="file input for the replacement of a student document"
+        (change)="onReplacementSelected($event)"
+      />
 
       <ng-container ngProjectAs="[drawer-form-footer]">
         <button
@@ -123,14 +159,54 @@ export class DmsStudentDocsDrawerComponent {
     this.facade.openUpload('student', detail?.studentId ?? null, detail?.enrollmentId ?? null);
   }
 
+  /** fix-470-m: carnets, contrato firmado y certificados no se borran desde el DMS. */
+  protected readonly isDeletable = isDeletableStudentDoc;
+
+  // ── fix-471-m: reemplazar un documento subido (admin y secretaria) ──────────
+  private readonly replacementInput = viewChild<ElementRef<HTMLInputElement>>('replacementInput');
+  private pendingReplacement: { id: string; label: string } | null = null;
+  protected readonly replacingId = signal<string | null>(null);
+
+  onPickReplacement(docId: string, label: string): void {
+    this.pendingReplacement = { id: docId, label };
+    const input = this.replacementInput()?.nativeElement;
+    if (!input) return;
+    input.value = '';
+    input.click();
+  }
+
+  async onReplacementSelected(event: Event): Promise<void> {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    const target = this.pendingReplacement;
+    this.pendingReplacement = null;
+    if (!file || !target) return;
+
+    const confirmed = await this.facade.confirm({
+      title: 'Reemplazar documento',
+      message: `Se reemplazará "${target.label}" por ${file.name}. El archivo anterior deja de estar disponible.`,
+      severity: 'warn',
+      confirmLabel: 'Reemplazar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
+
+    this.replacingId.set(target.id);
+    try {
+      const ok = await this.facade.replaceStudentDocument(target.id, file);
+      const detail = this.facade.studentDetail();
+      if (ok && detail?.studentId) {
+        await this.facade.loadStudentDocuments(detail.studentId, detail.enrollmentId ?? undefined);
+      }
+    } finally {
+      this.replacingId.set(null);
+    }
+  }
+
   onSelectDocument(path: string | null, fileName: string): void {
     this.facade.openDocPreview(path, fileName);
   }
 
-  async onDeleteDoc(
-    docId: string,
-    source: 'student_document' | 'digital_contract' | 'enrollment_license',
-  ): Promise<void> {
+  async onDeleteDoc(docId: string, source: DmsStudentDocSource): Promise<void> {
     const confirmed = await this.facade.confirm({
       title: 'Eliminar documento',
       message: '¿Estás seguro de que quieres eliminar este documento?',
