@@ -28,6 +28,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
+import { isTaskOpen } from '@core/utils/task.utils';
 
 type TaskTab = 'sent' | 'received' | 'observations';
 
@@ -120,17 +121,17 @@ export class AdminTareasComponent implements OnInit, AfterViewInit {
     {
       id: 'sent',
       label: 'Asignadas por mí',
-      count: this.facade.sentTasks().filter((t) => t.status !== 'completed').length,
+      count: this.facade.sentTasks().filter((t) => isTaskOpen(t.status)).length,
     },
     {
       id: 'received',
       label: 'Dirigidas a mí',
-      count: this.facade.receivedTasks().filter((t) => t.status !== 'completed').length,
+      count: this.facade.receivedTasks().filter((t) => isTaskOpen(t.status)).length,
     },
     {
       id: 'observations',
       label: 'Observaciones',
-      count: this.facade.observationTasks().filter((t) => t.status !== 'completed').length,
+      count: this.facade.observationTasks().filter((t) => isTaskOpen(t.status)).length,
     },
   ]);
 

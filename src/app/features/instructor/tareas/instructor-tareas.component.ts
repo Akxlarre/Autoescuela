@@ -19,6 +19,7 @@ import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { TaskType } from '@core/models/ui/task.model';
 import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
+import { isTaskOpen } from '@core/utils/task.utils';
 
 type TaskTypeFilter = 'all' | TaskType;
 
@@ -89,28 +90,27 @@ export class InstructorTareasComponent implements OnInit, AfterViewInit {
     {
       id: 'all',
       label: 'Todas',
-      count: this.facade.receivedTasks().filter((t) => t.status !== 'completed').length,
+      count: this.facade.receivedTasks().filter((t) => isTaskOpen(t.status)).length,
     },
     {
       id: 'task',
       label: 'Tareas',
-      count: this.facade
-        .receivedTasks()
-        .filter((t) => t.type === 'task' && t.status !== 'completed').length,
+      count: this.facade.receivedTasks().filter((t) => t.type === 'task' && isTaskOpen(t.status))
+        .length,
     },
     {
       id: 'question',
       label: 'Consultas',
       count: this.facade
         .receivedTasks()
-        .filter((t) => t.type === 'question' && t.status !== 'completed').length,
+        .filter((t) => t.type === 'question' && isTaskOpen(t.status)).length,
     },
     {
       id: 'observation',
       label: 'Observaciones',
       count: this.facade
         .receivedTasks()
-        .filter((t) => t.type === 'observation' && t.status !== 'completed').length,
+        .filter((t) => t.type === 'observation' && isTaskOpen(t.status)).length,
     },
   ]);
 

@@ -5,6 +5,7 @@ import {
   dueDateToInstant,
   taskBranchScopeFilter,
   sentNonObservations,
+  isTaskOpen,
   canEditTask,
   canChangeStatus,
   canDeleteTask,
@@ -205,7 +206,22 @@ describe('canDeleteTask', () => {
 
 // ─── canChangeStatus ─────────────────────────────────────────────────────────
 
+// ─── isTaskOpen (S11, fix-231-b) ────────────────────────────────────────────
+
+describe('isTaskOpen', () => {
+  it('pendiente y en curso cuentan como abiertas; completada y vista no', () => {
+    expect(isTaskOpen('pending')).toBe(true);
+    expect(isTaskOpen('in_progress')).toBe(true);
+    expect(isTaskOpen('completed')).toBe(false);
+    expect(isTaskOpen('seen')).toBe(false);
+  });
+});
+
 describe('canChangeStatus', () => {
+  it('fix-231-b: una observación vista no ofrece cambiar el estado', () => {
+    expect(canChangeStatus(makeTask({ to_user_id: 20, status: 'seen' }), 20)).toBe(false);
+  });
+
   it('permite al destinatario cambiar estado si no está completada', () => {
     expect(canChangeStatus(makeTask({ to_user_id: 20, status: 'pending' }), 20)).toBe(true);
   });

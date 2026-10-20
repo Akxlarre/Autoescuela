@@ -279,7 +279,12 @@ export class TasksFacade {
     }
   }
 
-  async markSeen(taskId: string): Promise<void> {
+  /**
+   * El destinatario abrió la observación (spec 0001-b AC5): queda `seen`, no `completed` —
+   * completarla disparaba "Tarea completada" y cerraba el hilo (fix-231-b). Se avisa a quien la
+   * mandó desde acá: el trigger de la BD solo notifica al pasar a `completed`.
+   */
+  async markSeen(task: Pick<Task, 'id' | 'from_user_id' | 'subject'>): Promise<void> {
     const currentUser = this.auth.currentUser();
     if (!currentUser?.dbId) return;
 
@@ -289,15 +294,23 @@ export class TasksFacade {
         await this.supabase.client
           .from('tasks')
           .update({
-            status: 'completed',
-            completed_at: now,
+            status: 'seen',
             seen_at: now,
             seen_by: currentUser.dbId,
           })
-          .eq('id', taskId)
+          .eq('id', task.id)
           .select('id'),
         { requireRows: true },
       );
+      this.notifications
+        .createNotification({
+          recipientId: task.from_user_id,
+          type: 'system',
+          subject: 'Observación vista',
+          message: `${currentUser.name} vio tu observación: ${task.subject}`,
+          referenceType: 'task',
+        })
+        .catch(() => undefined);
       await this.refreshSilently();
     } catch {
       // fix-362-m: antes fallaba en silencio y la observación seguía "sin ver" sin explicación.

@@ -449,14 +449,30 @@ describe('TasksFacade', () => {
   // ── markSeen() — AC5 ────────────────────────────────────────────────────────
 
   describe('markSeen()', () => {
-    it('AC5: calls UPDATE with status=completed, completed_at, seen_at and seen_by', async () => {
-      await facade.markSeen('uuid-1');
-      expect(mockSupabase._builder.update).toHaveBeenCalledWith(
+    const OBS = { id: 'uuid-1', from_user_id: 7, subject: 'Revisar caja' };
+
+    it('AC5 (fix-231-b): deja la observación "seen" (no completed) con seen_at y seen_by', async () => {
+      await facade.markSeen(OBS);
+      const cambios = mockSupabase._builder.update.mock.calls[0][0];
+      expect(cambios).toEqual(
         expect.objectContaining({
-          status: 'completed',
-          completed_at: expect.any(String),
+          status: 'seen',
           seen_at: expect.any(String),
           seen_by: ADMIN_USER.dbId,
+        }),
+      );
+      expect(cambios).not.toHaveProperty('completed_at');
+    });
+
+    it('fix-231-b: avisa a quien la mandó que fue vista', async () => {
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([{ id: 'uuid-1' }]));
+      await facade.markSeen(OBS);
+      expect(mockNotifications.createNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipientId: 7,
+          subject: 'Observación vista',
+          message: `${ADMIN_USER.name} vio tu observación: Revisar caja`,
+          referenceType: 'task',
         }),
       );
     });
@@ -465,19 +481,19 @@ describe('TasksFacade', () => {
       mockSupabase.client.from.mockReturnValue(
         createMockQueryBuilder(null, { message: 'Update error' }),
       );
-      await facade.markSeen('uuid-1');
+      await facade.markSeen(OBS);
       expect(mockToast.error).toHaveBeenCalledWith('No se pudo marcar la observación como vista');
     });
 
     it('fix-362-m: si la RLS filtra la tarea (0 filas, sin error), también avisa', async () => {
       mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([]));
-      await facade.markSeen('uuid-1');
+      await facade.markSeen(OBS);
       expect(mockToast.error).toHaveBeenCalled();
     });
 
     it('fix-362-m: con la fila actualizada no muestra error', async () => {
       mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([{ id: 'uuid-1' }]));
-      await facade.markSeen('uuid-1');
+      await facade.markSeen(OBS);
       expect(mockToast.error).not.toHaveBeenCalled();
     });
   });
