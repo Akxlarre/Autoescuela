@@ -129,6 +129,16 @@ describe('DmsFacade', () => {
       expect(deleteSpy).not.toHaveBeenCalled();
     });
 
+    it('fix-470-m: rechaza eliminar el contrato firmado o un certificado (enrollment_file)', async () => {
+      const deleteSpy = vi.fn();
+      supabaseSpy.client.from = vi.fn().mockReturnValue({ delete: deleteSpy });
+
+      await expect(facade.deleteStudentDocument('cert-b-9', 'enrollment_file')).rejects.toThrow(
+        'no se puede eliminar desde el DMS',
+      );
+      expect(deleteSpy).not.toHaveBeenCalled();
+    });
+
     it('should call dmsViewer.openByUrl on openDocument', async () => {
       await facade.openDocument('storage/path/doc.pdf', 'File');
       expect(viewerSpy.openByUrl).toHaveBeenCalledWith('https://example.com/signed/doc', 'File');

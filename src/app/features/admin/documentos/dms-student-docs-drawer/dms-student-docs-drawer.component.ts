@@ -2,6 +2,8 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { DmsFacade } from '@core/facades/dms.facade';
+import type { DmsStudentDocSource } from '@core/models/ui/dms.model';
+import { isDeletableStudentDoc } from '@core/utils/dms-documents.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
@@ -69,7 +71,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                     {{ doc.typeLabel }} · {{ doc.documentAt | chileDate: 'yyyy-MM-dd' }}
                   </p>
                 </div>
-                @if (isAdmin() && doc.source !== 'enrollment_license') {
+                @if (isAdmin() && isDeletable(doc.source)) {
                   <button
                     aria-label="Eliminar"
                     type="button"
@@ -123,14 +125,14 @@ export class DmsStudentDocsDrawerComponent {
     this.facade.openUpload('student', detail?.studentId ?? null, detail?.enrollmentId ?? null);
   }
 
+  /** fix-470-m: carnets, contrato firmado y certificados no se borran desde el DMS. */
+  protected readonly isDeletable = isDeletableStudentDoc;
+
   onSelectDocument(path: string | null, fileName: string): void {
     this.facade.openDocPreview(path, fileName);
   }
 
-  async onDeleteDoc(
-    docId: string,
-    source: 'student_document' | 'digital_contract' | 'enrollment_license',
-  ): Promise<void> {
+  async onDeleteDoc(docId: string, source: DmsStudentDocSource): Promise<void> {
     const confirmed = await this.facade.confirm({
       title: 'Eliminar documento',
       message: '¿Estás seguro de que quieres eliminar este documento?',

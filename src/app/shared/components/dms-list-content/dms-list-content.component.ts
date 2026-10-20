@@ -41,6 +41,7 @@ import {
 } from '@core/models/ui/document-content-template.model';
 import type { BranchOption } from '@core/models/ui/branch.model';
 import { editableDocumentTypes } from '@core/utils/document-template-options.utils';
+import { isDeletableStudentDoc } from '@core/utils/dms-documents.utils';
 
 interface DocumentTypeOption {
   label: string;
@@ -324,7 +325,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                                   Ver
                                 </button>
                               }
-                              @if (isAdmin()) {
+                              @if (isAdmin() && isDeletableDoc(doc.source)) {
                                 <button
                                   type="button"
                                   class="text-xs font-medium px-2.5 py-1 rounded-md cursor-pointer border-0 bg-transparent transition-colors duration-150 text-error"
@@ -798,6 +799,9 @@ export class DmsListContentComponent {
   }>();
   readonly templatePublishRequested = output<void>();
   readonly templateDiscardRequested = output<void>();
+
+  /** fix-470-m: carnets, contrato firmado y certificados no se borran desde el DMS. */
+  protected readonly isDeletableDoc = isDeletableStudentDoc;
 
   readonly activeTab = signal<DmsTab>('students');
   readonly studentSearch = signal('');

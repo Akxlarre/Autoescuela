@@ -10,6 +10,7 @@ import type {
   StudentWithDocsRow,
   StudentEnrollmentOption,
   DmsStudentDocRow,
+  DmsStudentDocSource,
   InstructorWithDocsRow,
   DmsInstructorDocRow,
   SchoolDocRow,
@@ -24,6 +25,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { fetchAllPages } from '@core/utils/paged-fetch.utils';
+import { isDeletableStudentDoc } from '@core/utils/dms-documents.utils';
 
 // ─── Labels ──────────────────────────────────────────────────────────────────
 
@@ -39,6 +41,10 @@ const LABELS_TIPO_ALUMNO: Record<string, string> = {
   semep: 'SEMEP',
   carnet_inicial: 'Carnet Inicial (6 clases)',
   carnet_completo: 'Carnet Completo (12 clases)',
+  // fix-470-m: filas derivadas de la matrícula (source enrollment_file).
+  contract_signed: 'Contrato firmado',
+  certificado_b: 'Certificado Clase B',
+  certificado_profesional: 'Certificado Profesional',
   // Legacy — quedan solo para mostrar documentos ya subidos con estas claves antiguas
   // (dms-upload-drawer.component.ts ya no las ofrece como opción, DG-038).
   foto_licencia: 'Foto Licencia (legacy)',
@@ -640,15 +646,18 @@ export class DmsFacade {
     await this.refreshSilently();
   }
 
-  async deleteStudentDocument(
-    docId: string,
-    source: 'student_document' | 'digital_contract' | 'enrollment_license',
-  ): Promise<void> {
+  async deleteStudentDocument(docId: string, source: DmsStudentDocSource): Promise<void> {
     await this.withDeleteFeedback(async () => {
       if (source === 'enrollment_license') {
         // Fila sintética derivada de enrollments.license_*_url — no existe como registro
         // propio que borrar. El carnet se regenera/reemplaza desde la ficha del alumno.
         throw new Error('El Carnet no se puede eliminar desde el DMS. Ve a la ficha del alumno.');
+      }
+      if (!isDeletableStudentDoc(source)) {
+        // fix-470-m: contrato firmado y certificados, derivados de columnas de la matrícula.
+        throw new Error(
+          'Este documento no se puede eliminar desde el DMS. Se gestiona en la ficha del alumno o en Certificación.',
+        );
       }
       const numericId = parseInt(docId, 10);
       if (source === 'student_document') {
@@ -1109,7 +1118,7 @@ export class DmsFacade {
       : 'Alumno';
     return {
       id: d.id,
-      source: d.source as 'student_document' | 'digital_contract' | 'enrollment_license',
+      source: d.source as DmsStudentDocSource,
       studentId: d.student_id,
       enrollmentId: d.enrollment_id,
       type: d.type ?? '',

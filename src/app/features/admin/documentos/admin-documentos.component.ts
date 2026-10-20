@@ -5,6 +5,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { DocumentContentTemplatesFacade } from '@core/facades/document-content-templates.facade';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import type { DmsStudentDocSource } from '@core/models/ui/dms.model';
 import { DmsListContentComponent } from '@shared/components/dms-list-content/dms-list-content.component';
 import {
   DOCUMENT_TYPE_LABELS,
@@ -119,10 +120,7 @@ export class AdminDocumentosComponent {
     });
     if (!confirmed) return;
     try {
-      await this.facade.deleteStudentDocument(
-        payload.id,
-        payload.source as 'student_document' | 'digital_contract',
-      );
+      await this.facade.deleteStudentDocument(payload.id, payload.source as DmsStudentDocSource);
     } catch (err) {
       console.error('Error al eliminar documento:', err);
     }

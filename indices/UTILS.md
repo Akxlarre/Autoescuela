@@ -59,6 +59,7 @@
 | `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
 | `src/app/core/utils/document-download.utils.ts` | `documentDownloadUrl` — URL de Storage con `download=<nombre>` para descargar de verdad (fix-468-m); `null` si no es de Storage |
+| `src/app/core/utils/dms-documents.utils.ts` | `isDeletableStudentDoc` — solo `student_document` y `digital_contract` se borran desde el DMS (fix-470-m) |
 | `src/app/core/utils/document-template-options.utils.ts` | `editableDocumentTypes` |
 | `src/app/core/utils/drawer-navigation.utils.ts` | `isRouteChange` |
 | `src/app/core/utils/edge-function-error.utils.ts` | `EdgeFunctionError`, `readEdgeFunctionError`, `edgeFunctionUserMessage` |
