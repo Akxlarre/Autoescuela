@@ -1557,7 +1557,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | select_notifications | SELECT | `auth_user_role() = 'admin' OR recipient_id = auth_user_id()` | — |
 | update_notifications | UPDATE | `auth_user_role() = 'admin' OR recipient_id = auth_user_id()` | — |
 | delete_notifications | DELETE | `auth_user_role() = 'admin'` | — |
-| insert_notifications | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| insert_notifications | INSERT | — | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` |
 
 **Índices:** `idx_notifications_not_deleted`, `idx_unread_notifications`
 
@@ -2630,6 +2630,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `reserve_next_promotion_slot` | `(p_branch_id INT)` |
 | `restrict_instructor_vehicle_update` | `()` |
 | `run_class_b_absences_cutoff` | `()` |
+| `secretary_can_notify` | `(p_recipient_id integer)` |
 | `secretary_extra_visible_user_ids` | `()` |
 | `secretary_last_sign_in` | `(p_user_ids integer[])` |
 | `servicios_especiales_kpis` | `(p_branch_id INT DEFAULT NULL)` |
