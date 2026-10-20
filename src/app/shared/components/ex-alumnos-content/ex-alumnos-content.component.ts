@@ -444,7 +444,7 @@ export interface EgresadosExportRequest {
       border: 1px solid var(--border-subtle);
     }
     .inas-badge[data-licencia*='B'] {
-      color: var(--color-primary);
+      color: var(--brand-strong);
       background: var(--color-primary-tint);
       border-color: var(--color-primary);
     }

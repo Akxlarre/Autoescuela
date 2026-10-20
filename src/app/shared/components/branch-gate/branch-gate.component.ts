@@ -112,7 +112,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
         height: 56px;
         border-radius: var(--radius-full);
         background: var(--color-primary-muted);
-        color: var(--color-primary);
+        color: var(--brand-strong);
         margin-bottom: 0.25rem;
       }
 
@@ -182,7 +182,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
         height: 36px;
         border-radius: var(--radius-md);
         background: var(--color-primary-muted);
-        color: var(--color-primary);
+        color: var(--brand-strong);
         flex-shrink: 0;
       }
 
@@ -206,7 +206,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
       .branch-gate__card-badge {
         font-size: 10px;
         font-weight: var(--font-medium);
-        color: var(--color-primary);
+        color: var(--brand-strong);
         background: var(--color-primary-muted);
         border-radius: var(--radius-sm);
         padding: 1px 6px;
@@ -221,7 +221,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
 
       .branch-gate__card:hover .branch-gate__card-arrow {
         transform: translateX(3px);
-        color: var(--color-primary);
+        color: var(--brand-strong);
       }
 
       /* ── Estado vacío ────────────────────────────────────────── */

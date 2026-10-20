@@ -182,7 +182,7 @@ const MONTH_NAMES = [
     }
     .nav-btn:hover:not(.nav-btn--disabled) {
       border-color: var(--ds-brand);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
     .nav-btn--disabled {
       opacity: 0.35;
@@ -233,7 +233,7 @@ const MONTH_NAMES = [
       font-weight: 700;
       flex-shrink: 0;
       background: color-mix(in srgb, var(--ds-brand) 12%, transparent);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
 
     .hours-chip {
@@ -243,7 +243,7 @@ const MONTH_NAMES = [
       font-size: 12px;
       font-weight: 600;
       background: color-mix(in srgb, var(--ds-brand) 8%, transparent);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
   `,
 })

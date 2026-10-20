@@ -56,9 +56,13 @@ Overrides de tokens que aplican SOLO bajo un selector de scope (nunca en `:root`
 
 ### Tokens `@theme` disponibles (→ clases Tailwind generadas)
 
+> **Marca como texto o fondo sólido → `var(--brand-strong)`** (spec 0055-b, contraste WCAG AA).
+> `--ds-brand` / `--color-primary` (celeste brillante) quedan para bordes, degradados, foco e íconos
+> decorativos: como texto sobre blanco dan 2,77:1.
+
 | Token CSS (`var(--)`) | Clase `bg-*` | Clase `border-*` | Clase `text-*` |
 |-----------------------|-------------|-----------------|---------------|
-| `--ds-brand` | `bg-brand` / `bg-brand/N` | `border-brand` / `border-brand/N` | `text-brand` |
+| `--brand-strong` (spec 0055-b: `#0369a1` claro / `#38bdf8` oscuro) | `bg-brand` / `bg-brand/N` | `border-brand` / `border-brand/N` | `text-brand` |
 | `--color-primary-muted` | `bg-brand-muted` | `border-brand-muted` | — |
 | `--color-primary-tint` | `bg-brand-tint` | — | — |
 | `--color-primary-dark` | `bg-brand-dark` / `bg-brand-dark/N` | — | — |

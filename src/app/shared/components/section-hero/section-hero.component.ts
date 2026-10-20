@@ -316,7 +316,7 @@ import type {
         color: var(--text-muted);
       }
       .hero-menu-panel__item:hover .hero-menu-panel__item-icon {
-        color: var(--color-primary);
+        color: var(--brand-strong);
       }
 
       .hero-menu-panel__item-body {

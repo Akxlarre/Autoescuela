@@ -404,7 +404,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     }
     .quick-action-btn:hover {
       border-color: var(--ds-brand);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
       background: color-mix(in srgb, var(--ds-brand) 4%, transparent);
     }
   `,

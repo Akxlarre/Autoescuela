@@ -339,7 +339,13 @@
                     >
                       {{ cat.label }}
                     </p>
-                    <p class="text-xs text-text-muted mt-0.5">{{ cat.description }}</p>
+                    <p
+                      class="text-xs mt-0.5"
+                      [class.text-text-secondary]="selectedCategory() === cat.value"
+                      [class.text-text-muted]="selectedCategory() !== cat.value"
+                    >
+                      {{ cat.description }}
+                    </p>
                   </div>
                 </button>
               }

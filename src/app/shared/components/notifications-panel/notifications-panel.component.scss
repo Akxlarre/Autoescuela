@@ -95,7 +95,7 @@
 
   &.type-info {
     background: var(--color-primary-muted);
-    color: var(--color-primary);
+    color: var(--brand-strong);
   }
 
   &.type-success {
@@ -218,7 +218,7 @@
   &:hover,
   &:focus-visible {
     background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
-    color: var(--color-primary);
+    color: var(--brand-strong);
   }
 }
 
@@ -271,7 +271,7 @@
   cursor: pointer;
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--brand-strong);
   transition: color 150ms ease;
 
   &:hover,

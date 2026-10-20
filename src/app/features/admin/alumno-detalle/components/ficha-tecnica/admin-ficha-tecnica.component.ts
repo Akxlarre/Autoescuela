@@ -371,7 +371,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
       background: var(--state-success);
     }
     .firma-instructor {
-      background: var(--ds-brand);
+      background: var(--brand-strong);
     }
     .firma-pendiente {
       background: var(--bg-subtle);
@@ -395,7 +395,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
     }
     .btn-edit-clase:hover {
       border-color: var(--ds-brand);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
       background: var(--bg-brand-muted, color-mix(in srgb, var(--ds-brand) 8%, transparent));
     }
   `,

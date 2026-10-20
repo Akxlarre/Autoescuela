@@ -89,7 +89,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   `,
   styles: `
     .brand-link {
-      color: var(--ds-brand);
+      color: var(--brand-strong);
       text-decoration: none;
     }
   `,

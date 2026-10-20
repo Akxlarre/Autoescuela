@@ -215,7 +215,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
       }
 
       .branch-trigger--active {
-        color: var(--color-primary);
+        color: var(--brand-strong);
         background: var(--color-primary-muted);
       }
 
@@ -262,7 +262,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
         width: 7px;
         height: 7px;
         border-radius: var(--radius-full);
-        background: var(--ds-brand);
+        background: var(--brand-strong);
         flex-shrink: 0;
       }
 
@@ -369,12 +369,12 @@ import type { BranchOption } from '@core/models/ui/branch.model';
 
       .branch-panel__item--selected {
         background: var(--color-primary-muted);
-        color: var(--color-primary);
+        color: var(--brand-strong);
       }
 
       .branch-panel__item--selected:hover {
         background: var(--color-primary-muted);
-        color: var(--color-primary);
+        color: var(--brand-strong);
       }
 
       /* Dot dentro del item */
@@ -383,7 +383,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
         width: 7px;
         height: 7px;
         border-radius: var(--radius-full);
-        background: var(--ds-brand);
+        background: var(--brand-strong);
         flex-shrink: 0;
       }
 
@@ -406,7 +406,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
       /* Check de selección activa */
       .branch-panel__item-check {
         flex-shrink: 0;
-        color: var(--color-primary);
+        color: var(--brand-strong);
       }
 
       /* Item deshabilitado */

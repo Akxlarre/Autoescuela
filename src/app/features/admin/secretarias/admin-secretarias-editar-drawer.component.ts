@@ -422,7 +422,7 @@ import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
     .estado-btn--selected {
       border-color: var(--ds-brand);
       background: color-mix(in srgb, var(--ds-brand) 10%, transparent);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
   `,
 })

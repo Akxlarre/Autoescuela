@@ -903,7 +903,7 @@ const INTERFACE_ICONS = [
       background: color-mix(in srgb, var(--ds-brand) 5%, var(--bg-surface));
     }
     .layout-selector-card.active .layout-label {
-      color: var(--ds-brand);
+      color: var(--brand-strong);
       font-weight: 700;
     }
     .layout-mockup-icon {
@@ -970,7 +970,7 @@ const INTERFACE_ICONS = [
     .layout-mockup-icon .mock-btn {
       width: 30%;
       height: 6px;
-      background: var(--ds-brand);
+      background: var(--brand-strong);
       border-radius: 2px;
       opacity: 0.8;
     }
@@ -1018,7 +1018,7 @@ const INTERFACE_ICONS = [
     }
     .media-pill.active {
       background: var(--bg-surface);
-      color: var(--color-primary);
+      color: var(--brand-strong);
       box-shadow: var(--shadow-sm);
     }
     .studio-range-slider {
@@ -1037,7 +1037,7 @@ const INTERFACE_ICONS = [
       width: 16px;
       height: 16px;
       border-radius: 50%;
-      background: var(--ds-brand);
+      background: var(--brand-strong);
       cursor: pointer;
       border: 2px solid var(--bg-surface);
       box-shadow: var(--shadow-sm);
@@ -1097,7 +1097,7 @@ const INTERFACE_ICONS = [
       box-shadow: var(--shadow-xs);
     }
     input:checked + .switch-slider {
-      background-color: var(--ds-brand);
+      background-color: var(--brand-strong);
     }
     input:checked + .switch-slider:before {
       transform: translateX(16px);

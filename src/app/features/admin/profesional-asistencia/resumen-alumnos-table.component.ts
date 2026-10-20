@@ -118,7 +118,7 @@ import type { ResumenAlumnoAsistencia } from '@core/models/ui/sesion-profesional
       font-weight: 700;
       flex-shrink: 0;
       background: var(--color-primary-tint);
-      color: var(--color-primary);
+      color: var(--brand-strong);
     }
   `,
 })

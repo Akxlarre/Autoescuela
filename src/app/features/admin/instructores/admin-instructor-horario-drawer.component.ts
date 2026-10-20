@@ -180,7 +180,7 @@ interface DayGroup {
       font-weight: 700;
       flex-shrink: 0;
       background: color-mix(in srgb, var(--ds-brand) 12%, transparent);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
 
     .day-pill {
@@ -194,7 +194,7 @@ interface DayGroup {
     }
     .day-pill--today {
       background: color-mix(in srgb, var(--ds-brand) 12%, transparent);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
     .day-pill--tomorrow {
       background: color-mix(in srgb, var(--state-warning) 10%, transparent);

@@ -253,7 +253,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     }
     .btn-secondary:hover {
       border-color: var(--ds-brand);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
   `,
 })
