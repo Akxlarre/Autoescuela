@@ -1,6 +1,6 @@
 # Asignación ASG-i-058 — Unificar los helpers de autorización de las edge functions
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P2
