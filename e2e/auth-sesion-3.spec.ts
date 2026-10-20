@@ -188,12 +188,9 @@ test('I01 + I07: grupos del menú del admin y rutas sin ítem', async ({ pageAs 
   for (const grupo of ['Operaciones Diarias', 'Academia Clase B', 'Finanzas y Caja']) {
     expect(menu.toLowerCase()).toContain(grupo.toLowerCase());
   }
-  // I07: las rutas existen aunque no tengan ítem.
-  for (const url of ['/app/admin/notificaciones']) {
-    await page.goto(url);
-    await expect(page).toHaveURL(new RegExp(`${url}$`), CARGA);
-    await expect(page.getByRole('heading', { name: 'Página no encontrada' })).toHaveCount(0);
-  }
+  // I07: la ruta sin ítem de menú no da 404; desde hotfix-103-b (S16) era una maqueta y lleva al inicio.
+  await page.goto('/app/admin/notificaciones');
+  await expect(page).toHaveURL(/\/app\/admin\/dashboard$/, CARGA);
 });
 
 // ── J. Páginas especiales ───────────────────────────────────────────────────────────────────
