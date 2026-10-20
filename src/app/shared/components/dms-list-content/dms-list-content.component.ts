@@ -165,7 +165,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                         <input
                           type="text"
                           [ngModel]="studentSearch()"
-                          (ngModelChange)="studentSearch.set($event)"
+                          (ngModelChange)="onStudentSearch($event)"
                           placeholder="Buscar alumno por nombre o RUT..."
                           class="w-full pl-9 pr-3 py-2 text-sm rounded-lg border transition-all duration-200 bg-subtle border-border-subtle text-text-primary outline-none focus:border-brand"
                           data-llm-description="input for searching students by name or RUT"
@@ -175,7 +175,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                             type="button"
                             class="absolute border-0 bg-transparent right-2 top-1/2 -translate-y-1/2 p-1 cursor-pointer text-text-muted hover:text-text-primary"
                             aria-label="Limpiar búsqueda"
-                            (click)="studentSearch.set('')"
+                            (click)="onStudentSearch('')"
                           >
                             <app-icon name="x" [size]="14" />
                           </button>
@@ -216,6 +216,8 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                           [value]="filteredStudentsWithDocs()"
                           [paginator]="filteredStudentsWithDocs().length > 10"
                           [rows]="10"
+                          [first]="studentsPageFirst()"
+                          (onPage)="studentsPageFirst.set($event.first)"
                           [scrollable]="true"
                           scrollHeight="flex"
                           styleClass="p-datatable-sm h-full flex flex-col"
@@ -849,6 +851,13 @@ export class DmsListContentComponent {
 
   readonly activeTab = signal<DmsTab>('students');
   readonly studentSearch = signal('');
+  /** hotfix-163-m: primera fila de la página actual; buscar vuelve a la página 1. */
+  readonly studentsPageFirst = signal(0);
+
+  onStudentSearch(query: string): void {
+    this.studentSearch.set(query);
+    this.studentsPageFirst.set(0);
+  }
 
   setActiveTab(tabId: string): void {
     this.activeTab.set(tabId as DmsTab);
