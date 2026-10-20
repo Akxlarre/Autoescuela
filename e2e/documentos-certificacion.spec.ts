@@ -207,7 +207,13 @@ test('C05 · C06 (fix-470-m): el drawer muestra el contrato firmado y el certifi
   await expect(
     fila('Certificado Clase B').locator('[data-llm-action="delete-document"]'),
   ).toHaveCount(0);
-  // El contrato generado y la cédula sí se pueden eliminar.
+  // fix-475-m: el contrato tampoco se elimina desde el DMS; la cédula sí.
+  await expect(
+    drawer
+      .locator('[data-llm-action="preview-document"]')
+      .filter({ hasText: 'E2E-contrato-generado.pdf' })
+      .locator('[data-llm-action="delete-document"]'),
+  ).toHaveCount(0);
   await expect(
     fila('Cédula de Identidad').locator('[data-llm-action="delete-document"]'),
   ).toHaveCount(1);

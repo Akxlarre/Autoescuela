@@ -139,6 +139,16 @@ describe('DmsFacade', () => {
       expect(deleteSpy).not.toHaveBeenCalled();
     });
 
+    it('fix-475-m: rechaza eliminar el contrato (digital_contract) sin tocar la BD', async () => {
+      const deleteSpy = vi.fn();
+      supabaseSpy.client.from = vi.fn().mockReturnValue({ delete: deleteSpy });
+
+      await expect(facade.deleteStudentDocument('7', 'digital_contract')).rejects.toThrow(
+        'no se puede eliminar desde el DMS',
+      );
+      expect(deleteSpy).not.toHaveBeenCalled();
+    });
+
     it('should call dmsViewer.openByUrl on openDocument', async () => {
       await facade.openDocument('storage/path/doc.pdf', 'File');
       expect(viewerSpy.openByUrl).toHaveBeenCalledWith('https://example.com/signed/doc', 'File');

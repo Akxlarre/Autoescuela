@@ -738,21 +738,12 @@ export class DmsFacade {
       }
       if (!isDeletableStudentDoc(source)) {
         // fix-470-m: contrato firmado y certificados, derivados de columnas de la matrícula.
+        // fix-475-m: el contrato tampoco se borra desde acá (decisión F04).
         throw new Error(
           'Este documento no se puede eliminar desde el DMS. Se gestiona en la ficha del alumno o en Certificación.',
         );
       }
-      const numericId = parseInt(docId, 10);
-      if (source === 'student_document') {
-        await this.deleteRowAndFile('student_documents', numericId);
-      } else {
-        // El PDF del contrato lo genera el wizard de matrícula: fuera del alcance de fix-454-m.
-        const { error } = await this.supabase.client
-          .from('digital_contracts')
-          .delete()
-          .eq('id', numericId);
-        if (error) throw error;
-      }
+      await this.deleteRowAndFile('student_documents', parseInt(docId, 10));
     });
     await this.refreshSilently();
   }
