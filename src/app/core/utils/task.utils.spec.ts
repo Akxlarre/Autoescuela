@@ -4,6 +4,7 @@ import {
   isOverdue,
   dueDateToInstant,
   taskBranchScopeFilter,
+  sentNonObservations,
   canEditTask,
   canChangeStatus,
   canDeleteTask,
@@ -91,6 +92,20 @@ describe('isOverdue', () => {
   it('S10 (hotfix-100-b): una tarea completada nunca está vencida', () => {
     expect(isOverdue('2026-05-17T00:00:00Z', NOW, 'completed')).toBe(false);
     expect(isOverdue('2026-05-17T00:00:00Z', NOW, 'in_progress')).toBe(true);
+  });
+});
+
+// ─── sentNonObservations (S23, hotfix-102-b) ────────────────────────────────
+
+describe('sentNonObservations', () => {
+  it('incluye tareas y consultas (al admin y a instructores, completadas incluidas), no observaciones', () => {
+    const enviadas = [
+      makeTask({ id: 'a', type: 'task', to_role: 'admin' }),
+      makeTask({ id: 'b', type: 'question', to_role: 'admin', status: 'completed' }),
+      makeTask({ id: 'c', type: 'task', to_role: 'instructor' }),
+      makeTask({ id: 'd', type: 'observation', to_role: 'admin' }),
+    ];
+    expect(sentNonObservations(enviadas).map((t) => t.id)).toEqual(['a', 'b', 'c']);
   });
 });
 
