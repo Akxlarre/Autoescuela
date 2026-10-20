@@ -115,7 +115,11 @@ Deno.serve(async (req: Request) => {
       // resueltas. Ver `{{nombre}}` literal no diría nada sobre el resultado real.
       const ejemplo = { nombre: 'Ana Pérez', sede: 'Autoescuela Chillán' };
       return jsonResponse({
-        html: buildEmailHtml(renderTemplate(subject, ejemplo), renderTemplate(body, ejemplo)),
+        html: buildEmailHtml(renderTemplate(subject, ejemplo), renderTemplate(body, ejemplo), {
+          sede: ejemplo.sede,
+          correoSede: 'correo de la sede',
+          promocional: preview?.kind === 'promocional',
+        }),
         subject: renderTemplate(subject, ejemplo),
       });
     }
@@ -138,6 +142,15 @@ Deno.serve(async (req: Request) => {
     // La RLS no protege al service_role: la autorización de sede se comprueba acá.
     if (callerRole === 'secretary' && announcement.branch_id !== caller.branch_id) {
       return jsonResponse({ error: 'No puedes enviar comunicados de otra sede' }, 403);
+    }
+
+    // fix-232-b (S20): solo se envía o cierra un comunicado que está en envío. Un cancelado o
+    // uno programado (que todavía no toma el dispatcher) llamado a mano no sale.
+    if (announcement.status !== 'enviando') {
+      return jsonResponse(
+        { error: `El comunicado no está en envío (estado: ${announcement.status})` },
+        409,
+      );
     }
 
     // ── Cierre ───────────────────────────────────────────────────────────────
