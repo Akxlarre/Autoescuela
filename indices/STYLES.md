@@ -459,8 +459,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
-| Tamaño display (`text-4xl/3xl/2xl`) | 47 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 868 | Informativo — legítimo en botones/headers/títulos |
+| Tamaño display (`text-4xl/3xl/2xl`) | 45 | Candidatas a `.kpi-value` o heading semántico |
+| Peso de fuente (`font-bold/semibold`) | 866 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -477,12 +477,12 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | 10 | `text-lg font-semibold text-text-primary` |
 | 10 | `text-sm font-bold text-text-primary` |
 | 9 | `text-xs font-semibold text-text-muted mb-1 block` |
-| 8 | `text-2xl font-semibold text-text-primary` |
 | 8 | `w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle` |
 | 8 | `text-left text-xs font-semibold text-text-secondary pb-2 pr-4` |
 | 7 | `m-0 font-semibold text-text-primary` |
 | 6 | `text-xs font-bold uppercase tracking-wider text-text-primary` |
 | 6 | `text-xs font-semibold uppercase tracking-wider` |
+| 6 | `text-2xl font-semibold text-text-primary` |
 
 
 <!-- AUTO-GENERATED:END -->

@@ -61,7 +61,7 @@
 | `/app/admin/tareas` | `AdminTareasComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/libro-de-clases` | `LibroDeClasesComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
 | `/app/admin/servicios-especiales` | `AdminServiciosEspecialesComponent` | — | `src/app/app.routes.ts` |
-| `/app/admin/notificaciones` | `AdminNotificacionesComponent` | — | `src/app/app.routes.ts` |
+| `/app/admin/notificaciones` | → redirect a `dashboard` | — | `src/app/app.routes.ts` |
 | `/app/admin/clase-profesional/relatores` | `AdminProfesionalRelatoresComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
 | `/app/admin/clase-profesional/promociones` | `AdminProfesionalPromocionesComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
 | `/app/admin/clase-profesional/asistencia` | `AdminProfesionalAsistenciaComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
@@ -98,7 +98,7 @@
 | `/app/secretaria/profesional/evaluaciones` | `SecretariaProfesionalNotasComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
 | `/app/secretaria/profesional/certificados` | `SecretariaProfesionalCertificadosComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
 | `/app/secretaria/profesional/archivo` | `SecretariaProfesionalArchivoComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
-| `/app/secretaria/notificaciones` | `SecretariaNotificacionesComponent` | — | `src/app/app.routes.ts` |
+| `/app/secretaria/notificaciones` | → redirect a `dashboard` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/ex-alumnos` | `SecretariaExAlumnosComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/ex-alumnos-profesional` | `SecretariaExAlumnosProfesionalComponent` | `professionalBranchGuard`, `pilotPhaseGuard('clase-profesional-recorte')` | `src/app/app.routes.ts` |
 | `/app/secretaria/servicios-especiales` | `SecretariaServiciosEspecialesComponent` | — | `src/app/app.routes.ts` |

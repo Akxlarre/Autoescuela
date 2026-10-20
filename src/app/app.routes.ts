@@ -308,11 +308,9 @@ export const routes: Routes = [
               ),
           },
           {
+            // hotfix-103-b (S16): era una maqueta "PLANO"; el historial vive en la campana.
             path: 'notificaciones',
-            loadComponent: () =>
-              import('./features/admin/notificaciones/admin-notificaciones.component').then(
-                (m) => m.AdminNotificacionesComponent,
-              ),
+            redirectTo: 'dashboard',
           },
           {
             path: 'clase-profesional/relatores',
@@ -596,11 +594,9 @@ export const routes: Routes = [
               ),
           },
           {
+            // hotfix-103-b (S16): era una maqueta "PLANO"; el historial vive en la campana.
             path: 'notificaciones',
-            loadComponent: () =>
-              import('./features/secretaria/notificaciones/secretaria-notificaciones.component').then(
-                (m) => m.SecretariaNotificacionesComponent,
-              ),
+            redirectTo: 'dashboard',
           },
           {
             path: 'ex-alumnos',

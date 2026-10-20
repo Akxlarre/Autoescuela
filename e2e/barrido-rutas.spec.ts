@@ -81,7 +81,6 @@ const ADMIN: RouteSpec[] = [
   { id: 'B25', path: '/app/admin/tareas', appLike: true },
   { id: 'B26', path: '/app/admin/auditoria', appLike: true },
   { id: 'B27', path: '/app/admin/configuracion-web', appLike: true },
-  { id: 'B29', path: '/app/admin/notificaciones', appLike: false },
 ];
 
 const SECRETARIA: RouteSpec[] = [
@@ -107,7 +106,6 @@ const SECRETARIA: RouteSpec[] = [
   { id: 'B23', path: '/app/secretaria/instructores', appLike: true },
   { id: 'B25', path: '/app/secretaria/observaciones', appLike: true },
   { id: 'B27', path: '/app/secretaria/configuracion-web', appLike: true },
-  { id: 'B29', path: '/app/secretaria/notificaciones', appLike: false },
 ];
 
 /** Ids reales para las rutas con parámetro: un alumno con matrícula activa en la sede pedida y un vehículo. */
