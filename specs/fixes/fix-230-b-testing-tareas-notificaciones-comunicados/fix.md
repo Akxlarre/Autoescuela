@@ -93,15 +93,15 @@ ruta correcta de la ficha.
 | S1, S3 | Resueltas antes por `fix-361-m` (ASG-i-057): el dispatcher reanuda desde el primer pendiente y rescata envíos inmediatos a medias |
 | S2 | Resuelta antes por `fix-362-m`: cancelar revisa que se haya cancelado |
 | S4 | Resuelta antes por `fix-361-m`: se excluyen archivados (servidor y vista previa) |
-| S5 | ✅ Confirmada en el código: el correo promocional no trae forma de darse de baja — **decisión** |
-| S6 | ✅ Confirmada en el código: el correo dice "Conductores Chillán" / logo "CC" para todas las sedes (`_shared/announcement-send.ts:81-93`) — pendiente (requiere desplegar la Edge Function) |
-| S7 | Por confirmar con el owner (toasts "enviado al alumno" sobre notificaciones que nadie verá en el piloto) — **decisión** |
+| S5 | ❌ → `fix-232-b` (#338): el promocional dice cómo darse de baja (en la escuela o por el correo de la sede) — decisión del owner |
+| S6 | ❌ → `fix-232-b` (#338): el correo lleva la marca de la sede del alumno. Desplegado |
+| S7 | Ya resuelta por `fix-380-m`: "Recordar" no se ofrece mientras el portal alumno esté bloqueado. Anotado en `docs/BACKLOG-DEUDA-TECNICA.md` § "Al levantar el piloto" (pedido del owner) |
 | S8, S9, S10, S11, S14, S16, S17 (G04/G05) | ❌ → corregidas: #328, #329, #331, #333, #332, #335 |
-| S12 | ✅ Confirmada en la BD (`tasks_insert` no considera `both_branches`, el picker sí), **latente**: hoy no hay instructores activos con "ambas sedes" — **decisión** (ajustar la policy o el picker) |
+| S12 | ❌ → `fix-233-b` (#339): `tasks_insert` acepta instructores "ambas sedes" (decisión del owner). Migración aplicada |
 | S13 | Latente: solo aplica a un admin con `branch_id`; hoy el único admin no tiene sede |
 | S15 | Resuelta antes por `fix-328-m`; los tipos sin ruta solo cierran el panel |
 | S18–S19 | Pendientes de revisar |
-| S20 | ✅ Confirmada en el código: `send-announcement` no revisa el estado (un cancelado llamado a mano se enviaría). O04 (otra sede → 403) sí está — pendiente (requiere desplegar la Edge Function) |
+| S20 | ❌ → `fix-232-b` (#338): `send-announcement` rechaza (409) lo que no está `enviando`. Desplegado. O04 (otra sede → 403) ya estaba |
 | S21 | **Decisión** (secretaria puede crear notificaciones para cualquier usuario; admin lee todas) |
 | S22 | Parcial: `updateStatus` revisa error; eliminar sin permiso sigue sin mensaje; "Editar" siempre deshabilitado |
 | S23 (nuevo) | ❌ → `hotfix-102-b` (#330) |
