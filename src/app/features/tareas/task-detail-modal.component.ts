@@ -180,7 +180,7 @@ export class TaskDetailModalComponent {
       // AC5: auto-mark seen for observation when recipient opens
       const currentUser = this.authFacade.currentUser();
       if (t.type === 'observation' && t.to_user_id === currentUser?.dbId && !t.seen_at) {
-        void this.tasksFacade.markSeen(t.id);
+        void this.tasksFacade.markSeen(t);
       }
     });
   }
@@ -197,7 +197,7 @@ export class TaskDetailModalComponent {
     const t = this.task();
     if (!t || this.isMutating()) return;
     this.isMutating.set(true);
-    await this.tasksFacade.markSeen(t.id);
+    await this.tasksFacade.markSeen(t);
     this.isMutating.set(false);
   }
 

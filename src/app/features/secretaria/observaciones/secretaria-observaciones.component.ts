@@ -27,7 +27,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
-import { sentNonObservations } from '@core/utils/task.utils';
+import { sentNonObservations, isTaskOpen } from '@core/utils/task.utils';
 
 type ObsTab = 'mis-obs' | 'recibidas' | 'enviadas';
 
@@ -125,24 +125,24 @@ export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
   protected readonly sentTasks = computed(() => sentNonObservations(this.facade.sentTasks()));
 
   protected readonly pendingMineCount = computed(
-    () => this.facade.receivedTasks().filter((t) => t.status !== 'completed').length,
+    () => this.facade.receivedTasks().filter((t) => isTaskOpen(t.status)).length,
   );
 
   protected readonly tabs = computed(() => [
     {
       id: 'mis-obs',
       label: 'Mis observaciones',
-      count: this.myObservations().filter((t) => t.status !== 'completed').length,
+      count: this.myObservations().filter((t) => isTaskOpen(t.status)).length,
     },
     {
       id: 'recibidas',
       label: 'Tareas recibidas',
-      count: this.facade.receivedTasks().filter((t) => t.status !== 'completed').length,
+      count: this.facade.receivedTasks().filter((t) => isTaskOpen(t.status)).length,
     },
     {
       id: 'enviadas',
       label: 'Enviadas',
-      count: this.sentTasks().filter((t) => t.status !== 'completed').length,
+      count: this.sentTasks().filter((t) => isTaskOpen(t.status)).length,
     },
   ]);
 
@@ -194,7 +194,7 @@ export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
     {
       id: 'enviadas',
       label: 'Enviadas',
-      value: this.sentTasks().filter((t) => t.status !== 'completed').length,
+      value: this.sentTasks().filter((t) => isTaskOpen(t.status)).length,
       icon: 'send',
     },
   ]);

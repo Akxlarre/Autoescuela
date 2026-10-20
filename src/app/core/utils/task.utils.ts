@@ -62,8 +62,16 @@ export function canDeleteTask(task: Task, currentUserId: number, currentRole: st
   return task.from_user_id === currentUserId && task.status === 'pending';
 }
 
+/**
+ * La tarea sigue abierta (cuenta en los contadores de pendientes): pendiente o en curso. Una
+ * completada o una observación ya vista (fix-231-b) no.
+ */
+export function isTaskOpen(status: Task['status']): boolean {
+  return status === 'pending' || status === 'in_progress';
+}
+
 export function canChangeStatus(task: Task, currentUserId: number): boolean {
-  if (task.status === 'completed') return false;
+  if (!isTaskOpen(task.status)) return false;
   if (task.to_user_id === currentUserId) return true;
   // Question sender can also close the question once satisfied with the answer
   if (task.type === 'question' && task.from_user_id === currentUserId) return true;
