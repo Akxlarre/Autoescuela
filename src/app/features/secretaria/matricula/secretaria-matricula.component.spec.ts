@@ -284,6 +284,85 @@ describe('SecretariaMatriculaComponent — error al subir foto carnet inválida 
   });
 });
 
+// fix-059-i: el banner del wizard solo leía enrollment.error(); los errores del pago (ej. caja
+// cerrada) y de documentos quedaban mudos.
+describe('SecretariaMatriculaComponent — banner de errores del wizard (fix-059-i)', () => {
+  function crear(errores: { wizard?: string | null; pago?: string | null; docs?: string | null }) {
+    const enrollmentFacadeSpy: any = {
+      currentStep: vi.fn().mockReturnValue(4),
+      personalData: vi.fn().mockReturnValue(null),
+      courseOptions: vi.fn().mockReturnValue([]),
+      paymentMode: vi.fn().mockReturnValue('full'),
+      enrollmentBasePrice: vi.fn().mockReturnValue(0),
+      selectedInstructorId: vi.fn().mockReturnValue(null),
+      scheduleGrid: vi.fn().mockReturnValue(null),
+      activeDrafts: vi.fn().mockReturnValue([]),
+      docsComplete: vi.fn().mockReturnValue(true),
+      loadCourses: vi.fn().mockResolvedValue(undefined),
+      loadInstructors: vi.fn().mockResolvedValue(undefined),
+      loadScheduleGrid: vi.fn().mockResolvedValue(undefined),
+      loadActiveDrafts: vi.fn().mockResolvedValue([]),
+      draft: vi.fn().mockReturnValue({ enrollmentId: 123, studentId: 456 }),
+      error: vi.fn().mockReturnValue(errores.wizard ?? null),
+      reset: vi.fn(),
+    };
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: LayoutDrawerFacadeService,
+          useValue: { setActions: vi.fn(), setBadge: vi.fn() },
+        },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
+        {
+          provide: AuthFacade,
+          useValue: {
+            currentUser: vi.fn().mockReturnValue({ role: 'admin', branchId: 1 }),
+            whenReady: Promise.resolve(),
+          },
+        },
+        BranchFacade,
+        { provide: SupabaseService, useValue: { client: {} } },
+        {
+          provide: ErrorSanitizerService,
+          useValue: { sanitize: (e: Error) => ({ message: e.message }) },
+        },
+        { provide: EnrollmentFacade, useValue: enrollmentFacadeSpy },
+        {
+          provide: EnrollmentDocumentsFacade,
+          useValue: { reset: vi.fn(), error: vi.fn().mockReturnValue(errores.docs ?? null) },
+        },
+        {
+          provide: EnrollmentPaymentFacade,
+          useValue: { reset: vi.fn(), error: vi.fn().mockReturnValue(errores.pago ?? null) },
+        },
+        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn(), info: vi.fn() } },
+      ],
+    });
+    return TestBed.runInInjectionContext(() => new SecretariaMatriculaComponent()) as any;
+  }
+
+  it('muestra el error del pago (ej. caja cerrada)', () => {
+    const c = crear({ pago: 'Error al registrar pago: La caja del 18-10-2026 ya está cerrada.' });
+    expect(c.wizardError()).toBe(
+      'Error al registrar pago: La caja del 18-10-2026 ya está cerrada.',
+    );
+  });
+
+  it('muestra el error de documentos', () => {
+    const c = crear({ docs: 'No se pudo subir la foto.' });
+    expect(c.wizardError()).toBe('No se pudo subir la foto.');
+  });
+
+  it('el error del wizard tiene prioridad y sin errores no hay banner', () => {
+    expect(crear({ wizard: 'Error al crear matrícula', pago: 'otro' }).wizardError()).toBe(
+      'Error al crear matrícula',
+    );
+    TestBed.resetTestingModule();
+    expect(crear({}).wizardError()).toBeNull();
+  });
+});
+
 // Cancelar o terminar la matrícula abierta como panel no saca de la pantalla — fix-307-m.
 describe('SecretariaMatriculaComponent — finishWizard (fix-307-m)', () => {
   function setup(drawerComponent: unknown) {

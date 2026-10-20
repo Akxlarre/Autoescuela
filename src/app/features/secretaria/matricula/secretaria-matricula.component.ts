@@ -236,6 +236,15 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   /** Almacena el objeto completo de firma (digital o archivo físico). */
   private readonly _signedContractUpload = signal<SignedContractUpload | null>(null);
 
+  /**
+   * Error que muestra el banner del wizard (fix-059-i). Antes solo leía `enrollment.error()`:
+   * un fallo del paso Pago (ej. caja cerrada, fix-051-i) o de Documentos quedaba en su propio
+   * facade y la pantalla no decía nada.
+   */
+  readonly wizardError = computed<string | null>(
+    () => this.enrollment.error() ?? this.payment.error() ?? this.docs.error() ?? null,
+  );
+
   // ── Datos computados por paso (desde facades) ─────────────────────────────
 
   readonly step1Data = computed<EnrollmentPersonalData>(() => ({
