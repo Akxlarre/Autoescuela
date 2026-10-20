@@ -3,6 +3,7 @@ import {
   canSendTo,
   isOverdue,
   dueDateToInstant,
+  taskBranchScopeFilter,
   canEditTask,
   canChangeStatus,
   canDeleteTask,
@@ -90,6 +91,14 @@ describe('isOverdue', () => {
   it('S10 (hotfix-100-b): una tarea completada nunca está vencida', () => {
     expect(isOverdue('2026-05-17T00:00:00Z', NOW, 'completed')).toBe(false);
     expect(isOverdue('2026-05-17T00:00:00Z', NOW, 'in_progress')).toBe(true);
+  });
+});
+
+// ─── taskBranchScopeFilter (S8, hotfix-101-b) ───────────────────────────────
+
+describe('taskBranchScopeFilter', () => {
+  it('la sede acota, pero lo enviado y recibido por el usuario se ve siempre', () => {
+    expect(taskBranchScopeFilter(1, 2)).toBe('branch_id.eq.1,from_user_id.eq.2,to_user_id.eq.2');
   });
 });
 
