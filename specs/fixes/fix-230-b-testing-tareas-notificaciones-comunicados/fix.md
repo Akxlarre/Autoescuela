@@ -27,3 +27,22 @@ Ninguno de una spec previa — track de testing (origen ASG-i-035). Criterios pr
 
 ## Test de Regresión
 - Los tests nuevos de este track, contra `localhost:4200`.
+
+## Primera tanda — tareas (2026-10-20)
+
+`e2e/comunicacion-tareas.spec.ts`: **8/8 en verde** después de los fixes. Crea tareas E2E- entre
+las cuentas de prueba y al final borra tareas, respuestas y notificaciones generadas. Las tareas
+eliminadas desde la app quedan con `deleted_at` (la RLS no deja borrarlas por API) y se anotan para
+limpieza manual.
+
+| Casos | Resultado |
+|---|---|
+| B01, E01, F01, I01, D01–D03, E02, I03 | ✅ admin → tarea a secretaria: le llega en vivo (lista + campana +1 + "Nueva tarea: <asunto>"); el emisor no ve Iniciar/Completar; la secretaria la inicia y completa; el admin lo ve sin recargar y recibe "Tarea completada" (ella no) |
+| **B12, D17 (S9)** | ❌ → `hotfix-100-b` (#328): "hoy" se guardaba como medianoche UTC → "Vence <ayer>" y "Vencida" desde que se creaba. Ahora 23:59 de Chile |
+| **C03 (S10)** | ❌ → `hotfix-100-b` (#328): una completada con fecha pasada seguía "Vencida" |
+| **C06 (S8)** | ❌ → `hotfix-101-b` (#329): el admin con sede A no veía lo que le mandaba la secretaria de B |
+| **D04 (S11)** | ❌ → `fix-231-b` (#331): abrir una observación la completaba y avisaba "Tarea completada". Ahora queda "Vista" y avisa "Observación vista" (decisión del owner) |
+| **D05, D06, I02 (S23, nuevo)** | ❌ → `hotfix-102-b` (#330): la secretaria no veía en ninguna pestaña lo que le mandaba al admin (no podía leer la respuesta ni cerrar la consulta). Pestaña "Enviadas" (decisión del owner). Tras el fix: la respuesta la pasa a "En curso" y avisa "Nueva respuesta · Respondieron en: <asunto>"; cerrada queda en solo lectura |
+| **D13, E04 (S14)** | ❌ → `hotfix-104-b` (#333): la tarea eliminada seguía del lado del destinatario. Ahora desaparece en vivo (broadcast) |
+| **G07 (S16)** | ❌ → `hotfix-103-b` (#332): `/notificaciones` de admin y secretaria eran una maqueta "PLANO". Redirigen al inicio (decisión del owner) |
+| B02 | ✅ la observación no guarda fecha límite |
