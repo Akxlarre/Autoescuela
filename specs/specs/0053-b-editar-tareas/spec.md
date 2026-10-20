@@ -1,6 +1,7 @@
 # Spec 0053-b — Editar una tarea enviada
 
-> **Status:** done (2026-10-20; ver acceptance.md)
+> **Status:** done
+> **Closed:** 2026-10-20 (ver acceptance.md)
 > **Created:** 2026-10-20
 > **Owner:** Benjamín
 > **Priority:** P2
