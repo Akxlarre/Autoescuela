@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnDestroy,
+  OnInit,
+  effect,
+  inject,
+  untracked,
+} from '@angular/core';
 import { CertificacionProfesionalFacade } from '@core/facades/certificacion-profesional.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -51,10 +59,25 @@ export class SecretariaProfesionalCertificadosComponent implements OnInit, OnDes
   private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
+  constructor() {
+    // hotfix-161-m: una secretaria con acceso a ambas sedes tiene selector; se recarga al cambiarlo.
+    let previousBranchId: number | null | undefined = undefined;
+
+    effect(() => {
+      const branchId = this.branchFacade.selectedBranchId();
+
+      if (previousBranchId === undefined) {
+        untracked(() => void this.facade.initialize());
+      } else if (previousBranchId !== branchId) {
+        untracked(() => void this.facade.reload());
+      }
+      previousBranchId = branchId;
+    });
+  }
+
   ngOnInit(): void {
     // fix-028: con grant, la secretaria se comporta como admin → fuerza sede con profesional.
     this.branchFacade.setProfessionalOnly(true);
-    void this.facade.initialize();
   }
 
   ngOnDestroy(): void {
