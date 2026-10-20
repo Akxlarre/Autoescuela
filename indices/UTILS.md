@@ -58,6 +58,7 @@
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
 | `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |
 | `src/app/core/utils/document-file-validation.util.ts` | `validateDocumentFile` |
+| `src/app/core/utils/document-download.utils.ts` | `documentDownloadUrl` — URL de Storage con `download=<nombre>` para descargar de verdad (fix-468-m); `null` si no es de Storage |
 | `src/app/core/utils/document-template-options.utils.ts` | `editableDocumentTypes` |
 | `src/app/core/utils/drawer-navigation.utils.ts` | `isRouteChange` |
 | `src/app/core/utils/edge-function-error.utils.ts` | `EdgeFunctionError`, `readEdgeFunctionError`, `edgeFunctionUserMessage` |

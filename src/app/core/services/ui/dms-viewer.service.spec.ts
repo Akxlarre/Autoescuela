@@ -35,6 +35,40 @@ describe('DmsViewerService', () => {
     expect(service.currentDoc()?.type).toBe('image');
   });
 
+  describe('download() (fix-468-m)', () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    function captureClickedLink(): { link: HTMLAnchorElement | null } {
+      const captured = { link: null as HTMLAnchorElement | null };
+      vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+        this: HTMLAnchorElement,
+      ) {
+        captured.link = this;
+      });
+      return captured;
+    }
+
+    it('URL de Storage: enlace con download=<nombre>, sin pestaña nueva', () => {
+      const captured = captureClickedLink();
+      service.download({
+        url: 'https://abc.supabase.co/storage/v1/object/sign/documents/a.pdf?token=t',
+        name: 'Contrato',
+        type: 'pdf',
+      });
+      expect(captured.link?.href).toBe(
+        'https://abc.supabase.co/storage/v1/object/sign/documents/a.pdf?token=t&download=Contrato.pdf',
+      );
+      expect(captured.link?.target).toBe('');
+    });
+
+    it('URL externa: abre en pestaña nueva como antes', () => {
+      const captured = captureClickedLink();
+      service.download({ url: 'https://example.com/a.pdf', name: 'A', type: 'pdf' });
+      expect(captured.link?.href).toBe('https://example.com/a.pdf');
+      expect(captured.link?.target).toBe('_blank');
+    });
+  });
+
   it('close should reset document', () => {
     service.openByUrl('test.pdf', 'Test');
     service.close();

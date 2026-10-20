@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SafePipe } from '@core/pipes/safe.pipe';
+import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 
 /**
  * DmsDocPreviewDrawerComponent — Previsualización de un documento, apilada (push)
@@ -92,16 +93,12 @@ import { SafePipe } from '@core/pipes/safe.pipe';
 })
 export class DmsDocPreviewDrawerComponent {
   readonly facade = inject(DmsFacade);
+  private readonly dmsViewer = inject(DmsViewerService);
 
   onDownload(): void {
     const doc = this.facade.previewDoc();
     if (!doc) return;
-    const link = document.createElement('a');
-    link.href = doc.url;
-    link.download = doc.name;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // fix-468-m: descarga real (antes abría una pestaña: download no aplica cross-origin).
+    this.dmsViewer.download(doc);
   }
 }

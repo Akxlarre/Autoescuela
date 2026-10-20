@@ -17,9 +17,7 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TooltipModule, CommonModule, IconComponent, SafePipe],
   template: `
-    <div
-      class="flex-1 w-full h-full flex items-center justify-center bg-(--bg-subtle) min-h-0 p-4 sm:p-8"
-    >
+    <div class="flex-1 w-full flex items-center justify-center bg-(--bg-subtle) min-h-0 p-4 sm:p-8">
       @switch (doc()?.type) {
         @case ('image') {
           <div class="relative w-full h-full flex items-center justify-center min-h-0">
@@ -69,6 +67,19 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
         }
       }
     </div>
+    @if (doc()?.type === 'pdf' || doc()?.type === 'image') {
+      <div class="shrink-0 px-4 py-3 border-t border-border-subtle bg-surface">
+        <button
+          type="button"
+          class="btn-secondary w-full"
+          data-llm-action="download-document"
+          (click)="onDownload()"
+        >
+          <app-icon name="download" [size]="14" />
+          Descargar
+        </button>
+      </div>
+    }
   `,
   styles: `
     :host {
@@ -100,12 +111,7 @@ export class DmsViewerModalComponent {
   onDownload(): void {
     const docData = this.doc();
     if (!docData) return;
-    const link = document.createElement('a');
-    link.href = docData.url;
-    link.download = docData.name;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // fix-468-m: descarga real (antes abría una pestaña: download no aplica cross-origin).
+    this.dms.download(docData);
   }
 }
