@@ -195,7 +195,12 @@ type UploadMode = 'student' | 'school' | 'instructor';
               (dragleave)="isDragOver.set(false)"
               (drop)="onDrop($event)"
               data-llm-action="select-document-file"
+              role="button"
+              tabindex="0"
+              aria-label="Elegir el archivo del documento"
               (click)="fileInput.click()"
+              (keydown.enter)="fileInput.click()"
+              (keydown.space)="$event.preventDefault(); fileInput.click()"
             >
               <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-surface">
                 <app-icon name="upload" [size]="22"></app-icon>
@@ -213,7 +218,9 @@ type UploadMode = 'student' | 'school' | 'instructor';
               } @else {
                 <div>
                   <p class="font-medium text-sm m-0 text-text-primary">Arrastra tu archivo aquí</p>
-                  <p class="text-xs m-0 mt-1 text-text-secondary">PDF, JPG, PNG — máx. 5 MB</p>
+                  <p class="text-xs m-0 mt-1 text-text-secondary">
+                    PDF, JPG, PNG o WEBP — máx. 5 MB
+                  </p>
                 </div>
               }
             </div>
