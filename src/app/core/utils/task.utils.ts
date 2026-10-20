@@ -44,6 +44,15 @@ export function taskBranchScopeFilter(branchId: number, userId: number): string 
   return `branch_id.eq.${branchId},from_user_id.eq.${userId},to_user_id.eq.${userId}`;
 }
 
+/**
+ * Pestaña "Enviadas" de la secretaria (hotfix-102-b, S23): todo lo que envió que no es una
+ * observación — tareas y consultas, al admin y a instructores, incluidas las completadas.
+ * Antes solo veía lo enviado a instructores: lo que le mandaba al admin no aparecía en ningún lado.
+ */
+export function sentNonObservations<T extends Pick<Task, 'type'>>(sent: T[]): T[] {
+  return sent.filter((t) => t.type !== 'observation');
+}
+
 export function canEditTask(task: Task, currentUserId: number): boolean {
   return task.from_user_id === currentUserId && task.status === 'pending';
 }
