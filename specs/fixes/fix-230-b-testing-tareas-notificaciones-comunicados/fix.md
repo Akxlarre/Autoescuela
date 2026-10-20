@@ -1,7 +1,7 @@
 # Fix: Testing — Tareas/observaciones, notificaciones y comunicados
 > id: fix-230-b-testing-tareas-notificaciones-comunicados
 > refs: ASG-i-035
-> status: in_progress
+> status: done
 > created: 2026-10-20
 
 ## Root Cause
@@ -100,8 +100,28 @@ ruta correcta de la ficha.
 | S12 | ❌ → `fix-233-b` (#339): `tasks_insert` acepta instructores "ambas sedes" (decisión del owner). Migración aplicada |
 | S13 | Latente: solo aplica a un admin con `branch_id`; hoy el único admin no tiene sede |
 | S15 | Resuelta antes por `fix-328-m`; los tipos sin ruta solo cierran el panel |
-| S18–S19 | Pendientes de revisar |
+| S18, S19 | ❌ → `hotfix-106-b` (#344): filas del historial sin falsa acción, historial recarga al cambiar de sede, compositor del admin arranca en la sede elegida. Pendiente por diseño: el historial no se actualiza en vivo (se refresca al volver a la pestaña) |
 | S20 | ❌ → `fix-232-b` (#338): `send-announcement` rechaza (409) lo que no está `enviando`. Desplegado. O04 (otra sede → 403) ya estaba |
-| S21 | **Decisión** (secretaria puede crear notificaciones para cualquier usuario; admin lee todas) |
-| S22 | Parcial: `updateStatus` revisa error; eliminar sin permiso sigue sin mensaje; "Editar" siempre deshabilitado |
+| S21 | ❌ → `fix-234-b` (#343): la secretaria solo notifica a usuarios de su sede (decisión del owner). Que el admin lea todas queda como está |
+| S22 | ❌ → `hotfix-107-b` (#345): eliminar sin permiso avisa. `updateStatus` ya revisaba el error. El botón "Editar" siempre deshabilitado queda como **decisión** del owner |
 | S23 (nuevo) | ❌ → `hotfix-102-b` (#330) |
+
+## Cierre (2026-10-20)
+
+Tres tandas e2e en verde (`comunicacion-tareas`, `comunicacion-notificaciones`,
+`comunicacion-comunicados`: 8 + 6 + 10). De las 23 sospechas: 15 corregidas en esta asignación
+(#328–#345), 5 ya resueltas antes por otros tracks (S1–S4, S7, S15), S13 latente (solo un admin con
+sede cargada; hoy no hay ninguno) y 1 decisión abierta ("Editar" en tareas).
+
+**Quedan manuales** (no se automatizan sin efectos reales):
+- L01–L09: envío real de comunicados a casillas propias (correo recibido, spam, falla SMTP, cerrar la
+  pestaña a mitad).
+- M01, M04–M12: programados que despacha el cron (esperar la hora, cambio de horario, cron caído).
+- I04–I19: productores de otros módulos. Ya los probaron las specs 0024–0027 (olas 1–4, con QA en
+  vivo); la regla por sede de fix-234-b se probó en SQL. Repetirlos exige matrículas y pagos reales:
+  quedan para el checklist de Matrícula (ASG-i-023) y Pagos.
+- A04, A06, P01–P04: visuales/teclado/sin red.
+
+**Datos de prueba:** 3 tareas `E2E-Eliminar-*` eliminadas desde la app (con `deleted_at`, la RLS no
+deja borrarlas por API). SQL para el owner:
+`delete from public.tasks where subject like 'E2E-Eliminar-%' and deleted_at is not null;`
