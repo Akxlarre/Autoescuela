@@ -1,6 +1,6 @@
 # Asignación ASG-i-035 — Testing: Tareas/observaciones, notificaciones y comunicados
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P1

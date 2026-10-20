@@ -272,7 +272,6 @@
 | ASG-i-034 | Testing: Gestión de instructores, secretarias y usuarios | `b` | [fix-197-b-testing-instructores-secretarias-usuarios](fixes/fix-197-b-testing-instructores-secretarias-usuarios/fix.md) | 2026-10-07 |
 | ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `i` | [0010-i-clase-7-bloqueada-sin-segundo-pago](specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | 2026-10-13 |
 | ASG-i-033 | Testing: Documentos (DMS), plantillas y certificación Clase B | `m` | [fix-447-m-testing-documentos-certificacion](fixes/fix-447-m-testing-documentos-certificacion/fix.md) | 2026-10-18 |
-| ASG-i-035 | Testing: Tareas/observaciones, notificaciones y comunicados | `b` | [fix-230-b-testing-tareas-notificaciones-comunicados](fixes/fix-230-b-testing-tareas-notificaciones-comunicados/fix.md) | 2026-10-20 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -442,6 +441,7 @@
 | ASG-i-030 | Testing: Dashboards (admin, ejecutivo y secretaria) | [fix-395-m-testing-dashboards](fixes/fix-395-m-testing-dashboards/fix.md) | 2026-10-14 |
 | ASG-i-031 | Testing: Servicios especiales | [fix-429-m-testing-servicios-especiales](fixes/fix-429-m-testing-servicios-especiales/fix.md) | 2026-10-15 |
 | ASG-i-064 | Arreglar el test de mantenciones de vehículo (falta `basePath` en la ruta simulada) | [hotfix-076-b-test-mantenimientos-basepath](hotfixes/hotfix-076-b-test-mantenimientos-basepath/hotfix.md) | 2026-10-15 |
+| ASG-i-035 | Testing: Tareas/observaciones, notificaciones y comunicados | [fix-230-b-testing-tareas-notificaciones-comunicados](fixes/fix-230-b-testing-tareas-notificaciones-comunicados/fix.md) | 2026-10-20 |
 <!-- AUTO-GENERATED:END -->
 
 ---
