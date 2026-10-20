@@ -331,6 +331,29 @@ browser_resize({ width: 1280, height: 800 })   // restaurar SIEMPRE
 
 En móvil el scroll nativo **debe** volver (`documentScrolls === true` es correcto aquí).
 
+### 9 — Accesibilidad (axe, WCAG 2 A/AA) — spec 0054-b
+
+Correr axe sobre el componente nuevo (no sobre toda la página: el resto ya tiene su línea base en
+el barrido e2e). Reemplazar el selector por el del componente:
+
+```
+browser_evaluate({ function: `async () => {
+  if (!window.axe) {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js';
+    document.head.appendChild(s);
+    await new Promise((r) => (s.onload = r));
+  }
+  const res = await window.axe.run(document.querySelector('app-mi-componente'),
+    { runOnly: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] });
+  return res.violations.map((v) => ({ rule: v.id, impact: v.impact, nodes: v.nodes.length,
+    ejemplo: v.nodes[0]?.target }));
+}` })
+```
+
+Un componente nuevo no debe sumar violaciones `serious`/`critical`. `color-contrast` sobre
+`text-text-muted` es conocido (token del DS, ver ASG-i-065): no usarlo para texto que haya que leer.
+
 ---
 
 ## Qué NO verificar aquí
@@ -395,6 +418,7 @@ Esta sección NO puede ser una lista de checkboxes.]
 | Overflow / hover | ✅ / ❌ [qué] |
 | Modo oscuro | ✅ / ❌ [qué] |
 | Mobile 375px | ✅ / ❌ [qué] |
+| Accesibilidad (axe) | ✅ sin serious/critical nuevas / ❌ [regla, nodos] |
 
 ### Veredicto
 ✅ PASA — listo para el visto bueno del owner
