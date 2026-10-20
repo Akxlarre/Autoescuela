@@ -1,6 +1,6 @@
 # Asignación ASG-i-065 — Revisión de accesibilidad con axe en los tests e2e
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** spec
 > **priority:** P2
