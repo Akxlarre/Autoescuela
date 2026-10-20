@@ -5,6 +5,7 @@ import {
   dueDateToInstant,
   taskBranchScopeFilter,
   sentNonObservations,
+  taskEditPayload,
   isTaskOpen,
   canEditTask,
   canChangeStatus,
@@ -93,6 +94,30 @@ describe('isOverdue', () => {
   it('S10 (hotfix-100-b): una tarea completada nunca está vencida', () => {
     expect(isOverdue('2026-05-17T00:00:00Z', NOW, 'completed')).toBe(false);
     expect(isOverdue('2026-05-17T00:00:00Z', NOW, 'in_progress')).toBe(true);
+  });
+});
+
+// ─── taskEditPayload (spec 0053-b) ──────────────────────────────────────────
+
+describe('taskEditPayload', () => {
+  it('tarea: asunto recortado, descripción vacía → null, fecha límite a las 23:59 de Chile', () => {
+    expect(
+      taskEditPayload('task', { subject: '  Nuevo  ', body: '   ', due_date: '2026-10-20' }),
+    ).toEqual({ subject: 'Nuevo', body: null, due_date: '2026-10-21T02:59:00.000Z' });
+  });
+
+  it('tarea sin fecha → due_date null', () => {
+    expect(taskEditPayload('task', { subject: 'A', body: 'b', due_date: null })).toEqual({
+      subject: 'A',
+      body: 'b',
+      due_date: null,
+    });
+  });
+
+  it('observación o consulta nunca llevan fecha límite', () => {
+    expect(
+      taskEditPayload('observation', { subject: 'A', body: null, due_date: '2026-10-20' }),
+    ).toEqual({ subject: 'A', body: null, due_date: null });
   });
 });
 

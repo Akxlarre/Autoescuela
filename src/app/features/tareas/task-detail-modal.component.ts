@@ -6,6 +6,9 @@ import { TaskReplyThreadComponent } from '@shared/components/task-reply-thread/t
 import { TasksFacade } from '@core/facades/tasks.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { TaskCreateContextService } from '@core/services/ui/task-create-context.service';
+import { TaskCreateDrawerComponent } from './task-create-drawer.component';
 import { formatTaskAge } from '@core/utils/task.utils';
 import type { TaskStatus } from '@core/models/ui/task.model';
 
@@ -108,7 +111,12 @@ const TYPE_ICON: Record<string, string> = {
           }
 
           @if (task()!.canEdit) {
-            <button class="btn-secondary ml-auto text-xs" data-llm-action="edit-task" disabled>
+            <button
+              class="btn-secondary ml-auto text-xs"
+              data-llm-action="edit-task"
+              [disabled]="isMutating()"
+              (click)="onEditClicked()"
+            >
               <app-icon name="edit-3" [size]="13" [ariaHidden]="true" />
               Editar
             </button>
@@ -150,6 +158,8 @@ export class TaskDetailModalComponent {
   protected readonly tasksFacade = inject(TasksFacade);
   private readonly authFacade = inject(AuthFacade);
   private readonly confirmModal = inject(ConfirmModalService);
+  private readonly drawer = inject(LayoutDrawerFacadeService);
+  private readonly taskContext = inject(TaskCreateContextService);
 
   protected readonly task = this.tasksFacade.selectedTask;
   protected readonly isMutating = signal(false);
@@ -206,6 +216,14 @@ export class TaskDetailModalComponent {
     if (!t) return;
     const ok = await this.tasksFacade.addReply(t.id, body);
     if (ok) void this.tasksFacade.loadReplies(t.id);
+  }
+
+  /** Spec 0053-b: abre el formulario en modo edición, apilado sobre el detalle. */
+  protected onEditClicked(): void {
+    const t = this.task();
+    if (!t?.canEdit) return;
+    this.taskContext.primeEdit(t);
+    this.drawer.push(TaskCreateDrawerComponent, 'Editar tarea', 'edit-3');
   }
 
   protected async onDeleteClicked(): Promise<void> {

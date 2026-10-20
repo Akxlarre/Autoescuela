@@ -8,7 +8,11 @@
  * `deleted_at` y la RLS ya no deja verla ni borrarla: se anota su id para limpiarla a mano.
  */
 import type { Page } from '@playwright/test';
-import { chileToday, addDaysIso } from '../src/app/core/utils/chile-time.utils';
+import {
+  chileToday,
+  addDaysIso,
+  chileWallTimeToInstant,
+} from '../src/app/core/utils/chile-time.utils';
 import { getAdminClient } from './support/supabase-admin';
 import { e2eName, expect, test } from './support/fixtures';
 
@@ -366,4 +370,70 @@ test('G07 (S16, hotfix-103-b): /notificaciones de admin y secretaria llevan al i
     await expect(page, url).toHaveURL(new RegExp(`${inicio}$`), CARGA);
     await expect(page.getByText('PLANO')).toHaveCount(0);
   }
+});
+
+// ── Spec 0053-b: editar una tarea enviada ───────────────────────────────────────────────────
+
+test('0053-b AC1–AC5: el admin edita una tarea pendiente; la secretaria ve el cambio en vivo, recibe el aviso y no puede editarla', async ({
+  pageAs,
+}) => {
+  const original = asunto('Editar');
+  const nuevo = asunto('Editada');
+  const manana = addDaysIso(chileToday(), 1);
+  const sec = await pageAs('secretariaA');
+  await abrirComunicacion(sec, 'secretaria');
+  await tab(sec, 'recibidas');
+  await sec.waitForTimeout(4_000);
+
+  const admin = await pageAs('admin');
+  await abrirComunicacion(admin, 'admin');
+  await crearTarea(admin, { tipo: 'Tarea', para: SEC_A.nombre, asunto: original });
+  await expect(tarjeta(sec, original)).toBeVisible(VIVO);
+
+  // AC1 + AC2: el formulario abre precargado; el destinatario no se cambia.
+  await tab(admin, 'sent');
+  await tarjeta(admin, original).click();
+  await admin.locator('[data-llm-action="edit-task"]').click();
+  const form = admin.locator('[data-llm-form="create-task"]');
+  await expect(admin.locator('#t-subject')).toHaveValue(original, CARGA);
+  await expect(form.getByText(SEC_A.nombre)).toBeVisible();
+  await expect(admin.locator('#t-recipient')).toHaveCount(0);
+
+  // "Cancelar" vuelve al detalle; se reabre el formulario.
+  await admin.getByRole('button', { name: 'Cancelar', exact: true }).last().click();
+  await expect(admin.locator('[data-llm-action="edit-task"]')).toBeVisible(CARGA);
+  await admin.locator('[data-llm-action="edit-task"]').click();
+  await expect(admin.locator('#t-subject')).toHaveValue(original, CARGA);
+
+  // AC-E2: asunto de solo espacios no deja guardar.
+  await admin.locator('#t-subject').fill('   ');
+  await expect(admin.locator('[data-llm-action="save-task-edit"]')).toBeDisabled();
+
+  // AC3: guardar con asunto y fecha nuevos.
+  await admin.locator('#t-subject').fill(nuevo);
+  const [y, m, d] = manana.split('-');
+  const fecha = form.locator('app-date-input input');
+  await fecha.click();
+  await fecha.fill('');
+  await fecha.pressSequentially(`${d}${m}${y}`);
+  await admin.keyboard.press('Escape');
+  await admin.locator('[data-llm-action="save-task-edit"]').click();
+  await expect(admin.getByText('Tarea actualizada')).toBeVisible(CARGA);
+  await expect(admin.locator('[data-llm-action="delete-task"]')).toBeVisible(CARGA); // volvió al detalle
+  await expect(admin.getByText(nuevo).first()).toBeVisible();
+  // 23:59 de Chile del día elegido (hotfix-100-b).
+  expect(Date.parse(String((await tarea(nuevo))?.due_date))).toBe(
+    Date.parse(chileWallTimeToInstant(manana, '23:59')),
+  );
+
+  // AC4: la secretaria ve el asunto nuevo sin recargar y recibe el aviso.
+  await expect(tarjeta(sec, nuevo)).toBeVisible(VIVO);
+  await expect
+    .poll(async () => (await notifs(SEC_A.id, nuevo)).map((n) => n.subject), VIVO)
+    .toContain(`Tarea modificada: ${nuevo}`);
+
+  // AC5: la destinataria no ve "Editar".
+  await tarjeta(sec, nuevo).click();
+  await expect(sec.locator('[data-llm-action="mark-task-in-progress"]')).toBeVisible(CARGA);
+  await expect(sec.locator('[data-llm-action="edit-task"]')).toHaveCount(0);
 });

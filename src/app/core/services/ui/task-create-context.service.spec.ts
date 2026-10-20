@@ -22,4 +22,13 @@ describe('TaskCreateContextService', () => {
     service.reset();
     expect(service.initialType()).toBe('task');
   });
+
+  it('spec 0053-b: primeEdit() deja la tarea a editar y reset() la limpia', () => {
+    const tarea = { id: 'uuid-1', subject: 'A' } as never;
+    expect(service.editing()).toBeNull();
+    service.primeEdit(tarea);
+    expect(service.editing()).toBe(tarea);
+    service.reset();
+    expect(service.editing()).toBeNull();
+  });
 });
