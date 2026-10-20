@@ -15,11 +15,37 @@
  * ⚠️ Contra el BUILD DE PRODUCCIÓN servido en localhost:4200 (ver e2e/auth-sesion.spec.ts).
  * Las rutas de secretaria corren con secretariaB (sede 2, con Clase Profesional) para cubrir B05/B06.
  */
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { expect, test } from './support/fixtures';
 import { isKnownError } from './support/known-errors';
 import { getAdminClient } from './support/supabase-admin';
+import {
+  baselineKeys,
+  countByImpact,
+  newSeriousViolations,
+  type A11yViolation,
+} from './support/a11y';
+import { runAxe } from './support/a11y-run';
 import type { Page } from '@playwright/test';
 import type { E2eRole } from './support/accounts';
+
+/**
+ * C7 accesibilidad (spec 0054-b): axe WCAG 2 A/AA en cada celda. Por defecto solo reporta
+ * (adjunto `a11y.json` + anotación). `E2E_A11Y_WRITE_BASELINE=1` escribe la línea base en
+ * `e2e/a11y-baseline/<ruta>-<rol>.json`; `E2E_A11Y_STRICT=1` falla con violaciones serious/critical
+ * que no estén en ella. El modo estricto se enciende cuando el equipo lo acuerde.
+ */
+const A11Y_BASELINE_DIR = 'e2e/a11y-baseline';
+const A11Y_WRITE_BASELINE = !!process.env['E2E_A11Y_WRITE_BASELINE'];
+const A11Y_STRICT = !!process.env['E2E_A11Y_STRICT'];
+
+function readA11yBaseline(file: string): string[] {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8')) as string[];
+  } catch {
+    return [];
+  }
+}
 
 test.describe.configure({ mode: 'parallel', timeout: 240_000 });
 
@@ -157,6 +183,10 @@ function runSweep(role: E2eRole, routes: RouteSpec[], branchForIds: number) {
         .replace(':student', String(ids.student))
         .replace(':vehicle', String(ids.vehicle));
       const failures: string[] = [];
+      const a11yFile = `${A11Y_BASELINE_DIR}/${route.id}-${role}.json`;
+      const a11yBaseline = readA11yBaseline(a11yFile);
+      const a11yReport: Record<string, A11yViolation[] | string> = {};
+      const a11yKeys = new Set<string>();
 
       for (const cell of CELLS) {
         const context = await browser.newContext({
@@ -199,6 +229,20 @@ function runSweep(role: E2eRole, routes: RouteSpec[], branchForIds: number) {
               `${tag} C4: no app-like (shell ${m.shellOverflowY}px, doc ${m.docOverflowY}px de más)`,
             );
 
+          // C7 accesibilidad (spec 0054-b). Un error de axe se anota sin tumbar la celda.
+          try {
+            const violations = await runAxe(page);
+            a11yReport[tag] = violations;
+            for (const k of baselineKeys(cell.theme, violations)) a11yKeys.add(k);
+            const nuevas = newSeriousViolations(cell.theme, violations, a11yBaseline);
+            if (A11Y_STRICT && nuevas.length)
+              failures.push(
+                `${tag} C7: ${nuevas.map((v) => `${v.rule} (${v.impact}, ${v.nodes})`).join(', ')}`,
+              );
+          } catch (e) {
+            a11yReport[tag] = `axe no pudo correr: ${(e as Error).message.split('\n')[0]}`;
+          }
+
           const shot = testInfo.outputPath(`${route.id}-${role}-${cell.width}-${cell.theme}.png`);
           await page.screenshot({ path: shot });
         } catch (e) {
@@ -206,6 +250,31 @@ function runSweep(role: E2eRole, routes: RouteSpec[], branchForIds: number) {
         } finally {
           await context.close();
         }
+      }
+
+      // C7: reporte por celda y, si se pide, la línea base de esta ruta × rol.
+      await testInfo.attach('a11y.json', {
+        body: JSON.stringify(a11yReport, null, 2),
+        contentType: 'application/json',
+      });
+      testInfo.annotations.push({
+        type: 'a11y',
+        description: Object.entries(a11yReport)
+          .map(([tag, v]) =>
+            typeof v === 'string'
+              ? `${tag}: ${v}`
+              : `${tag}: ${
+                  Object.entries(countByImpact(v))
+                    .filter(([, n]) => n > 0)
+                    .map(([impact, n]) => `${n} ${impact}`)
+                    .join(', ') || 'sin violaciones'
+                }`,
+          )
+          .join(' | '),
+      });
+      if (A11Y_WRITE_BASELINE) {
+        if (!existsSync(A11Y_BASELINE_DIR)) mkdirSync(A11Y_BASELINE_DIR, { recursive: true });
+        writeFileSync(a11yFile, JSON.stringify([...a11yKeys].sort(), null, 2) + '\n');
       }
 
       testInfo.annotations.push({ type: 'barrido', description: failures.join(' | ') || 'ok' });

@@ -1,6 +1,6 @@
 # Spec 0054-b — Revisión de accesibilidad con axe en el barrido e2e
 
-> **Status:** in_progress
+> **Status:** done (2026-10-20; ver acceptance.md)
 > **Created:** 2026-10-20
 > **Owner:** Benjamín
 > **Priority:** P2
