@@ -21,6 +21,8 @@ import { DmsListContentComponent } from '@shared/components/dms-list-content/dms
       [schoolDocs]="facade.schoolDocs()"
       [isLoading]="facade.isLoading()"
       [isAdmin]="false"
+      [loadError]="facade.listsError()"
+      (retryRequested)="facade.reload()"
       (uploadStudentDoc)="openUploadStudentDrawer()"
       (uploadInstructorDoc)="openUploadInstructorDrawer()"
       (uploadSchoolDoc)="openUploadSchoolDrawer()"

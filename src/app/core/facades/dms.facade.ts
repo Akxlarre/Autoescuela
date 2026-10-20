@@ -251,6 +251,7 @@ export class DmsFacade {
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
   private _initialized = false;
+  private readonly _listsError = signal<string | null>(null);
   private _lastBranchId: number | null | undefined = undefined;
   /** Descarta respuestas de fetchAllData() fuera de orden (spec 0005-m). */
   private readonly dmsGuard = createRequestGuard();
@@ -305,6 +306,8 @@ export class DmsFacade {
   readonly schoolDocs = this._schoolDocs.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  /** fix-473-m: la primera carga de las listas falló (null si cargaron o si es solo un SWR fallido). */
+  readonly listsError = this._listsError.asReadonly();
   readonly studentDetail = this._studentDetail.asReadonly();
   readonly studentDocs = this._studentDocs.asReadonly();
   readonly studentDocsLoading = this._studentDocsLoading.asReadonly();
@@ -355,6 +358,14 @@ export class DmsFacade {
     // fix-455-m: solo la primera carga avisa; el refresco silencioso (SWR) deja los datos stale.
     const loadError = this._error();
     if (loadError) this.toast.error('Error al cargar documentos', loadError);
+    // fix-473-m: sin datos que mostrar, las listas dicen que falló (no "Sin documentos aún").
+    this._listsError.set(loadError);
+  }
+
+  /** fix-473-m: "Reintentar" tras una primera carga fallida — vuelve a cargar con skeleton. */
+  async reload(): Promise<void> {
+    this._initialized = false;
+    await this.initialize();
   }
 
   private getActiveBranchId(): number | null {
@@ -1162,6 +1173,7 @@ export class DmsFacade {
       // Respuesta fuera de orden: ya se disparó una fetch más reciente, descartar (spec 0005-m).
       if (!this.dmsGuard.isCurrent(requestToken)) return;
 
+      this._listsError.set(null);
       this._recentDocs.set(recentDocs);
       this._studentsWithDocs.set(studentsWithDocs);
       this._uploadableStudents.set(uploadableStudents);

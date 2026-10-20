@@ -441,6 +441,31 @@ describe('DmsFacade', () => {
       );
     });
 
+    it('fix-473-m: primera carga fallida fija listsError; reload() correcto lo limpia', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      localSupabaseSpy.client.from = vi.fn(() =>
+        makeBuilder({ data: null, error: new Error('timeout') }),
+      );
+      await localFacade.initialize();
+      expect(localFacade.listsError()).not.toBeNull();
+
+      localSupabaseSpy.client.from = vi.fn(() => makeBuilder({ data: [], error: null }));
+      await localFacade.reload();
+      expect(localFacade.listsError()).toBeNull();
+    });
+
+    it('fix-473-m: un refresco silencioso fallido con datos cargados no fija listsError', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      localSupabaseSpy.client.from = vi.fn(() => makeBuilder({ data: [], error: null }));
+      await localFacade.initialize();
+
+      localSupabaseSpy.client.from = vi.fn(() =>
+        makeBuilder({ data: null, error: new Error('timeout') }),
+      );
+      await localFacade.refreshSilently();
+      expect(localFacade.listsError()).toBeNull();
+    });
+
     it('refreshSilently() con una consulta fallida no muestra toast (SWR, fix-455-m)', async () => {
       const { localFacade, localSupabaseSpy, localToast } = setupFacade();
       localSupabaseSpy.client.from = vi.fn(() =>

@@ -35,6 +35,8 @@ import {
       [isLoading]="facade.isLoading()"
       [isAdmin]="isAdmin()"
       [showSedeColumn]="showSedeColumn()"
+      [loadError]="facade.listsError()"
+      (retryRequested)="facade.reload()"
       [templateBranches]="branchFacade.branches()"
       [templateForm]="templatesFacade.form()"
       [templateIsLoading]="templatesFacade.isLoading()"

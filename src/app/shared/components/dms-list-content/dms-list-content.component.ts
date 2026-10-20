@@ -184,17 +184,30 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
 
                     @if (filteredStudentsWithDocs().length === 0) {
                       <div class="p-6 flex-1 flex items-center justify-center">
-                        <app-empty-state
-                          [message]="
-                            studentSearch() ? 'No se encontraron resultados' : 'Sin documentos aún'
-                          "
-                          [subtitle]="
-                            studentSearch()
-                              ? 'Prueba con otro nombre o RUT.'
-                              : 'Los alumnos con documentos subidos aparecerán aquí.'
-                          "
-                          [icon]="studentSearch() ? 'search-x' : 'folder'"
-                        />
+                        @if (loadError(); as error) {
+                          <app-empty-state
+                            message="No se pudieron cargar los documentos"
+                            [subtitle]="error"
+                            icon="circle-alert"
+                            actionLabel="Reintentar"
+                            actionIcon="refresh-cw"
+                            (action)="retryRequested.emit()"
+                          />
+                        } @else {
+                          <app-empty-state
+                            [message]="
+                              studentSearch()
+                                ? 'No se encontraron resultados'
+                                : 'Sin documentos aún'
+                            "
+                            [subtitle]="
+                              studentSearch()
+                                ? 'Prueba con otro nombre o RUT.'
+                                : 'Los alumnos con documentos subidos aparecerán aquí.'
+                            "
+                            [icon]="studentSearch() ? 'search-x' : 'folder'"
+                          />
+                        }
                       </div>
                     } @else {
                       <div class="flex-1 min-h-0">
@@ -282,7 +295,12 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                     </div>
                     @if (recentDocs().length === 0) {
                       <div class="p-6 flex-1 flex items-center justify-center">
-                        <app-empty-state message="Sin documentos recientes" icon="file-text" />
+                        <app-empty-state
+                          [message]="
+                            loadError() ? 'No se pudieron cargar' : 'Sin documentos recientes'
+                          "
+                          [icon]="loadError() ? 'circle-alert' : 'file-text'"
+                        />
                       </div>
                     } @else {
                       <ul
@@ -376,11 +394,22 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
 
                   @if (instructorsWithDocs().length === 0) {
                     <div class="p-6 flex-1 flex items-center justify-center">
-                      <app-empty-state
-                        message="Sin instructores"
-                        subtitle="Los instructores de esta sede aparecerán aquí."
-                        icon="shield-check"
-                      />
+                      @if (loadError(); as error) {
+                        <app-empty-state
+                          message="No se pudieron cargar los instructores"
+                          [subtitle]="error"
+                          icon="circle-alert"
+                          actionLabel="Reintentar"
+                          actionIcon="refresh-cw"
+                          (action)="retryRequested.emit()"
+                        />
+                      } @else {
+                        <app-empty-state
+                          message="Sin instructores"
+                          subtitle="Los instructores de esta sede aparecerán aquí."
+                          icon="shield-check"
+                        />
+                      }
                     </div>
                   } @else {
                     <div class="flex-1 min-h-0">
@@ -480,11 +509,22 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                   </div>
                   @if (schoolDocs().length === 0) {
                     <div class="p-6 flex-1 flex items-center justify-center">
-                      <app-empty-state
-                        message="Sin documentos institucionales"
-                        subtitle="Sube las facturas, resoluciones y decretos de la escuela."
-                        icon="building-2"
-                      />
+                      @if (loadError(); as error) {
+                        <app-empty-state
+                          message="No se pudieron cargar los documentos de la escuela"
+                          [subtitle]="error"
+                          icon="circle-alert"
+                          actionLabel="Reintentar"
+                          actionIcon="refresh-cw"
+                          (action)="retryRequested.emit()"
+                        />
+                      } @else {
+                        <app-empty-state
+                          message="Sin documentos institucionales"
+                          subtitle="Sube las facturas, resoluciones y decretos de la escuela."
+                          icon="building-2"
+                        />
+                      }
                     </div>
                   } @else {
                     <ul
@@ -769,6 +809,9 @@ export class DmsListContentComponent {
   readonly isAdmin = input<boolean>(false);
   /** Admin con selector de sede en "Todas las sedes" → muestra la columna Sede en Alumnos. */
   readonly showSedeColumn = input<boolean>(false);
+  /** fix-473-m: la primera carga falló → las listas lo dicen (y ofrecen reintentar) en vez de "vacío". */
+  readonly loadError = input<string | null>(null);
+  readonly retryRequested = output<void>();
 
   // ── Inputs — editor de plantillas (spec 0016-m) ─────────────────────────────
   readonly templateBranches = input<BranchOption[]>([]);
