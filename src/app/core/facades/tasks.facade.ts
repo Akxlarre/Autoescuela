@@ -365,7 +365,14 @@ export class TasksFacade {
         p_task_id: taskId,
       });
       if (error) throw error;
-      if (!data) return false;
+      if (!data) {
+        // hotfix-107-b (S22): antes devolvía false sin decir nada y el botón parecía no funcionar.
+        this.toast.warning(
+          'No puedes eliminar esta tarea: ya no está pendiente o no la creaste tú.',
+        );
+        await this.refreshSilently();
+        return false;
+      }
       if (task) this.broadcastDeleted(task);
       await this.refreshSilently();
       return true;
