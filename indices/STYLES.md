@@ -329,8 +329,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 445 | `#38bdf8` |
 | `--text-muted` | 387 | `rgba(255, 255, 255, 0.55)` |
+| `--ds-brand` | 385 | `#38bdf8` |
 | `--text-primary` | 264 | `var(--color-primary-text)` |
 | `--state-error` | 247 | `#f87171` |
 | `--text-secondary` | 230 | `rgba(255, 255, 255, 0.78)` |
@@ -338,8 +338,9 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--bg-surface` | 192 | `#18181b` |
 | `--state-success` | 178 | `#4ade80` |
 | `--border-default` | 140 | `rgba(255, 255, 255, 0.28)` |
-| `--color-primary` | 133 | `#38bdf8` |
 | `--state-warning` | 131 | `#fbbf24` |
+| `--color-primary` | 113 | `#38bdf8` |
+| `--brand-strong` | 78 | `#38bdf8` |
 | `--bg-elevated` | 77 | `#27272a` |
 | `--text-sm` | 67 | `0.875rem` |
 | `--radius-md` | 58 | `10px` |
@@ -353,7 +354,6 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--border-muted` | 36 | `var(--border-subtle)` |
 | `--bg-base` | 28 | `#09090b` |
 | `--state-error-bg` | 25 | `rgba(248, 113, 113, 0.1)` |
-| `--radius-full` | 24 | `9999px` |
 
 ## Clases semánticas del Design System
 
