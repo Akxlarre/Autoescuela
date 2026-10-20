@@ -20,7 +20,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-058 | Unificar los helpers de autorización de las edge functions (`staff-auth.ts` + `user-edit-authz.ts`) | `cualquiera` | fix | P2 | i | Orden, no seguridad: hoy la resolución del llamador está repetida y los formatos de error difieren (`error` vs `message`). Coordinar con Benjamín |
 | ASG-i-061 | Dashboard ejecutivo: medir todo el negocio, no solo Clase B | `cualquiera` | spec | P2 | i | **Después del piloto.** Hoy cuenta solo ingresos de Clase B (spec 0044-b); se dejó así en `fix-047-i`. Criterio de ingreso: solo `paid` (060 descartada, `pending` va sin fecha) |
 | ASG-i-063 | Cerrar una matrícula y reiniciar el curso (Clase B) | `cualquiera` | spec | P1 | i | **Decisión de negocio primero.** Cerrar con motivo; deuda: perdonar o mantener; ¿también la secretaria? (el admin es el dueño y no siempre está) |
 | ASG-i-065 | Revisión de accesibilidad con axe en los tests e2e | `cualquiera` | spec | P2 | i | Mejora de herramientas, no un fix. Empezar solo reportando; después fallar con problemas graves nuevos. Ya encontró: gris `text-muted` con contraste 2.56:1 |
@@ -272,6 +271,7 @@
 | ASG-i-034 | Testing: Gestión de instructores, secretarias y usuarios | `b` | [fix-197-b-testing-instructores-secretarias-usuarios](fixes/fix-197-b-testing-instructores-secretarias-usuarios/fix.md) | 2026-10-07 |
 | ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `i` | [0010-i-clase-7-bloqueada-sin-segundo-pago](specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | 2026-10-13 |
 | ASG-i-033 | Testing: Documentos (DMS), plantillas y certificación Clase B | `m` | [fix-447-m-testing-documentos-certificacion](fixes/fix-447-m-testing-documentos-certificacion/fix.md) | 2026-10-18 |
+| ASG-i-058 | Unificar los helpers de autorización de las edge functions | `b` | [fix-235-b-unificar-autorizacion-edge-functions](fixes/fix-235-b-unificar-autorizacion-edge-functions/fix.md) | 2026-10-20 |
 <!-- AUTO-GENERATED:END -->
 
 ---
