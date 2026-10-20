@@ -2396,8 +2396,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 |--------|-----|-------|------------|
 | tasks_select | SELECT | `deleted_at IS NULL AND ( (auth_user_role() = 'admin' AND branch_visible(branc…` | — |
 | tasks_delete | DELETE | `auth_user_role() = 'admin' AND branch_visible(branch_id)` | — |
-| tasks_insert | INSERT | — | `( auth_user_role() = 'admin' AND from_user_id = auth_user_id() AND from_role …` |
 | tasks_update | UPDATE | `deleted_at IS NULL AND EXISTS ( SELECT 1 FROM public.users u JOIN public.role…` | `EXISTS ( SELECT 1 FROM public.users u JOIN public.roles r ON r.id = u.role_id…` |
+| tasks_insert | INSERT | — | `( auth_user_role() = 'admin' AND from_user_id = auth_user_id() AND from_role …` |
 
 **Índices:** `idx_tasks_branch_status`, `idx_tasks_due_date`, `idx_tasks_from_user_status`, `idx_tasks_to_user_status`
 
