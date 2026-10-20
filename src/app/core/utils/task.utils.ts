@@ -34,6 +34,16 @@ export function dueDateToInstant(day: string): string {
   return chileWallTimeToInstant(day, '23:59');
 }
 
+/**
+ * Filtro PostgREST (`.or(...)`) de la lista de tareas con una sede elegida (hotfix-101-b, S8):
+ * la sede acota las tareas ajenas, pero lo que el usuario envió o recibió se ve siempre. Una
+ * tarea secretaria → admin queda con la sede de la secretaria; filtrar solo por `branch_id`
+ * le escondía al admin lo que le mandaban desde la otra sede.
+ */
+export function taskBranchScopeFilter(branchId: number, userId: number): string {
+  return `branch_id.eq.${branchId},from_user_id.eq.${userId},to_user_id.eq.${userId}`;
+}
+
 export function canEditTask(task: Task, currentUserId: number): boolean {
   return task.from_user_id === currentUserId && task.status === 'pending';
 }

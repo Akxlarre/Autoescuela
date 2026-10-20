@@ -15,7 +15,13 @@ import type {
   CreateTaskPayload,
   RecipientOption,
 } from '@core/models/ui/task.model';
-import { canSendTo, dueDateToInstant, isOverdue, mapTaskDtoToRow } from '@core/utils/task.utils';
+import {
+  canSendTo,
+  dueDateToInstant,
+  isOverdue,
+  mapTaskDtoToRow,
+  taskBranchScopeFilter,
+} from '@core/utils/task.utils';
 
 // Maps currentUser().role (runtime value = DB roles.name) → TaskFromRole
 // DB seed stores 'secretary' (English), not 'secretaria'
@@ -168,7 +174,7 @@ export class TasksFacade {
       .or(`status.neq.completed,created_at.gte.${ninetyDaysAgo}`);
 
     if (branchId !== null) {
-      query = query.eq('branch_id', branchId);
+      query = query.or(taskBranchScopeFilter(branchId, currentUser.dbId));
     }
 
     const { data, error } = await query.order('created_at', { ascending: false });

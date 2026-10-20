@@ -613,13 +613,17 @@ describe('TasksFacade', () => {
       expect(branchEqCall).toBeUndefined();
     });
 
-    it('applies branch_id filter when selectedBranchId is set', async () => {
+    it('S8 (hotfix-101-b): con sede elegida filtra por sede, pero conserva lo que envió o recibió', async () => {
       mockBranch.selectedBranchId.mockReturnValue(1);
       await facade.initialize();
       const branchEqCall = mockSupabase._builder.eq.mock.calls.find(
         (call: unknown[]) => call[0] === 'branch_id',
       );
-      expect(branchEqCall).toBeDefined();
+      expect(branchEqCall).toBeUndefined();
+      const filtros = mockSupabase._builder.or.mock.calls.map((call: unknown[]) => call[0]);
+      expect(filtros).toContainEqual(
+        expect.stringMatching(/^branch_id\.eq\.1,from_user_id\.eq\.\d+,to_user_id\.eq\.\d+$/),
+      );
     });
   });
 
