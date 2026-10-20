@@ -28,7 +28,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { INSTRUCTOR_DOC_TYPES } from '@core/utils/instructor-doc-types.util';
-import { validateDocumentFile } from '@core/utils/document-file-validation.util';
+import { checkDocumentFile } from '@core/utils/document-file-validation.util';
 import { isOptionalSurnameValid } from '@core/utils/optional-surname.utils';
 import { isValidLicenseNumber } from '@core/utils/license-number.utils';
 
@@ -576,14 +576,14 @@ export class AdminInstructorCrearDrawerComponent {
     return this.instructorDocTypes.find((t) => t.value === type)?.label ?? type;
   }
 
-  protected onDocFileSelected(event: Event): void {
+  protected async onDocFileSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
     const type = this.pendingDocType();
     if (!file || !type) return;
 
-    const error = validateDocumentFile(file);
+    const error = await checkDocumentFile(file);
     this.docValidationError.set(error);
     if (error) return;
 

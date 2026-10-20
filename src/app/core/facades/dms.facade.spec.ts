@@ -1073,7 +1073,8 @@ describe('DmsFacade', () => {
     });
 
     describe('replaceStudentDocument() (fix-471-m)', () => {
-      const pdf = () => new File(['nuevo'], 'carnet-bueno.pdf', { type: 'application/pdf' });
+      const pdf = () =>
+        new File(['%PDF-1.4 nuevo'], 'carnet-bueno.pdf', { type: 'application/pdf' });
 
       function setupReplace(updateResult: { data: any; error: any }) {
         const ctx = setupFacade({ role: 'secretary', branchId: 1 });

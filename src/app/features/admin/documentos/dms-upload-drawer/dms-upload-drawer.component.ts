@@ -18,7 +18,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { INSTRUCTOR_DOC_TYPES } from '@core/utils/instructor-doc-types.util';
-import { validateDocumentFile } from '@core/utils/document-file-validation.util';
+import { checkDocumentFile } from '@core/utils/document-file-validation.util';
 
 type UploadMode = 'student' | 'school' | 'instructor';
 
@@ -486,10 +486,11 @@ export class DmsUploadDrawerComponent {
     if (file) this.validateAndSetFile(file);
   }
 
-  private validateAndSetFile(file: File): void {
-    const error = validateDocumentFile(file);
+  private async validateAndSetFile(file: File): Promise<void> {
+    const error = await checkDocumentFile(file);
     this.validationError.set(error);
-    if (!error) this.selectedFile.set(file);
+    // fix-474-m: un archivo inválido descarta el anterior; si no, "Subir" mandaba otro archivo.
+    this.selectedFile.set(error ? null : file);
   }
 
   async onSubmit(): Promise<void> {

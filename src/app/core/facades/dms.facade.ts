@@ -26,7 +26,7 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { fetchAllPages } from '@core/utils/paged-fetch.utils';
 import { isDeletableStudentDoc } from '@core/utils/dms-documents.utils';
-import { validateDocumentFile } from '@core/utils/document-file-validation.util';
+import { checkDocumentFile } from '@core/utils/document-file-validation.util';
 
 // ─── Labels ──────────────────────────────────────────────────────────────────
 
@@ -684,7 +684,7 @@ export class DmsFacade {
    */
   async replaceStudentDocument(docId: string, file: File): Promise<boolean> {
     try {
-      const invalid = validateDocumentFile(file);
+      const invalid = await checkDocumentFile(file);
       if (invalid) throw new Error(invalid);
 
       const { data: current, error: readError } = await this.supabase.client
