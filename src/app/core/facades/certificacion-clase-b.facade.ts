@@ -10,7 +10,10 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { formatRut } from '@core/utils/rut.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
-import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
+import {
+  edgeFunctionUserMessage,
+  readEdgeFunctionError,
+} from '@core/utils/edge-function-error.utils';
 import { bulkCertificateSummary } from '@core/utils/certificate-confirmation.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { CertificadoAutorizacionFacade } from '@core/facades/certificado-autorizacion.facade';
@@ -365,7 +368,10 @@ export class CertificacionClaseBFacade {
         { body: { enrollment_id: enrollmentId } },
       );
       if (error || !data?.success) {
-        this.toast.error('No se pudo enviar el certificado por correo');
+        // hotfix-160-m: el motivo del rechazo ("El alumno no tiene email…") en vez de un genérico.
+        this.toast.error(
+          await edgeFunctionUserMessage(error, 'No se pudo enviar el certificado por correo'),
+        );
         return;
       }
       this.toast.success('Certificado enviado', `Correo enviado a ${data.recipientEmail}`);

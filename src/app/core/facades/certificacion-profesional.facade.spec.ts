@@ -316,6 +316,20 @@ describe('CertificacionProfesionalFacade', () => {
       expect(toastSpy.success).toHaveBeenCalled();
     });
 
+    it('hotfix-160-m: si la función rechaza, el toast muestra su motivo', async () => {
+      supabaseSpy.client.functions.invoke.mockResolvedValueOnce({
+        data: null,
+        error: {
+          context: new Response(
+            JSON.stringify({ error: 'El certificado aún no ha sido generado' }),
+            { status: 400 },
+          ),
+        },
+      });
+      await facade.enviarEmail(1);
+      expect(toastSpy.error).toHaveBeenCalledWith('El certificado aún no ha sido generado');
+    });
+
     it('generarPendientes sin elegibles no invoca generación', async () => {
       await facade.generarPendientes();
       expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
