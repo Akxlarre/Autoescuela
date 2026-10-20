@@ -175,35 +175,45 @@ async function actualizar(id: number, cambios: Record<string, unknown>): Promise
   if (error) throw error;
 }
 
-test('H06 + H07: secretaria sin sede asignada (anotar qué ve; las rutas profesionales no se abren)', async ({
+test('H06 + H07: secretaria sin sede queda en /sin-sede; al asignarle sede entra sola y al quitársela vuelve', async ({
   page,
 }) => {
   const antes = await secretaria2();
+  const SIN_SEDE = /\/sin-sede$/;
+  const VIVO = { timeout: 20_000 };
   try {
     await actualizar(antes.id, { branch_id: null });
+    // H07: desde el login cae en la pantalla de bloqueo, sin menú ni nada que apretar.
     await login(page, ACCOUNTS.secretariaB.email);
-    await page.waitForURL(/\/(app|modulo-no-disponible|acceso-denegado)/, CARGA);
-    await page.waitForTimeout(4_000);
-    test.info().annotations.push({
-      type: 'H07 al entrar',
-      description: `${new URL(page.url()).pathname} · ${(
-        await page
-          .locator('main')
-          .first()
-          .innerText()
-          .catch(() => '')
-      )
-        .slice(0, 200)
-        .replace(/\s+/g, ' ')}`,
-    });
+    await expect(page).toHaveURL(SIN_SEDE, CARGA);
+    await expect(page.getByText('Tu cuenta no tiene una sede asignada')).toBeVisible();
+    await expect(page.locator('app-sidebar')).toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath('h07-sin-sede.png') });
 
-    // H06
-    await page.goto('/app/secretaria/profesional/alumnos');
-    await page.waitForTimeout(4_000);
-    const ruta = new URL(page.url()).pathname;
-    test.info().annotations.push({ type: 'H06 ruta profesional', description: ruta });
-    expect(ruta).not.toMatch(/\/profesional\//);
+    // H06 y cualquier otra ruta del portal.
+    for (const ruta of [
+      '/app/secretaria/profesional/alumnos',
+      '/app/secretaria/pagos',
+      '/app/secretaria/matricula',
+    ]) {
+      await page.goto(ruta);
+      await expect(page, ruta).toHaveURL(SIN_SEDE, CARGA);
+    }
+    await page.waitForTimeout(5_000); // canal de tiempo real unido
+
+    // El admin le asigna la sede → entra sola.
+    await actualizar(antes.id, { branch_id: antes.branch_id });
+    await expect(page).toHaveURL(/\/app\/secretaria\/dashboard$/, VIVO);
+    await page.waitForTimeout(5_000);
+
+    // El admin se la quita con la app abierta → vuelve a la pantalla de bloqueo.
+    await actualizar(antes.id, { branch_id: null });
+    await expect(page).toHaveURL(SIN_SEDE, VIVO);
+
+    await page.locator('[data-llm-action="cerrar-sesion-sin-sede"]').click();
+    await expect(page).toHaveURL(/\/login/, CARGA);
+    await page.goto('/app');
+    await expect(page).toHaveURL(/\/login/, CARGA);
   } finally {
     await actualizar(antes.id, { branch_id: antes.branch_id });
   }

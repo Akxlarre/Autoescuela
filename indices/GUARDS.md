@@ -23,6 +23,7 @@
 | Guard | Tipo | Dependencias | Archivo |
 |-------|------|-------------|---------|
 | `authGuard` | `CanActivateFn` | `AuthFacade`, `Router` | `src/app/core/guards/auth.guard.ts` |
+| `branchAssignedGuard` | `CanActivateFn` | `AuthFacade`, `Router` | `src/app/core/guards/branch-assigned.guard.ts` |
 | `enrollmentDraftGuard` | `CanDeactivateFn` | `EnrollmentFacade`, `ConfirmModalService` | `src/app/core/guards/enrollment-draft.guard.ts` |
 | `firstLoginGuard` | `CanActivateFn` | `AuthFacade`, `Router` | `src/app/core/guards/first-login.guard.ts` |
 | `guestGuard` | `CanActivateFn` | `AuthFacade`, `Router` | `src/app/core/guards/guest.guard.ts` |

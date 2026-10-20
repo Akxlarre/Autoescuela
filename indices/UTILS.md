@@ -101,6 +101,7 @@
 | `src/app/core/utils/liquidaciones-avatar-colors.ts` | `LIQUIDACIONES_AVATAR_COLORS`, `getLiquidacionAvatarColor` |
 | `src/app/core/utils/live-class-action.utils.ts` | `ClasePracticaActionRow`, `LiveClassAgendaSlot`, `liveClassToAgendaSlot`, `LiveClassActionPlan`, `resolveLiveClassActionPlan` |
 | `src/app/core/utils/maintenance-format.utils.ts` | `formatKm`, `servicesLabel` |
+| `src/app/core/utils/missing-branch.utils.ts` | `isMissingBranch` |
 | `src/app/core/utils/name.utils.ts` | `stripInvalidNameChars`, `validateName` |
 | `src/app/core/utils/notification.utils.ts` | `mapReferenceToNotificationType`, `mapNotificationDtoToUi`, `groupNotifications` |
 | `src/app/core/utils/odometer.utils.ts` | `OdometerFontTier`, `odometerDigitCount`, `odometerFontTier`, `KM_SUSPICIOUS_DELTA`, `kmWarning` |
