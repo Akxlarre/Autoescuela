@@ -42,6 +42,7 @@ import {
 import type { BranchOption } from '@core/models/ui/branch.model';
 import { editableDocumentTypes } from '@core/utils/document-template-options.utils';
 import { isDeletableStudentDoc } from '@core/utils/dms-documents.utils';
+import { filterBySearchTokens } from '@core/utils/search-filter.utils';
 
 interface DocumentTypeOption {
   label: string;
@@ -868,13 +869,11 @@ export class DmsListContentComponent {
   );
 
   // ── Computed ──────────────────────────────────────────────────────────────
-  readonly filteredStudentsWithDocs = computed(() => {
-    const search = this.studentSearch().toLowerCase().trim();
-    if (!search) return this.studentsWithDocs();
-    return this.studentsWithDocs().filter(
-      (s) => s.name.toLowerCase().includes(search) || s.rut.toLowerCase().includes(search),
-    );
-  });
+  // hotfix-162-m: sin tildes ("jose" → José), RUT en cualquier formato y nombre/apellido en
+  // cualquier orden, igual que la Base de Alumnos.
+  readonly filteredStudentsWithDocs = computed(() =>
+    filterBySearchTokens(this.studentsWithDocs(), this.studentSearch(), (s) => [s.name, s.rut]),
+  );
 
   readonly heroActions = () => {
     const tab = this.activeTab();
