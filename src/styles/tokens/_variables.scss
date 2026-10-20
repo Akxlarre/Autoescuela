@@ -171,7 +171,9 @@
      NUNCA usar para fondos ni acciones */
   --text-primary: #09090b;
   --text-secondary: #52525b;
-  --text-muted: #a1a1aa;
+  /* spec 0055-b: #a1a1aa daba 2,56:1 sobre blanco (WCAG AA pide 4,5). #6b6b74 da ≥4,8 sobre
+     blanco, --bg-base y el tinte de marca, y sigue más claro que --text-secondary. */
+  --text-muted: #6b6b74;
   --text-disabled: #d4d4d8;
 
   /* Bordes */
@@ -231,6 +233,10 @@
   --color-primary-muted: rgba(14, 165, 233, 0.08);
   --color-primary-tint: rgba(14, 165, 233, 0.04);
   --color-primary-text: #ffffff;
+  /* spec 0055-b: marca para TEXTO y FONDOS SÓLIDOS con texto encima. El celeste #0ea5e9 da 2,77:1
+     sobre blanco; #0369a1 da 5,93. --ds-brand sigue siendo el celeste brillante para bordes,
+     degradados, foco e indicadores. */
+  --brand-strong: #0369a1;
   --accent-border: rgba(14, 165, 233, 0.2);
   --accent-glow: rgba(14, 165, 233, 0.15);
   --shadow-focus: 0 0 0 3px rgba(14, 165, 233, 0.08);
@@ -248,7 +254,7 @@
   --action-primary: var(--ds-brand);
   --action-primary-hover: var(--color-primary-hover);
   --action-primary-text: var(--color-primary-text);
-  --color-brand: var(--ds-brand);
+  --color-brand: var(--brand-strong); /* spec 0055-b: text-brand/bg-brand con contraste AA */
 
   /* ──────────────────────────────────────────
      CAPA 4 — COMPONENTES
@@ -257,8 +263,9 @@
    ────────────────────────────────────────── */
 
   /* ── Botón primario ── */
-  --btn-primary-bg: var(--ds-brand);
-  --btn-primary-bg-hover: var(--color-primary-hover);
+  /* spec 0055-b: fondo sólido con texto blanco → tono profundo (5,93:1; hover sky-800 7,6:1). */
+  --btn-primary-bg: var(--brand-strong);
+  --btn-primary-bg-hover: #075985;
   --btn-primary-text: var(--color-primary-text);
   --btn-primary-radius: var(--radius-md);
   --btn-primary-padding-x: var(--space-4);
@@ -270,7 +277,7 @@
   --btn-secondary-bg: transparent;
   --btn-secondary-bg-hover: var(--color-primary-muted);
   --btn-secondary-border: var(--border-default);
-  --btn-secondary-text: var(--color-primary);
+  --btn-secondary-text: var(--brand-strong); /* spec 0055-b: texto de marca con contraste AA */
   --btn-secondary-radius: var(--radius-md);
 
   /* ── Botón ghost / terciario ── */
@@ -418,7 +425,8 @@
   /* ── Capa 2: Tipografía ── */
   --text-primary: #f4f4f5;
   --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
+  /* spec 0055-b: #71717a daba 3,67:1 sobre --bg-surface. #929299 da ≥5,4 sobre las superficies. */
+  --text-muted: #929299;
   --text-disabled: #52525b;
 
   /* ── Capa 2: Bordes ──
@@ -465,6 +473,10 @@
   --color-primary: #38bdf8;
   --color-primary-hover: #7dd3fc;
   --color-primary-dark: #0ea5e9;
+  /* spec 0055-b: en oscuro el sky-400 ya da 8,2:1 como texto sobre las superficies. */
+  --brand-strong: #38bdf8;
+  /* Sobre el botón sky-400, el blanco daba 2,14:1; azul marino #082f49 da 6,48. */
+  --btn-primary-text: #082f49;
   --color-primary-muted: rgba(56, 189, 248, 0.15);
   --color-primary-tint: rgba(56, 189, 248, 0.08);
   --color-primary-text: #ffffff;
@@ -483,7 +495,7 @@
   --action-primary: var(--ds-brand);
   --action-primary-hover: var(--color-primary-hover);
   --action-primary-text: var(--color-primary-text);
-  --color-brand: var(--ds-brand);
+  --color-brand: var(--brand-strong); /* spec 0055-b */
 
   /* ── Capa 4: Componentes (solo overrides necesarios) ──
      La mayoría de tokens de componente propagan automáticamente
@@ -727,7 +739,7 @@ body {
   // Botón primario: inverso (blanco + texto brand)
   --btn-primary-bg: rgba(255, 255, 255, 0.95);
   --btn-primary-bg-hover: rgba(255, 255, 255, 1);
-  --btn-primary-text: var(--ds-brand); // brand sobre blanco = legible
+  --btn-primary-text: #0369a1; // spec 0055-b: botón siempre blanco → tono profundo (5,93:1)
   --btn-primary-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   --btn-primary-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.2);
 

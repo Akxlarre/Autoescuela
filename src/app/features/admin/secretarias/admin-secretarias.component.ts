@@ -392,7 +392,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
     }
     .action-btn:hover {
       border-color: var(--ds-brand);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
       background: color-mix(in srgb, var(--ds-brand) 4%, transparent);
     }
 
@@ -409,7 +409,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
     }
     .pagination-btn:hover:not(:disabled) {
       border-color: var(--ds-brand);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
     .pagination-btn:disabled {
       opacity: 0.4;
@@ -425,7 +425,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
       padding: 12px;
       border-radius: var(--radius-lg);
       border: none;
-      background: var(--ds-brand);
+      background: var(--brand-strong);
       color: white;
       font-size: 13px;
       font-weight: 600;

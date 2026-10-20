@@ -14,7 +14,7 @@ import type { EvaluationChecklistItem } from '@core/models/ui/instructor-portal.
         font-weight: 700;
       }
       .text-checked {
-        color: var(--ds-brand) !important;
+        color: var(--brand-strong) !important;
       }
     `,
   ],

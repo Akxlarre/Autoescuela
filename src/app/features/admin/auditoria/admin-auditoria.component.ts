@@ -370,7 +370,7 @@ const ACTION_OPTIONS = withAllOption(
     }
 
     .brand-link {
-      color: var(--ds-brand);
+      color: var(--brand-strong);
       text-decoration: none;
     }
 
@@ -433,7 +433,7 @@ const ACTION_OPTIONS = withAllOption(
     }
     .action-badge--info {
       background: color-mix(in srgb, var(--ds-brand) 12%, transparent);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
     .action-badge--warning {
       background: color-mix(in srgb, var(--state-warning) 15%, transparent);

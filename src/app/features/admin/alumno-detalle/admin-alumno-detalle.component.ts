@@ -1121,7 +1121,7 @@ export function resolveCertificadoBAction(
     }
     .progress-fill-brand {
       height: 100%;
-      background: var(--ds-brand);
+      background: var(--brand-strong);
       border-radius: var(--radius-full);
       display: flex;
       align-items: center;

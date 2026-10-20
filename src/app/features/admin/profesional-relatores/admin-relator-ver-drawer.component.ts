@@ -295,7 +295,7 @@ import { getSpecColor, getSpecLabel } from '@core/utils/professional-specializat
     }
     .status-badge--planned {
       background: color-mix(in srgb, var(--ds-brand) 10%, transparent);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
     .status-badge--in_progress {
       background: color-mix(in srgb, var(--state-success) 12%, transparent);

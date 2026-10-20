@@ -96,7 +96,7 @@ export type StatBoxVariant = 'default' | 'success' | 'warning' | 'error' | 'bran
       .stat-box__label,
       .stat-box__value,
       .stat-box__icon {
-        color: var(--ds-brand);
+        color: var(--brand-strong);
       }
     }
 

@@ -274,7 +274,7 @@ function minimumPhoneLength(control: AbstractControl): ValidationErrors | null {
       font-size: var(--text-xs);
       font-weight: var(--font-semibold);
       letter-spacing: 0.06em;
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
     .field-input {
       width: 100%;

@@ -122,7 +122,7 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
         border-style: solid;
         border-color: var(--ds-brand);
         background: color-mix(in srgb, var(--ds-brand) 8%, var(--bg-surface));
-        color: var(--ds-brand);
+        color: var(--brand-strong);
         box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-brand) 15%, transparent);
       }
     }
@@ -144,7 +144,7 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
     /* ── In progress — más prominente: fondo sólido brand ── */
 
     .slot-block--in_progress {
-      background: var(--ds-brand);
+      background: var(--brand-strong);
       border: 1.5px solid var(--color-primary-hover);
       color: var(--color-primary-text);
 

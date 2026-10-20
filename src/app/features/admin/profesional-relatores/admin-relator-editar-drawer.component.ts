@@ -284,7 +284,7 @@ import { SPECIALIZATION_OPTIONS } from '@core/utils/professional-specializations
       shrink: 0;
     }
     .toggle-btn--active {
-      background: var(--ds-brand);
+      background: var(--brand-strong);
     }
     .toggle-knob {
       position: absolute;

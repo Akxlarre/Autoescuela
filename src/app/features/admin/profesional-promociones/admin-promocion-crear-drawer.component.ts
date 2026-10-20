@@ -356,10 +356,10 @@ function generatePromoName(startIso: string, code: string): string {
     }
     .monday-btn:hover {
       border-color: var(--ds-brand);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
     .monday-btn.selected {
-      background: var(--color-primary);
+      background: var(--brand-strong);
       color: white;
       border-color: var(--color-primary);
       font-weight: 600;
@@ -384,7 +384,7 @@ function generatePromoName(startIso: string, code: string): string {
     }
     .btn-secondary:hover {
       border-color: var(--ds-brand);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
   `,
 })

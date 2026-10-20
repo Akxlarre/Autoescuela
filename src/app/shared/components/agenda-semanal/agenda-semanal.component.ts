@@ -497,13 +497,13 @@ interface CellSummary {
       background: transparent;
 
       &--active {
-        color: var(--ds-brand);
+        color: var(--brand-strong);
         border-bottom-color: var(--ds-brand);
         font-weight: 600;
       }
 
       &--today .agenda-mobile-tab-day {
-        color: var(--ds-brand);
+        color: var(--brand-strong);
       }
     }
 
@@ -512,7 +512,7 @@ interface CellSummary {
       width: 4px;
       height: 4px;
       border-radius: 50%;
-      background: var(--ds-brand);
+      background: var(--brand-strong);
     }
 
     /* ── Toolbar ───────────────────────────────────────────────────── */
@@ -539,7 +539,7 @@ interface CellSummary {
 
       &:hover {
         border-color: var(--ds-brand);
-        color: var(--ds-brand);
+        color: var(--brand-strong);
         background: color-mix(in srgb, var(--ds-brand) 6%, var(--bg-surface));
       }
 
@@ -585,7 +585,7 @@ interface CellSummary {
       padding: 0.25rem 0.625rem;
       border-radius: var(--radius-md);
       border: 1px solid var(--ds-brand);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
       background: color-mix(in srgb, var(--ds-brand) 8%, var(--bg-surface));
       cursor: pointer;
       transition: background 120ms ease;
@@ -636,7 +636,7 @@ interface CellSummary {
 
     .agenda-jump-date ::ng-deep .p-datepicker-dropdown:hover {
       border-color: var(--ds-brand);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
       background: color-mix(in srgb, var(--ds-brand) 6%, var(--bg-surface));
     }
 
@@ -739,7 +739,7 @@ interface CellSummary {
       z-index: 2;
 
       &--today {
-        color: var(--ds-brand);
+        color: var(--brand-strong);
         background: color-mix(in srgb, var(--ds-brand) 5%, var(--bg-surface));
 
         &::after {
@@ -748,7 +748,7 @@ interface CellSummary {
           width: 4px;
           height: 4px;
           border-radius: 50%;
-          background: var(--ds-brand);
+          background: var(--brand-strong);
           margin: 2px auto 0;
         }
       }
@@ -932,7 +932,7 @@ interface CellSummary {
 
     .cell-pill--available {
       background: color-mix(in srgb, var(--ds-brand) 12%, var(--bg-surface));
-      color: var(--ds-brand);
+      color: var(--brand-strong);
       border: 1px solid color-mix(in srgb, var(--ds-brand) 35%, transparent);
     }
 
@@ -963,7 +963,7 @@ interface CellSummary {
       border-radius: var(--radius-sm);
 
       &:hover {
-        color: var(--ds-brand);
+        color: var(--brand-strong);
         background: color-mix(in srgb, var(--ds-brand) 8%, transparent);
       }
     }
@@ -1003,7 +1003,7 @@ interface CellSummary {
       }
 
       &--in-progress::before {
-        background: var(--ds-brand);
+        background: var(--brand-strong);
         border: 1.5px solid var(--color-primary-hover);
       }
 

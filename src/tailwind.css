@@ -39,7 +39,9 @@
 
 @theme {
   /* ── Colores de marca ── */
-  --color-brand: var(--ds-brand);
+  /* spec 0055-b: text-brand / bg-brand → tono profundo (contraste AA). Bordes y detalles en SCSS
+     siguen con --ds-brand (celeste brillante). */
+  --color-brand: var(--brand-strong);
   --color-brand-hover: var(--color-primary-hover);
   --color-brand-dark: var(--color-primary-dark);
   --color-brand-muted: var(--color-primary-muted);
