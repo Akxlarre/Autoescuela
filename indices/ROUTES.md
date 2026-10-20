@@ -26,6 +26,7 @@
 | `/login` | `LoginComponent` | `guestGuard` | `src/app/app.routes.ts` |
 | `/force-password-change` | `ForcePasswordChangeComponent` | `firstLoginGuard` | `src/app/app.routes.ts` |
 | `/recuperar-contrasena` | `ForcePasswordChangeComponent` | `passwordRecoveryGuard` | `src/app/app.routes.ts` |
+| `/sin-sede` | `SinSedeComponent` | `authGuard` | `src/app/app.routes.ts` |
 | `/modulo-no-disponible` | `ModuloNoDisponibleComponent` | — | `src/app/app.routes.ts` |
 | `/inscripcion` | `PublicEnrollmentComponent` | `pilotPhaseGuard('inscripcion-publica')` | `src/app/app.routes.ts` |
 | `/inscripcion/retorno` | `PublicEnrollmentRetornoComponent` | `pilotPhaseGuard('inscripcion-publica')` | `src/app/app.routes.ts` |
@@ -69,7 +70,7 @@
 | `/app/admin/clase-profesional/archivo` | `AdminProfesionalArchivoComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
 | `/app/admin/auditoria` | `AdminAuditoriaComponent` | — | `src/app/app.routes.ts` |
 | `/app/admin/configuracion-web` | `AdminConfiguracionWebComponent` | — | `src/app/app.routes.ts` |
-| `/app/secretaria` | — | `hasRoleGuard(['secretaria'])` | `src/app/app.routes.ts` |
+| `/app/secretaria` | — | `hasRoleGuard(['secretaria'])`, `branchAssignedGuard` | `src/app/app.routes.ts` |
 | `/app/secretaria` | → redirect a `dashboard` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/dashboard` | `SecretariaDashboardComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/alumnos` | `SecretariaAlumnosComponent` | — | `src/app/app.routes.ts` |

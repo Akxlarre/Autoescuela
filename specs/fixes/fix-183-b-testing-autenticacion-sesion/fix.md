@@ -202,7 +202,7 @@ bloqueados, API, dos equipos, sin sede, sin rol): **13/13 en verde, 2 corridas**
 | N04 | ✅ por API, el instructor ve 0 pagos y 0 alumnos; el alumno ve solo lo suyo (3 pagos, 1 alumno), de 186 pagos de la escuela |
 | L04 | ✅ la misma secretaria en dos equipos: ambos siguen funcionando |
 | H06 | ✅ sin sede, la ruta profesional redirige al dashboard |
-| H07 | ⚠️ sin sede ve el dashboard con todo en 0 (no ve datos de otras sedes), sin ningún aviso de "cuenta sin sede". Queda como **decisión** (pregunta H07 de §4) |
+| H07 | ❌ → `hotfix-099-b`: sin sede veía el dashboard en 0 sin aviso y podía guardar (fallaba por RLS o quedaba sin sede). Ahora cae en `/sin-sede` ("Tu cuenta no tiene una sede asignada" + "Cerrar sesión"); entra sola cuando el admin le asigna sede |
 | J05 | ✅ sin rol reconocido: se queda en el login con "No se pudo cargar tu perfil. Si el problema continúa, contacta al administrador."; el botón de MND cierra la sesión |
 
 **Siguen sin automatizar:**

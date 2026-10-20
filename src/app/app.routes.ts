@@ -8,6 +8,7 @@ import { roleRedirectGuard } from '@core/guards/role-redirect.guard';
 import { enrollmentDraftGuard } from '@core/guards/enrollment-draft.guard';
 import { professionalBranchGuard } from '@core/guards/professional-branch.guard';
 import { pilotPhaseGuard } from '@core/guards/pilot-phase.guard';
+import { branchAssignedGuard } from '@core/guards/branch-assigned.guard';
 
 /**
  * Rutas de la aplicación, estructuradas por portal de rol.
@@ -50,6 +51,13 @@ export const routes: Routes = [
       import('./features/auth/force-password-change/force-password-change.component').then(
         (m) => m.ForcePasswordChangeComponent,
       ),
+  },
+  {
+    // hotfix-099-b: secretaria sin sede asignada — no puede operar hasta que el admin le asigne una.
+    path: 'sin-sede',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/sin-sede/sin-sede.component').then((m) => m.SinSedeComponent),
   },
   {
     path: 'modulo-no-disponible',
@@ -379,7 +387,8 @@ export const routes: Routes = [
       // ─────────────────────────────────────
       {
         path: 'secretaria',
-        canActivate: [hasRoleGuard(['secretaria'])],
+        canActivate: [hasRoleGuard(['secretaria']), branchAssignedGuard],
+        canActivateChild: [branchAssignedGuard],
         children: [
           // /app/secretaria sin sub-ruta → su dashboard (fix-184-b; antes daba 404).
           { path: '', redirectTo: 'dashboard', pathMatch: 'full' },

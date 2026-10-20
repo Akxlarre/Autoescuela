@@ -26,6 +26,7 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { isMissingBranch } from '@core/utils/missing-branch.utils';
 import { DmsViewerModalComponent } from '@shared/components/dms-viewer-modal/dms-viewer-modal.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { GlobalSearchFacade } from '@core/facades/global-search.facade';
@@ -360,6 +361,13 @@ export class AppShellComponent {
     effect(() => {
       if (this.auth.currentUser()?.dbId) {
         this.auth.initializeRealtime();
+      }
+    });
+    // hotfix-099-b: el admin le quitó la sede con la app abierta → no puede seguir operando.
+    effect(() => {
+      const user = this.auth.currentUser();
+      if (user && isMissingBranch(user.role, user.branchId, user.canAccessBothBranches)) {
+        void this.router.navigate(['/sin-sede']);
       }
     });
   }
