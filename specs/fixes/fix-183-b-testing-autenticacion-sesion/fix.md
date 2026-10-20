@@ -182,3 +182,33 @@ prueba `secretaria@test.com` / `secretaria2@test.com` y deja los valores origina
 
 Nota: el cambio llega por Realtime cuando el canal ya está unido; el test espera 5 s después de
 cargar para representar al admin actuando sobre una sesión asentada.
+
+## Sexta y séptima tanda (2026-10-19)
+
+`e2e/auth-sesion-6.spec.ts` (borrador de matrícula) y `e2e/auth-sesion-7.spec.ts` (portales
+bloqueados, API, dos equipos, sin sede, sin rol): **13/13 en verde, 2 corridas**.
+- La sexta siembra alumnos E2E- con un borrador vigente y el harness los borra al terminar.
+- La séptima usa las cuentas de prueba `instructor@test.com` y `alumno@test.com` (las mismas que
+  muestra el login). Para H06/H07 y J05 cambia `branch_id` / `role_id` de `secretaria2@test.com` y
+  los restaura en `finally` (verificado en la BD).
+
+| Casos | Resultado |
+|---|---|
+| M01, M02, M03 | ✅ con borrador, el menú pide "¿Deseas salir?"; "Quedarse" sigue en el wizard; "Sí, salir" navega y el borrador sigue en la lista |
+| M06 | ✅ "Atrás" del navegador muestra el mismo aviso |
+| E09, M08 | ✅ cerrar sesión con un borrador abierto: pide confirmar el cierre **y además** el aviso del borrador (dos confirmaciones), y termina en `/login` con la sesión cerrada de verdad |
+| G21–G26, I06, J02 | ✅ instructor: el login cae en MND sin menú; las 11 rutas del portal terminan en MND; "Volver al inicio de sesión" cierra la sesión sin bucle |
+| G27–G30 | ✅ alumno: igual, 9 rutas; ninguna ruta de pago (incluido `/pagar/retorno?token_ws=x`) llama a una Edge Function |
+| N04 | ✅ por API, el instructor ve 0 pagos y 0 alumnos; el alumno ve solo lo suyo (3 pagos, 1 alumno), de 186 pagos de la escuela |
+| L04 | ✅ la misma secretaria en dos equipos: ambos siguen funcionando |
+| H06 | ✅ sin sede, la ruta profesional redirige al dashboard |
+| H07 | ⚠️ sin sede ve el dashboard con todo en 0 (no ve datos de otras sedes), sin ningún aviso de "cuenta sin sede". Queda como **decisión** (pregunta H07 de §4) |
+| J05 | ✅ sin rol reconocido: se queda en el login con "No se pudo cargar tu perfil. Si el problema continúa, contacta al administrador."; el botón de MND cierra la sesión |
+
+**Siguen sin automatizar:**
+- A16 (usuario sin fila en `users`: J05 cubre el mensaje).
+- B04–B06 (horas de espera o cerrar todas las sesiones de una cuenta compartida por la suite).
+- C02–C13 (primer login; desde `fix-182-b` se activa por correo).
+- D03–D08, D10 (dominio).
+- G20, G34, K08 (cubierto por `secretarias-cambio-correo-real.spec.ts`), L05, M07 (decisión),
+  N02, O05 (autocompletar del navegador).
