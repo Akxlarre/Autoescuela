@@ -239,9 +239,13 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                     <td class="px-4 py-2">
                       <app-badge variant="brand">{{ alumno.curso }}</app-badge>
                     </td>
-                    <!-- Prácticas: siempre 12/12 si aparece en esta lista -->
+                    <!-- Prácticas: verde solo completas (el admin ve también incompletos, hotfix-165-m) -->
                     <td class="px-4 py-2 text-center">
-                      <span class="font-semibold text-success">
+                      <span
+                        class="font-semibold"
+                        [class.text-success]="alumno.clasesCompletadas >= alumno.clasesTotales"
+                        [class.text-warning]="alumno.clasesCompletadas < alumno.clasesTotales"
+                      >
                         {{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }}
                       </span>
                     </td>
@@ -382,7 +386,11 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                   class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary"
                 >
                   <app-badge variant="brand">{{ alumno.curso }}</app-badge>
-                  <span class="font-semibold text-success">
+                  <span
+                    class="font-semibold"
+                    [class.text-success]="alumno.clasesCompletadas >= alumno.clasesTotales"
+                    [class.text-warning]="alumno.clasesCompletadas < alumno.clasesTotales"
+                  >
                     {{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }} prácticas
                   </span>
                   @if (alumno.fechaTermino) {
