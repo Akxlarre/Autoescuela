@@ -103,7 +103,7 @@ ruta correcta de la ficha.
 | S18, S19 | ❌ → `hotfix-106-b` (#344): filas del historial sin falsa acción, historial recarga al cambiar de sede, compositor del admin arranca en la sede elegida. Pendiente por diseño: el historial no se actualiza en vivo (se refresca al volver a la pestaña) |
 | S20 | ❌ → `fix-232-b` (#338): `send-announcement` rechaza (409) lo que no está `enviando`. Desplegado. O04 (otra sede → 403) ya estaba |
 | S21 | ❌ → `fix-234-b` (#343): la secretaria solo notifica a usuarios de su sede (decisión del owner). Que el admin lea todas queda como está |
-| S22 | ❌ → `hotfix-107-b` (#345): eliminar sin permiso avisa. `updateStatus` ya revisaba el error. El botón "Editar" siempre deshabilitado queda como **decisión** del owner |
+| S22 | ❌ → `hotfix-107-b` (#345): eliminar sin permiso avisa. `updateStatus` ya revisaba el error. El botón "Editar" siempre deshabilitado: el owner pidió implementarlo → spec 0053-b |
 | S23 (nuevo) | ❌ → `hotfix-102-b` (#330) |
 
 ## Cierre (2026-10-20)
@@ -111,7 +111,7 @@ ruta correcta de la ficha.
 Tres tandas e2e en verde (`comunicacion-tareas`, `comunicacion-notificaciones`,
 `comunicacion-comunicados`: 8 + 6 + 10). De las 23 sospechas: 15 corregidas en esta asignación
 (#328–#345), 5 ya resueltas antes por otros tracks (S1–S4, S7, S15), S13 latente (solo un admin con
-sede cargada; hoy no hay ninguno) y 1 decisión abierta ("Editar" en tareas).
+sede cargada; hoy no hay ninguno) y "Editar" en tareas implementado aparte en la spec 0053-b.
 
 **Quedan manuales** (no se automatizan sin efectos reales):
 - L01–L09: envío real de comunicados a casillas propias (correo recibido, spam, falla SMTP, cerrar la

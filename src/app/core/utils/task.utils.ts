@@ -53,6 +53,27 @@ export function sentNonObservations<T extends Pick<Task, 'type'>>(sent: T[]): T[
   return sent.filter((t) => t.type !== 'observation');
 }
 
+/** Campos que el emisor puede corregir de una tarea pendiente (spec 0053-b). */
+export interface TaskEditChanges {
+  subject: string;
+  body: string | null;
+  /** `AAAA-MM-DD` del selector, o null. */
+  due_date: string | null;
+}
+
+/**
+ * UPDATE de una edición (spec 0053-b): asunto recortado, descripción vacía → null y fecha límite
+ * con la misma regla que al crear (23:59 de Chile, hotfix-100-b), solo en tareas.
+ */
+export function taskEditPayload(
+  type: Task['type'],
+  changes: TaskEditChanges,
+): { subject: string; body: string | null; due_date: string | null } {
+  const body = changes.body?.trim() ? changes.body.trim() : null;
+  const due = type === 'task' && changes.due_date ? dueDateToInstant(changes.due_date) : null;
+  return { subject: changes.subject.trim(), body, due_date: due };
+}
+
 export function canEditTask(task: Task, currentUserId: number): boolean {
   return task.from_user_id === currentUserId && task.status === 'pending';
 }

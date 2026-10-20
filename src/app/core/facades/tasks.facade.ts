@@ -3,7 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
-import { assertWriteOk } from '@core/utils/db-error.utils';
+import { assertWriteOk, NoRowsAffectedError } from '@core/utils/db-error.utils';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -21,6 +21,8 @@ import {
   isOverdue,
   mapTaskDtoToRow,
   taskBranchScopeFilter,
+  taskEditPayload,
+  type TaskEditChanges,
 } from '@core/utils/task.utils';
 
 // Maps currentUser().role (runtime value = DB roles.name) → TaskFromRole
@@ -280,6 +282,49 @@ export class TasksFacade {
       this.toast.error('Error al actualizar el estado');
       return false;
     }
+  }
+
+  /**
+   * El emisor corrige asunto, descripción o fecha límite de una tarea pendiente (spec 0053-b).
+   * El filtro `status = 'pending'` cubre AC-E1: si la iniciaron mientras se editaba, no se toca.
+   */
+  async updateTask(
+    task: Pick<Task, 'id' | 'type' | 'to_user_id'>,
+    changes: TaskEditChanges,
+  ): Promise<boolean> {
+    const payload = taskEditPayload(task.type, changes);
+    try {
+      assertWriteOk(
+        await this.supabase.client
+          .from('tasks')
+          .update(payload)
+          .eq('id', task.id)
+          .eq('status', 'pending')
+          .select('id'),
+        { requireRows: true },
+      );
+    } catch (err) {
+      if (err instanceof NoRowsAffectedError) {
+        this.toast.warning('La tarea ya no está pendiente; no se puede editar.');
+        await this.refreshSilently();
+      } else {
+        this.toast.error('No se pudo actualizar la tarea');
+      }
+      return false;
+    }
+
+    this.notifications
+      .createNotification({
+        recipientId: task.to_user_id,
+        type: 'system',
+        subject: `Tarea modificada: ${payload.subject}`,
+        message: `Se actualizó la tarea: ${payload.subject}`,
+        referenceType: 'task',
+      })
+      .catch(() => undefined);
+    await this.refreshSilently();
+    this.toast.success('Tarea actualizada');
+    return true;
   }
 
   /**

@@ -556,6 +556,60 @@ describe('TasksFacade', () => {
 
   // ── softDelete() ─────────────────────────────────────────────────────────────
 
+  describe('updateTask() — spec 0053-b', () => {
+    const TAREA = {
+      id: 'uuid-1',
+      type: 'task' as const,
+      to_user_id: 20,
+    };
+    const CAMBIOS = { subject: '  Nuevo asunto ', body: 'detalle', due_date: '2026-10-20' };
+
+    it('AC3: actualiza solo si sigue pendiente, con la fecha a las 23:59 de Chile', async () => {
+      const builder = createMockQueryBuilder([{ id: 'uuid-1' }]);
+      mockSupabase.client.from.mockReturnValue(builder);
+      const ok = await facade.updateTask(TAREA, CAMBIOS);
+      expect(ok).toBe(true);
+      expect(builder.update).toHaveBeenCalledWith({
+        subject: 'Nuevo asunto',
+        body: 'detalle',
+        due_date: '2026-10-21T02:59:00.000Z',
+      });
+      expect(builder.eq).toHaveBeenCalledWith('status', 'pending');
+      expect(mockToast.success).toHaveBeenCalledWith('Tarea actualizada');
+    });
+
+    it('AC4: avisa al destinatario "Tarea modificada: <asunto>"', async () => {
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([{ id: 'uuid-1' }]));
+      await facade.updateTask(TAREA, CAMBIOS);
+      expect(mockNotifications.createNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipientId: 20,
+          subject: 'Tarea modificada: Nuevo asunto',
+          referenceType: 'task',
+        }),
+      );
+    });
+
+    it('AC-E1: si ya no está pendiente (0 filas), no notifica y avisa', async () => {
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([]));
+      const ok = await facade.updateTask(TAREA, CAMBIOS);
+      expect(ok).toBe(false);
+      expect(mockNotifications.createNotification).not.toHaveBeenCalled();
+      expect(mockToast.warning).toHaveBeenCalledWith(
+        'La tarea ya no está pendiente; no se puede editar.',
+      );
+    });
+
+    it('si la BD falla, muestra error', async () => {
+      mockSupabase.client.from.mockReturnValue(
+        createMockQueryBuilder(null, { message: 'Update error' }),
+      );
+      const ok = await facade.updateTask(TAREA, CAMBIOS);
+      expect(ok).toBe(false);
+      expect(mockToast.error).toHaveBeenCalledWith('No se pudo actualizar la tarea');
+    });
+  });
+
   describe('softDelete()', () => {
     it('calls soft_delete_task RPC and returns true', async () => {
       mockSupabase.client.rpc.mockResolvedValue({ data: true, error: null });
