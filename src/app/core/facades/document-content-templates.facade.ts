@@ -46,6 +46,8 @@ export class DocumentContentTemplatesFacade {
   private readonly _error = signal<string | null>(null);
   /** fix-469-m: contenido publicado de la sede+tipo del form, para saber si hay un borrador. */
   private readonly _publishedContent = signal<Record<string, string>>({});
+  /** fix-478-m: `updated_at` de lo publicado al cargar (null = no había fila); publicar lo exige. */
+  private readonly _publishedVersion = signal<string | null>(null);
 
   // ── 2. ESTADO EXPUESTO (Público, Solo lectura) ────────────────────────────
   readonly form = this._form.asReadonly();
@@ -78,7 +80,7 @@ export class DocumentContentTemplatesFacade {
     try {
       const { data, error } = await this.supabase.client
         .from('document_templates')
-        .select('content')
+        .select('content, updated_at')
         .eq('branch_id', branchId)
         .eq('document_type', documentType)
         .maybeSingle();
@@ -91,6 +93,7 @@ export class DocumentContentTemplatesFacade {
         (meta) => ({ ...meta, body: savedContent[meta.id] ?? '' }),
       );
       this._publishedContent.set(savedContent);
+      this._publishedVersion.set((data?.updated_at as string | undefined) ?? null);
       this._form.set({ branchId, documentType, sections });
     } catch (err) {
       if (!this.loadGuard.isCurrent(requestToken)) return;
@@ -134,20 +137,46 @@ export class DocumentContentTemplatesFacade {
     this._error.set(null);
 
     try {
-      const { error } = await this.supabase.client.from('document_templates').upsert(
-        {
+      const content = this.sectionsToContent(form.sections);
+      const updatedAt = new Date().toISOString();
+      const version = this._publishedVersion();
+      let conflict: boolean;
+
+      // fix-478-m: nunca un UPSERT ciego. Con fila, se actualiza solo si sigue en la versión que
+      // se cargó; sin fila, se inserta y el índice único (branch_id, document_type) detecta si
+      // otra persona la creó entre medio.
+      if (version) {
+        const { data, error } = await this.supabase.client
+          .from('document_templates')
+          .update({ content, name: DOCUMENT_TYPE_LABELS[form.documentType], updated_at: updatedAt })
+          .eq('branch_id', form.branchId)
+          .eq('document_type', form.documentType)
+          .eq('updated_at', version)
+          .select('updated_at');
+        if (error) throw error;
+        conflict = !data?.length;
+      } else {
+        const { error } = await this.supabase.client.from('document_templates').insert({
           branch_id: form.branchId,
           document_type: form.documentType,
           name: DOCUMENT_TYPE_LABELS[form.documentType],
-          content: this.sectionsToContent(form.sections),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'branch_id,document_type' },
-      );
+          content,
+          updated_at: updatedAt,
+        });
+        conflict = (error as { code?: string } | null)?.code === '23505';
+        if (error && !conflict) throw error;
+      }
 
-      if (error) throw error;
+      if (conflict) {
+        this.toast.warning(
+          'Otra persona publicó esta plantilla',
+          'Mientras la editabas se publicó otra versión. Tus cambios no se publicaron: copia tu texto y recarga la página para ver la versión nueva.',
+        );
+        return false;
+      }
 
-      this._publishedContent.set(this.sectionsToContent(form.sections));
+      this._publishedVersion.set(updatedAt);
+      this._publishedContent.set(content);
       this.toast.success(
         'Plantilla publicada',
         'Los próximos documentos generados usarán este contenido.',
