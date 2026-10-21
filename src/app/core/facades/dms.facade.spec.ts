@@ -1051,6 +1051,55 @@ describe('DmsFacade', () => {
       expect(localFacade.studentDocs()).toEqual([]);
     });
 
+    it('fix-479-m: instructorDetail apunta al instructor nuevo antes de que respondan las consultas', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      const pending = new Promise<{ data: any; error: any }>(() => {});
+      const slow = makeBuilder({ data: [], error: null });
+      slow.then = (res: any, rej?: any) => pending.then(res, rej);
+      slow.single = vi.fn(() => pending);
+      localSupabaseSpy.client.from = vi.fn(() => slow);
+
+      void localFacade.loadInstructorDocuments(7);
+
+      expect(localFacade.instructorDetail()).toEqual(expect.objectContaining({ instructorId: 7 }));
+    });
+
+    it('fix-479-m: la respuesta tardía de otro instructor no pisa al actual', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      let releaseA!: () => void;
+      const pendingA = new Promise<{ data: any; error: any }>((resolve) => {
+        releaseA = () =>
+          resolve({
+            data: {
+              id: 1,
+              license_number: 'A',
+              users: { id: 1, first_names: 'Ana', paternal_last_name: 'A' },
+            },
+            error: null,
+          });
+      });
+      const slowA = makeBuilder({ data: [], error: null });
+      slowA.single = vi.fn(() => pendingA);
+      localSupabaseSpy.client.from = vi.fn(() => slowA);
+      const loadingA = localFacade.loadInstructorDocuments(1);
+
+      localSupabaseSpy.client.from = vi.fn(() =>
+        makeBuilder({
+          data: {
+            id: 2,
+            license_number: 'B',
+            users: { id: 2, first_names: 'Bea', paternal_last_name: 'B' },
+          },
+          error: null,
+        }),
+      );
+      await localFacade.loadInstructorDocuments(2);
+      releaseA();
+      await loadingA;
+
+      expect(localFacade.instructorDetail()).toEqual(expect.objectContaining({ instructorId: 2 }));
+    });
+
     it('fix-472-m: la respuesta tardía de un alumno anterior no pisa al actual', async () => {
       const { localFacade, localSupabaseSpy } = setupFacade();
       let releaseA!: () => void;

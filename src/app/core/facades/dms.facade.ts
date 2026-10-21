@@ -257,6 +257,8 @@ export class DmsFacade {
   private readonly dmsGuard = createRequestGuard();
   /** fix-472-m: abrir el drawer de A y luego el de B; la respuesta tardía de A se descarta. */
   private readonly studentDocsGuard = createRequestGuard();
+  /** fix-479-m: mismo guard para el drawer de documentos del instructor. */
+  private readonly instructorDocsGuard = createRequestGuard();
 
   // Sub-ruta: detalle de alumno
   private readonly _studentDetail = signal<{
@@ -767,7 +769,18 @@ export class DmsFacade {
   // ── Tab 4 — Documentos del Instructor ───────────────────────────────────────
 
   async loadInstructorDocuments(instructorId: number): Promise<void> {
+    const token = this.instructorDocsGuard.next();
     this._instructorDocsLoading.set(true);
+    // fix-479-m: el drawer apunta a este instructor desde ya ("Subir documento" lo preselecciona
+    // aunque la carga no haya terminado), igual que fix-472-m con el alumno.
+    const previous = this._instructorDetail();
+    const sameInstructor = previous?.instructorId === instructorId;
+    this._instructorDetail.set({
+      name: sameInstructor ? previous.name : '',
+      licenseNumber: sameInstructor ? previous.licenseNumber : '',
+      instructorId,
+    });
+    if (!sameInstructor) this._instructorDocs.set([]);
     try {
       const { data: instructorData } = await this.supabase.client
         .from('instructors')
@@ -790,6 +803,7 @@ export class DmsFacade {
             .join(' ')
         : 'Instructor';
 
+      if (!this.instructorDocsGuard.isCurrent(token)) return;
       if (rawInstructor) {
         this._instructorDetail.set({
           name: instructorName,
@@ -806,16 +820,18 @@ export class DmsFacade {
 
       if (error) throw error;
 
+      if (!this.instructorDocsGuard.isCurrent(token)) return;
       const docs = (data ?? []) as unknown as RawInstructorDoc[];
       this._instructorDocs.set(docs.map((d) => this.mapRawToInstructorDocRow(d, instructorName)));
     } catch (err) {
+      if (!this.instructorDocsGuard.isCurrent(token)) return;
       this._error.set(
         err instanceof Error
           ? this.sanitizer.sanitize(err).message
           : 'Error al cargar documentos del instructor',
       );
     } finally {
-      this._instructorDocsLoading.set(false);
+      if (this.instructorDocsGuard.isCurrent(token)) this._instructorDocsLoading.set(false);
     }
   }
 
