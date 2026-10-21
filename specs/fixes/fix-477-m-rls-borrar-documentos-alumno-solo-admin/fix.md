@@ -37,6 +37,6 @@ reemplazar un documento del paso 4 (`removeDocument`) y "Descartar borrador"
 
 ## Progreso
 
-- [ ] Test SQL rojo → verde (ensayado con `BEGIN … ROLLBACK`)
+- [x] Test SQL rojo → verde (ensayado con `BEGIN … ROLLBACK`): sin la migración falla D1; con ella, OK D1–D3
 - [ ] Migración aplicada (Matías) y test contra la BD
 - [ ] Wizard: quitar la foto carnet como secretaria sigue funcionando
