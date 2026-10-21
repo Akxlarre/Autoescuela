@@ -172,6 +172,8 @@ test('I02 · I04 · I08: la secretaria sube un documento de la escuela; el admin
       .select('id, branch_id, uploaded_by')
       .eq('file_name', nombre);
     expect(fila0, 'la subida de la secretaria quedó en la BD').toHaveLength(1);
+    // fix-476-m (I07): queda de la sede de la secretaria (sede 1), no para ambas.
+    expect(fila0?.[0].branch_id).toBe(1);
 
     const admin = await pageAs('admin');
     await abrirDms(admin, '/app/admin/documentos');

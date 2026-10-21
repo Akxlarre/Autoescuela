@@ -2,7 +2,7 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from './auth.facade';
 import { BranchFacade } from './branch.facade';
-import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { NO_BRANCH_SCOPE, resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { buildStudentDisplayName, sortByPaternalLastNameAsc } from '@core/utils/student-name.util';
 import { INSTRUCTOR_DOC_TYPES } from '@core/utils/instructor-doc-types.util';
@@ -880,6 +880,9 @@ export class DmsFacade {
       description: payload.description ?? null,
       // fix-452-m: antes se buscaba por `users.auth_id` (no existe) y siempre quedaba NULL.
       uploaded_by: this.auth.currentUser()?.dbId ?? null,
+      // fix-476-m: la sede de quien sube (misma regla que filtra las listas); NULL = ambas sedes
+      // (admin en "Todas"). Una secretaria sin sede (NO_BRANCH_SCOPE) también sube para ambas.
+      branch_id: this.schoolDocumentBranchId(),
     });
     if (insertError) {
       await this.removeStoredFile(path);
@@ -887,6 +890,11 @@ export class DmsFacade {
     }
 
     await this.refreshSilently();
+  }
+
+  private schoolDocumentBranchId(): number | null {
+    const branchId = this.getActiveBranchId();
+    return branchId === NO_BRANCH_SCOPE ? null : branchId;
   }
 
   async deleteSchoolDocument(docId: number): Promise<void> {
