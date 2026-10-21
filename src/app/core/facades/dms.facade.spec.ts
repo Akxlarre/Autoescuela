@@ -534,6 +534,28 @@ describe('DmsFacade', () => {
       expect(localSupabaseSpy.client.from).not.toHaveBeenCalledWith('users');
     });
 
+    it.each([
+      ['secretaria de la sede 1', { role: 'secretary', branchId: 1 }, 1],
+      ['admin con la sede 2 elegida', { role: 'admin', selectedBranchId: 2 }, 2],
+      ['admin en "Todas las sedes"', { role: 'admin', selectedBranchId: null }, null],
+      ['secretaria sin sede asignada', { role: 'secretary', branchId: null }, null],
+    ])('uploadSchoolDocument() (fix-476-m): %s → branch_id %s', async (_caso, opts, esperado) => {
+      const { localFacade, localSupabaseSpy } = setupFacade({ ...opts, dbId: 8 });
+      const schoolBuilder = makeBuilder({ data: null, error: null });
+      localSupabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'school_documents' ? schoolBuilder : makeBuilder({ data: [], error: null }),
+      );
+
+      await localFacade.uploadSchoolDocument({
+        file: new File(['%PDF'], 'folios.pdf', { type: 'application/pdf' }),
+        type: 'factura_folios',
+      });
+
+      expect(schoolBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ branch_id: esperado }),
+      );
+    });
+
     it('fetchAllData() (fix-456-m): con sede, filtra alumnos y documentos por la sede de la matrícula', async () => {
       const { localFacade, localSupabaseSpy } = setupFacade({ role: 'secretary', branchId: 1 });
       // La query ya viene filtrada por enrollments.branch_id = 1: el alumno es de la sede 2 pero
@@ -1027,6 +1049,55 @@ describe('DmsFacade', () => {
       void localFacade.loadStudentDocuments(1, 200);
 
       expect(localFacade.studentDocs()).toEqual([]);
+    });
+
+    it('fix-479-m: instructorDetail apunta al instructor nuevo antes de que respondan las consultas', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      const pending = new Promise<{ data: any; error: any }>(() => {});
+      const slow = makeBuilder({ data: [], error: null });
+      slow.then = (res: any, rej?: any) => pending.then(res, rej);
+      slow.single = vi.fn(() => pending);
+      localSupabaseSpy.client.from = vi.fn(() => slow);
+
+      void localFacade.loadInstructorDocuments(7);
+
+      expect(localFacade.instructorDetail()).toEqual(expect.objectContaining({ instructorId: 7 }));
+    });
+
+    it('fix-479-m: la respuesta tardía de otro instructor no pisa al actual', async () => {
+      const { localFacade, localSupabaseSpy } = setupFacade();
+      let releaseA!: () => void;
+      const pendingA = new Promise<{ data: any; error: any }>((resolve) => {
+        releaseA = () =>
+          resolve({
+            data: {
+              id: 1,
+              license_number: 'A',
+              users: { id: 1, first_names: 'Ana', paternal_last_name: 'A' },
+            },
+            error: null,
+          });
+      });
+      const slowA = makeBuilder({ data: [], error: null });
+      slowA.single = vi.fn(() => pendingA);
+      localSupabaseSpy.client.from = vi.fn(() => slowA);
+      const loadingA = localFacade.loadInstructorDocuments(1);
+
+      localSupabaseSpy.client.from = vi.fn(() =>
+        makeBuilder({
+          data: {
+            id: 2,
+            license_number: 'B',
+            users: { id: 2, first_names: 'Bea', paternal_last_name: 'B' },
+          },
+          error: null,
+        }),
+      );
+      await localFacade.loadInstructorDocuments(2);
+      releaseA();
+      await loadingA;
+
+      expect(localFacade.instructorDetail()).toEqual(expect.objectContaining({ instructorId: 2 }));
     });
 
     it('fix-472-m: la respuesta tardía de un alumno anterior no pisa al actual', async () => {
