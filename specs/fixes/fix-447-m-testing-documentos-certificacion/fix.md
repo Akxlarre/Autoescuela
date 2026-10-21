@@ -1,7 +1,8 @@
 # Fix: Testing — Documentos (DMS), plantillas y certificación Clase B
 > id: fix-447-m-testing-documentos-certificacion
 > refs: ASG-i-033
-> status: open
+> status: done
+> closed: 2026-10-20
 > created: 2026-10-18
 
 > **Track de testing, no de corrección.** Acá se registra el resultado de cada caso (✅ / ❌ +
@@ -63,9 +64,9 @@ consultan a medida que aparecen.
 - [x] Verificados en navegador 161 y 468–471; hallazgo nuevo C08 → `fix-472-m`
 - [x] Casos A…S del checklist en navegador (ver "Casos del checklist en navegador")
 - [x] Playwright: `e2e/documentos-certificacion.spec.ts` (7 tests: A01/A02/J20, C08/D16/G01/G04, F08, C05/C06, J13/J15/J16, L06/L07/P09, O04) — verde
-- [ ] Migración `20261020150000` (fix-477-m) aplicada por Matías y verificada
+- [x] Migración `20261020150000` (fix-477-m) aplicada por Matías y verificada (test SQL OK; borrado en borrador sí, en matrícula activa no)
 - [x] Test de regresión del track (ver abajo): verde 2026-10-20
-- [ ] `/fix-close`
+- [x] `/fix-close` (2026-10-20)
 
 ## Resultados
 
@@ -163,7 +164,7 @@ plantilla real y emitir un certificado real deja folios y cambia el texto vigent
 | `hotfix-166-m-zona-de-arrastre-accesible-con-teclado` | S05/S06 — la zona de arrastre no se usaba con teclado | Cerrado 2026-10-20 |
 | `fix-475-m-contrato-no-se-elimina-desde-dms` | F04 (decisión) — el contrato no se elimina desde el DMS | Cerrado 2026-10-20 |
 | `fix-476-m-documento-escuela-sede-de-quien-sube` | I07 (decisión) — el documento de la escuela queda de la sede de quien sube | Cerrado 2026-10-20 |
-| `fix-477-m-rls-borrar-documentos-alumno-solo-admin` | P10 (decisión) — solo el admin borra documentos de alumno (salvo un borrador) | **Migración pendiente (Matías)** |
+| `fix-477-m-rls-borrar-documentos-alumno-solo-admin` | P10 (decisión) — solo el admin borra documentos de alumno (salvo un borrador) | Cerrado 2026-10-20 |
 | `fix-478-m-plantillas-conflicto-al-publicar` | Q03 (decisión) — publicar avisa si otra persona publicó entre medio | Cerrado 2026-10-20 |
 | `fix-479-m-subir-documento-instructor-del-drawer` | H05 — "Subir documento" del drawer del instructor quedaba sin instructor si se presionaba mientras cargaba | Cerrado 2026-10-20 |
 
@@ -193,4 +194,4 @@ plantilla real y emitir un certificado real deja folios y cambia el texto vigent
   plantillas con cambios sin publicar, certificado no elegible, cambio de sede multisede,
   2 matrículas, eliminar, documentos de la escuela e instructores — 11/11 verdes (2026-10-20).
 - `npm run test:ci` — 4540 verdes; `lint:arch` 0 errores.
-- `supabase/tests/rls/fix-477-m-borrar-documentos-alumno.sql` — se corre tras aplicar la migración.
+- `supabase/tests/rls/fix-477-m-borrar-documentos-alumno.sql` — OK D1, D2, D3 contra la BD de dev tras aplicar la migración.

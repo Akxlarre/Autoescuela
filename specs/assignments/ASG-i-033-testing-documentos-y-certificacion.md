@@ -1,6 +1,6 @@
 # Asignación ASG-i-033 — Testing: Documentos (DMS), plantillas y certificación Clase B
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
