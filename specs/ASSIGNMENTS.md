@@ -85,6 +85,7 @@
 | ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `i` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
 | ASG-i-029 | Testing: Contabilidad | `i` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
 | ASG-i-036 | Testing: Auditoría y Configuración web | `i` | fix | P2 | i | Funcional · Baja |
+| ASG-m-011 | Testing: Certificación Profesional en el piloto | `m` | fix | P1 | m | Funcional · Media · agregada 2026-10-20: se habilitó en `fix-465-m`, después de que 025 y 033 cerraran |
 
 ### Tanda fixes del testing del piloto — 2026-09-30
 
