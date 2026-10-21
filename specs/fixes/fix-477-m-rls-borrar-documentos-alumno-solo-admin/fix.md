@@ -1,7 +1,8 @@
 # Fix: Solo el admin borra documentos de alumno (salvo un borrador de matrícula)
 > id: fix-477-m-rls-borrar-documentos-alumno-solo-admin
 > refs: fix-447-m-testing-documentos-certificacion (P10, S26)
-> status: in_progress
+> status: done
+> closed: 2026-10-20
 > created: 2026-10-20
 
 ## Root Cause
@@ -38,5 +39,5 @@ reemplazar un documento del paso 4 (`removeDocument`) y "Descartar borrador"
 ## Progreso
 
 - [x] Test SQL rojo → verde (ensayado con `BEGIN … ROLLBACK`): sin la migración falla D1; con ella, OK D1–D3
-- [ ] Migración aplicada (Matías) y test contra la BD
-- [ ] Wizard: quitar la foto carnet como secretaria sigue funcionando
+- [x] Migración aplicada (Matías, 2026-10-20) y test contra la BD: OK D1, D2, D3
+- [x] Wizard: con sesión real de secretaria por la API, el mismo DELETE que "Quitar foto carnet" borra 1 fila en un borrador y 0 en una matrícula activa (datos E2E- borrados)

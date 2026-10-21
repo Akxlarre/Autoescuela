@@ -1942,6 +1942,22 @@
   `checkCertificateDebt()`.
 - **Fuente:** `specs/fixes/fix-466-m-confirmacion-previa-certificados`, spec `0010-i` (AC8, AC-E5).
 
+### DG-117 — La secretaria solo borra documentos de alumno en matrículas en borrador
+
+- **Trampa:** cerrar `delete_student_documents` a "solo admin" porque la pantalla de Documentos no
+  le muestra "Eliminar" a la secretaria, o al revés, asumir que la secretaria puede borrar porque
+  el wizard de matrícula lo hace.
+- **Realidad:** la policy deja borrar al admin siempre y a la secretaria **solo si la matrícula
+  está en `draft`** y es de su sede (`20261020150000`). El wizard borra documentos de borradores
+  ("Quitar foto carnet", reemplazar un documento del paso 4, "Descartar borrador"); una matrícula
+  ya confirmada se corrige con "Reemplazar" (UPDATE), nunca borrando. Un DELETE de la secretaria
+  sobre una matrícula activa no da error: devuelve 0 filas.
+- **Regla de aplicabilidad:** un flujo nuevo de la secretaria que necesite quitar un documento de
+  una matrícula confirmada usa UPDATE (reemplazo), no DELETE; y todo DELETE de la app revisa con
+  `.select()` cuántas filas borró, porque la RLS no avisa.
+- **Fuente:** `specs/fixes/fix-477-m-rls-borrar-documentos-alumno-solo-admin`, test
+  `supabase/tests/rls/fix-477-m-borrar-documentos-alumno.sql`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:
