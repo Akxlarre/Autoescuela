@@ -33,6 +33,7 @@ describe('CertificacionProfesionalFacade', () => {
     return {
       enrollmentId: 42,
       studentId: 5,
+      numeroMatricula: '0042',
       nombre: 'Juan López',
       rut: '11.111.111-1',
       curso: 'Clase Profesional A4',

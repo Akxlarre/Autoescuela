@@ -524,6 +524,7 @@ export class CertificacionProfesionalFacade {
       .select(
         `
         id,
+        number,
         branch_id,
         pending_balance,
         certificate_professional_pdf_url,
@@ -662,6 +663,7 @@ export class CertificacionProfesionalFacade {
       return {
         enrollmentId: e.id,
         studentId: student.id,
+        numeroMatricula: e.number ?? null,
         nombre,
         rut: formatRut(user.rut || ''),
         curso: e.courses?.name ?? 'Clase Profesional',

@@ -32,6 +32,7 @@ import type {
   PromocionCertOption,
 } from '@core/models/ui/certificacion-profesional.model';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { filterCertProfAlumnos } from '@core/utils/professional-certificate.utils';
 
 type EstadoFilter = 'generado' | 'pendiente' | null;
 
@@ -171,9 +172,9 @@ const PAGE_SIZE = 10;
               />
               <input
                 type="text"
-                placeholder="Buscar por nombre o RUT..."
+                placeholder="Buscar por Nº, nombre o RUT..."
                 class="w-full list-search-input h-9 pl-8 pr-3 text-sm rounded-lg border outline-none transition-colors border-border-default bg-surface text-text-primary"
-                data-llm-description="Search professional certificate students by name or RUT"
+                data-llm-description="Search professional certificate students by enrollment number, name or RUT"
                 [value]="searchQuery()"
                 (input)="setSearchQuery($any($event.target).value)"
               />
@@ -277,9 +278,9 @@ const PAGE_SIZE = 10;
               <table class="w-full text-sm">
                 <thead class="sticky top-0 z-10 bg-surface">
                   <tr class="border-b border-(--border-default)">
+                    <th class="micro-label text-left px-4 py-2" title="Nº de matrícula">Nº</th>
                     <th class="micro-label text-left px-4 py-2">Alumno</th>
                     <th class="micro-label text-left px-4 py-2">RUT</th>
-                    <th class="micro-label text-left px-4 py-2">Promoción</th>
                     @if (academicoVisible) {
                       <th
                         class="micro-label text-center px-4 py-2"
@@ -313,21 +314,22 @@ const PAGE_SIZE = 10;
                     <tr
                       class="border-b border-(--border-default) last:border-b-0 transition-colors"
                     >
+                      <!-- fix-482-m: el Nº de matrícula identifica al alumno -->
+                      <td class="px-4 py-2 item-title whitespace-nowrap tabular-nums">
+                        {{ alumno.numeroMatricula ?? '—' }}
+                      </td>
                       <td class="px-4 py-2 font-medium text-text-primary">
-                        <div class="flex items-center gap-1.5">
+                        <div class="flex flex-wrap items-center gap-1.5">
                           <span>{{ alumno.nombre }}</span>
                           @if (alumno.convalidatedLicense) {
-                            <app-badge variant="info"
+                            <app-badge variant="info" class="whitespace-nowrap"
                               >Convalida {{ alumno.convalidatedLicense }}</app-badge
                             >
                           }
                         </div>
                       </td>
-                      <td class="px-4 py-2 text-brand">
+                      <td class="px-4 py-2 text-brand whitespace-nowrap">
                         {{ alumno.rut }}
-                      </td>
-                      <td class="px-4 py-2 text-xs text-text-muted max-w-40 truncate">
-                        {{ alumno.promocion }}
                       </td>
                       <!-- fix-465-m: sin asistencia ni notas en el piloto (se llevan en el libro de clases) -->
                       @if (academicoVisible) {
@@ -390,7 +392,7 @@ const PAGE_SIZE = 10;
                         </td>
                       }
                       <!-- Pago -->
-                      <td class="px-4 py-2 text-center">
+                      <td class="px-4 py-2 text-center whitespace-nowrap">
                         @if (alumno.pagoCorrecto) {
                           <app-badge variant="success">
                             <span class="inline-flex items-center gap-1">
@@ -408,7 +410,7 @@ const PAGE_SIZE = 10;
                         }
                       </td>
                       <!-- Estado certificado -->
-                      <td class="px-4 py-2 text-center">
+                      <td class="px-4 py-2 text-center whitespace-nowrap">
                         @if (alumno.certificadoStatus === 'generado') {
                           <app-badge variant="success">
                             <span class="inline-flex items-center gap-1">
@@ -421,7 +423,7 @@ const PAGE_SIZE = 10;
                         }
                       </td>
                       <!-- Acciones -->
-                      <td class="px-4 py-2 text-right">
+                      <td class="px-4 py-2 text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-2">
                           @if (alumno.certificadoStatus === 'pendiente') {
                             <button
@@ -449,6 +451,8 @@ const PAGE_SIZE = 10;
                             <button
                               class="inline-flex items-center font-semibold transition-colors btn-secondary btn-sm"
                               data-llm-action="view-professional-certificate-pdf"
+                              aria-label="Ver certificado"
+                              title="Ver certificado"
                               (click)="
                                 verCertificado.emit({
                                   storagePath: alumno.storagePath!,
@@ -456,25 +460,27 @@ const PAGE_SIZE = 10;
                                 })
                               "
                             >
-                              <app-icon name="eye" [size]="13" />
-                              Ver
+                              <app-icon name="eye" [size]="14" [ariaHidden]="true" />
                             </button>
                             <!-- fix-481-m: reemite el PDF con los datos y la plantilla actuales -->
                             <button
                               class="inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
                               data-llm-action="regenerate-professional-certificate"
-                              title="Volver a generar el PDF con los datos y la plantilla actuales"
+                              aria-label="Regenerar certificado"
+                              title="Regenerar: vuelve a generar el PDF con los datos y la plantilla actuales"
                               [disabled]="generatingId() !== null"
-                              [appStableWidth]="generatingId() === alumno.enrollmentId"
                               (click)="regenerarCertificado.emit(alumno.enrollmentId)"
                             >
-                              @if (generatingId() === alumno.enrollmentId) {
-                                <app-icon name="loader-circle" [size]="13" class="animate-spin" />
-                                Generando...
-                              } @else {
-                                <app-icon name="refresh-cw" [size]="13" />
-                                Regenerar
-                              }
+                              <app-icon
+                                [name]="
+                                  generatingId() === alumno.enrollmentId
+                                    ? 'loader-circle'
+                                    : 'refresh-cw'
+                                "
+                                [size]="14"
+                                [class.animate-spin]="generatingId() === alumno.enrollmentId"
+                                [ariaHidden]="true"
+                              />
                             </button>
                             <button
                               class="inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
@@ -511,18 +517,18 @@ const PAGE_SIZE = 10;
                 <div class="card flex flex-col gap-2.5" appCardHover>
                   <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
+                      <p class="micro-label m-0">Matrícula {{ alumno.numeroMatricula ?? '—' }}</p>
                       <div class="flex items-center gap-1.5">
                         <p class="item-title truncate m-0">
                           {{ alumno.nombre }}
                         </p>
                         @if (alumno.convalidatedLicense) {
-                          <app-badge variant="info"
+                          <app-badge variant="info" class="whitespace-nowrap"
                             >Convalida {{ alumno.convalidatedLicense }}</app-badge
                           >
                         }
                       </div>
                       <p class="text-xs text-brand m-0">{{ alumno.rut }}</p>
-                      <p class="text-xs text-text-muted m-0 truncate">{{ alumno.promocion }}</p>
                     </div>
                     @if (alumno.certificadoStatus === 'generado') {
                       <app-badge variant="success">
@@ -817,23 +823,10 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
   protected readonly academicoVisible = !isBlockedInPilot('clase-profesional-recorte');
 
   // ── Computed ──
-  readonly filteredAlumnos = computed(() => {
-    const filter = this.estadoFilter();
-    const query = this.searchQuery().trim();
-    let result = this.alumnos();
-    if (filter) {
-      result = result.filter((a) => a.certificadoStatus === filter);
-    }
-    if (!query) return result;
-    const normalize = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-    const queryNorm = normalize(query).replace(/[.\-]/g, '');
-    return result.filter((a) => {
-      const nameMatch = normalize(a.nombre).includes(normalize(query));
-      const rutNorm = a.rut.replace(/[.\-]/g, '').toLowerCase();
-      const rutMatch = rutNorm.includes(queryNorm);
-      return nameMatch || rutMatch;
-    });
-  });
+  /** fix-482-m: estado + texto (Nº de matrícula, nombre o RUT). */
+  readonly filteredAlumnos = computed(() =>
+    filterCertProfAlumnos(this.alumnos(), this.estadoFilter(), this.searchQuery()),
+  );
 
   readonly totalPagesAlumnos = computed(() => Math.ceil(this.filteredAlumnos().length / PAGE_SIZE));
 
