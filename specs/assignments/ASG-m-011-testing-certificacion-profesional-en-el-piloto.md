@@ -1,6 +1,6 @@
 # Asignación ASG-m-011 — Testing: Certificación Profesional en el piloto
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
