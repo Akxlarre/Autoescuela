@@ -28,8 +28,13 @@ import { ACCION_LABELS_PROF } from '@core/models/ui/certificacion-profesional.mo
     <app-drawer-form [hasFooter]="false">
       <div class="flex flex-col gap-4">
         <p class="text-sm text-text-secondary m-0">
-          {{ facade.log().length }} registro{{ facade.log().length !== 1 ? 's' : '' }} de emisión de
-          certificados Clase Profesional.
+          <!-- hotfix-167-m: con un curso elegido, el historial es solo de ese curso -->
+          {{ facade.log().length }} registro{{ facade.log().length !== 1 ? 's' : '' }} de emisión
+          {{
+            facade.selectedCursoId() !== null
+              ? 'del curso seleccionado.'
+              : 'de certificados Clase Profesional (los más recientes).'
+          }}
         </p>
 
         @if (facade.isLoading()) {

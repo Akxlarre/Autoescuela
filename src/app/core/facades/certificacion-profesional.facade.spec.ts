@@ -270,6 +270,28 @@ describe('CertificacionProfesionalFacade', () => {
     });
   });
 
+  describe('selectCurso() — hotfix-167-m', () => {
+    it('recarga el historial después de los alumnos, para que sea del curso elegido', async () => {
+      const orden: string[] = [];
+      vi.spyOn(facade as any, 'fetchAlumnos').mockImplementation(async () => {
+        orden.push('alumnos');
+      });
+      vi.spyOn(facade as any, 'fetchLog').mockImplementation(async () => {
+        orden.push('log');
+      });
+
+      await facade.selectCurso(5);
+
+      expect(orden).toEqual(['alumnos', 'log']);
+    });
+
+    it('al quitar el curso, el historial vuelve a los más recientes', async () => {
+      const fetchLog = vi.spyOn(facade as any, 'fetchLog').mockResolvedValue(undefined);
+      await facade.selectCurso(null);
+      expect(fetchLog).toHaveBeenCalled();
+    });
+  });
+
   describe('regenerarCertificado() — fix-481-m', () => {
     beforeEach(() => {
       (facade as any)._alumnos.set([

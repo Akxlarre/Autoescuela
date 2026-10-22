@@ -18,6 +18,7 @@ import { formatRut } from '@core/utils/rut.utils';
 import { calcAverage } from '@core/utils/professional-modules';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { fetchConvalidationMap } from '@core/utils/convalidation.utils';
+import { cursoCertLabel, promocionCertLabel } from '@core/utils/professional-certificate.utils';
 import type {
   CertificacionProfesionalAlumnoRow,
   CertificacionProfesionalKpis,
@@ -163,10 +164,15 @@ export class CertificacionProfesionalFacade {
   async selectCurso(cursoId: number | null): Promise<void> {
     this._selectedCursoId.set(cursoId);
     this._alumnos.set([]);
-    if (cursoId === null) return;
+    // hotfix-167-m: el historial sigue al curso (sus certificados) o, sin curso, a los más recientes.
+    if (cursoId === null) {
+      void this.fetchLog();
+      return;
+    }
     this._isLoadingAlumnos.set(true);
     try {
       await this.fetchAlumnos(cursoId);
+      void this.fetchLog();
     } catch {
       this._error.set('Error al cargar alumnos del curso');
       this.toast.error('Error al cargar alumnos');
@@ -455,7 +461,7 @@ export class CertificacionProfesionalFacade {
       code: p.code as string,
       name: p.name as string,
       startDate: p.start_date as string,
-      label: `${p.code} — ${p.name}`,
+      label: promocionCertLabel(p.code, p.name),
     }));
 
     this._promociones.set(opts);
@@ -478,12 +484,15 @@ export class CertificacionProfesionalFacade {
       return;
     }
 
-    const opts: CursoCertOption[] = (data ?? []).map((pc: any) => ({
-      id: pc.id as number,
-      courseName: pc.courses?.name ?? 'Curso',
-      licenseClass: pc.courses?.license_class ?? 'A4',
-      label: `${pc.courses?.name ?? 'Curso'} (${pc.courses?.license_class ?? ''})`,
-    }));
+    const opts: CursoCertOption[] = (data ?? [])
+      .map((pc: any) => ({
+        id: pc.id as number,
+        courseName: pc.courses?.name ?? 'Curso',
+        licenseClass: pc.courses?.license_class ?? 'A4',
+        label: cursoCertLabel(pc.courses?.name ?? 'Curso', pc.courses?.license_class ?? ''),
+      }))
+      // hotfix-167-m: A2, A3, A4, A5 (la base los devuelve en otro orden)
+      .sort((a, b) => a.licenseClass.localeCompare(b.licenseClass));
 
     this._cursos.set(opts);
   }
