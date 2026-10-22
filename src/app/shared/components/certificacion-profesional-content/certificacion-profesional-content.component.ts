@@ -32,7 +32,7 @@ import type {
   PromocionCertOption,
 } from '@core/models/ui/certificacion-profesional.model';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
-import { filterCertProfAlumnos } from '@core/utils/professional-certificate.utils';
+import { filterCertificadoAlumnos } from '@core/utils/certificate-list.utils';
 
 type EstadoFilter = 'generado' | 'pendiente' | null;
 
@@ -825,7 +825,7 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
   // ── Computed ──
   /** fix-482-m: estado + texto (Nº de matrícula, nombre o RUT). */
   readonly filteredAlumnos = computed(() =>
-    filterCertProfAlumnos(this.alumnos(), this.estadoFilter(), this.searchQuery()),
+    filterCertificadoAlumnos(this.alumnos(), this.estadoFilter(), this.searchQuery()),
   );
 
   readonly totalPagesAlumnos = computed(() => Math.ceil(this.filteredAlumnos().length / PAGE_SIZE));

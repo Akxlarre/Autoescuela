@@ -13,6 +13,7 @@ function makeAlumno(over: Partial<CertificacionAlumnoRow> = {}): CertificacionAl
   return {
     enrollmentId: 1,
     studentId: 1,
+    numeroMatricula: '0001',
     nombre: 'Juan Pérez',
     rut: '11.111.111-1',
     curso: 'Clase B',

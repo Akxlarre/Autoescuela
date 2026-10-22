@@ -558,6 +558,7 @@ export class CertificacionClaseBFacade {
       .select(
         `
         id,
+        number,
         branch_id,
         certificate_b_pdf_url,
         courses!inner(name, type, practical_hours, is_reinforcement),
@@ -653,6 +654,7 @@ export class CertificacionClaseBFacade {
       return {
         enrollmentId: e.id,
         studentId: student.id,
+        numeroMatricula: e.number ?? null,
         nombre,
         rut: formatRut(user.rut || ''),
         curso: e.courses?.name || 'Clase B',

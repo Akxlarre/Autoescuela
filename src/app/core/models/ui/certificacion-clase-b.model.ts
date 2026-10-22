@@ -7,6 +7,8 @@
 export interface CertificacionAlumnoRow {
   enrollmentId: number;
   studentId: number;
+  /** enrollments.number — dato principal para identificar al alumno (fix-484-m). */
+  numeroMatricula: string | null;
   nombre: string;
   rut: string;
   curso: string;
