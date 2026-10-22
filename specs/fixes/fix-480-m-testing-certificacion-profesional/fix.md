@@ -113,6 +113,8 @@ En el curso A2 ya estaba Samuel José Merino (Nº 0031, seed, saldo $90.000): no
 | "Generar Pendientes" en lote | ✅ | A5: folio 7 (correlativo), toast "1 certificado generado" |
 | Badge "Convalida A3" | ✅ | lista y tarjeta |
 | Enviar email | ✅ | modal con el correo → "Email enviado"; el botón pasa a "Reenviar" |
+| Enviar Emails Masivo (2026-10-22, tras el cierre) | ✅ | drawer "1 alumno recibirá su certificado por correo" con nombre y correo → "1 email enviado"; la fila pasa a "Reenviar" y el botón masivo desaparece |
+| Exportar todos (ZIP, admin y secretaria sede 2) | ✅ | 200, `certificados-profesional-2026-10-22.zip` con `CERT-PROF-2026-0006_…` y `…0007_…`, ambos PDF válidos (`zip.mjs`) |
 | Historial | ⚠️ | muestra solo el curso elegido, pero dice "1 registro de emisión de certificados Clase Profesional" |
 | Notificación al alumno | ✅ | 0 filas en `notifications` para los alumnos de prueba |
 | DMS de la matrícula | ✅ | `v_dms_student_documents` trae `certificado_profesional` de 8554 y 8556 |
