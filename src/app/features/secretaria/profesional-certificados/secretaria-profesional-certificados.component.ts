@@ -47,6 +47,7 @@ import { EnviarMasivoProfDrawerComponent } from '@features/admin/profesional-cer
       (generarCertificado)="facade.generarCertificado($event)"
       (verCertificado)="facade.verCertificado($event.storagePath, $event.nombre)"
       (enviarEmail)="facade.enviarEmail($event)"
+      (regenerarCertificado)="facade.regenerarCertificado($event)"
       (abrirHistorialDrawer)="openHistorialDrawer()"
       (abrirGenerarPendientesDrawer)="openGenerarPendientesDrawer()"
       (abrirEnviarMasivoDrawer)="openEnviarMasivoDrawer()"

@@ -297,7 +297,7 @@ test('L06 · L07 · P09: un alumno sin las prácticas completas no se certifica 
   const admin = await pageAs('admin');
   await admin.setViewportSize(DESKTOP);
   await admin.goto('/app/admin/certificacion');
-  await admin.getByPlaceholder('Buscar por nombre o RUT...').fill(alumno.paternalLastName, CARGA);
+  await admin.getByPlaceholder('Buscar por Nº, nombre o RUT...').fill(alumno.paternalLastName, CARGA);
   const fila = admin.locator('tr').filter({ hasText: alumno.paternalLastName });
   await expect(fila).toContainText('5/12', CARGA);
   await fila.locator('[data-llm-action="generate-certificate"]').click();

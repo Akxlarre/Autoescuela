@@ -116,7 +116,8 @@
 | `src/app/core/utils/period-window.utils.ts` | `PeriodWindow`, `PERIOD_WINDOW_MONTHS`, `DEFAULT_PERIOD_WINDOW`, `periodCutoffIso`, `PeriodWindowOptions`, `applyPeriodWindow` |
 | `src/app/core/utils/phone.utils.ts` | `DialCode`, `DIAL_CODES`, `validatePhone`, `hasMinimumPhoneLength`, `normalizePhone` |
 | `src/app/core/utils/professional-access.utils.ts` | `BranchProfessionalFlag`, `canAccessProfessional`, `canUnlockProfessional`, `visibleNavGroups` |
-| `src/app/core/utils/professional-certificate.utils.ts` | `promotionAllowsCertificate` |
+| `src/app/core/utils/professional-certificate.utils.ts` | `promotionAllowsCertificate`, `promocionCertLabel`, `cursoCertLabel` (etiquetas de los selectores sin datos repetidos, hotfix-167-m) |
+| `src/app/core/utils/certificate-list.utils.ts` | `filterCertificadoAlumnos` — filtro de las listas de certificados B y Profesional por estado y por Nº de matrícula, nombre (sin tildes) o RUT (sin puntos) (fix-482-m, fix-484-m) |
 | `src/app/core/utils/professional-modules.ts` | `GRADE_MIN`, `GRADE_MAX`, `GRADE_PASS`, `MODULE_COUNT`, `getModuleNames`, `getModuleShortLabel`, `isPassing`, `roundGrade`, `calcAverage` |
 | `src/app/core/utils/professional-specializations.ts` | `SPEC_COLORS`, `SPEC_LABELS`, `SPECIALIZATION_OPTIONS`, `getSpecColor`, `getSpecLabel` |
 | `src/app/core/utils/promotion-code.utils.ts` | `PROMOTION_CADENCE_ANCHOR`, `PROMOTION_CODE_MAX_AHEAD`, `isValidPromotionCode`, `maxPromotionCode`, `suggestNextPromotionCode`, `promotionCodeError`, `promotionNameForCode`, `promotionLabel`, `promotionOptionStatus`, `sortPromotionGroupsByStart`, `isCadenceDate`, `promotionWriteErrorMessage` |

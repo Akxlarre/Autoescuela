@@ -41,6 +41,8 @@ export interface ElegibilidadCertProf {
 export interface CertificacionProfesionalAlumnoRow {
   enrollmentId: number;
   studentId: number;
+  /** enrollments.number — dato principal para identificar al alumno (fix-482-m). */
+  numeroMatricula: string | null;
   nombre: string;
   rut: string;
   curso: string;

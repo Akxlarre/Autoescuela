@@ -407,7 +407,13 @@ export function resolveCertificadoBAction(
               <div class="flex flex-col gap-2">
                 <!-- fix-336-m: en Profesional puede quedar vacía; sin esto deja un hueco extra -->
                 @if (secondaryActions().length > 0 || showsClaseBActions(alumno.licenseGroup)) {
-                  <div class="grid grid-cols-2 gap-2">
+                  <!-- hotfix-167-m: con una sola acción (Profesional) ocupa todo el ancho -->
+                  <div
+                    class="grid gap-2"
+                    [class.grid-cols-2]="
+                      secondaryActions().length > 1 || showsClaseBActions(alumno.licenseGroup)
+                    "
+                  >
                     @for (action of secondaryActions(); track action.id) {
                       <button
                         type="button"
@@ -704,7 +710,7 @@ export function resolveCertificadoBAction(
                 <app-empty-state
                   icon="book-open"
                   message="Asistencia y evaluaciones aún no habilitadas"
-                  subtitle="La asistencia, las notas y el certificado de Clase Profesional se registran en módulos que no están disponibles en esta etapa."
+                  subtitle="La asistencia y las notas de Clase Profesional se registran en módulos que no están disponibles en esta etapa."
                 />
               </div>
             }

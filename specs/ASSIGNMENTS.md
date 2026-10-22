@@ -85,7 +85,6 @@
 | ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `i` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
 | ASG-i-029 | Testing: Contabilidad | `i` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
 | ASG-i-036 | Testing: Auditoría y Configuración web | `i` | fix | P2 | i | Funcional · Baja |
-| ASG-m-011 | Testing: Certificación Profesional en el piloto | `m` | fix | P1 | m | Funcional · Media · agregada 2026-10-20: se habilitó en `fix-465-m`, después de que 025 y 033 cerraran |
 
 ### Tanda fixes del testing del piloto — 2026-09-30
 
@@ -443,6 +442,7 @@
 | ASG-i-035 | Testing: Tareas/observaciones, notificaciones y comunicados | [fix-230-b-testing-tareas-notificaciones-comunicados](fixes/fix-230-b-testing-tareas-notificaciones-comunicados/fix.md) | 2026-10-20 |
 | ASG-i-058 | Unificar los helpers de autorización de las edge functions | [fix-235-b-unificar-autorizacion-edge-functions](fixes/fix-235-b-unificar-autorizacion-edge-functions/fix.md) | 2026-10-20 |
 | ASG-i-065 | Revisión de accesibilidad con axe en los tests e2e | [0054-b-axe-accesibilidad-en-e2e](specs/0054-b-axe-accesibilidad-en-e2e/spec.md) | 2026-10-20 (ver acceptance.md) |
+| ASG-m-011 | Testing: Certificación Profesional en el piloto | [fix-480-m-testing-certificacion-profesional](fixes/fix-480-m-testing-certificacion-profesional/fix.md) | 2026-10-22 |
 <!-- AUTO-GENERATED:END -->
 
 ---

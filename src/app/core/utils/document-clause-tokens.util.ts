@@ -17,7 +17,8 @@ const TOKEN_DESCRIPTIONS: Record<string, string> = {
   horasCurso: 'Cantidad de horas del curso',
   fechaInicio: 'Fecha de inicio del curso',
   fechaFin: 'Fecha de término del curso',
-  cursoLabel: 'Nombre del curso',
+  cursoLabel: 'Nombre del curso (incluye la convalidación, si la hay)',
+  claseConvalidada: 'Clase de licencia convalidada (A3 o A4)',
 };
 
 /** Fallback: si aparece un token nuevo sin descripción mapeada, se muestra el token crudo. */

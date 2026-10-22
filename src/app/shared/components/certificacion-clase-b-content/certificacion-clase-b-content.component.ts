@@ -22,6 +22,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { filterCertificadoAlumnos } from '@core/utils/certificate-list.utils';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import type {
   CertificacionAlumnoRow,
@@ -90,7 +91,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
             />
             <input
               type="text"
-              placeholder="Buscar por nombre o RUT..."
+              placeholder="Buscar por Nº, nombre o RUT..."
               class="w-full list-search-input h-9 pl-8 pr-3 text-sm rounded-lg border outline-none transition-colors border-border-default bg-surface text-text-primary"
               data-llm-description="Search students by name or RUT"
               [value]="searchQuery()"
@@ -216,6 +217,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
             <table class="w-full text-sm">
               <thead class="sticky top-0 z-10 bg-surface">
                 <tr class="border-b border-(--border-default)">
+                  <th class="micro-label text-left px-4 py-2" title="Nº de matrícula">Nº</th>
                   <th class="micro-label text-left px-4 py-2">Alumno</th>
                   <th class="micro-label text-left px-4 py-2">RUT</th>
                   <th class="micro-label text-left px-4 py-2">Curso</th>
@@ -230,10 +232,14 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                 @for (alumno of pagedAlumnos(); track alumno.enrollmentId) {
                   <!-- Fila principal -->
                   <tr class="border-b border-(--border-default) last:border-b-0 transition-colors">
+                    <!-- fix-484-m: el Nº de matrícula identifica al alumno -->
+                    <td class="px-4 py-2 item-title whitespace-nowrap tabular-nums">
+                      {{ alumno.numeroMatricula ?? '—' }}
+                    </td>
                     <td class="px-4 py-2 font-medium text-text-primary">
                       {{ alumno.nombre }}
                     </td>
-                    <td class="px-4 py-2 text-brand">
+                    <td class="px-4 py-2 text-brand whitespace-nowrap">
                       {{ alumno.rut }}
                     </td>
                     <td class="px-4 py-2">
@@ -365,6 +371,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
               <div class="card flex flex-col gap-2.5" appCardHover>
                 <div class="flex items-start justify-between gap-2">
                   <div class="min-w-0">
+                    <p class="micro-label m-0">Matrícula {{ alumno.numeroMatricula ?? '—' }}</p>
                     <p class="item-title truncate m-0">
                       {{ alumno.nombre }}
                     </p>
@@ -639,27 +646,10 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
 
   // ── Computed ──
 
-  readonly filteredAlumnos = computed(() => {
-    const filter = this.estadoFilter();
-    const query = this.searchQuery().trim().toLowerCase();
-    const all = this.alumnos();
-
-    let result = !filter ? all : all.filter((a) => a.certificadoStatus === filter);
-
-    if (query) {
-      // Normalize: strip diacritics so "Gonza" matches "González"
-      const normalize = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-      const queryNorm = normalize(query).replace(/[.\-]/g, '');
-      result = result.filter((a) => {
-        const nameMatch = normalize(a.nombre).includes(normalize(query));
-        const rutNorm = a.rut.replace(/[.\-]/g, '').toLowerCase();
-        const rutMatch = rutNorm.includes(queryNorm);
-        return nameMatch || rutMatch;
-      });
-    }
-
-    return result;
-  });
+  /** fix-484-m: estado + texto (Nº de matrícula, nombre o RUT), igual que Profesional. */
+  readonly filteredAlumnos = computed(() =>
+    filterCertificadoAlumnos(this.alumnos(), this.estadoFilter(), this.searchQuery()),
+  );
 
   readonly totalPagesAlumnos = computed(() =>
     Math.ceil(this.filteredAlumnos().length / this.PAGE_SIZE),

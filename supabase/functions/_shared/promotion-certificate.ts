@@ -28,3 +28,28 @@ export function checkPromotionFinished(
     },
   };
 }
+
+/**
+ * fix-483-m: texto inicial del campo "Convalidación" de la plantilla certificate_professional
+ * (redacción decidida en fix-480-m, D1). Se edita en Plantillas; vacío = no se menciona.
+ */
+export const DEFAULT_CONVALIDACION = 'con convalidación de Clase {{claseConvalidada}}';
+
+/**
+ * fix-483-m: nombre del curso que va en el certificado ({{cursoLabel}}). Con convalidación
+ * simultánea (license_validations) agrega el texto de la plantilla con {{claseConvalidada}}:
+ * "Licencia Profesional Clase A5 con convalidación de Clase A3".
+ */
+export function professionalCourseLabel(
+  licenseClass: string | null | undefined,
+  convalidatedLicense: string | null | undefined,
+  convalidacionTexto: string,
+): string {
+  const clase = (licenseClass ?? '').toUpperCase();
+  const base = ['A2', 'A3', 'A4', 'A5'].includes(clase)
+    ? `Licencia Profesional Clase ${clase}`
+    : 'Licencia Profesional';
+  const convalidada = (convalidatedLicense ?? '').toUpperCase();
+  const frase = convalidacionTexto.split('{{claseConvalidada}}').join(convalidada).trim();
+  return convalidada && frase ? `${base} ${frase}` : base;
+}
