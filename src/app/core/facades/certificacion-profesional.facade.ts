@@ -214,6 +214,24 @@ export class CertificacionProfesionalFacade {
   }
 
   /**
+   * fix-481-m (como fix-464-m en Clase B): reemite el PDF con los datos y la plantilla actuales.
+   * El folio no cambia (la RPC devuelve el certificado existente) y no se vuelve a notificar.
+   */
+  async regenerarCertificado(enrollmentId: number): Promise<void> {
+    if (!(await this.autorizacion.confirmarRegeneracion())) return;
+
+    const result = await this.invokeConAutorizacionDeDeuda(enrollmentId);
+    if (!result) return;
+    this.toast.success('Certificado regenerado');
+    const cursoId = this._selectedCursoId();
+    if (cursoId !== null) {
+      await this.fetchAlumnos(cursoId);
+      void this.fetchLog();
+    }
+    this.dmsViewer.openByUrl(result.url, 'Certificado Clase Profesional');
+  }
+
+  /**
    * Notifica al alumno que su certificado quedó disponible en el portal (AC7).
    * Solo se llama al generar (no en `enviarEmail`, para no duplicar).
    * Fire-and-forget: un fallo nunca rompe el flujo de generación (AC-E1).

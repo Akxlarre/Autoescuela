@@ -459,6 +459,23 @@ const PAGE_SIZE = 10;
                               <app-icon name="eye" [size]="13" />
                               Ver
                             </button>
+                            <!-- fix-481-m: reemite el PDF con los datos y la plantilla actuales -->
+                            <button
+                              class="inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                              data-llm-action="regenerate-professional-certificate"
+                              title="Volver a generar el PDF con los datos y la plantilla actuales"
+                              [disabled]="generatingId() !== null"
+                              [appStableWidth]="generatingId() === alumno.enrollmentId"
+                              (click)="regenerarCertificado.emit(alumno.enrollmentId)"
+                            >
+                              @if (generatingId() === alumno.enrollmentId) {
+                                <app-icon name="loader-circle" [size]="13" class="animate-spin" />
+                                Generando...
+                              } @else {
+                                <app-icon name="refresh-cw" [size]="13" />
+                                Regenerar
+                              }
+                            </button>
                             <button
                               class="inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
                               data-llm-action="send-professional-certificate-email"
@@ -607,6 +624,20 @@ const PAGE_SIZE = 10;
                       </button>
                       <button
                         class="flex-1 inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                        data-llm-action="regenerate-professional-certificate"
+                        [disabled]="generatingId() !== null"
+                        (click)="regenerarCertificado.emit(alumno.enrollmentId)"
+                      >
+                        @if (generatingId() === alumno.enrollmentId) {
+                          <app-icon name="loader-circle" [size]="13" class="animate-spin" />
+                          Generando...
+                        } @else {
+                          <app-icon name="refresh-cw" [size]="13" />
+                          Regenerar
+                        }
+                      </button>
+                      <button
+                        class="flex-1 inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
                         data-llm-action="send-professional-certificate-email"
                         [disabled]="sendingEmailId() === alumno.enrollmentId"
                         (click)="onClickEmail(alumno)"
@@ -715,6 +746,8 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
   readonly generarCertificado = output<number>();
   readonly verCertificado = output<{ storagePath: string; nombre: string }>();
   readonly enviarEmail = output<number>();
+  /** fix-481-m */
+  readonly regenerarCertificado = output<number>();
   readonly abrirHistorialDrawer = output<void>();
   readonly abrirGenerarPendientesDrawer = output<void>();
   readonly abrirEnviarMasivoDrawer = output<void>();

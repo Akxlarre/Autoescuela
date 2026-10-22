@@ -269,6 +269,64 @@ describe('CertificacionProfesionalFacade', () => {
     });
   });
 
+  describe('regenerarCertificado() — fix-481-m', () => {
+    beforeEach(() => {
+      (facade as any)._alumnos.set([
+        makeAlumnoRow({ enrollmentId: 42, certificadoStatus: 'generado' }),
+      ]);
+    });
+
+    it('si se cancela la confirmación, no invoca la generación', async () => {
+      autorizacionSpy.confirmarRegeneracion.mockResolvedValueOnce(false);
+
+      await facade.regenerarCertificado(42);
+
+      expect(autorizacionSpy.confirmarRegeneracion).toHaveBeenCalled();
+      expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
+    });
+
+    it('al confirmar, invoca la Edge Function, avisa y abre el visor', async () => {
+      await facade.regenerarCertificado(42);
+
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(
+        'generate-certificate-professional-pdf',
+        { body: { enrollment_id: 42 } },
+      );
+      expect(toastSpy.success).toHaveBeenCalledWith('Certificado regenerado');
+      expect(dmsViewerSpy.openByUrl).toHaveBeenCalledWith(
+        'https://pdf',
+        'Certificado Clase Profesional',
+      );
+    });
+
+    it('si la función rechaza por deuda, autoriza con motivo y reintenta (spec 0010-i)', async () => {
+      supabaseSpy.client.functions.invoke.mockResolvedValueOnce({
+        data: null,
+        error: Object.assign(new Error('Edge Function returned a non-2xx status code'), {
+          context: new Response(
+            JSON.stringify({ error: 'Saldo pendiente de $50.000.', code: 'DEUDA_PENDIENTE' }),
+            { status: 409 },
+          ),
+        }),
+      });
+      autorizacionSpy.autorizarDeuda.mockResolvedValueOnce(true);
+
+      await facade.regenerarCertificado(42);
+
+      expect(autorizacionSpy.autorizarDeuda).toHaveBeenCalledWith(
+        42,
+        'Saldo pendiente de $50.000.',
+      );
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledTimes(2);
+    });
+
+    it('no vuelve a notificar al alumno (ya se le avisó al generar)', async () => {
+      const notifySpy = vi.spyOn(facade as any, 'notifyCertificateReady');
+      await facade.regenerarCertificado(42);
+      expect(notifySpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe('verCertificado()', () => {
     it('genera signed URL y abre DMS viewer', async () => {
       await facade.verCertificado('certificates_prof/42/cert.pdf', 'Juan López');
