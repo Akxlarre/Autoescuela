@@ -36,7 +36,11 @@ import {
 } from '../_shared/pdf-utils.ts';
 import { substituteTokens } from '../_shared/template-tokens.ts';
 import { checkCertificateDebt, overrideCounterFrom } from '../_shared/certificate-debt.ts';
-import { checkPromotionFinished } from '../_shared/promotion-certificate.ts';
+import {
+  checkPromotionFinished,
+  DEFAULT_CONVALIDACION,
+  professionalCourseLabel,
+} from '../_shared/promotion-certificate.ts';
 
 // ─── CORS ───
 const corsHeaders = {
@@ -62,24 +66,15 @@ const SCHOOL = {
 const SAMPLE_STUDENT = {
   fullName: 'ALUMNO DE PRUEBA EJEMPLO',
   rut: '11.111.111-1',
-  courseLabel: 'Licencia Profesional Clase A4',
+  licenseClass: 'A5',
+  /** fix-483-m: convalida, para que la vista previa muestre el texto de "Convalidación". */
+  convalidatedLicense: 'A3',
   startDate: '01-01-2026',
   endDate: '30-06-2026',
 };
 
 const LOGO_URL =
   'https://skvekggejikzxhzsjmkz.supabase.co/storage/v1/object/public/assets/chillan_capacita.png';
-
-// ─── Nombre del curso según clase de licencia ───
-function getCourseLabel(licenseClass: string): string {
-  const map: Record<string, string> = {
-    A2: 'Licencia Profesional Clase A2',
-    A3: 'Licencia Profesional Clase A3',
-    A4: 'Licencia Profesional Clase A4',
-    A5: 'Licencia Profesional Clase A5',
-  };
-  return map[licenseClass?.toUpperCase()] ?? 'Licencia Profesional';
-}
 
 // ─── Main ───
 Deno.serve(async (req: Request) => {
@@ -169,7 +164,13 @@ Deno.serve(async (req: Request) => {
     const rut = u.rut ?? '';
 
     const licenseClass = enrollment.courses?.license_class ?? 'A4';
-    const courseLabel = getCourseLabel(licenseClass);
+    // fix-483-m: la convalidación simultánea va en el nombre del curso.
+    const { data: validation } = await supabase
+      .from('license_validations')
+      .select('convalidated_license')
+      .eq('enrollment_id', enrollment_id)
+      .maybeSingle();
+    const convalidatedLicense: string | null = validation?.convalidated_license ?? null;
 
     const promo = enrollment.promotion_courses?.professional_promotions;
     const startDate = promo?.start_date ? fmtDateShort(promo.start_date) : '';
@@ -180,6 +181,12 @@ Deno.serve(async (req: Request) => {
       loadPngForPdf(LOGO_URL),
       fetchDocumentContent(supabase, enrollment.branch_id, 'certificate_professional'),
     ]);
+    // fix-483-m: el texto de la convalidación sale de la plantilla (campo "convalidacion").
+    const courseLabel = professionalCourseLabel(
+      licenseClass,
+      convalidatedLicense,
+      content['convalidacion'] ?? DEFAULT_CONVALIDACION,
+    );
 
     // 4. Build PDF
     const pdfBytes = buildCertificatePdf({
@@ -314,7 +321,11 @@ async function handlePreviewOrSample(
   const pdfBytes = buildCertificatePdf({
     fullName: SAMPLE_STUDENT.fullName,
     rut: SAMPLE_STUDENT.rut,
-    courseLabel: SAMPLE_STUDENT.courseLabel,
+    courseLabel: professionalCourseLabel(
+      SAMPLE_STUDENT.licenseClass,
+      SAMPLE_STUDENT.convalidatedLicense,
+      content['convalidacion'] ?? DEFAULT_CONVALIDACION,
+    ),
     startDate: SAMPLE_STUDENT.startDate,
     endDate: SAMPLE_STUDENT.endDate,
     todayText: todayInSpanish(),
