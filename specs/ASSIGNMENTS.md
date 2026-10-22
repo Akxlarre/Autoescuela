@@ -85,7 +85,6 @@
 | ASG-i-023 | Testing: Matrícula presencial (B, refuerzo, Profesional) | `i` | fix | P0 | i | E2E · Alta · coordinar con 026 y 028 |
 | ASG-i-029 | Testing: Contabilidad | `i` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
 | ASG-i-036 | Testing: Auditoría y Configuración web | `i` | fix | P2 | i | Funcional · Baja |
-| ASG-m-011 | Testing: Certificación Profesional en el piloto | `m` | fix | P1 | m | Funcional · Media · agregada 2026-10-20: se habilitó en `fix-465-m`, después de que 025 y 033 cerraran |
 
 ### Tanda fixes del testing del piloto — 2026-09-30
 
@@ -270,6 +269,7 @@
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
 | ASG-i-034 | Testing: Gestión de instructores, secretarias y usuarios | `b` | [fix-197-b-testing-instructores-secretarias-usuarios](fixes/fix-197-b-testing-instructores-secretarias-usuarios/fix.md) | 2026-10-07 |
 | ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `i` | [0010-i-clase-7-bloqueada-sin-segundo-pago](specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | 2026-10-13 |
+| ASG-m-011 | Testing: Certificación Profesional en el piloto | `m` | [fix-480-m-testing-certificacion-profesional](fixes/fix-480-m-testing-certificacion-profesional/fix.md) | 2026-10-22 |
 <!-- AUTO-GENERATED:END -->
 
 ---
