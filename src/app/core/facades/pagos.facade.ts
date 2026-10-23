@@ -289,7 +289,9 @@ export class PagosFacade {
       .from('enrollments')
       .select('pending_balance')
       .gt('pending_balance', 0)
-      .neq('status', 'draft');
+      // Una matrícula cancelada no es deuda (fix-060-i): la limpieza nocturna cancela borradores
+      // vencidos con consentimientos y las online vencidas sin pago quedan canceladas.
+      .not('status', 'in', '("draft","cancelled")');
     if (branchId !== null) q = q.eq('branch_id', branchId);
     const { data } = await q;
     if (!this.pagosGuard.isCurrent(token)) return;
@@ -305,7 +307,7 @@ export class PagosFacade {
         'id, number, status, base_price, discount, total_paid, pending_balance, created_at, branch_id, students!inner(users!inner(first_names, paternal_last_name, maternal_last_name, rut)), courses!inner(type, name), branches!inner(name)',
       )
       .gt('pending_balance', 0)
-      .neq('status', 'draft')
+      .not('status', 'in', '("draft","cancelled")')
       .order('pending_balance', { ascending: false })
       // Techo server-side (fix-147-b): sin esto la lista crece sin límite con el historial.
       // Mismo patrón que fetchPagosRecientes. Al venir ordenada por saldo descendente, el

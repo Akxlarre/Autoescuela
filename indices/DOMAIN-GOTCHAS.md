@@ -1958,6 +1958,22 @@
 - **Fuente:** `specs/fixes/fix-477-m-rls-borrar-documentos-alumno-solo-admin`, test
   `supabase/tests/rls/fix-477-m-borrar-documentos-alumno.sql`.
 
+### DG-118 — Una matrícula con consentimientos no se puede borrar, y cancelarla exige limpiar `expires_at`
+
+- **Trampa:** borrar una matrícula (borrador vencido, descarte, limpieza) con un `DELETE` de
+  `enrollments`, o "resolverlo" borrando o desvinculando sus `consents` antes.
+- **Realidad:** `consents.enrollment_id` apunta a `enrollments` sin `ON DELETE`, y `consents` es
+  append-only (Ley 21.719, spec 0009-m): un trigger bloquea todo UPDATE salvo `revoked_at` y no hay
+  DELETE. Una matrícula con consentimientos solo se puede **cancelar**. Al pasarla a `cancelled`
+  hay que poner `expires_at = NULL`: `chk_expires_at_draft_only` exige que solo un `draft` tenga
+  fecha de vencimiento. Una matrícula `cancelled` puede quedar con `pending_balance > 0`: las
+  consultas de deuda excluyen `draft` **y** `cancelled`.
+- **Regla de aplicabilidad:** todo camino que borre matrículas (limpiezas, descartes, RPCs) separa
+  primero las que tienen `consents` y las cancela; toda consulta nueva de saldos/deudores filtra
+  `status NOT IN ('draft','cancelled')`.
+- **Fuente:** `specs/fixes/fix-060-i-limpieza-borradores-con-consentimientos`, migración
+  `20261022130000`, test `supabase/tests/rls/fix-060-i-cleanup-borradores-consentimientos.sql`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

@@ -29,7 +29,7 @@ describe('PagosFacade', () => {
             order: vi.fn().mockResolvedValue({ data: [], error: null }),
           }),
           gt: vi.fn().mockReturnValue({
-            neq: vi.fn().mockResolvedValue({ data: [], error: null }),
+            not: vi.fn().mockResolvedValue({ data: [], error: null }),
           }),
           order: vi.fn().mockReturnValue({
             limit: vi.fn().mockResolvedValue({ data: [], error: null }),
@@ -106,6 +106,7 @@ describe('PagosFacade', () => {
           gte: () => b,
           lte: () => b,
           neq: () => b,
+          not: () => b,
           order: () => b,
           limit: () => b,
           then: async (resolve: (v: unknown) => void) => {
@@ -320,8 +321,8 @@ describe('PagosFacade', () => {
       const genericMock = supabaseSpy.client.from();
       const limitSpy = vi.fn().mockResolvedValue({ data: [], error: null });
       const orderSpy = vi.fn().mockReturnValue({ limit: limitSpy });
-      const neqSpy = vi.fn().mockReturnValue({ order: orderSpy });
-      const gtSpy = vi.fn().mockReturnValue({ neq: neqSpy });
+      const notSpy = vi.fn().mockReturnValue({ order: orderSpy });
+      const gtSpy = vi.fn().mockReturnValue({ not: notSpy });
       const enrollmentsSelectSpy = vi.fn().mockReturnValue({ gt: gtSpy });
 
       supabaseSpy.client.from = vi.fn((table: string) =>
@@ -339,6 +340,36 @@ describe('PagosFacade', () => {
       // los que quedan fuera son los deudores más chicos, no unos al azar.
       expect(orderSpy).toHaveBeenCalledWith('pending_balance', { ascending: false });
       expect(limitSpy).toHaveBeenCalledWith(200);
+    });
+
+    // fix-060-i: la limpieza nocturna deja `cancelled` un borrador vencido con consentimientos,
+    // y una matrícula online vencida sin pago también queda `cancelled`. Ninguna es deuda.
+    it('excluye borradores y matrículas canceladas del total pendiente y de la lista de deudores', async () => {
+      const genericMock = supabaseSpy.client.from();
+      // currentUser() = null → el scope de sede cae a -1 y ambas queries terminan en `.eq()`.
+      const eqSpy = vi.fn().mockResolvedValue({ data: [], error: null });
+      const limitSpy = vi.fn().mockReturnValue({ eq: eqSpy });
+      const orderSpy = vi.fn().mockReturnValue({ limit: limitSpy });
+      const notSpy = vi.fn().mockReturnValue({ order: orderSpy, eq: eqSpy });
+      const gtSpy = vi.fn().mockReturnValue({ not: notSpy });
+      const enrollmentsSelectSpy = vi.fn().mockReturnValue({ gt: gtSpy });
+
+      supabaseSpy.client.from = vi.fn((table: string) =>
+        table === 'enrollments' ? { select: enrollmentsSelectSpy } : genericMock,
+      );
+      supabaseSpy.client.channel = vi.fn().mockReturnValue({
+        on: vi.fn().mockReturnThis(),
+        subscribe: vi.fn().mockReturnThis(),
+      });
+
+      await facade.initialize();
+      await flushMicrotasks();
+
+      // Una vez por fetchPagosPendientes y otra por fetchAlumnosConDeuda.
+      expect(notSpy).toHaveBeenCalledTimes(2);
+      for (const call of notSpy.mock.calls) {
+        expect(call).toEqual(['status', 'in', '("draft","cancelled")']);
+      }
     });
   });
 
@@ -366,9 +397,9 @@ describe('PagosFacade', () => {
       const limitEqSpy = vi.fn().mockResolvedValue({ data: [row], error: null });
       const limitSpy = vi.fn().mockReturnValue({ eq: limitEqSpy });
       const orderSpy = vi.fn().mockReturnValue({ limit: limitSpy });
-      const neqEqSpy = vi.fn().mockResolvedValue({ data: [], error: null });
-      const neqSpy = vi.fn().mockReturnValue({ order: orderSpy, eq: neqEqSpy });
-      const gtSpy = vi.fn().mockReturnValue({ neq: neqSpy });
+      const notEqSpy = vi.fn().mockResolvedValue({ data: [], error: null });
+      const notSpy = vi.fn().mockReturnValue({ order: orderSpy, eq: notEqSpy });
+      const gtSpy = vi.fn().mockReturnValue({ not: notSpy });
       const enrollmentsSelectSpy = vi.fn().mockReturnValue({ gt: gtSpy });
 
       supabaseSpy.client.from = vi.fn((table: string) =>

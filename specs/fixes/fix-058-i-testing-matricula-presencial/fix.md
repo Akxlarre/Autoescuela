@@ -120,7 +120,8 @@ se registra recién al firmar? → su propio fix cuando haya decisión.
 
 **B1-2 — La limpieza de borradores se cae con un borrador que tenga consentimientos.** Latente: hoy
 no hay ninguno. Arreglo probable: borrar (o desvincular) `consents` del borrador en
-`cleanup_expired_drafts()`, o no registrar el consentimiento hasta activar. → su propio fix.
+`cleanup_expired_drafts()`, o no registrar el consentimiento hasta activar. → **Resuelto en
+`fix-060-i`** (2026-10-22): se cancela en vez de borrarse y libera sus clases.
 
 ### Bloque 2 — pantallas sin guardar (Playwright, todas las escrituras interceptadas, 2026-10-18)
 
