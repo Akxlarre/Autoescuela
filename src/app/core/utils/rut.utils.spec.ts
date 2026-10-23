@@ -5,7 +5,43 @@ import {
   formatRutTyping,
   validateRut,
   formatRut,
+  decideRutCorrection,
 } from './rut.utils';
+
+// fix-063-i: corregir el RUT de un borrador ya guardado.
+describe('decideRutCorrection', () => {
+  const nuevo = { hasOtherEnrollments: false, hasAccount: false };
+
+  it('el mismo RUT con otro formato no es un cambio', () => {
+    expect(decideRutCorrection('33.058.002-K', '33058002k', nuevo)).toBe('unchanged');
+  });
+
+  it('alumno nuevo: el RUT corregido se aplica', () => {
+    expect(decideRutCorrection('33.058.002-K', '33.058.003-8', nuevo)).toBe('apply');
+  });
+
+  it('alumno con otras matrículas: no se cambia desde el wizard', () => {
+    expect(
+      decideRutCorrection('33.058.002-K', '33.058.003-8', {
+        hasOtherEnrollments: true,
+        hasAccount: false,
+      }),
+    ).toBe('locked');
+  });
+
+  it('usuario con cuenta de acceso: no se cambia desde el wizard', () => {
+    expect(
+      decideRutCorrection('33.058.002-K', '33.058.003-8', {
+        hasOtherEnrollments: false,
+        hasAccount: true,
+      }),
+    ).toBe('locked');
+  });
+
+  it('sin RUT guardado (fila vieja) se aplica', () => {
+    expect(decideRutCorrection(null, '33.058.003-8', nuevo)).toBe('apply');
+  });
+});
 
 describe('calculateRutDv', () => {
   it('calcula el DV para un cuerpo real de 8 dígitos (caso conocido "5")', () => {

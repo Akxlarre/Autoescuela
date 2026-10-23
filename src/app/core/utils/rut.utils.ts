@@ -43,6 +43,25 @@ export function normalizeRutForStorage(rut: string): string {
   return formatRut(rut);
 }
 
+/** Qué hacer con el RUT al volver a guardar el paso 1 de un borrador (fix-063-i). */
+export type RutCorrection = 'unchanged' | 'apply' | 'locked';
+
+/**
+ * Corregir un RUT mal tipeado solo es seguro si la persona nació en este borrador: si ya tiene
+ * otras matrículas o cuenta de acceso, cambiarle el RUT reescribiría la identidad de alguien que
+ * ya existía (lo correcto es descartar el borrador y empezar uno con el RUT correcto).
+ */
+export function decideRutCorrection(
+  storedRut: string | null | undefined,
+  newRut: string,
+  person: { hasOtherEnrollments: boolean; hasAccount: boolean },
+): RutCorrection {
+  const same = (a: string, b: string) => cleanRut(a).toUpperCase() === cleanRut(b).toUpperCase();
+  if (storedRut && same(storedRut, newRut)) return 'unchanged';
+  if (person.hasOtherEnrollments || person.hasAccount) return 'locked';
+  return 'apply';
+}
+
 /** Calcula el dígito verificador (módulo 11) para el cuerpo numérico de un RUT. */
 export function calculateRutDv(body: string): string {
   let sum = 0;

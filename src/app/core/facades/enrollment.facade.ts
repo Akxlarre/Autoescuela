@@ -13,7 +13,12 @@ import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service
 import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 
 import type { Enrollment } from '@core/models/dto/enrollment.model';
-import { normalizeRutForStorage, cleanRut } from '@core/utils/rut.utils';
+import {
+  normalizeRutForStorage,
+  cleanRut,
+  decideRutCorrection,
+  type RutCorrection,
+} from '@core/utils/rut.utils';
 import { evaluateReenrollment, type ReenrollmentVerdict } from '@core/utils/reenrollment.utils';
 import {
   chileDayRange,
@@ -2250,13 +2255,28 @@ export class EnrollmentFacade {
     // This avoids a 409 conflict when RLS prevents the SELECT from returning the existing row.
     const knownUserId = this._draft().userId;
     if (knownUserId) {
+      // fix-063-i: la corrección del RUT también se guarda (antes el UPDATE no lo llevaba).
+      const rutChange = await this.resolveDraftRutChange(knownUserId, data.rut);
+      if (rutChange.decision === 'locked') {
+        this._error.set(
+          `Este alumno ya estaba registrado con el RUT ${rutChange.storedRut}: no se puede cambiar desde la matrícula. Si es otra persona, descarta este borrador y empieza una matrícula nueva.`,
+        );
+        return null;
+      }
+      if (rutChange.decision === 'apply') updatePayload['rut'] = normalizedRut;
+
       const { error } = await this.supabase.client
         .from('users')
         .update(updatePayload)
         .eq('id', knownUserId);
 
       if (error) {
-        this._error.set('Error al actualizar usuario: ' + this.sanitizer.sanitize(error).message);
+        const pg = error as { code?: string; message?: string };
+        this._error.set(
+          pg.code === '23505' && /rut/i.test(pg.message ?? '')
+            ? `El RUT ${normalizedRut} ya está registrado para otra persona. Revisa el RUT; si es otro alumno, descarta este borrador y empieza una matrícula nueva.`
+            : 'Error al actualizar usuario: ' + this.sanitizer.sanitize(error).message,
+        );
         return null;
       }
       return knownUserId;
@@ -2312,6 +2332,38 @@ export class EnrollmentFacade {
       return null;
     }
     return newUser.id;
+  }
+
+  /**
+   * ¿Se puede corregir el RUT del usuario de este borrador? (fix-063-i). Solo si la persona nació
+   * en el borrador: sin otras matrículas ni cuenta de acceso. La regla vive en
+   * `decideRutCorrection()`; acá solo se leen los datos.
+   */
+  private async resolveDraftRutChange(
+    userId: number,
+    newRut: string,
+  ): Promise<{ decision: RutCorrection; storedRut: string | null }> {
+    const { data: current } = await this.supabase.client
+      .from('users')
+      .select('rut, supabase_uid')
+      .eq('id', userId)
+      .maybeSingle();
+    const storedRut: string | null = current?.rut ?? null;
+    const person = { hasOtherEnrollments: false, hasAccount: !!current?.supabase_uid };
+
+    if (decideRutCorrection(storedRut, newRut, person) === 'unchanged') {
+      return { decision: 'unchanged', storedRut };
+    }
+
+    const { studentId, enrollmentId } = this._draft();
+    if (studentId) {
+      const { data: rows } = await this.supabase.client
+        .from('enrollments')
+        .select('id')
+        .eq('student_id', studentId);
+      person.hasOtherEnrollments = (rows ?? []).some((r: { id: number }) => r.id !== enrollmentId);
+    }
+    return { decision: decideRutCorrection(storedRut, newRut, person), storedRut };
   }
 
   private async upsertStudent(

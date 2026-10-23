@@ -130,7 +130,7 @@
 | `src/app/core/utils/reportes-contables.utils.ts` | `PaymentRow`, `ExpenseRow`, `SingularSaleReportDto`, `mapSingularSaleToPaymentRow`, `SpecialServiceSaleReportDto`, `mapSpecialServiceSaleToPaymentRow`, `filterPaymentsByBranch`, `computeKpis`, `computeIngresosCategoria`, `computeGastosCategoria`, `computeEvolucionMensual`, `computeEvolucionRange`, `computeRentabilidadCursos`, `buildReporte` |
 | `src/app/core/utils/request-guard.utils.ts` | `RequestGuard`, `createRequestGuard` |
 | `src/app/core/utils/return-url.utils.ts` | `safeReturnUrl`, `loginQueryParams` |
-| `src/app/core/utils/rut.utils.ts` | `cleanRut`, `formatRut`, `normalizeRutForStorage`, `calculateRutDv`, `validateRut`, `formatRutTyping`, `completeRutDv` |
+| `src/app/core/utils/rut.utils.ts` | `cleanRut`, `formatRut`, `normalizeRutForStorage`, `decideRutCorrection` (fix-063-i: `unchanged`/`apply`/`locked` al corregir el RUT de un borrador — `locked` si la persona tiene otras matrículas o cuenta), `calculateRutDv`, `validateRut`, `formatRutTyping`, `completeRutDv` |
 | `src/app/core/utils/schedule-status.utils.ts` | `SessionStatus`, `StatusVisual`, `getStatusVisual`, `getStatusLabel`, `getDotStyle` |
 | `src/app/core/utils/schedule-week-days.utils.ts` | `filterVisibleWeekDays` |
 | `src/app/core/utils/search-filter.utils.ts` | `normalizeSearchText`, `matchesSearch`, `filterBySearch`, `matchesSearchTokens`, `filterBySearchTokens` |

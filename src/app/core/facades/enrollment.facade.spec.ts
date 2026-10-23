@@ -1642,6 +1642,98 @@ describe('EnrollmentFacade', () => {
     });
   });
 
+  // fix-063-i: al volver a guardar el paso 1 de un borrador, el UPDATE de users no llevaba el RUT.
+  describe('upsertUser — corregir el RUT de un borrador (fix-063-i)', () => {
+    const data = {
+      rut: '33.058.003-8',
+      firstNames: 'Ana',
+      paternalLastName: 'Soto',
+      maternalLastName: '',
+      email: 'ana@test.cl',
+      phone: '+56900000000',
+    } as any;
+
+    function prepare(opts: {
+      storedRut: string;
+      supabaseUid?: string | null;
+      enrollments?: { id: number }[];
+      updateError?: unknown;
+    }) {
+      (facade as any)._draft.set({ enrollmentId: 77, studentId: 5, userId: 12 });
+      const usersSelect = createMockQueryBuilder(
+        { rut: opts.storedRut, supabase_uid: opts.supabaseUid ?? null },
+        null,
+      );
+      const usersUpdate = createMockQueryBuilder(null, opts.updateError ?? null);
+      const enrollments = createMockQueryBuilder(opts.enrollments ?? [{ id: 77 }], null);
+      let usersCalls = 0;
+      mockSupabase.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'users') return usersCalls++ === 0 ? usersSelect : usersUpdate;
+        if (table === 'enrollments') return enrollments;
+        return createMockQueryBuilder(null, null);
+      });
+      return { usersUpdate };
+    }
+
+    it('alumno nuevo: el UPDATE lleva el RUT corregido', async () => {
+      const { usersUpdate } = prepare({ storedRut: '33.058.002-K' });
+
+      const id = await (facade as any).upsertUser(data, 1);
+
+      expect(id).toBe(12);
+      expect(usersUpdate.update).toHaveBeenCalledWith(
+        expect.objectContaining({ rut: '33.058.003-8' }),
+      );
+    });
+
+    it('sin cambio de RUT no lo reescribe', async () => {
+      const { usersUpdate } = prepare({ storedRut: '33.058.003-8' });
+
+      await (facade as any).upsertUser(data, 1);
+
+      expect(usersUpdate.update.mock.calls[0][0]).not.toHaveProperty('rut');
+    });
+
+    it('alumno con otras matrículas: no cambia el RUT y lo explica', async () => {
+      const { usersUpdate } = prepare({
+        storedRut: '33.058.002-K',
+        enrollments: [{ id: 77 }, { id: 40 }],
+      });
+
+      const id = await (facade as any).upsertUser(data, 1);
+
+      expect(id).toBeNull();
+      expect(usersUpdate.update).not.toHaveBeenCalled();
+      expect(facade.error()).toContain('descarta este borrador');
+    });
+
+    it('usuario con cuenta de acceso: no cambia el RUT', async () => {
+      prepare({ storedRut: '33.058.002-K', supabaseUid: 'uid-1' });
+
+      const id = await (facade as any).upsertUser(data, 1);
+
+      expect(id).toBeNull();
+      expect(facade.error()).toContain('33.058.002-K');
+    });
+
+    it('RUT que ya es de otra persona: mensaje propio, no el genérico de duplicado', async () => {
+      prepare({
+        storedRut: '33.058.002-K',
+        updateError: {
+          code: '23505',
+          message: 'duplicate key value violates unique constraint "users_rut_key"',
+        },
+      });
+
+      const id = await (facade as any).upsertUser(data, 1);
+
+      expect(id).toBeNull();
+      expect(facade.error()).toBe(
+        'El RUT 33.058.003-8 ya está registrado para otra persona. Revisa el RUT; si es otro alumno, descarta este borrador y empieza una matrícula nueva.',
+      );
+    });
+  });
+
   // fix-061-i: el código se resolvía a sence_code_id con un mapa que nadie llenaba → siempre null.
   describe('savePersonalData — guarda el código SENCE escrito (fix-061-i)', () => {
     const baseData = {
