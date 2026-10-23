@@ -43,6 +43,7 @@ describe('SecretariaMatriculaComponent — branch-gate reactivity (fix-067)', ()
       loadScheduleGrid: vi.fn().mockResolvedValue(undefined),
       loadActiveDrafts: vi.fn().mockResolvedValue([]),
       reset: vi.fn(),
+      draft: vi.fn().mockReturnValue({ enrollmentId: null }),
     };
 
     TestBed.configureTestingModule({
@@ -103,17 +104,70 @@ describe('SecretariaMatriculaComponent — branch-gate reactivity (fix-067)', ()
     expect(initWizardSpy).toHaveBeenCalled();
   });
 
-  it('mientras el wizard ya está activo, el cambio de sede del topbar sigue recargando cursos (sin regresión)', () => {
-    (component as any)._viewMode.set('wizard');
-    branchFacade.selectBranch(1);
-    TestBed.tick();
+  // fix-065-i (B2-3): antes solo vaciaba el paso 1 y recargaba cursos; el wizard seguía en el mismo
+  // paso con el borrador de la sede anterior.
+  describe('cambio de sede con el wizard abierto (fix-065-i)', () => {
+    const flush = async () => {
+      for (let i = 0; i < 6; i++) await Promise.resolve();
+      TestBed.tick();
+    };
+    let toast: any;
 
-    enrollmentFacadeSpy.loadCourses.mockClear();
+    beforeEach(() => {
+      toast = TestBed.inject(ToastService);
+      branchFacade.selectBranch(1);
+      TestBed.tick();
+      (component as any)._viewMode.set('wizard');
+      (component as any).wizardBranchId = 1;
+      enrollmentFacadeSpy.loadCourses.mockClear();
+      enrollmentFacadeSpy.loadActiveDrafts.mockClear();
+      enrollmentFacadeSpy.reset.mockClear();
+    });
 
-    branchFacade.selectBranch(2);
-    TestBed.tick();
+    it('sin borrador guardado, vuelve a empezar en la sede nueva sin aviso', async () => {
+      enrollmentFacadeSpy.draft.mockReturnValue({ enrollmentId: null });
 
-    expect(enrollmentFacadeSpy.loadCourses).toHaveBeenCalledWith(2);
+      branchFacade.selectBranch(2);
+      TestBed.tick();
+      await flush();
+
+      expect(enrollmentFacadeSpy.loadActiveDrafts).toHaveBeenCalledWith(2);
+      expect(enrollmentFacadeSpy.loadCourses).toHaveBeenCalledWith(2);
+      expect(toast.info).not.toHaveBeenCalled();
+    });
+
+    it('con un borrador guardado, lo deja en la sede anterior, avisa y sale del paso en curso', async () => {
+      enrollmentFacadeSpy.draft.mockReturnValue({ enrollmentId: 8495 });
+      enrollmentFacadeSpy.loadActiveDrafts.mockResolvedValue([{ enrollmentId: 9000 }]);
+
+      branchFacade.selectBranch(2);
+      TestBed.tick();
+      await flush();
+
+      expect(enrollmentFacadeSpy.reset).toHaveBeenCalled();
+      expect(enrollmentFacadeSpy.loadActiveDrafts).toHaveBeenCalledWith(2);
+      expect(component.viewMode()).toBe('draft-list');
+      expect(toast.info).toHaveBeenCalledWith(
+        'Matrícula guardada como borrador',
+        expect.stringContaining('borrador'),
+      );
+    });
+
+    it('si el efecto se re-dispara con la misma sede, no reinicia nada', async () => {
+      branchFacade.selectBranch(2);
+      TestBed.tick();
+      await flush();
+      enrollmentFacadeSpy.loadActiveDrafts.mockClear();
+      (component as any)._viewMode.set('wizard');
+
+      // Misma sede otra vez (p. ej. currentUser() re-emitido por un refresco de sesión).
+      branchFacade.selectBranch(2);
+      TestBed.tick();
+      await flush();
+
+      expect(enrollmentFacadeSpy.loadActiveDrafts).not.toHaveBeenCalled();
+      expect(component.viewMode()).toBe('wizard');
+    });
   });
 
   describe('sede elegida en el wizard (fix-309-m)', () => {

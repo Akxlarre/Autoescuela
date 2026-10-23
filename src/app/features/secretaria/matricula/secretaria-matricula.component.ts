@@ -148,9 +148,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
 
       if (currentView !== 'wizard') return;
 
-      this._step1Form.set(DEFAULT_PERSONAL_DATA);
-      this._step1Saved.set(DEFAULT_PERSONAL_DATA);
-      void this.enrollment.loadCourses(branchId);
+      untracked(() => this.onBranchChangedDuringWizard(branchId));
     });
 
     effect(() => {
@@ -555,9 +553,38 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     await this.startFreshWizard();
   }
 
+  /** Sede con que arrancó el wizard en curso (fix-065-i): un cambio de sede se mide contra esta. */
+  private wizardBranchId: number | null = null;
+
+  /**
+   * El admin cambió de sede en el topbar con el wizard abierto (fix-065-i). Antes solo se vaciaba
+   * el paso 1 y se recargaban los cursos: el wizard seguía en el mismo paso con el borrador de la
+   * sede anterior. Ahora vuelve a empezar en la sede nueva; un borrador ya guardado no se pierde,
+   * queda en su sede y se avisa. Si la sede no cambió (el efecto se re-dispara), no hace nada.
+   */
+  private onBranchChangedDuringWizard(branchId: number): void {
+    if (branchId === this.wizardBranchId) return;
+
+    if (this.enrollment.draft().enrollmentId != null) {
+      const previous =
+        this.branchFacade.branches().find((b) => b.id === this.wizardBranchId)?.name ??
+        'la sede anterior';
+      this.toast.info(
+        'Matrícula guardada como borrador',
+        `La matrícula en curso quedó como borrador en ${previous}. La encuentras al volver a esa sede.`,
+      );
+    }
+
+    this.enrollment.reset();
+    this.docs.reset();
+    this.payment.reset();
+    void this.initWizard();
+  }
+
   /** Inicia el wizard desde cero (sin borrador). La sede activa se lee desde activeBranchId(). */
   private async startFreshWizard(): Promise<void> {
     const branch = this.activeBranchId();
+    this.wizardBranchId = branch;
     this.enrollment.reset();
     this.docs.reset();
     this.payment.reset();
@@ -585,6 +612,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     if (ok) {
       // Cargar cursos para que los computed funcionen correctamente
       const branchId = this.activeBranchId();
+      this.wizardBranchId = branchId;
       await this.enrollment.loadCourses(branchId);
       // Sincronizar _step1Form con los datos del draft para que onStep1Next
       // envíe los datos correctos si el usuario navega de vuelta al paso 1.
