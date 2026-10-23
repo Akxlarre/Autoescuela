@@ -19,7 +19,12 @@ import {
   decideRutCorrection,
   type RutCorrection,
 } from '@core/utils/rut.utils';
-import { evaluateReenrollment, type ReenrollmentVerdict } from '@core/utils/reenrollment.utils';
+import {
+  duplicateEnrollmentMessage,
+  evaluateReenrollment,
+  pickBlockingCourseName,
+  type ReenrollmentVerdict,
+} from '@core/utils/reenrollment.utils';
 import {
   chileDayRange,
   diffDaysIso,
@@ -547,6 +552,32 @@ export class EnrollmentFacade {
    *  - la matrícula actual en edición (`_draft().enrollmentId`): un draft que se
    *    está reanudando no debe verse a sí mismo como duplicado.
    */
+  /**
+   * Nombre del curso de la matrícula en curso que bloquea una nueva de la misma licencia
+   * (fix-066-i). Solo se consulta cuando el veredicto ya es 'block', para el aviso.
+   */
+  private async findBlockingCourseName(
+    studentId: number,
+    licenseClass: string,
+  ): Promise<string | null> {
+    let query = this.supabase.client
+      .from('enrollments')
+      .select('id, status, courses!inner(name, license_class)')
+      .eq('student_id', studentId)
+      .eq('courses.license_class', licenseClass)
+      .neq('status', 'draft');
+
+    const currentId = this._draft().enrollmentId;
+    if (currentId != null) {
+      query = query.neq('id', currentId) as typeof query;
+    }
+
+    const { data } = await query;
+    return pickBlockingCourseName(
+      (data ?? []).map((r: any) => ({ status: r.status, courseName: r.courses?.name ?? null })),
+    );
+  }
+
   private async evaluateCourseReenrollment(
     studentId: number,
     licenseClass: string,
@@ -598,9 +629,13 @@ export class EnrollmentFacade {
 
           // 'block' → tiene una matrícula viva (activa/pendiente de pago) en este curso.
           if (verdict === 'block') {
+            // fix-066-i: nombrar el curso que está en curso, no el elegido (comparten licencia).
+            const blockingCourse = existing.studentId
+              ? await this.findBlockingCourseName(existing.studentId, licenseClass)
+              : null;
             await this.confirm({
               title: 'Matrícula duplicada',
-              message: `${fullName} ya tiene una matrícula en curso en ${courseName}. No es posible crear una nueva mientras esa siga vigente.`,
+              message: duplicateEnrollmentMessage(fullName, blockingCourse, courseName),
               severity: 'danger',
               confirmLabel: 'Entendido',
             });
@@ -691,8 +726,13 @@ export class EnrollmentFacade {
       if (licenseClassForCheck) {
         const verdict = await this.evaluateCourseReenrollment(studentId, licenseClassForCheck);
         if (verdict === 'block') {
+          const blockingCourse = await this.findBlockingCourseName(studentId, licenseClassForCheck);
           this._error.set(
-            `El alumno ya tiene una matrícula en curso en ${courseForCheck?.name ?? licenseClassForCheck}. No es posible crear una nueva mientras esa siga vigente.`,
+            duplicateEnrollmentMessage(
+              'El alumno',
+              blockingCourse,
+              courseForCheck?.name ?? licenseClassForCheck,
+            ),
           );
           this._isLoading.set(false);
           return false;

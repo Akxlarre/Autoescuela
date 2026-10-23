@@ -1,5 +1,48 @@
 import { describe, expect, it } from 'vitest';
-import { BLOCKING_STATUSES, HISTORICAL_STATUSES, evaluateReenrollment } from './reenrollment.utils';
+import {
+  BLOCKING_STATUSES,
+  HISTORICAL_STATUSES,
+  duplicateEnrollmentMessage,
+  evaluateReenrollment,
+  pickBlockingCourseName,
+} from './reenrollment.utils';
+
+// fix-066-i (B2-4): el aviso nombraba el curso elegido, no el que estaba en curso.
+describe('pickBlockingCourseName', () => {
+  it('devuelve el curso de la primera matrícula en curso, ignorando las históricas', () => {
+    expect(
+      pickBlockingCourseName([
+        { status: 'completed', courseName: 'Clase B SENCE' },
+        { status: 'active', courseName: 'Clase B' },
+      ]),
+    ).toBe('Clase B');
+  });
+
+  it('sin matrículas en curso devuelve null', () => {
+    expect(pickBlockingCourseName([{ status: 'cancelled', courseName: 'Clase B' }])).toBeNull();
+    expect(pickBlockingCourseName([])).toBeNull();
+  });
+});
+
+describe('duplicateEnrollmentMessage', () => {
+  it('con otro curso en curso, nombra los dos', () => {
+    expect(duplicateEnrollmentMessage('Ana Soto', 'Clase B', 'Refuerzo Clase B')).toBe(
+      'Ana Soto ya tiene una matrícula en curso en Clase B. No es posible matricularlo/a en Refuerzo Clase B mientras esa siga vigente.',
+    );
+  });
+
+  it('con el mismo curso, mantiene el texto de siempre', () => {
+    expect(duplicateEnrollmentMessage('Ana Soto', 'Clase B', 'Clase B')).toBe(
+      'Ana Soto ya tiene una matrícula en curso en Clase B. No es posible crear una nueva mientras esa siga vigente.',
+    );
+  });
+
+  it('si no se sabe el curso en curso, usa el elegido', () => {
+    expect(duplicateEnrollmentMessage('Ana Soto', null, 'Clase B')).toBe(
+      'Ana Soto ya tiene una matrícula en curso en Clase B. No es posible crear una nueva mientras esa siga vigente.',
+    );
+  });
+});
 
 /**
  * Núcleo funcional de la regla de re-matrícula (fix-020).

@@ -1643,6 +1643,27 @@ describe('EnrollmentFacade', () => {
     });
   });
 
+  // fix-066-i (B2-4): el aviso nombraba el curso elegido, no el que estaba en curso.
+  it('red de seguridad: el aviso de duplicado nombra el curso en curso y el elegido (fix-066-i)', async () => {
+    (facade as any)._draft.set({ enrollmentId: null, studentId: 5, userId: 12 });
+    (facade as any)._courses.set([{ id: 10, name: 'Refuerzo Clase B', license_class: 'B' }]);
+    vi.spyOn(facade as any, 'upsertUser').mockResolvedValue(12);
+    vi.spyOn(facade as any, 'upsertStudent').mockResolvedValue(5);
+    vi.spyOn(facade as any, 'resolveCourseId').mockResolvedValue(10);
+    vi.spyOn(facade as any, 'evaluateCourseReenrollment').mockResolvedValue('block');
+    vi.spyOn(facade as any, 'findBlockingCourseName').mockResolvedValue('Clase B');
+
+    const ok = await facade.savePersonalData(
+      { rut: '11.111.111-1', courseType: 'class_b_reinforcement', courses: [] } as any,
+      1,
+    );
+
+    expect(ok).toBe(false);
+    expect(facade.error()).toBe(
+      'El alumno ya tiene una matrícula en curso en Clase B. No es posible matricularlo/a en Refuerzo Clase B mientras esa siga vigente.',
+    );
+  });
+
   // fix-064-i: el borrador se buscaba por (alumno, curso) → cambiar el curso insertaba otro.
   describe('savePersonalData — cambiar el curso del borrador actual (fix-064-i)', () => {
     const data = {

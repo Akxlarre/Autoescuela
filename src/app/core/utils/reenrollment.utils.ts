@@ -41,6 +41,34 @@ export const HISTORICAL_STATUSES: readonly EnrollmentStatus[] = ['completed', 'c
  * Esta es la ÚNICA fuente de la regla en el frontend; el flujo público la
  * replica en `supabase/functions/_shared/` (Deno no puede importar este módulo).
  */
+/**
+ * Curso de la matrícula que bloquea una nueva (fix-066-i): la primera que no es histórica.
+ * El bloqueo se decide por clase de licencia, así que puede ser otro curso que el elegido
+ * (Clase B en curso bloquea Refuerzo Clase B).
+ */
+export function pickBlockingCourseName(
+  rows: readonly { status: string | null | undefined; courseName: string | null | undefined }[],
+): string | null {
+  const blocking = rows.find(
+    (r) => !!r.status && !(HISTORICAL_STATUSES as readonly string[]).includes(r.status),
+  );
+  return blocking?.courseName ?? null;
+}
+
+/** Aviso de matrícula duplicada: nombra el curso en curso y, si es otro, también el elegido. */
+export function duplicateEnrollmentMessage(
+  fullName: string,
+  blockingCourseName: string | null,
+  chosenCourseName: string,
+): string {
+  const inCourse = blockingCourseName ?? chosenCourseName;
+  const tail =
+    inCourse === chosenCourseName
+      ? 'No es posible crear una nueva mientras esa siga vigente.'
+      : `No es posible matricularlo/a en ${chosenCourseName} mientras esa siga vigente.`;
+  return `${fullName} ya tiene una matrícula en curso en ${inCourse}. ${tail}`;
+}
+
 export function evaluateReenrollment(
   existingStatuses: readonly (string | null | undefined)[],
 ): ReenrollmentVerdict {

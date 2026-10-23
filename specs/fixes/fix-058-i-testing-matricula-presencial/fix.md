@@ -140,7 +140,7 @@ no hay ninguno. Arreglo probable: borrar (o desvincular) `consents` del borrador
 | C01 precarga por RUT (egresado Alumno62) | ✅ | nombre, email, teléfono, nacimiento se precargan |
 | C04 / C05 egresado + Clase B | ✅ | aviso "Re-matrícula en el mismo curso… se conserva como historial" con confirmación; "Cancelar" deja el paso 1 sin crear nada |
 | C06 Clase B activa (Alumno79) + Clase B | ✅ | "Matrícula duplicada… No es posible crear una nueva" |
-| C08 Clase B activa + Refuerzo | ❌ **B2-4** + decisión | bloquea (S20, decisión de negocio pendiente) y además el mensaje es **engañoso**: "ya tiene una matrícula en curso en Refuerzo Clase B", cuando lo activo es Clase B (nombra el curso elegido, no el existente) |
+| C08 Clase B activa + Refuerzo | ❌ **B2-4** → ✅ mensaje resuelto en `fix-066-i` · decisión S20 pendiente | bloquea (S20, decisión de negocio pendiente) y además el mensaje es **engañoso**: "ya tiene una matrícula en curso en Refuerzo Clase B", cuando lo activo es Clase B (nombra el curso elegido, no el existente) |
 | C13 / C14 email de otra persona (también con mayúsculas) | ✅ | "Este correo ya está registrado por otra persona…"; no avanza y el botón no queda pegado |
 | C07, C10–C12, C15–C17 | → Bloque 3 | requieren datos que no existen hoy (retirado, cancelado, funcionario, archivado, otra sede) o crear la matrícula |
 | S21 admin cambia de sede a mitad del wizard | ❌ **B2-3** → ✅ resuelto en `fix-065-i` | en el paso 3, sede 1 → 2: sigue en el paso 3 con el mismo borrador (de la sede 1), el formulario del paso 1 queda vacío, se cargan los cursos de la sede 2 (aparece Profesional) y no hay aviso |

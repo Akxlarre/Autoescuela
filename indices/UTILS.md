@@ -125,7 +125,7 @@
 | `src/app/core/utils/reagendamiento.utils.ts` | `isRazonReagendamientoCompleta`, `slotChocaConClases` |
 | `src/app/core/utils/realtime-scope.utils.ts` | `RealtimeRowChange`, `StudentRealtimeScope`, `isRealtimeEventForStudent` |
 | `src/app/core/utils/recipient-filter.utils.ts` | `BulkAction`, `filterRecipients`, `includedCount`, `applyBulkAction`, `onlyExcluded` |
-| `src/app/core/utils/reenrollment.utils.ts` | `EnrollmentStatus`, `ReenrollmentVerdict`, `BLOCKING_STATUSES`, `HISTORICAL_STATUSES`, `evaluateReenrollment` |
+| `src/app/core/utils/reenrollment.utils.ts` | `EnrollmentStatus`, `ReenrollmentVerdict`, `BLOCKING_STATUSES`, `HISTORICAL_STATUSES`, `evaluateReenrollment`, `pickBlockingCourseName` + `duplicateEnrollmentMessage` (fix-066-i: el aviso de duplicado nombra el curso en curso, no el elegido) |
 | `src/app/core/utils/remember-session.utils.ts` | `REMEMBER_KEY`, `ALIVE_COOKIE`, `shouldDiscardStoredSession`, `supabaseStorageKey` |
 | `src/app/core/utils/reportes-contables.utils.ts` | `PaymentRow`, `ExpenseRow`, `SingularSaleReportDto`, `mapSingularSaleToPaymentRow`, `SpecialServiceSaleReportDto`, `mapSpecialServiceSaleToPaymentRow`, `filterPaymentsByBranch`, `computeKpis`, `computeIngresosCategoria`, `computeGastosCategoria`, `computeEvolucionMensual`, `computeEvolucionRange`, `computeRentabilidadCursos`, `buildReporte` |
 | `src/app/core/utils/request-guard.utils.ts` | `RequestGuard`, `createRequestGuard` |
