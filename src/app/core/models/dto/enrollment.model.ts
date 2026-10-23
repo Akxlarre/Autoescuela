@@ -5,6 +5,8 @@ export interface Enrollment {
   course_id: number;
   branch_id?: number | null;
   sence_code_id?: number | null;
+  /** Código SENCE tal como lo escribe la secretaria en el paso 1 (fix-061-i). */
+  sence_code?: string | null;
   promotion_course_id?: number | null;
   base_price?: number | null;
   discount: number;

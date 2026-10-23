@@ -1524,7 +1524,7 @@ describe('EnrollmentFacade', () => {
   // antes era al revés (4=Contrato, 5=Pago). Un mismatch acá pisaría datos del paso
   // equivocado al reanudar un borrador.
   describe('resumeDraft — rehidrata Pago/Contrato según el paso, en el orden nuevo (fix-034-i)', () => {
-    function buildResumeMocks(currentStep: number) {
+    function buildResumeMocks(currentStep: number, extraEnrollment: Record<string, unknown> = {}) {
       const enrollmentRow = {
         id: 77,
         student_id: 5,
@@ -1533,6 +1533,7 @@ describe('EnrollmentFacade', () => {
         current_step: currentStep,
         payment_mode: null,
         promotion_course_id: null,
+        ...extraEnrollment,
       };
       const studentRow = {
         id: 5,
@@ -1620,6 +1621,96 @@ describe('EnrollmentFacade', () => {
       expect(ok).toBe(true);
       expect(mockPayment.rehydrateFromEnrollment).not.toHaveBeenCalled();
       expect(mockSupabase.client.from).not.toHaveBeenCalledWith('digital_contracts');
+    });
+
+    // fix-061-i: antes armaba `senceCode: null` fijo y el campo volvía vacío.
+    it('devuelve el código SENCE guardado al paso 1', async () => {
+      buildResumeMocks(2, { sence_code: '1237958058' });
+
+      const ok = await facade.resumeDraft(77);
+
+      expect(ok).toBe(true);
+      expect(facade.personalData()?.senceCode).toBe('1237958058');
+    });
+
+    it('sin código SENCE guardado, el campo queda vacío', async () => {
+      buildResumeMocks(2);
+
+      await facade.resumeDraft(77);
+
+      expect(facade.personalData()?.senceCode).toBeNull();
+    });
+  });
+
+  // fix-061-i: el código se resolvía a sence_code_id con un mapa que nadie llenaba → siempre null.
+  describe('savePersonalData — guarda el código SENCE escrito (fix-061-i)', () => {
+    const baseData = {
+      rut: '11.111.111-1',
+      firstNames: 'Ana',
+      paternalLastName: 'Soto',
+      maternalLastName: '',
+      email: 'ana@test.cl',
+      phone: '+56900000000',
+      birthDate: '2000-01-01',
+      gender: 'F',
+      address: '',
+      courseCategory: 'class_b',
+      courseType: 'class_b_sence',
+      singularCourseCode: null,
+      senceCode: '  1237958058 ',
+      currentLicense: null,
+      licenseDate: null,
+      convalidatesSimultaneously: false,
+      validationBook: null,
+      historicalPromotionId: null,
+      courses: [],
+    } as any;
+
+    function prepare(existingDraft: unknown) {
+      // Reanudación (userId conocido): se salta el chequeo de RUT/email duplicado.
+      (facade as any)._draft.set({ enrollmentId: null, studentId: 5, userId: 12 });
+      vi.spyOn(facade as any, 'upsertUser').mockResolvedValue(12);
+      vi.spyOn(facade as any, 'upsertStudent').mockResolvedValue(5);
+      vi.spyOn(facade as any, 'resolveCourseId').mockResolvedValue(9);
+      vi.spyOn(facade as any, 'evaluateCourseReenrollment').mockResolvedValue('allow');
+      vi.spyOn(facade as any, 'findExistingDraft').mockResolvedValue(existingDraft);
+      const enrollments = createMockQueryBuilder({ id: 77 }, null);
+      mockSupabase.client.from = vi
+        .fn()
+        .mockImplementation((table: string) =>
+          table === 'enrollments' ? enrollments : createMockQueryBuilder(null, null),
+        );
+      return enrollments;
+    }
+
+    it('al crear el borrador escribe sence_code sin espacios al borde', async () => {
+      const enrollments = prepare(null);
+
+      await facade.savePersonalData(baseData, 1);
+
+      expect(enrollments.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ sence_code: '1237958058' }),
+      );
+    });
+
+    it('al actualizar un borrador existente también escribe sence_code', async () => {
+      const enrollments = prepare({ id: 77, base_price: 100 });
+
+      await facade.savePersonalData(baseData, 1);
+
+      expect(enrollments.update).toHaveBeenCalledWith(
+        expect.objectContaining({ sence_code: '1237958058' }),
+      );
+    });
+
+    it('sin código (curso que no es SENCE) guarda null', async () => {
+      const enrollments = prepare(null);
+
+      await facade.savePersonalData({ ...baseData, courseType: 'class_b', senceCode: '   ' }, 1);
+
+      expect(enrollments.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ sence_code: null }),
+      );
     });
   });
 

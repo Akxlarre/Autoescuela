@@ -693,11 +693,9 @@ export class EnrollmentFacade {
         }
       }
 
-      // 4. Resolve sence_code_id (optional, from internal map)
-      let senceCodeId: number | null = null;
-      if (data.senceCode) {
-        senceCodeId = this._senceCodeMap.get(data.senceCode) ?? null;
-      }
+      // 4. Código SENCE tal como lo escribe la secretaria (fix-061-i). Antes se resolvía a
+      //    sence_code_id con _senceCodeMap, que nadie llenaba: siempre quedaba null.
+      const senceCode = data.senceCode?.trim() || null;
 
       // 5. Check for existing draft for this student+course
       const existingDraft = await this.findExistingDraft(studentId, courseId);
@@ -711,7 +709,7 @@ export class EnrollmentFacade {
           .from('enrollments')
           .update({
             branch_id: branchId,
-            sence_code_id: senceCodeId,
+            sence_code: senceCode,
             base_price: course?.base_price ?? existingDraft.base_price,
             expires_at: this.getDraftExpiry(),
             updated_at: new Date().toISOString(),
@@ -732,7 +730,7 @@ export class EnrollmentFacade {
             student_id: studentId,
             course_id: courseId,
             branch_id: branchId,
-            sence_code_id: senceCodeId,
+            sence_code: senceCode,
             base_price: course?.base_price ?? 0,
             discount: 0,
             total_paid: 0,
@@ -1875,7 +1873,7 @@ export class EnrollmentFacade {
         courseCategory: courseOption.category,
         courseType: courseOption.type,
         singularCourseCode: null,
-        senceCode: null,
+        senceCode: enrollment.sence_code ?? null,
         currentLicense: (student.current_license_class as CurrentLicenseType) ?? null,
         licenseDate: student.license_obtained_date ?? null,
         convalidatesSimultaneously: false, // se actualiza abajo si existe registro
