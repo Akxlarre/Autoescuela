@@ -1,6 +1,6 @@
 # Asignación ASG-i-066 — Prueba real del correo del Zoom (cierra fix-062-i)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P1

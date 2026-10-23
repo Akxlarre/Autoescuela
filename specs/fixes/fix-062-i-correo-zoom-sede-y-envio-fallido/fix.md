@@ -1,7 +1,8 @@
 # Fix: El correo del Zoom dice siempre "Conductores Chillán", y un envío fallido queda como enviado o sin explicar
 > id: fix-062-i-correo-zoom-sede-y-envio-fallido
 > refs: revisión del envío de Zoom de clases teóricas Clase B pedida por Ignacio (2026-10-23)
-> status: in_progress
+> status: done
+> closed: 2026-10-23
 > created: 2026-10-23
 
 ## Root Cause
@@ -48,11 +49,24 @@ Ninguno de una spec — bugs encontrados revisando el flujo. Criterios de este f
 - [x] Tests (rojo 2/8) + cambio en la facade (verde): `ciclos-teoricos.facade.spec.ts` 27/27.
 - [x] Marca por sede en la función + test: `zoom-email.test.ts` 10/10, `deno check` limpio.
 - [x] Suite completa 298 archivos, `tsc` limpio, `lint:arch` 0 errores (2026-10-23).
-- [ ] **ASG-i-066 (Ignacio):** OK para desplegar `send-zoom-email` y prueba real (correo a
-      ig.sorko@duocuc.cl). El cambio de correo del alumno de prueba lo hace Ignacio: el modo
-      automático bloqueó que el agente modificara datos reales para disparar un correo.
-- [ ] Cierre.
+- [x] ASG-i-066 (2026-10-23, Ignacio pidió hacerla con ignacio.sorkop@gmail.com): `send-zoom-email`
+      desplegada; alumno QA-058 (user 9080) con ese correo y clase 175 (ciclo 30, Autoescuela
+      Chillán) con enlace de prueba; envío desde la facade → `{ sent: 1, errors: [] }` y la clase
+      quedó marcada. Datos restaurados (correo original, clase sin enlace ni `zoom_sent_at`).
+- [x] Ignacio confirmó el correo (captura de Gmail en el celular).
+- [x] Cierre.
 
 ## Verificación
 
-(pendiente)
+- 2026-10-23, prueba real (ASG-i-066): el correo llegó a **Recibidos** (no a spam) de
+  ignacio.sorkop@gmail.com con encabezado rojo, sello **"AC"** y **"AUTOESCUELA CHILLÁN"** (antes
+  "Conductores Chillán" azul), "lunes, 19 de octubre", "Tema: Clase Teórica 1", botón "Unirse por
+  Zoom" y el enlace `https://zoom.us/j/0000000000` ✅ (AC-F1). Respuesta de la función
+  `{ sent: 1, errors: [] }` y la clase quedó marcada ✅ (AC-F4).
+- AC-F2 y AC-F3 cubiertos por `ciclos-teoricos.facade.spec.ts` (27/27): con `sent = 0` no se
+  estampa `zoom_sent_at` y aparece "No se envió ningún correo"; un rechazo de la función muestra su
+  motivo real.
+- `zoom-email.test.ts` 10/10, `deno check` limpio, suite completa 298 archivos, `tsc` limpio,
+  `lint:arch` 0 errores.
+- Fuera de alcance, para más adelante: el recuadro dice "Fecha y hora" pero solo trae la fecha
+  (`class_b_theory_sessions.class_date` es un día, sin hora).
