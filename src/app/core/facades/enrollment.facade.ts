@@ -32,6 +32,7 @@ import {
   sortPromotionGroupsByStart,
 } from '@core/utils/promotion-code.utils';
 import { calcAge } from '@core/utils/age.utils';
+import { PAYMENT_STATUS_ANULADO } from '@core/utils/payment-status.utils';
 import {
   buildEnrollmentConsents,
   buildCommunicationsConsents,
@@ -702,8 +703,19 @@ export class EnrollmentFacade {
       //    sence_code_id con _senceCodeMap, que nadie llenaba: siempre quedaba null.
       const senceCode = data.senceCode?.trim() || null;
 
-      // 5. Check for existing draft for this student+course
-      const existingDraft = await this.findExistingDraft(studentId, courseId);
+      // 5. Borrador a actualizar: el que el wizard ya está trabajando (fix-064-i) o, si es una
+      //    matrícula nueva, uno vigente del mismo alumno y curso. Antes se buscaba siempre por
+      //    (alumno, curso): cambiar el curso en el paso 1 insertaba un segundo borrador.
+      const currentDraftId = this._draft().enrollmentId;
+      const existingDraft = currentDraftId
+        ? await this.findCurrentDraft(currentDraftId)
+        : await this.findExistingDraft(studentId, courseId);
+
+      const courseChanged = !!existingDraft && existingDraft.course_id !== courseId;
+      if (existingDraft && courseChanged) {
+        const released = await this.releaseDraftForCourseChange(existingDraft.id);
+        if (!released) return false;
+      }
 
       let enrollmentId: number;
       const course = this._courses().find((c) => c.id === courseId);
@@ -713,6 +725,7 @@ export class EnrollmentFacade {
         const { error } = await this.supabase.client
           .from('enrollments')
           .update({
+            ...(courseChanged ? { course_id: courseId, promotion_course_id: null } : {}),
             branch_id: branchId,
             sence_code: senceCode,
             base_price: course?.base_price ?? existingDraft.base_price,
@@ -2464,6 +2477,63 @@ export class EnrollmentFacade {
       return null;
     }
     return course.id;
+  }
+
+  /** El borrador que el wizard está trabajando, si sigue siendo borrador (fix-064-i). */
+  private async findCurrentDraft(enrollmentId: number): Promise<Enrollment | null> {
+    const { data } = await this.supabase.client
+      .from('enrollments')
+      .select('*')
+      .eq('id', enrollmentId)
+      .eq('status', 'draft')
+      .maybeSingle();
+
+    if (data) this._enrollment.set(data);
+    return data ?? null;
+  }
+
+  /**
+   * Antes de cambiarle el curso a un borrador (fix-064-i): libera lo que dependía del curso
+   * anterior — horarios reservados, descuentos y la selección del paso 2. Con un pago registrado
+   * no se cambia: el pago y su precio son del curso anterior.
+   */
+  private async releaseDraftForCourseChange(enrollmentId: number): Promise<boolean> {
+    // Un pago anulado no ata el borrador al curso; uno cobrado o pendiente sí (lleva su precio).
+    const { data: payments } = await this.supabase.client
+      .from('payments')
+      .select('id')
+      .eq('enrollment_id', enrollmentId)
+      .neq('status', PAYMENT_STATUS_ANULADO);
+    if ((payments ?? []).length > 0) {
+      this._error.set(
+        'Este borrador ya tiene un pago registrado para el curso anterior: no se puede cambiar el curso. Si el alumno quiere otro curso, descarta este borrador y empieza una matrícula nueva.',
+      );
+      return false;
+    }
+
+    const releases = [
+      this.supabase.client
+        .from('class_b_sessions')
+        .delete()
+        .eq('enrollment_id', enrollmentId)
+        .eq('status', 'reserved'),
+      this.supabase.client.from('discount_applications').delete().eq('enrollment_id', enrollmentId),
+    ];
+    for (const release of releases) {
+      const { error } = await release;
+      if (error) {
+        this._error.set(
+          'Error al liberar los datos del curso anterior: ' +
+            this.sanitizer.sanitize(error).message,
+        );
+        return false;
+      }
+    }
+
+    this._selectedSlotIds.set([]);
+    this._ownReservedSlotIds.set([]);
+    this._selectedPromotionCourseId.set(null);
+    return true;
   }
 
   private async findExistingDraft(studentId: number, courseId: number): Promise<Enrollment | null> {

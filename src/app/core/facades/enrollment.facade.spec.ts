@@ -28,6 +28,7 @@ function createMockQueryBuilder(responseData: any = null, responseError: any = n
     upsert: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    neq: vi.fn().mockReturnThis(),
     gt: vi.fn().mockReturnThis(),
     is: vi.fn().mockReturnThis(),
     lte: vi.fn().mockReturnThis(),
@@ -1639,6 +1640,100 @@ describe('EnrollmentFacade', () => {
       await facade.resumeDraft(77);
 
       expect(facade.personalData()?.senceCode).toBeNull();
+    });
+  });
+
+  // fix-064-i: el borrador se buscaba por (alumno, curso) → cambiar el curso insertaba otro.
+  describe('savePersonalData — cambiar el curso del borrador actual (fix-064-i)', () => {
+    const data = {
+      rut: '11.111.111-1',
+      firstNames: 'Ana',
+      paternalLastName: 'Soto',
+      maternalLastName: '',
+      email: 'ana@test.cl',
+      phone: '+56900000000',
+      birthDate: '2000-01-01',
+      gender: 'F',
+      address: '',
+      courseCategory: 'non-professional',
+      courseType: 'class_b_sence',
+      singularCourseCode: null,
+      senceCode: '123',
+      currentLicense: null,
+      licenseDate: null,
+      convalidatesSimultaneously: false,
+      validationBook: null,
+      historicalPromotionId: null,
+      courses: [],
+    } as any;
+
+    function prepare(opts: { currentCourseId: number; newCourseId: number; payments?: unknown[] }) {
+      (facade as any)._draft.set({ enrollmentId: 77, studentId: 5, userId: 12 });
+      (facade as any)._selectedSlotIds.set(['2026-11-02T12:00:00+00:00']);
+      vi.spyOn(facade as any, 'upsertUser').mockResolvedValue(12);
+      vi.spyOn(facade as any, 'upsertStudent').mockResolvedValue(5);
+      vi.spyOn(facade as any, 'resolveCourseId').mockResolvedValue(opts.newCourseId);
+      vi.spyOn(facade as any, 'evaluateCourseReenrollment').mockResolvedValue('allow');
+      const findByCourse = vi.spyOn(facade as any, 'findExistingDraft').mockResolvedValue(null);
+      const builders: Record<string, any> = {
+        enrollments: createMockQueryBuilder(
+          { id: 77, course_id: opts.currentCourseId, base_price: 100, status: 'draft' },
+          null,
+        ),
+        payments: createMockQueryBuilder(opts.payments ?? [], null),
+        class_b_sessions: createMockQueryBuilder(null, null),
+        discount_applications: createMockQueryBuilder(null, null),
+      };
+      mockSupabase.client.from = vi
+        .fn()
+        .mockImplementation((t: string) => builders[t] ?? createMockQueryBuilder(null, null));
+      return { builders, findByCourse };
+    }
+
+    it('actualiza el mismo borrador con el curso nuevo en vez de crear otro', async () => {
+      const { builders, findByCourse } = prepare({ currentCourseId: 9, newCourseId: 10 });
+
+      await facade.savePersonalData(data, 1);
+
+      expect(findByCourse).not.toHaveBeenCalled();
+      expect(builders['enrollments'].insert).not.toHaveBeenCalled();
+      expect(builders['enrollments'].update).toHaveBeenCalledWith(
+        expect.objectContaining({ course_id: 10, promotion_course_id: null }),
+      );
+    });
+
+    it('al cambiar el curso libera los horarios reservados y los descuentos', async () => {
+      const { builders } = prepare({ currentCourseId: 9, newCourseId: 10 });
+
+      await facade.savePersonalData(data, 1);
+
+      expect(builders['class_b_sessions'].delete).toHaveBeenCalled();
+      expect(builders['class_b_sessions'].eq).toHaveBeenCalledWith('status', 'reserved');
+      expect(builders['discount_applications'].delete).toHaveBeenCalled();
+      expect((facade as any)._selectedSlotIds()).toEqual([]);
+    });
+
+    it('con un pago registrado no cambia el curso y lo explica', async () => {
+      const { builders } = prepare({ currentCourseId: 9, newCourseId: 10, payments: [{ id: 1 }] });
+
+      const ok = await facade.savePersonalData(data, 1);
+
+      expect(ok).toBe(false);
+      // Los pagos anulados no cuentan (spec 0025-m: toda lectura de payments filtra por estado).
+      expect(builders['payments'].neq).toHaveBeenCalledWith('status', 'anulado');
+      expect(builders['enrollments'].update).not.toHaveBeenCalled();
+      expect(builders['class_b_sessions'].delete).not.toHaveBeenCalled();
+      expect(facade.error()).toContain('descarta este borrador');
+    });
+
+    it('sin cambio de curso no libera horarios', async () => {
+      const { builders } = prepare({ currentCourseId: 10, newCourseId: 10 });
+
+      await facade.savePersonalData(data, 1);
+
+      expect(builders['class_b_sessions'].delete).not.toHaveBeenCalled();
+      expect(builders['enrollments'].update).toHaveBeenCalled();
+      expect((facade as any)._selectedSlotIds()).toEqual(['2026-11-02T12:00:00+00:00']);
     });
   });
 

@@ -176,7 +176,7 @@ no hay ninguno. Arreglo probable: borrar (o desvincular) `consents` del borrador
 | O Pagos / Base de Alumnos | ✅ | deudor "N° 0084 · Clase B" $150.000; aparece en Base de Alumnos |
 | S12 / C17 secretaria sede 2 matricula al alumno de la sede 1 | ❌ **B3-1** | no precarga (no lo ve) y al guardar muestra el error crudo "Error al crear usuario: duplicate key value violates unique constraint "users_rut_key"". No duplica (lo frena la unicidad del RUT), pero el mensaje no dice qué pasa ni qué hacer. Decisión M07/M08 pendiente: ¿quién matricula a un alumno de otra sede? |
 | S7 corregir el RUT tras guardar el paso 1 | ❌ **B3-2** → ✅ resuelto en `fix-063-i` | se cambió a 33.058.003-8 y se guardó: la BD sigue con 33.058.002-K (el `UPDATE` de `users` no incluye `rut`) y la pantalla muestra el nuevo |
-| S6 volver y cambiar el curso | ❌ **B3-3** | Clase B → Clase B SENCE: se creó el borrador 8497 y el 8496 sigue vivo (con horarios elegidos los bloquearía hasta que venza) |
+| S6 volver y cambiar el curso | ❌ **B3-3** → ✅ resuelto en `fix-064-i` | Clase B → Clase B SENCE: se creó el borrador 8497 y el 8496 sigue vivo (con horarios elegidos los bloquearía hasta que venza) |
 | S14 código SENCE | ❌ **B3-4** → ✅ resuelto en `fix-061-i` | con código "1237958058", `enrollments.sence_code_id` de la 8497 quedó `null`; al retomar el borrador el campo vuelve vacío |
 | K lista de borradores | ✅ | "Matrículas en progreso" lista los 2 borradores del alumno (paso 1 y paso 2) |
 | K descartar | ✅ | "¿Descartar matrícula? … no se puede deshacer" → la 8496 se borra de la BD |
