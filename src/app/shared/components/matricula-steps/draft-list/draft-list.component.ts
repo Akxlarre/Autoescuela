@@ -24,14 +24,12 @@ import type { DraftSummary, EnrollmentWizardStep } from '@core/models/ui/enrollm
       <!-- Lista de borradores -->
       <div class="draft-list">
         @for (draft of drafts(); track draft.enrollmentId) {
+          <!-- fix-067-i: la tarjeta no es un control (era role=button con botones adentro). El
+               clic en el cuerpo retoma con el mouse; con teclado y lector se usa Retomar. -->
           <div
             class="draft-card"
             [class.draft-card--active]="draft.currentStep > 1"
-            role="button"
-            tabindex="0"
-            data-llm-action="resume-enrollment-draft"
-            (click)="resume.emit(draft.enrollmentId)"
-            (keydown.enter)="resume.emit(draft.enrollmentId)"
+            (click)="onCardClick($event, draft.enrollmentId)"
           >
             <!-- Arriba: Identidad e Info básica -->
             <div class="draft-card__top">
@@ -90,7 +88,7 @@ import type { DraftSummary, EnrollmentWizardStep } from '@core/models/ui/enrollm
                 type="button"
                 class="btn-discard"
                 data-llm-action="discard-enrollment-draft"
-                (click)="$event.stopPropagation(); discard.emit(draft.enrollmentId)"
+                (click)="discard.emit(draft.enrollmentId)"
               >
                 <app-icon name="trash-2" [size]="14" />
                 Descartar
@@ -123,6 +121,15 @@ export class DraftListComponent {
   readonly startNew = output<void>();
 
   readonly stepNumbers: EnrollmentWizardStep[] = [1, 2, 3, 4, 5, 6];
+
+  /**
+   * Clic en el cuerpo de la tarjeta → retomar (comodidad de mouse). Los clics que vienen de un
+   * botón de la tarjeta los maneja ese botón: antes "Retomar" emitía resume dos veces (fix-067-i).
+   */
+  onCardClick(event: MouseEvent, enrollmentId: number): void {
+    if ((event.target as HTMLElement | null)?.closest('button')) return;
+    this.resume.emit(enrollmentId);
+  }
 
   getInitials(name: string): string {
     return name

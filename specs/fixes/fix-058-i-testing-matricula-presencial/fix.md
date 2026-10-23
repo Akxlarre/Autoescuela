@@ -190,7 +190,7 @@ no hay ninguno. Arreglo probable: borrar (o desvincular) `consents` del borrador
 | Pantalla | Resultado | Evidencia |
 |---|---|---|
 | Oscuro y móvil 375 px (paso 1) | ✅ | se ve bien; sin scroll horizontal |
-| Lista "Matrículas en progreso" | ❌ **B4-1** | `nested-interactive` (serio) ×3: cada tarjeta de borrador es clicable y tiene botones adentro ("Retomar", "Descartar"); un lector de pantalla no puede anunciarlos bien |
+| Lista "Matrículas en progreso" | ❌ **B4-1** → ✅ resuelto en `fix-067-i` | `nested-interactive` (serio) ×3: cada tarjeta de borrador es clicable y tiene botones adentro ("Retomar", "Descartar"); un lector de pantalla no puede anunciarlos bien |
 | Paso 1 | ❌ **B4-2** | `aria-required-children` y `aria-valid-attr-value` (críticos) en el contenedor del formulario: un `role` ARIA sin sus hijos esperados y un atributo ARIA con valor inválido |
 | Contraste (lista y paso 1) | ❌ (ASG-i-065) | `color-contrast` ×19 en la lista y ×7 en el paso 1: el gris `text-muted` (ej. "FECHA DE NACIMIENTO *", subtítulos). Es del sistema de diseño, no de la matrícula → va con ASG-i-065 |
 | Etiquetas de fecha | ◐ baja | "FECHA DE NACIMIENTO *" y "FECHA DE OBTENCIÓN…" salen en mayúsculas grises (estilo `micro-label` de `app-date-input`), distintas del resto de las etiquetas del formulario |
