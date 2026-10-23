@@ -191,7 +191,8 @@ export class KpiCardVariantComponent {
         return 'var(--state-error)';
       case 'default':
       default:
-        return 'var(--color-primary)';
+        // spec 0055-b: es texto → tono profundo (el ícono sigue en --color-primary).
+        return 'var(--brand-strong)';
     }
   });
 

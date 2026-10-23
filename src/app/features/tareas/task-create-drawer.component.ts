@@ -6,7 +6,8 @@ import { SelectModule } from 'primeng/select';
 import { TasksFacade } from '@core/facades/tasks.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { TaskCreateContextService } from '@core/services/ui/task-create-context.service';
-import type { TaskType } from '@core/models/ui/task.model';
+import type { TaskRow, TaskType } from '@core/models/ui/task.model';
+import { toChileDate } from '@core/utils/chile-time.utils';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
@@ -62,7 +63,15 @@ const ROLE_LABEL: Record<string, string> = {
           <label class="field-label" for="t-recipient">
             Destinatario <span class="text-error">*</span>
           </label>
-          @if (recipientOptions().length === 0) {
+          @if (editing(); as tarea) {
+            <!-- spec 0053-b (AC2): el destinatario no se cambia al editar. -->
+            <p
+              class="field-input bg-subtle text-text-secondary"
+              data-llm-description="task recipient, read-only while editing"
+            >
+              {{ tarea.recipientName }}
+            </p>
+          } @else if (recipientOptions().length === 0) {
             <p class="field-hint">No hay destinatarios disponibles.</p>
           } @else {
             <p-select
@@ -136,18 +145,28 @@ const ROLE_LABEL: Record<string, string> = {
 
       <!-- Footer canónico -->
       <ng-container ngProjectAs="[drawer-form-footer]">
-        <button type="button" class="btn-secondary" (click)="drawer.close()">Cancelar</button>
+        <!-- Al editar vuelve al detalle de la tarea, no cierra todo (spec 0053-b). -->
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="editing() ? drawer.back() : drawer.close()"
+        >
+          Cancelar
+        </button>
         <button
           type="button"
           class="btn-primary flex items-center justify-center gap-2"
           [disabled]="form.invalid || isSaving()"
           [appStableWidth]="isSaving()"
           (click)="submit()"
-          data-llm-action="submit-create-task"
+          [attr.data-llm-action]="editing() ? 'save-task-edit' : 'submit-create-task'"
         >
           @if (isSaving()) {
             <app-icon name="loader-2" [size]="16" [ariaHidden]="true" class="animate-spin" />
-            Enviando…
+            {{ editing() ? 'Guardando…' : 'Enviando…' }}
+          } @else if (editing()) {
+            <app-icon name="check" [size]="16" [ariaHidden]="true" />
+            Guardar cambios
           } @else {
             <app-icon name="send" [size]="16" [ariaHidden]="true" />
             Enviar tarea
@@ -165,6 +184,8 @@ export class TaskCreateDrawerComponent {
   protected readonly typeOptions = TYPE_OPTIONS;
   protected readonly isSaving = signal(false);
   protected readonly selectedType = signal<TaskType>('task');
+  /** Tarea en edición (spec 0053-b); null = crear. Se toma del contexto al abrir. */
+  protected readonly editing = signal<TaskRow | null>(this.taskContext.editing());
 
   protected readonly recipientOptions = computed(() =>
     this.tasksFacade.recipients().map((r) => ({
@@ -181,19 +202,36 @@ export class TaskCreateDrawerComponent {
     recipientId: new FormControl<number | null>(null, Validators.required),
     subject: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(200)],
+      // spec 0053-b (AC-E2): un asunto de solo espacios no vale.
+      validators: [Validators.required, Validators.maxLength(200), Validators.pattern(/\S/)],
     }),
     body: new FormControl<string | null>(null),
     due_date: new FormControl<string | null>(null),
   });
 
   constructor() {
-    void this.tasksFacade.loadRecipients();
-
-    const initialType = this.taskContext.initialType();
-    if (initialType !== 'task') {
-      this.form.patchValue({ type: initialType }, { emitEvent: false });
-      this.selectedType.set(initialType);
+    const tarea = this.editing();
+    if (tarea) {
+      // spec 0053-b (AC1/AC2): campos precargados; tipo y destinatario fijos.
+      this.form.patchValue(
+        {
+          type: tarea.type,
+          recipientId: tarea.to_user_id,
+          subject: tarea.subject,
+          body: tarea.body ?? null,
+          due_date: tarea.due_date ? toChileDate(tarea.due_date) : null,
+        },
+        { emitEvent: false },
+      );
+      this.form.get('type')!.disable({ emitEvent: false });
+      this.selectedType.set(tarea.type);
+    } else {
+      void this.tasksFacade.loadRecipients();
+      const initialType = this.taskContext.initialType();
+      if (initialType !== 'task') {
+        this.form.patchValue({ type: initialType }, { emitEvent: false });
+        this.selectedType.set(initialType);
+      }
     }
     this.taskContext.reset();
 
@@ -212,6 +250,21 @@ export class TaskCreateDrawerComponent {
     if (this.form.invalid || this.isSaving()) return;
 
     const val = this.form.getRawValue();
+
+    const tarea = this.editing();
+    if (tarea) {
+      this.isSaving.set(true);
+      const ok = await this.tasksFacade.updateTask(tarea, {
+        subject: val.subject,
+        body: val.body ?? null,
+        due_date: val.due_date ?? null,
+      });
+      this.isSaving.set(false);
+      // AC3: vuelve al detalle, que ya muestra los datos nuevos.
+      if (ok) this.drawer.back();
+      return;
+    }
+
     const recipient = this.tasksFacade.recipients().find((r) => r.dbId === val.recipientId);
     if (!recipient) return;
 

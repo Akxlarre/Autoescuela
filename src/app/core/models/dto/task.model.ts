@@ -1,5 +1,6 @@
 export type TaskType = 'task' | 'observation' | 'question';
-export type TaskStatus = 'pending' | 'in_progress' | 'completed';
+/** `seen`: observación abierta por su destinatario (spec 0001-b AC5, fix-231-b). */
+export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'seen';
 export type TaskFromRole = 'admin' | 'secretary';
 export type TaskToRole = 'admin' | 'secretary' | 'instructor';
 

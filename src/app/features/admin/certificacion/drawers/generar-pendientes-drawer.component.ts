@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
@@ -38,7 +38,9 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
             subtitle="Todos los alumnos elegibles ya tienen su certificado generado"
           />
         } @else {
-          <div class="rounded-lg border divide-y divide-border-subtle overflow-hidden border-border-subtle">
+          <div
+            class="rounded-lg border divide-y divide-border-subtle overflow-hidden border-border-subtle"
+          >
             @for (alumno of pendientes(); track alumno.enrollmentId) {
               <div class="flex items-center gap-3 px-4 py-2.5">
                 <app-icon name="file-check" [size]="14" class="text-success shrink-0" />
@@ -82,9 +84,7 @@ export class GenerarPendientesDrawerComponent {
   protected readonly facade = inject(CertificacionClaseBFacade);
   protected readonly drawer = inject(LayoutDrawerFacadeService);
 
-  protected readonly pendientes = computed(() =>
-    this.facade.alumnos().filter((a) => a.certificadoStatus === 'pendiente'),
-  );
+  protected readonly pendientes = this.facade.pendientesElegibles;
 
   protected async confirmar(): Promise<void> {
     await this.facade.generarPendientes();

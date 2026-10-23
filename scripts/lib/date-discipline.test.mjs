@@ -115,6 +115,25 @@ check(
 check('pipe chileDate NO marcado', kinds('template: `{{ row.createdAt | chileDate }}`', COMPONENT).length === 0);
 check('unión de tipos en un facade NO marcada como pipe', kinds(`type X = string | date;`).length === 0);
 
+// ── slice-pipe (fix-453-m) ───────────────────────────────────────────────────
+check(
+  'pipe slice: 0 : 10 en template inline detectado',
+  kinds('template: `<span>{{ doc.createdAt | slice: 0 : 10 }}</span>`', COMPONENT).includes(
+    'slice-pipe',
+  ),
+);
+check(
+  'pipe slice:0:10 sin espacios en .html detectado',
+  kinds(`<td>{{ x.at | slice:0:10 }}</td>`, 'src/app/features/x/x.component.html').includes(
+    'slice-pipe',
+  ),
+);
+check('pipe slice de otro largo NO marcado', kinds('template: `{{ nombre | slice: 0 : 20 }}`', COMPONENT).length === 0);
+check(
+  'fixHint de slice-pipe nombra chileDate',
+  fixHint('slice-pipe', COMPONENT).includes('chileDate'),
+);
+
 // ── deprecated-date-api ──────────────────────────────────────────────────────
 check('toISODate() detectado', kinds(`const hoy = toISODate(new Date());`).includes('deprecated-date-api'));
 check(

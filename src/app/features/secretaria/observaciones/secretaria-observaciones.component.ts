@@ -27,8 +27,9 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
+import { sentNonObservations, isTaskOpen } from '@core/utils/task.utils';
 
-type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
+type ObsTab = 'mis-obs' | 'recibidas' | 'enviadas';
 
 /** Audiencia del canal: el equipo interno (tareas) o los alumnos (comunicados). */
 type Canal = 'tareas' | 'comunicados';
@@ -120,29 +121,28 @@ export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
     this.facade.sentTasks().filter((t) => t.type === 'observation'),
   );
 
-  protected readonly toInstructorTasks = computed(() =>
-    this.facade.sentTasks().filter((t) => t.to_role === 'instructor' && t.status !== 'completed'),
-  );
+  /** hotfix-102-b (S23): todo lo enviado que no es observación — al admin y a instructores. */
+  protected readonly sentTasks = computed(() => sentNonObservations(this.facade.sentTasks()));
 
   protected readonly pendingMineCount = computed(
-    () => this.facade.receivedTasks().filter((t) => t.status !== 'completed').length,
+    () => this.facade.receivedTasks().filter((t) => isTaskOpen(t.status)).length,
   );
 
   protected readonly tabs = computed(() => [
     {
       id: 'mis-obs',
       label: 'Mis observaciones',
-      count: this.myObservations().filter((t) => t.status !== 'completed').length,
+      count: this.myObservations().filter((t) => isTaskOpen(t.status)).length,
     },
     {
       id: 'recibidas',
       label: 'Tareas recibidas',
-      count: this.facade.receivedTasks().filter((t) => t.status !== 'completed').length,
+      count: this.facade.receivedTasks().filter((t) => isTaskOpen(t.status)).length,
     },
     {
-      id: 'instructores',
-      label: 'A instructores',
-      count: this.toInstructorTasks().length,
+      id: 'enviadas',
+      label: 'Enviadas',
+      count: this.sentTasks().filter((t) => isTaskOpen(t.status)).length,
     },
   ]);
 
@@ -152,8 +152,8 @@ export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
         return this.myObservations();
       case 'recibidas':
         return this.facade.receivedTasks();
-      case 'instructores':
-        return this.toInstructorTasks();
+      case 'enviadas':
+        return this.sentTasks();
     }
   });
 
@@ -192,10 +192,10 @@ export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
       icon: 'inbox',
     },
     {
-      id: 'instructores',
-      label: 'A instructores',
-      value: this.toInstructorTasks().length,
-      icon: 'users',
+      id: 'enviadas',
+      label: 'Enviadas',
+      value: this.sentTasks().filter((t) => isTaskOpen(t.status)).length,
+      icon: 'send',
     },
   ]);
 

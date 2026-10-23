@@ -37,6 +37,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@6';
+import { requireStaff } from '../_shared/staff-auth.ts';
 
 // Colors sourced from webs/src/styles/themes/{azul,roja}.css — single source of truth.
 const THEME_COLORS = {
@@ -255,30 +256,15 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // ── Validar que el llamador es admin o secretaria ─────────────────────────
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return errorResponse('No autorizado', 401);
-
-    const supabaseUser = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-
-    const {
-      data: { user: caller },
-    } = await supabaseUser.auth.getUser();
-    if (!caller) return errorResponse('No autorizado', 401);
-
-    const { data: callerRow } = await supabaseAdmin
-      .from('users')
-      .select('id, roles(name)')
-      .eq('supabase_uid', caller.id)
-      .maybeSingle();
-
-    const callerRole = callerRow?.roles?.name;
-    if (callerRole !== 'admin' && callerRole !== 'secretary') {
-      return errorResponse('Solo administradores y secretarias pueden realizar esta acción', 403);
+    // ── Validar que el llamador es admin o secretaria (fix-235-b: helper compartido) ──
+    const access = await requireStaff(req, ['admin', 'secretary']);
+    if (!access.ok) {
+      return errorResponse(
+        access.status === 403
+          ? 'Solo administradores y secretarias pueden realizar esta acción'
+          : access.error,
+        access.status,
+      );
     }
 
     // ── Leer y validar body ───────────────────────────────────────────────────

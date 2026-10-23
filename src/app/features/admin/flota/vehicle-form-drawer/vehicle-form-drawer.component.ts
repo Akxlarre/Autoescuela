@@ -40,7 +40,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { VEHICLE_DOC_TYPES } from '@core/utils/vehicle-doc-types.util';
-import { validateDocumentFile } from '@core/utils/document-file-validation.util';
+import { checkDocumentFile } from '@core/utils/document-file-validation.util';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { resolveInstructorCreateBranch } from '@core/utils/instructor-create-branch.utils';
 import {
@@ -474,15 +474,19 @@ export class VehicleFormDrawerComponent {
     return this.vehicleDocTypes.find((t) => t.value === type)?.label ?? type;
   }
 
-  onDocFileSelected(event: Event): void {
+  async onDocFileSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
 
-    const error = validateDocumentFile(file);
+    const error = await checkDocumentFile(file);
     this.docValidationError.set(error);
-    if (error) return;
+    if (error) {
+      // fix-474-m: un archivo inválido descarta el anterior.
+      this.pendingDocFile.set(null);
+      return;
+    }
 
     this.pendingDocFile.set(file);
   }

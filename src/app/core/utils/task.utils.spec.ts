@@ -1,6 +1,12 @@
+import { toChileDate } from './chile-time.utils';
 import {
   canSendTo,
   isOverdue,
+  dueDateToInstant,
+  taskBranchScopeFilter,
+  sentNonObservations,
+  taskEditPayload,
+  isTaskOpen,
   canEditTask,
   canChangeStatus,
   canDeleteTask,
@@ -84,6 +90,77 @@ describe('isOverdue', () => {
   it('retorna true cuando due_date es exactamente igual a now (borde)', () => {
     expect(isOverdue(NOW.toISOString(), NOW)).toBe(false);
   });
+
+  it('S10 (hotfix-100-b): una tarea completada nunca está vencida', () => {
+    expect(isOverdue('2026-05-17T00:00:00Z', NOW, 'completed')).toBe(false);
+    expect(isOverdue('2026-05-17T00:00:00Z', NOW, 'in_progress')).toBe(true);
+  });
+});
+
+// ─── taskEditPayload (spec 0053-b) ──────────────────────────────────────────
+
+describe('taskEditPayload', () => {
+  it('tarea: asunto recortado, descripción vacía → null, fecha límite a las 23:59 de Chile', () => {
+    expect(
+      taskEditPayload('task', { subject: '  Nuevo  ', body: '   ', due_date: '2026-10-20' }),
+    ).toEqual({ subject: 'Nuevo', body: null, due_date: '2026-10-21T02:59:00.000Z' });
+  });
+
+  it('tarea sin fecha → due_date null', () => {
+    expect(taskEditPayload('task', { subject: 'A', body: 'b', due_date: null })).toEqual({
+      subject: 'A',
+      body: 'b',
+      due_date: null,
+    });
+  });
+
+  it('observación o consulta nunca llevan fecha límite', () => {
+    expect(
+      taskEditPayload('observation', { subject: 'A', body: null, due_date: '2026-10-20' }),
+    ).toEqual({ subject: 'A', body: null, due_date: null });
+  });
+});
+
+// ─── sentNonObservations (S23, hotfix-102-b) ────────────────────────────────
+
+describe('sentNonObservations', () => {
+  it('incluye tareas y consultas (al admin y a instructores, completadas incluidas), no observaciones', () => {
+    const enviadas = [
+      makeTask({ id: 'a', type: 'task', to_role: 'admin' }),
+      makeTask({ id: 'b', type: 'question', to_role: 'admin', status: 'completed' }),
+      makeTask({ id: 'c', type: 'task', to_role: 'instructor' }),
+      makeTask({ id: 'd', type: 'observation', to_role: 'admin' }),
+    ];
+    expect(sentNonObservations(enviadas).map((t) => t.id)).toEqual(['a', 'b', 'c']);
+  });
+});
+
+// ─── taskBranchScopeFilter (S8, hotfix-101-b) ───────────────────────────────
+
+describe('taskBranchScopeFilter', () => {
+  it('la sede acota, pero lo enviado y recibido por el usuario se ve siempre', () => {
+    expect(taskBranchScopeFilter(1, 2)).toBe('branch_id.eq.1,from_user_id.eq.2,to_user_id.eq.2');
+  });
+});
+
+// ─── dueDateToInstant (S9, hotfix-100-b) ────────────────────────────────────
+
+describe('dueDateToInstant', () => {
+  it('el día elegido termina a las 23:59 de Chile (verano, UTC-3)', () => {
+    expect(dueDateToInstant('2026-10-20')).toBe('2026-10-21T02:59:00.000Z');
+  });
+
+  it('en invierno (UTC-4)', () => {
+    expect(dueDateToInstant('2026-06-15')).toBe('2026-06-16T03:59:00.000Z');
+  });
+
+  it('se muestra como el mismo día y no está vencida durante ese día en Chile', () => {
+    const due = dueDateToInstant('2026-10-20');
+    expect(toChileDate(due)).toBe('2026-10-20');
+    // 21:30 del 20 en Chile = 00:30 UTC del 21: antes era "Vencida".
+    expect(isOverdue(due, new Date('2026-10-21T00:30:00Z'))).toBe(false);
+    expect(isOverdue(due, new Date('2026-10-21T03:01:00Z'))).toBe(true);
+  });
 });
 
 // ─── canEditTask ─────────────────────────────────────────────────────────────
@@ -154,7 +231,22 @@ describe('canDeleteTask', () => {
 
 // ─── canChangeStatus ─────────────────────────────────────────────────────────
 
+// ─── isTaskOpen (S11, fix-231-b) ────────────────────────────────────────────
+
+describe('isTaskOpen', () => {
+  it('pendiente y en curso cuentan como abiertas; completada y vista no', () => {
+    expect(isTaskOpen('pending')).toBe(true);
+    expect(isTaskOpen('in_progress')).toBe(true);
+    expect(isTaskOpen('completed')).toBe(false);
+    expect(isTaskOpen('seen')).toBe(false);
+  });
+});
+
 describe('canChangeStatus', () => {
+  it('fix-231-b: una observación vista no ofrece cambiar el estado', () => {
+    expect(canChangeStatus(makeTask({ to_user_id: 20, status: 'seen' }), 20)).toBe(false);
+  });
+
   it('permite al destinatario cambiar estado si no está completada', () => {
     expect(canChangeStatus(makeTask({ to_user_id: 20, status: 'pending' }), 20)).toBe(true);
   });

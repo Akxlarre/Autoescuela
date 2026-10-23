@@ -51,15 +51,11 @@ import type { AnnouncementRow, AnnouncementStatus } from '@core/models/ui/announ
           <!-- El estado se lee por la barra lateral de color y por la línea propia de
                abajo, no buscándolo entre los metadatos (AC7). -->
           <li
-            class="flex items-start gap-3 border-l-2 px-4 py-3 cursor-pointer transition-colors hover:bg-subtle"
+            class="flex items-start gap-3 border-l-2 px-4 py-3"
             [class.border-l-brand]="a.status === 'programado'"
             [class.border-l-transparent]="a.status === 'enviado'"
             [class.border-l-border-default]="a.status === 'cancelado'"
-            [attr.data-llm-nav]="'announcement-' + a.id"
-            (click)="announcementClicked.emit(a.id)"
-            (keydown.enter)="announcementClicked.emit(a.id)"
-            tabindex="0"
-            role="button"
+            [attr.data-llm-description]="'announcement history row ' + a.id"
           >
             <div class="min-w-0 flex-1 space-y-1">
               <div class="flex items-start justify-between gap-3">
@@ -122,7 +118,7 @@ import type { AnnouncementRow, AnnouncementStatus } from '@core/models/ui/announ
                 type="button"
                 class="shrink-0 cursor-pointer rounded-lg border border-border-default bg-surface px-2.5 py-1.5 text-2xs font-semibold text-error transition-colors hover:bg-error-subtle"
                 data-llm-action="cancelar-comunicado-programado"
-                (click)="onCancel($event, a.id)"
+                (click)="onCancel(a.id)"
               >
                 Cancelar
               </button>
@@ -137,7 +133,6 @@ export class AnnouncementsContentComponent {
   readonly announcements = input.required<AnnouncementRow[]>();
   readonly loading = input(false);
 
-  readonly announcementClicked = output<number>();
   readonly cancelRequested = output<number>();
 
   protected readonly skeletonRows = [0, 1, 2, 3];
@@ -167,8 +162,7 @@ export class AnnouncementsContentComponent {
   }
 
   /** Sin `stopPropagation` el clic también abriría el detalle del comunicado. */
-  protected onCancel(event: Event, id: number): void {
-    event.stopPropagation();
+  protected onCancel(id: number): void {
     this.cancelRequested.emit(id);
   }
 }

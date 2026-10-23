@@ -1,7 +1,7 @@
 # Hotfix: El formulario de vehículo pisa lo escrito, valida mal la patente y el año, y deja bajar el kilometraje sin avisar
 > id: hotfix-075-b-formulario-vehiculo
 > refs: ASG-i-032 (checklist 032, S18, S19 y S3; decisión 2 del owner, 2026-10-12)
-> status: closed
+> status: done
 > created: 2026-10-12
 
 ## Problema

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthFacade } from '@core/facades/auth.facade';
 import type { UserRole } from '@core/models/ui/user.model';
@@ -18,6 +18,15 @@ export function resolveModuloNoDisponibleAction(
 ): ModuloNoDisponibleAction {
   if (!role) return 'login';
   return role === 'admin' || role === 'secretaria' ? 'dashboard' : 'logout';
+}
+
+/**
+ * Texto del botón (hotfix-092-b, S16). Mientras la sesión se restaura no se sabe el rol: decir
+ * "Volver al inicio de sesión" a un admin al recargar le hacía creer que lo habían sacado.
+ */
+export function moduloNoDisponibleLabel(action: ModuloNoDisponibleAction, ready: boolean): string {
+  if (!ready) return 'Volver';
+  return action === 'dashboard' ? 'Volver al inicio' : 'Volver al inicio de sesión';
 }
 
 /**
@@ -49,7 +58,7 @@ export function resolveModuloNoDisponibleAction(
           class="btn-primary mt-2"
           (click)="volver()"
         >
-          {{ action() === 'dashboard' ? 'Volver al inicio' : 'Volver al inicio de sesión' }}
+          {{ label() }}
         </button>
       </div>
     </div>
@@ -62,6 +71,14 @@ export class ModuloNoDisponibleComponent {
   protected readonly action = computed(() =>
     resolveModuloNoDisponibleAction(this.auth.currentUser()?.role),
   );
+
+  /** La sesión terminó de restaurarse (hotfix-092-b). */
+  private readonly ready = signal(false);
+  protected readonly label = computed(() => moduloNoDisponibleLabel(this.action(), this.ready()));
+
+  constructor() {
+    void this.auth.whenReady.then(() => this.ready.set(true));
+  }
 
   /**
    * Para instructor/alumno, navegar a `/login` con `routerLink` chocaba con

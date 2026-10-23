@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { NO_BRANCH_SCOPE, canChooseBranch, resolveBranchScope } from './branch-scope.utils';
+import {
+  NO_BRANCH_SCOPE,
+  canChooseBranch,
+  resolveBranchScope,
+  scopeStudentsToBranch,
+} from './branch-scope.utils';
 
 /**
  * Núcleo funcional del aislamiento por sede (fix-027).
@@ -101,5 +106,41 @@ describe('canChooseBranch', () => {
       const eligeSegunScope = resolveBranchScope(role, 9, 4, grant) === 4;
       expect(canChooseBranch(role, grant)).toBe(eligeSegunScope);
     }
+  });
+});
+
+// fix-458-m (DG-115): un alumno es de cada sede donde tiene matrícula, no solo de la de su usuario.
+describe('scopeStudentsToBranch', () => {
+  const alumno = (id: number, userBranch: number | null, enrollmentBranches: number[]) => ({
+    id,
+    users: { branch_id: userBranch },
+    enrollments: enrollmentBranches.map((b, i) => ({ id: id * 10 + i, branch_id: b })),
+  });
+
+  it('sin sede (null = todas) devuelve todo tal cual', () => {
+    const rows = [alumno(1, 1, [1]), alumno(2, 2, [2])];
+    expect(scopeStudentsToBranch(rows, null)).toBe(rows);
+  });
+
+  it('incluye al alumno de otra sede que tiene una matrícula en la sede elegida, solo con esa matrícula', () => {
+    const out = scopeStudentsToBranch([alumno(84, 2, [2, 1])], 1);
+    expect(out).toHaveLength(1);
+    expect(out[0].enrollments.map((e) => e.branch_id)).toEqual([1]);
+  });
+
+  it('excluye al alumno de la sede elegida cuyas matrículas son todas de la otra sede', () => {
+    expect(scopeStudentsToBranch([alumno(5, 1, [2])], 1)).toEqual([]);
+  });
+
+  it('un alumno sin matrículas aparece solo en la sede de su usuario', () => {
+    const sinMatricula = alumno(7, 1, []);
+    expect(scopeStudentsToBranch([sinMatricula], 1)).toEqual([sinMatricula]);
+    expect(scopeStudentsToBranch([sinMatricula], 2)).toEqual([]);
+  });
+
+  it('NO_BRANCH_SCOPE (secretaria sin sede) → ninguna fila', () => {
+    expect(
+      scopeStudentsToBranch([alumno(1, 1, [1]), alumno(9, null, [])], NO_BRANCH_SCOPE),
+    ).toEqual([]);
   });
 });

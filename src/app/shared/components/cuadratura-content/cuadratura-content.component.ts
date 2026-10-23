@@ -718,7 +718,7 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
       padding: 1px 5px;
       border-radius: 4px;
       background: var(--brand-muted);
-      color: var(--color-primary);
+      color: var(--brand-strong);
       border: 1px solid color-mix(in srgb, var(--color-primary) 10%, transparent);
     }
 

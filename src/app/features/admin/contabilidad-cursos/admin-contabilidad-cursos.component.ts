@@ -434,7 +434,7 @@ const BILLING_LABEL: Record<string, string> = {
         background: color-mix(in srgb, var(--color-primary) 4%, transparent);
       }
       .accion-btn--ver:hover {
-        color: var(--color-primary);
+        color: var(--brand-strong);
         background: color-mix(in srgb, var(--color-primary) 10%, transparent);
       }
       .accion-btn--cobro:hover {

@@ -64,6 +64,7 @@ function createMockSupabase(responseData: unknown = null, responseError: unknown
   const channel: Record<string, any> = {
     on: vi.fn().mockReturnThis(),
     subscribe: vi.fn().mockReturnThis(),
+    httpSend: vi.fn().mockResolvedValue({ success: true }),
   };
   return {
     client: {
@@ -449,14 +450,30 @@ describe('TasksFacade', () => {
   // ── markSeen() — AC5 ────────────────────────────────────────────────────────
 
   describe('markSeen()', () => {
-    it('AC5: calls UPDATE with status=completed, completed_at, seen_at and seen_by', async () => {
-      await facade.markSeen('uuid-1');
-      expect(mockSupabase._builder.update).toHaveBeenCalledWith(
+    const OBS = { id: 'uuid-1', from_user_id: 7, subject: 'Revisar caja' };
+
+    it('AC5 (fix-231-b): deja la observación "seen" (no completed) con seen_at y seen_by', async () => {
+      await facade.markSeen(OBS);
+      const cambios = mockSupabase._builder.update.mock.calls[0][0];
+      expect(cambios).toEqual(
         expect.objectContaining({
-          status: 'completed',
-          completed_at: expect.any(String),
+          status: 'seen',
           seen_at: expect.any(String),
           seen_by: ADMIN_USER.dbId,
+        }),
+      );
+      expect(cambios).not.toHaveProperty('completed_at');
+    });
+
+    it('fix-231-b: avisa a quien la mandó que fue vista', async () => {
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([{ id: 'uuid-1' }]));
+      await facade.markSeen(OBS);
+      expect(mockNotifications.createNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipientId: 7,
+          subject: 'Observación vista',
+          message: `${ADMIN_USER.name} vio tu observación: Revisar caja`,
+          referenceType: 'task',
         }),
       );
     });
@@ -465,19 +482,19 @@ describe('TasksFacade', () => {
       mockSupabase.client.from.mockReturnValue(
         createMockQueryBuilder(null, { message: 'Update error' }),
       );
-      await facade.markSeen('uuid-1');
+      await facade.markSeen(OBS);
       expect(mockToast.error).toHaveBeenCalledWith('No se pudo marcar la observación como vista');
     });
 
     it('fix-362-m: si la RLS filtra la tarea (0 filas, sin error), también avisa', async () => {
       mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([]));
-      await facade.markSeen('uuid-1');
+      await facade.markSeen(OBS);
       expect(mockToast.error).toHaveBeenCalled();
     });
 
     it('fix-362-m: con la fila actualizada no muestra error', async () => {
       mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([{ id: 'uuid-1' }]));
-      await facade.markSeen('uuid-1');
+      await facade.markSeen(OBS);
       expect(mockToast.error).not.toHaveBeenCalled();
     });
   });
@@ -539,6 +556,60 @@ describe('TasksFacade', () => {
 
   // ── softDelete() ─────────────────────────────────────────────────────────────
 
+  describe('updateTask() — spec 0053-b', () => {
+    const TAREA = {
+      id: 'uuid-1',
+      type: 'task' as const,
+      to_user_id: 20,
+    };
+    const CAMBIOS = { subject: '  Nuevo asunto ', body: 'detalle', due_date: '2026-10-20' };
+
+    it('AC3: actualiza solo si sigue pendiente, con la fecha a las 23:59 de Chile', async () => {
+      const builder = createMockQueryBuilder([{ id: 'uuid-1' }]);
+      mockSupabase.client.from.mockReturnValue(builder);
+      const ok = await facade.updateTask(TAREA, CAMBIOS);
+      expect(ok).toBe(true);
+      expect(builder.update).toHaveBeenCalledWith({
+        subject: 'Nuevo asunto',
+        body: 'detalle',
+        due_date: '2026-10-21T02:59:00.000Z',
+      });
+      expect(builder.eq).toHaveBeenCalledWith('status', 'pending');
+      expect(mockToast.success).toHaveBeenCalledWith('Tarea actualizada');
+    });
+
+    it('AC4: avisa al destinatario "Tarea modificada: <asunto>"', async () => {
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([{ id: 'uuid-1' }]));
+      await facade.updateTask(TAREA, CAMBIOS);
+      expect(mockNotifications.createNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipientId: 20,
+          subject: 'Tarea modificada: Nuevo asunto',
+          referenceType: 'task',
+        }),
+      );
+    });
+
+    it('AC-E1: si ya no está pendiente (0 filas), no notifica y avisa', async () => {
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([]));
+      const ok = await facade.updateTask(TAREA, CAMBIOS);
+      expect(ok).toBe(false);
+      expect(mockNotifications.createNotification).not.toHaveBeenCalled();
+      expect(mockToast.warning).toHaveBeenCalledWith(
+        'La tarea ya no está pendiente; no se puede editar.',
+      );
+    });
+
+    it('si la BD falla, muestra error', async () => {
+      mockSupabase.client.from.mockReturnValue(
+        createMockQueryBuilder(null, { message: 'Update error' }),
+      );
+      const ok = await facade.updateTask(TAREA, CAMBIOS);
+      expect(ok).toBe(false);
+      expect(mockToast.error).toHaveBeenCalledWith('No se pudo actualizar la tarea');
+    });
+  });
+
   describe('softDelete()', () => {
     it('calls soft_delete_task RPC and returns true', async () => {
       mockSupabase.client.rpc.mockResolvedValue({ data: true, error: null });
@@ -549,10 +620,42 @@ describe('TasksFacade', () => {
       });
     });
 
+    it('S14 (hotfix-104-b): avisa por broadcast a la otra persona, no a quien eliminó', async () => {
+      mockSupabase.client.from.mockReturnValue(
+        createMockQueryBuilder([makeRawDbTask({ id: 'uuid-1', from_user_id: 10, to_user_id: 20 })]),
+      );
+      await facade.initialize(); // ADMIN_USER (dbId 10) es el emisor
+      mockSupabase.client.channel.mockClear();
+      mockSupabase.client.rpc.mockResolvedValue({ data: true, error: null });
+      await facade.softDelete('uuid-1');
+      const topics = mockSupabase.client.channel.mock.calls.map((c: unknown[]) => c[0]);
+      expect(topics).toEqual(['tasks-received-20']);
+      expect(mockSupabase._channel.httpSend).toHaveBeenCalledWith('task-deleted', {
+        id: 'uuid-1',
+      });
+    });
+
+    it('S14: los canales propios escuchan el aviso de tarea eliminada', async () => {
+      await facade.initialize();
+      const broadcast = mockSupabase._channel.on.mock.calls.filter(
+        (c: unknown[]) => c[0] === 'broadcast',
+      );
+      expect(broadcast).toHaveLength(2);
+      expect(broadcast[0][1]).toEqual({ event: 'task-deleted' });
+    });
+
     it('returns false when RPC returns false (permission denied)', async () => {
       mockSupabase.client.rpc.mockResolvedValue({ data: false, error: null });
       const result = await facade.softDelete('uuid-1');
       expect(result).toBe(false);
+    });
+
+    it('S22 (hotfix-107-b): sin permiso avisa en vez de no hacer nada', async () => {
+      mockSupabase.client.rpc.mockResolvedValue({ data: false, error: null });
+      await facade.softDelete('uuid-1');
+      expect(mockToast.warning).toHaveBeenCalledWith(
+        'No puedes eliminar esta tarea: ya no está pendiente o no la creaste tú.',
+      );
     });
 
     it('returns false on RPC error', async () => {
@@ -613,13 +716,17 @@ describe('TasksFacade', () => {
       expect(branchEqCall).toBeUndefined();
     });
 
-    it('applies branch_id filter when selectedBranchId is set', async () => {
+    it('S8 (hotfix-101-b): con sede elegida filtra por sede, pero conserva lo que envió o recibió', async () => {
       mockBranch.selectedBranchId.mockReturnValue(1);
       await facade.initialize();
       const branchEqCall = mockSupabase._builder.eq.mock.calls.find(
         (call: unknown[]) => call[0] === 'branch_id',
       );
-      expect(branchEqCall).toBeDefined();
+      expect(branchEqCall).toBeUndefined();
+      const filtros = mockSupabase._builder.or.mock.calls.map((call: unknown[]) => call[0]);
+      expect(filtros).toContainEqual(
+        expect.stringMatching(/^branch_id\.eq\.1,from_user_id\.eq\.\d+,to_user_id\.eq\.\d+$/),
+      );
     });
   });
 

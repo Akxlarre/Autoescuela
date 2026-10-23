@@ -8,7 +8,8 @@ import {
   afterNextRender,
   isDevMode,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { safeReturnUrl } from '@core/utils/return-url.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import {
@@ -107,6 +108,7 @@ export class LoginComponent {
   private readonly sanitizer = inject(ErrorSanitizerService);
   private readonly auth = inject(AuthFacade);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly gsap = inject(GsapAnimationsService);
 
   readonly cardRef = viewChild<ElementRef<HTMLElement>>('cardRef');
@@ -168,11 +170,18 @@ export class LoginComponent {
         case 'login': {
           // data.password es opcional en la interfaz porque no se usa en 'reset',
           // pero siempre estará presente al hacer login.
-          const { error } = await this.auth.login(data.email, data.password ?? '');
+          const { error } = await this.auth.login(
+            data.email,
+            data.password ?? '',
+            data.rememberMe ?? true,
+          );
           if (error) {
             this.errorMsg.set(this.sanitizer.sanitize(error).message);
           } else {
-            this.router.navigate(['/app']);
+            // hotfix-096-b (A18): vuelve a la pantalla que se intentó abrir sin sesión, si es
+            // una pantalla interna; si su rol no la puede ver, el guard lo manda a su dashboard.
+            const returnUrl = safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
+            void this.router.navigateByUrl(returnUrl ?? '/app');
           }
           break;
         }

@@ -1,7 +1,7 @@
 # Hotfix: un mantenimiento realizado no puede tener fecha futura
 > id: hotfix-082-b-mantenimiento-sin-fecha-futura
 > refs: ASG-i-032 (checklist 032, M08; decisión del owner 2026-10-16)
-> status: closed
+> status: done
 > created: 2026-10-16
 
 ## Problema

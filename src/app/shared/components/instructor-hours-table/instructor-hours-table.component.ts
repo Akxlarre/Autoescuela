@@ -74,7 +74,7 @@ import { EmptyStateComponent } from '../empty-state/empty-state.component';
       .bar-fill {
         height: 100%;
         border-radius: 9999px;
-        background: var(--color-primary);
+        background: var(--brand-strong);
       }
     `,
   ],

@@ -5,6 +5,7 @@ import {
   Component,
   computed,
   effect,
+  untracked,
   ElementRef,
   inject,
   input,
@@ -27,7 +28,11 @@ import { ScrollContainerDirective } from '@core/directives/scroll-container.dire
 import { todayIso } from '@core/utils/date.utils';
 import { withAllOption } from '@core/utils/filter-options.utils';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
-import { isDateBeyondLimit, isNextWeekBeyondLimit } from '@core/utils/agenda-week.utils';
+import {
+  initialMobileDayIndex,
+  isDateBeyondLimit,
+  isNextWeekBeyondLimit,
+} from '@core/utils/agenda-week.utils';
 
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -492,13 +497,13 @@ interface CellSummary {
       background: transparent;
 
       &--active {
-        color: var(--ds-brand);
+        color: var(--brand-strong);
         border-bottom-color: var(--ds-brand);
         font-weight: 600;
       }
 
       &--today .agenda-mobile-tab-day {
-        color: var(--ds-brand);
+        color: var(--brand-strong);
       }
     }
 
@@ -507,7 +512,7 @@ interface CellSummary {
       width: 4px;
       height: 4px;
       border-radius: 50%;
-      background: var(--ds-brand);
+      background: var(--brand-strong);
     }
 
     /* ── Toolbar ───────────────────────────────────────────────────── */
@@ -534,7 +539,7 @@ interface CellSummary {
 
       &:hover {
         border-color: var(--ds-brand);
-        color: var(--ds-brand);
+        color: var(--brand-strong);
         background: color-mix(in srgb, var(--ds-brand) 6%, var(--bg-surface));
       }
 
@@ -580,7 +585,7 @@ interface CellSummary {
       padding: 0.25rem 0.625rem;
       border-radius: var(--radius-md);
       border: 1px solid var(--ds-brand);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
       background: color-mix(in srgb, var(--ds-brand) 8%, var(--bg-surface));
       cursor: pointer;
       transition: background 120ms ease;
@@ -631,7 +636,7 @@ interface CellSummary {
 
     .agenda-jump-date ::ng-deep .p-datepicker-dropdown:hover {
       border-color: var(--ds-brand);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
       background: color-mix(in srgb, var(--ds-brand) 6%, var(--bg-surface));
     }
 
@@ -734,7 +739,7 @@ interface CellSummary {
       z-index: 2;
 
       &--today {
-        color: var(--ds-brand);
+        color: var(--brand-strong);
         background: color-mix(in srgb, var(--ds-brand) 5%, var(--bg-surface));
 
         &::after {
@@ -743,7 +748,7 @@ interface CellSummary {
           width: 4px;
           height: 4px;
           border-radius: 50%;
-          background: var(--ds-brand);
+          background: var(--brand-strong);
           margin: 2px auto 0;
         }
       }
@@ -927,7 +932,7 @@ interface CellSummary {
 
     .cell-pill--available {
       background: color-mix(in srgb, var(--ds-brand) 12%, var(--bg-surface));
-      color: var(--ds-brand);
+      color: var(--brand-strong);
       border: 1px solid color-mix(in srgb, var(--ds-brand) 35%, transparent);
     }
 
@@ -958,7 +963,7 @@ interface CellSummary {
       border-radius: var(--radius-sm);
 
       &:hover {
-        color: var(--ds-brand);
+        color: var(--brand-strong);
         background: color-mix(in srgb, var(--ds-brand) 8%, transparent);
       }
     }
@@ -998,7 +1003,7 @@ interface CellSummary {
       }
 
       &--in-progress::before {
-        background: var(--ds-brand);
+        background: var(--brand-strong);
         border: 1.5px solid var(--color-primary-hover);
       }
 
@@ -1208,7 +1213,20 @@ export class AgendaSemanalComponent implements AfterViewInit {
 
   // ── GSAP: animar grilla al cargar ─────────────────────────────────────────────
 
+  /** Primer día de la semana a la que ya se le eligió el día móvil inicial (hotfix-094-b). */
+  private _mobileWeekKey: string | null = null;
+
   constructor() {
+    // hotfix-094-b (P03): en el celular, al abrir una semana se muestra el día de hoy. Solo al
+    // cambiar de semana: una recarga de datos no pisa el día que eligió la persona.
+    effect(() => {
+      const days = this.filteredDays();
+      const key = days[0]?.date ?? null;
+      if (!key || key === this._mobileWeekKey) return;
+      this._mobileWeekKey = key;
+      untracked(() => this.mobileDayIndex.set(initialMobileDayIndex(days)));
+    });
+
     effect(() => {
       if (this.isLoading()) {
         this._gridAnimated = false;

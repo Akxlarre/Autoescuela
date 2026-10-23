@@ -1,7 +1,7 @@
 # Hotfix: Editar secretaria promete un correo de confirmación que no se envía
 > id: hotfix-068-b-texto-correo-editar-secretaria
 > refs: ASG-i-034 (sospecha S13, confirmada en parte en fix-197-b)
-> status: closed
+> status: done
 > created: 2026-10-07
 
 ## Problema

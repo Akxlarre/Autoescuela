@@ -129,7 +129,6 @@ const ADMIN_NAV: NavGroup[] = [
         icon: 'award',
         routerLink: '/app/admin/clase-profesional/certificados',
         requiresProfessional: true,
-        hiddenInPilotRecorte: true,
       },
       {
         label: 'Archivo',
@@ -262,7 +261,6 @@ const SECRETARIA_NAV: NavGroup[] = [
         icon: 'award',
         routerLink: '/app/secretaria/profesional/certificados',
         requiresProfessional: true,
-        hiddenInPilotRecorte: true,
       },
       {
         label: 'Archivo',

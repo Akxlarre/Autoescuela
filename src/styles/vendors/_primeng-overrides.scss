@@ -114,7 +114,9 @@
   --p-paginator-item-color: var(--text-secondary);
   --p-paginator-item-hover-background: var(--bg-elevated);
   --p-paginator-item-selected-background: var(--color-primary-muted);
-  --p-paginator-item-selected-color: var(--ds-brand);
+  --p-paginator-item-selected-color: var(--brand-strong);
+  /* spec 0055-b: "Mostrando N de M" usaba el gris de PrimeNG (3,7:1 en oscuro). */
+  --p-paginator-current-page-report-color: var(--text-secondary);
   --p-paginator-border-color: var(--border-default);
 
   /* Select (Dropdown) — mismo fondo que .field-input/inputtext (fix-118-b) */

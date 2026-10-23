@@ -6,8 +6,10 @@ import { passwordRecoveryGuard } from '@core/guards/password-recovery.guard';
 import { hasRoleGuard } from '@core/guards/role.guard';
 import { roleRedirectGuard } from '@core/guards/role-redirect.guard';
 import { enrollmentDraftGuard } from '@core/guards/enrollment-draft.guard';
+import { documentTemplateDraftGuard } from '@core/guards/document-template-draft.guard';
 import { professionalBranchGuard } from '@core/guards/professional-branch.guard';
 import { pilotPhaseGuard } from '@core/guards/pilot-phase.guard';
+import { branchAssignedGuard } from '@core/guards/branch-assigned.guard';
 
 /**
  * Rutas de la aplicación, estructuradas por portal de rol.
@@ -50,6 +52,13 @@ export const routes: Routes = [
       import('./features/auth/force-password-change/force-password-change.component').then(
         (m) => m.ForcePasswordChangeComponent,
       ),
+  },
+  {
+    // hotfix-099-b: secretaria sin sede asignada — no puede operar hasta que el admin le asigne una.
+    path: 'sin-sede',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/sin-sede/sin-sede.component').then((m) => m.SinSedeComponent),
   },
   {
     path: 'modulo-no-disponible',
@@ -269,6 +278,7 @@ export const routes: Routes = [
               import('./features/admin/documentos/admin-documentos.component').then(
                 (m) => m.AdminDocumentosComponent,
               ),
+            canDeactivate: [documentTemplateDraftGuard],
           },
           {
             path: 'secretarias',
@@ -300,11 +310,9 @@ export const routes: Routes = [
               ),
           },
           {
+            // hotfix-103-b (S16): era una maqueta "PLANO"; el historial vive en la campana.
             path: 'notificaciones',
-            loadComponent: () =>
-              import('./features/admin/notificaciones/admin-notificaciones.component').then(
-                (m) => m.AdminNotificacionesComponent,
-              ),
+            redirectTo: 'dashboard',
           },
           {
             path: 'clase-profesional/relatores',
@@ -331,8 +339,10 @@ export const routes: Routes = [
               ),
           },
           {
+            // fix-465-m: habilitada en el piloto (los alumnos de promociones finalizadas necesitan
+            // su certificado aunque la asistencia y las notas se lleven a mano).
             path: 'clase-profesional/certificados',
-            canActivate: [professionalBranchGuard, pilotPhaseGuard('clase-profesional-recorte')],
+            canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/admin/profesional-certificados/admin-profesional-certificados.component').then(
                 (m) => m.AdminProfesionalCertificadosComponent,
@@ -377,7 +387,8 @@ export const routes: Routes = [
       // ─────────────────────────────────────
       {
         path: 'secretaria',
-        canActivate: [hasRoleGuard(['secretaria'])],
+        canActivate: [hasRoleGuard(['secretaria']), branchAssignedGuard],
+        canActivateChild: [branchAssignedGuard],
         children: [
           // /app/secretaria sin sub-ruta → su dashboard (fix-184-b; antes daba 404).
           { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -566,8 +577,10 @@ export const routes: Routes = [
               ),
           },
           {
+            // fix-465-m: habilitada en el piloto (los alumnos de promociones finalizadas necesitan
+            // su certificado aunque la asistencia y las notas se lleven a mano).
             path: 'profesional/certificados',
-            canActivate: [professionalBranchGuard, pilotPhaseGuard('clase-profesional-recorte')],
+            canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/secretaria/profesional-certificados/secretaria-profesional-certificados.component').then(
                 (m) => m.SecretariaProfesionalCertificadosComponent,
@@ -583,11 +596,9 @@ export const routes: Routes = [
               ),
           },
           {
+            // hotfix-103-b (S16): era una maqueta "PLANO"; el historial vive en la campana.
             path: 'notificaciones',
-            loadComponent: () =>
-              import('./features/secretaria/notificaciones/secretaria-notificaciones.component').then(
-                (m) => m.SecretariaNotificacionesComponent,
-              ),
+            redirectTo: 'dashboard',
           },
           {
             path: 'ex-alumnos',

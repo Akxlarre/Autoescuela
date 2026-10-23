@@ -11,7 +11,7 @@ import {
   ElementRef,
   viewChild,
 } from '@angular/core';
-import { SlicePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { SelectModule } from 'primeng/select';
@@ -40,6 +40,9 @@ import {
   type DocumentType,
 } from '@core/models/ui/document-content-template.model';
 import type { BranchOption } from '@core/models/ui/branch.model';
+import { editableDocumentTypes } from '@core/utils/document-template-options.utils';
+import { isDeletableStudentDoc } from '@core/utils/dms-documents.utils';
+import { filterBySearchTokens } from '@core/utils/search-filter.utils';
 
 interface DocumentTypeOption {
   label: string;
@@ -68,7 +71,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
   imports: [
     BadgeComponent,
     TooltipModule,
-    SlicePipe,
+    ChileDatePipe,
     TableModule,
     TagModule,
     SelectModule,
@@ -162,7 +165,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                         <input
                           type="text"
                           [ngModel]="studentSearch()"
-                          (ngModelChange)="studentSearch.set($event)"
+                          (ngModelChange)="onStudentSearch($event)"
                           placeholder="Buscar alumno por nombre o RUT..."
                           class="w-full pl-9 pr-3 py-2 text-sm rounded-lg border transition-all duration-200 bg-subtle border-border-subtle text-text-primary outline-none focus:border-brand"
                           data-llm-description="input for searching students by name or RUT"
@@ -172,7 +175,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                             type="button"
                             class="absolute border-0 bg-transparent right-2 top-1/2 -translate-y-1/2 p-1 cursor-pointer text-text-muted hover:text-text-primary"
                             aria-label="Limpiar búsqueda"
-                            (click)="studentSearch.set('')"
+                            (click)="onStudentSearch('')"
                           >
                             <app-icon name="x" [size]="14" />
                           </button>
@@ -182,17 +185,30 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
 
                     @if (filteredStudentsWithDocs().length === 0) {
                       <div class="p-6 flex-1 flex items-center justify-center">
-                        <app-empty-state
-                          [message]="
-                            studentSearch() ? 'No se encontraron resultados' : 'Sin documentos aún'
-                          "
-                          [subtitle]="
-                            studentSearch()
-                              ? 'Prueba con otro nombre o RUT.'
-                              : 'Los alumnos con documentos subidos aparecerán aquí.'
-                          "
-                          [icon]="studentSearch() ? 'search-x' : 'folder'"
-                        />
+                        @if (loadError(); as error) {
+                          <app-empty-state
+                            message="No se pudieron cargar los documentos"
+                            [subtitle]="error"
+                            icon="circle-alert"
+                            actionLabel="Reintentar"
+                            actionIcon="refresh-cw"
+                            (action)="retryRequested.emit()"
+                          />
+                        } @else {
+                          <app-empty-state
+                            [message]="
+                              studentSearch()
+                                ? 'No se encontraron resultados'
+                                : 'Sin documentos aún'
+                            "
+                            [subtitle]="
+                              studentSearch()
+                                ? 'Prueba con otro nombre o RUT.'
+                                : 'Los alumnos con documentos subidos aparecerán aquí.'
+                            "
+                            [icon]="studentSearch() ? 'search-x' : 'folder'"
+                          />
+                        }
                       </div>
                     } @else {
                       <div class="flex-1 min-h-0">
@@ -200,6 +216,8 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                           [value]="filteredStudentsWithDocs()"
                           [paginator]="filteredStudentsWithDocs().length > 10"
                           [rows]="10"
+                          [first]="studentsPageFirst()"
+                          (onPage)="studentsPageFirst.set($event.first)"
                           [scrollable]="true"
                           scrollHeight="flex"
                           styleClass="p-datatable-sm h-full flex flex-col"
@@ -280,7 +298,12 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                     </div>
                     @if (recentDocs().length === 0) {
                       <div class="p-6 flex-1 flex items-center justify-center">
-                        <app-empty-state message="Sin documentos recientes" icon="file-text" />
+                        <app-empty-state
+                          [message]="
+                            loadError() ? 'No se pudieron cargar' : 'Sin documentos recientes'
+                          "
+                          [icon]="loadError() ? 'circle-alert' : 'file-text'"
+                        />
                       </div>
                     } @else {
                       <ul
@@ -306,7 +329,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                                 </p>
                                 <p class="text-xs m-0 text-text-secondary">
                                   {{ doc.studentName }} · {{ doc.typeLabel }} ·
-                                  {{ doc.documentAt | slice: 0 : 10 }}
+                                  {{ doc.documentAt | chileDate: 'yyyy-MM-dd' }}
                                 </p>
                               </div>
                             </div>
@@ -323,7 +346,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                                   Ver
                                 </button>
                               }
-                              @if (isAdmin()) {
+                              @if (isAdmin() && isDeletableDoc(doc.source)) {
                                 <button
                                   type="button"
                                   class="text-xs font-medium px-2.5 py-1 rounded-md cursor-pointer border-0 bg-transparent transition-colors duration-150 text-error"
@@ -374,11 +397,22 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
 
                   @if (instructorsWithDocs().length === 0) {
                     <div class="p-6 flex-1 flex items-center justify-center">
-                      <app-empty-state
-                        message="Sin instructores"
-                        subtitle="Los instructores de esta sede aparecerán aquí."
-                        icon="shield-check"
-                      />
+                      @if (loadError(); as error) {
+                        <app-empty-state
+                          message="No se pudieron cargar los instructores"
+                          [subtitle]="error"
+                          icon="circle-alert"
+                          actionLabel="Reintentar"
+                          actionIcon="refresh-cw"
+                          (action)="retryRequested.emit()"
+                        />
+                      } @else {
+                        <app-empty-state
+                          message="Sin instructores"
+                          subtitle="Los instructores de esta sede aparecerán aquí."
+                          icon="shield-check"
+                        />
+                      }
                     </div>
                   } @else {
                     <div class="flex-1 min-h-0">
@@ -478,11 +512,22 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                   </div>
                   @if (schoolDocs().length === 0) {
                     <div class="p-6 flex-1 flex items-center justify-center">
-                      <app-empty-state
-                        message="Sin documentos institucionales"
-                        subtitle="Sube las facturas, resoluciones y decretos de la escuela."
-                        icon="building-2"
-                      />
+                      @if (loadError(); as error) {
+                        <app-empty-state
+                          message="No se pudieron cargar los documentos de la escuela"
+                          [subtitle]="error"
+                          icon="circle-alert"
+                          actionLabel="Reintentar"
+                          actionIcon="refresh-cw"
+                          (action)="retryRequested.emit()"
+                        />
+                      } @else {
+                        <app-empty-state
+                          message="Sin documentos institucionales"
+                          subtitle="Sube las facturas, resoluciones y decretos de la escuela."
+                          icon="building-2"
+                        />
+                      }
                     </div>
                   } @else {
                     <ul
@@ -511,7 +556,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                                 }}{{ doc.description ? ' · ' + doc.description : '' }}
                               </p>
                               <p class="text-xs mt-0.5 m-0 text-text-muted">
-                                Subido el {{ doc.createdAt | slice: 0 : 10 }} por
+                                Subido el {{ doc.createdAt | chileDate: 'yyyy-MM-dd' }} por
                                 {{ doc.uploaderName }}
                               </p>
                             </div>
@@ -574,6 +619,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                         optionLabel="name"
                         optionValue="id"
                         placeholder="Sede"
+                        [disabled]="templateHasUnsavedChanges()"
                         appendTo="body"
                         [style]="{ 'min-width': '180px', height: '36px' }"
                         data-llm-action="select-document-template-branch"
@@ -585,6 +631,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                         optionLabel="label"
                         optionValue="value"
                         placeholder="Tipo de documento"
+                        [disabled]="templateHasUnsavedChanges()"
                         appendTo="body"
                         [style]="{ 'min-width': '200px', height: '36px' }"
                         data-llm-action="select-document-template-type"
@@ -642,6 +689,25 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                       />
                       Publicar
                     </button>
+                    @if (templateHasUnsavedChanges()) {
+                      <button
+                        type="button"
+                        class="btn-ghost btn-sm"
+                        data-llm-action="discard-document-template-changes"
+                        [disabled]="templateIsPublishing()"
+                        (click)="templateDiscardRequested.emit()"
+                      >
+                        <app-icon name="rotate-ccw" [size]="14" />
+                        Descartar cambios
+                      </button>
+                      <span
+                        class="text-xs text-text-secondary flex items-center gap-1.5"
+                        data-llm-description="the template has edits that are not published yet"
+                      >
+                        <app-icon name="circle-alert" [size]="14" class="text-warning" />
+                        Cambios sin publicar: publica o descarta para cambiar de sede o documento.
+                      </span>
+                    }
                   </div>
 
                   <!-- Secciones editables (scroll interno) -->
@@ -746,6 +812,9 @@ export class DmsListContentComponent {
   readonly isAdmin = input<boolean>(false);
   /** Admin con selector de sede en "Todas las sedes" → muestra la columna Sede en Alumnos. */
   readonly showSedeColumn = input<boolean>(false);
+  /** fix-473-m: la primera carga falló → las listas lo dicen (y ofrecen reintentar) en vez de "vacío". */
+  readonly loadError = input<string | null>(null);
+  readonly retryRequested = output<void>();
 
   // ── Inputs — editor de plantillas (spec 0016-m) ─────────────────────────────
   readonly templateBranches = input<BranchOption[]>([]);
@@ -753,6 +822,8 @@ export class DmsListContentComponent {
   readonly templateIsLoading = input<boolean>(false);
   readonly templateIsPublishing = input<boolean>(false);
   readonly templateIsGeneratingPreview = input<boolean>(false);
+  /** fix-469-m: borrador distinto de lo publicado → bloquea los selectores y ofrece descartar. */
+  readonly templateHasUnsavedChanges = input<boolean>(false);
 
   // ── Outputs ───────────────────────────────────────────────────────────────
   readonly uploadStudentDoc = output<void>();
@@ -773,9 +844,20 @@ export class DmsListContentComponent {
     documentType: DocumentType;
   }>();
   readonly templatePublishRequested = output<void>();
+  readonly templateDiscardRequested = output<void>();
+
+  /** fix-470-m: carnets, contrato firmado y certificados no se borran desde el DMS. */
+  protected readonly isDeletableDoc = isDeletableStudentDoc;
 
   readonly activeTab = signal<DmsTab>('students');
   readonly studentSearch = signal('');
+  /** hotfix-163-m: primera fila de la página actual; buscar vuelve a la página 1. */
+  readonly studentsPageFirst = signal(0);
+
+  onStudentSearch(query: string): void {
+    this.studentSearch.set(query);
+    this.studentsPageFirst.set(0);
+  }
 
   setActiveTab(tabId: string): void {
     this.activeTab.set(tabId as DmsTab);
@@ -796,13 +878,11 @@ export class DmsListContentComponent {
   );
 
   // ── Computed ──────────────────────────────────────────────────────────────
-  readonly filteredStudentsWithDocs = computed(() => {
-    const search = this.studentSearch().toLowerCase().trim();
-    if (!search) return this.studentsWithDocs();
-    return this.studentsWithDocs().filter(
-      (s) => s.name.toLowerCase().includes(search) || s.rut.toLowerCase().includes(search),
-    );
-  });
+  // hotfix-162-m: sin tildes ("jose" → José), RUT en cualquier formato y nombre/apellido en
+  // cualquier orden, igual que la Base de Alumnos.
+  readonly filteredStudentsWithDocs = computed(() =>
+    filterBySearchTokens(this.studentsWithDocs(), this.studentSearch(), (s) => [s.name, s.rut]),
+  );
 
   readonly heroActions = () => {
     const tab = this.activeTab();
@@ -837,11 +917,11 @@ export class DmsListContentComponent {
     return this.templateIsGeneratingPreview() && this.pendingTemplateAction() === action;
   }
 
-  /** Filtra Profesional si la sede seleccionada no dicta cursos profesionales (AC8). */
+  /** Filtra Profesional si la sede no lo dicta (AC8). */
   readonly templateDocumentTypeOptions = computed<DocumentTypeOption[]>(() => {
     const branch = this.templateBranches().find((b) => b.id === this.selectedTemplateBranchId());
-    if (branch?.hasProfessional) return ALL_DOCUMENT_TYPE_OPTIONS;
-    return ALL_DOCUMENT_TYPE_OPTIONS.filter((o) => !o.value.includes('professional'));
+    const allowed = editableDocumentTypes(branch?.hasProfessional ?? false);
+    return ALL_DOCUMENT_TYPE_OPTIONS.filter((o) => allowed.includes(o.value));
   });
 
   constructor() {

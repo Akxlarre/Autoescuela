@@ -734,7 +734,7 @@ import { PromocionDetalleContentComponent } from '@shared/components/promocion-d
       font-weight: 700;
       flex-shrink: 0;
       background: var(--color-primary-tint, color-mix(in srgb, var(--ds-brand) 12%, transparent));
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
 
     .pct-badge {
@@ -826,12 +826,12 @@ import { PromocionDetalleContentComponent } from '@shared/components/promocion-d
     }
     .curso-pill:hover {
       border-color: var(--ds-brand);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
     .curso-pill--active {
       background: color-mix(in srgb, var(--ds-brand) 10%, transparent);
       border-color: var(--ds-brand);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
   `,
 })

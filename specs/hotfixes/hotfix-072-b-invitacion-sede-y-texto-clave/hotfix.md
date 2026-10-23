@@ -1,7 +1,7 @@
 # Hotfix: La invitación de secretaria dice "Conductores Chillán" para cualquier sede y la pantalla habla de una "contraseña temporal" que no existe
 > id: hotfix-072-b-invitacion-sede-y-texto-clave
 > refs: ASG-i-034 (checklist 034, caso L01) — visto por el owner al activar la cuenta de prueba
-> status: closed
+> status: done
 > created: 2026-10-12
 
 ## Problema

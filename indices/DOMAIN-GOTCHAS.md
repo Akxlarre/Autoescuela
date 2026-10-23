@@ -51,7 +51,8 @@
 ### DG-008 — Sin `.order()`/`.limit()`, PostgREST trunca en silencio a 1000 filas
 - **Trampa:** asumir que una query sin límite explícito devuelve todas las filas.
 - **Realidad:** `supabase/config.toml` fija `max_rows = 1000`. PostgREST corta ahí sin lanzar error — invisible con pocos datos de prueba, silencioso a escala real.
-- **Fuente:** `specs/fixes/fix-053-b-ciclos-queries-limit`
+- **Regla de aplicabilidad:** un listado que debe traer todo pasa por `fetchAllPages()` (`core/utils/paged-fetch.utils.ts`) con orden estable e `id` de desempate.
+- **Fuente:** `specs/fixes/fix-053-b-ciclos-queries-limit`, `specs/fixes/fix-457-m-dms-sin-tope-1000-filas`
 
 ### DG-009 — Un campo "sede" en un listado puede ser un placeholder sin JOIN real
 - **Trampa:** asumir que el campo "sucursal" de una fila ya trae el nombre resuelto.
@@ -1899,6 +1900,63 @@
   la transacción con `set_config('app.<marca>', 'on', true)`, y el trigger deja pasar solo con esa
   marca. El cliente no puede fijarla: PostgREST no expone `set_config` (comprobado: 404).
 - **Fuente:** `specs/fixes/fix-445-m-egreso-en-dia-con-caja-cerrada`, `fix-444-m`, `fix-051-i`.
+
+### DG-115 — "La sede del alumno" no existe como tal: un alumno es de cada sede donde tiene matrícula
+
+- **Trampa:** filtrar alumnos (o lo que cuelga de ellos) por sede con `users.branch_id`, ya sea en
+  una query (`.eq('users.branch_id', sede)`) o en una policy.
+- **Realidad:** `students` no tiene sede; `users.branch_id` es un único valor (la sede donde se
+  registró), pero cada matrícula tiene su `enrollments.branch_id` y puede ser de la otra sede
+  (spec 0007-m, re-matrícula). Un alumno de la sede 2 con matrícula activa en la sede 1 **también
+  es alumno de la sede 1**. Filtrar por `users.branch_id` lo hacía invisible para la secretaria de
+  la sede 1 (que sí podía leer su matrícula y sus documentos) y mostraba sus documentos en la sede
+  equivocada.
+- **Regla de aplicabilidad:** para "alumnos/documentos/datos de la sede X", filtrar por la sede de la
+  **matrícula** (`enrollments!inner` + `.eq('enrollments.branch_id', X)`; documentos por
+  `enrollment_id`). `select_students` deja ver a la secretaria los alumnos de su sede **o** con
+  alguna matrícula en ella (`20261018120000`).
+- **Fuente:** `specs/fixes/fix-456-m-dms-sede-de-la-matricula`, `specs/fixes/fix-458-m-base-alumnos-sede-de-la-matricula` (Base Alumnos: `scopeStudentsToBranch()` en `core/utils/branch-scope.utils.ts`).
+
+### DG-116 — Emitir un certificado tiene tres capas: no invocar `generate-certificate-*-pdf` directo
+
+- **Trampa:** emitir un certificado (Clase B o Profesional) llamando a la edge function desde un
+  facade o componente nuevo, o usar `CertificacionProfesionalAlumnoRow.elegible` como "se puede
+  emitir".
+- **Realidad:** (1) los facades de cada licencia (`generarCertificado()`, `regenerarCertificado()`,
+  `enviarEmail()`) abren los modales que correspondan vía `CertificadoAutorizacionFacade`: avisos que
+  nunca bloquean (prácticas incompletas del admin en Clase B; teoría < 75 % y práctica < 100 % en
+  Profesional), regenerar y envío de email; (2) con saldo pendiente la edge function responde
+  `DEUDA_PENDIENTE` y recién ahí el modal de la spec 0010-i pide el motivo, registra la habilitación
+  `certificado` en `enrollment_payment_overrides` y se reintenta; (3) ambas edge functions la exigen
+  vía `supabase/functions/_shared/certificate-debt.ts` (409 sin ella, para cualquier rol). `elegible`
+  en Profesional solo significa "pago al día" y filtra "Generar pendientes"; el lote nunca pide
+  motivos y salta a los que tienen deuda. En Clase B, las prácticas incompletas sí bloquean a la
+  secretaria (el admin sigue con `force`).
+  En Profesional, el equivalente es la promoción terminada: nunca se emite antes del último día
+  (`end_date ≤ hoy en Chile`), para ningún rol (fix-467-m). Se compara la fecha, no el estado:
+  la promoción pasa a `finished` recién el día siguiente (cron `auto_transition_promotion_status`).
+  App: `promotionAllowsCertificate()`; edge: `_shared/promotion-certificate.ts`.
+- **Regla de aplicabilidad:** cualquier botón o flujo nuevo que genere o regenere un certificado
+  llama a `generarCertificado()` / `regenerarCertificado()` del facade de su licencia (que ya
+  confirman y manejan `DEUDA_PENDIENTE`), nunca a la edge function directo. Un gate de saldo nuevo en otra edge function reusa
+  `checkCertificateDebt()`.
+- **Fuente:** `specs/fixes/fix-466-m-confirmacion-previa-certificados`, spec `0010-i` (AC8, AC-E5).
+
+### DG-117 — La secretaria solo borra documentos de alumno en matrículas en borrador
+
+- **Trampa:** cerrar `delete_student_documents` a "solo admin" porque la pantalla de Documentos no
+  le muestra "Eliminar" a la secretaria, o al revés, asumir que la secretaria puede borrar porque
+  el wizard de matrícula lo hace.
+- **Realidad:** la policy deja borrar al admin siempre y a la secretaria **solo si la matrícula
+  está en `draft`** y es de su sede (`20261020150000`). El wizard borra documentos de borradores
+  ("Quitar foto carnet", reemplazar un documento del paso 4, "Descartar borrador"); una matrícula
+  ya confirmada se corrige con "Reemplazar" (UPDATE), nunca borrando. Un DELETE de la secretaria
+  sobre una matrícula activa no da error: devuelve 0 filas.
+- **Regla de aplicabilidad:** un flujo nuevo de la secretaria que necesite quitar un documento de
+  una matrícula confirmada usa UPDATE (reemplazo), no DELETE; y todo DELETE de la app revisa con
+  `.select()` cuántas filas borró, porque la RLS no avisa.
+- **Fuente:** `specs/fixes/fix-477-m-rls-borrar-documentos-alumno-solo-admin`, test
+  `supabase/tests/rls/fix-477-m-borrar-documentos-alumno.sql`.
 
 ## Convención para agregar una entrada nueva
 

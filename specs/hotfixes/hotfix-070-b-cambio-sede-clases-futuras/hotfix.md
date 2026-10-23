@@ -1,7 +1,7 @@
 # Hotfix: Cambiar de sede a un instructor no avisa de sus clases ya agendadas
 > id: hotfix-070-b-cambio-sede-clases-futuras
 > refs: ASG-i-034 (caso E13, §5) — decisión del owner 2026-10-07: avisar, igual que al desactivar (fix-205-b)
-> status: closed
+> status: done
 > created: 2026-10-07
 
 ## Problema

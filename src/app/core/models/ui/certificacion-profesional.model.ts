@@ -41,6 +41,8 @@ export interface ElegibilidadCertProf {
 export interface CertificacionProfesionalAlumnoRow {
   enrollmentId: number;
   studentId: number;
+  /** enrollments.number — dato principal para identificar al alumno (fix-482-m). */
+  numeroMatricula: string | null;
   nombre: string;
   rut: string;
   curso: string;
@@ -56,8 +58,8 @@ export interface CertificacionProfesionalAlumnoRow {
   notaPromedio: number | null;
   elegibilidad: ElegibilidadCertProf;
   /**
-   * true = cumple teoría + pago + nota (puede tener práctica < 100 con confirmación).
-   * Controla si el botón "Generar" está habilitado.
+   * true = pago al día. Solo decide quién entra a "Generar pendientes" (fix-466-m); uno a uno se
+   * puede emitir igual: con deuda, el modal pide el motivo (spec 0010-i).
    */
   elegible: boolean;
   // ── Certificado ──

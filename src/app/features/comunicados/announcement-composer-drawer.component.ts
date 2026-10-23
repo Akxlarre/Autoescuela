@@ -728,6 +728,8 @@ export class AnnouncementComposerDrawerComponent {
     this.facade.clearPreview();
     this.facade.resetProgress();
     void this.templates.initialize();
+    // hotfix-106-b (S19): el admin arranca con la sede que tiene elegida arriba, no en "Todas".
+    if (this.isAdmin()) this.branchId.set(this.branchFacade.selectedBranchId());
   }
 
   protected isChecked(userId: number): boolean {

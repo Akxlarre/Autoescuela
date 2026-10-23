@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, untracked } from '@angular/core';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { DmsListContentComponent } from '@shared/components/dms-list-content/dms-list-content.component';
 
@@ -20,6 +21,8 @@ import { DmsListContentComponent } from '@shared/components/dms-list-content/dms
       [schoolDocs]="facade.schoolDocs()"
       [isLoading]="facade.isLoading()"
       [isAdmin]="false"
+      [loadError]="facade.listsError()"
+      (retryRequested)="facade.reload()"
       (uploadStudentDoc)="openUploadStudentDrawer()"
       (uploadInstructorDoc)="openUploadInstructorDrawer()"
       (uploadSchoolDoc)="openUploadSchoolDrawer()"
@@ -31,11 +34,16 @@ import { DmsListContentComponent } from '@shared/components/dms-list-content/dms
     />
   `,
 })
-export class SecretariaDocumentosComponent implements OnInit {
+export class SecretariaDocumentosComponent {
   readonly facade = inject(DmsFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
-  ngOnInit(): void {
-    void this.facade.initialize();
+  constructor() {
+    // hotfix-161-m: una secretaria con acceso a ambas sedes tiene selector; se recarga al cambiarlo.
+    effect(() => {
+      this.branchFacade.selectedBranchId();
+      untracked(() => void this.facade.initialize());
+    });
   }
 
   openUploadStudentDrawer(): void {

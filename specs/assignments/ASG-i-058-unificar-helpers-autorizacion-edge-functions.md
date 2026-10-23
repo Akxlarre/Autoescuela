@@ -1,14 +1,14 @@
 # Asignación ASG-i-058 — Unificar los helpers de autorización de las edge functions
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-10-01
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-10-20
+> **resulting_track:** fix-235-b-unificar-autorizacion-edge-functions
 
 ---
 

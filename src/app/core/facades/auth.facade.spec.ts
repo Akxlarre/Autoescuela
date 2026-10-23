@@ -39,6 +39,7 @@ describe('AuthFacade', () => {
       signUp: vi.fn(),
       signOut: vi.fn(),
       resetPasswordForEmail: vi.fn(),
+      setRememberSession: vi.fn(),
     };
     supabaseSpy.getUser.mockResolvedValue({ data: { user: null } } as any);
     supabaseSpy.signIn.mockResolvedValue({ error: null } as any);
@@ -141,9 +142,25 @@ describe('AuthFacade', () => {
     expect(branchFacade.selectedBranchId()).toBeNull();
   });
 
-  it("logout() should navigate to '/'", () => {
+  it("logout() should navigate to '/'", async () => {
     const navigateSpy = vi.spyOn(router, 'navigate');
-    service.logout();
+    await service.logout();
+    expect(navigateSpy).toHaveBeenCalledWith(['/']);
+  });
+
+  // hotfix-091-b (E10): navegar antes de cerrar la sesión dejaba que el guard la volviera a leer
+  // y la persona seguía adentro (sobre todo sin red).
+  it('logout() navega recién cuando terminó de cerrar la sesión', async () => {
+    const navigateSpy = vi.spyOn(router, 'navigate');
+    let terminar: (v: { error: null }) => void = () => undefined;
+    supabaseSpy.signOut.mockReturnValue(new Promise((r) => (terminar = r)) as any);
+
+    const salida = service.logout();
+    expect(service.currentUser()).toBeNull();
+    expect(navigateSpy).not.toHaveBeenCalled();
+
+    terminar({ error: null });
+    await salida;
     expect(navigateSpy).toHaveBeenCalledWith(['/']);
   });
 
@@ -167,6 +184,27 @@ describe('AuthFacade', () => {
     supabaseSpy.signIn.mockResolvedValue({ error: new Error('_skip_poll') } as any);
     await service.login('user@example.com', 'password123');
     expect(supabaseSpy.signIn).toHaveBeenCalledWith('user@example.com', 'password123');
+  });
+
+  // fix-229-b (A19): la preferencia se guarda ANTES de crear la sesión.
+  it('login() guarda "Mantener sesión iniciada" antes de iniciar sesión', async () => {
+    supabaseSpy.signIn.mockResolvedValue({ error: new Error('_skip_poll') } as any);
+    await service.login('user@example.com', 'password123', false);
+    expect(supabaseSpy.setRememberSession).toHaveBeenCalledWith(false);
+    expect(supabaseSpy.setRememberSession.mock.invocationCallOrder[0]).toBeLessThan(
+      supabaseSpy.signIn.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('login() sin indicar la casilla la da por marcada', async () => {
+    supabaseSpy.signIn.mockResolvedValue({ error: new Error('_skip_poll') } as any);
+    await service.login('user@example.com', 'password123');
+    expect(supabaseSpy.setRememberSession).toHaveBeenCalledWith(true);
+  });
+
+  it('logout() limpia la preferencia', async () => {
+    await service.logout({ redirect: false });
+    expect(supabaseSpy.setRememberSession).toHaveBeenCalledWith(true);
   });
 
   describe('sesión lenta (fix-185-b, S17)', () => {
@@ -492,6 +530,7 @@ describe('AuthFacade — cuenta desactivada con la sesión abierta (fix-219-b)',
     };
     supabaseSpy = {
       signOut: vi.fn().mockResolvedValue({ error: null }),
+      setRememberSession: vi.fn(),
       client: {
         auth: {
           onAuthStateChange: vi

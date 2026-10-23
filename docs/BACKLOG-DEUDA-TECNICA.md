@@ -163,6 +163,35 @@ dentro del componente (p. ej. `isAdmin() && …`), el re-export de 10 líneas ga
 extraer a un `*-content`.** Extraer solo se justifica cuando los roles difieren de verdad en
 datos o en composición.
 
+## Al levantar el piloto (lista viva)
+
+> La fuente de qué está bloqueado es `src/app/core/config/pilot-phase.config.ts` (`BLOCKED_MODULES`).
+> Sacar un módulo de esa lista reactiva **solo** lo que pregunta `isBlockedInPilot(...)`. Lo de abajo
+> separa lo que vuelve solo de lo que hay que revisar a mano. Agregar una línea cada vez que algo se
+> oculte o se recorte "por el piloto".
+
+**Vuelve solo al sacar `alumno` de la lista:**
+- Botón "Recordar" de alumnos en riesgo en Asistencia B (`asistencia-clase-b.facade.ts`,
+  `recordatoriosHabilitados`, fix-380-m). Pedido del owner (2026-10-20, checklist 035 S7): **no
+  olvidar que existe** — hoy el recordatorio es solo in-app y en el piloto nadie lo vería.
+- Notificaciones al alumno de matrícula confirmada y de certificados (`enrollment.facade.ts`,
+  `certificacion-*.facade.ts`), menú del portal alumno, invitaciones desde la ficha.
+
+**Vuelve solo al sacar `instructor`:** menú del portal, envío de invitaciones al crear un instructor
+(`instructores.facade.ts`, fix-214-b), aviso de invitación en el drawer de edición.
+
+**Vuelve solo al sacar `clase-profesional-recorte`:** académico Profesional en fichas, listas y
+archivo; alertas del dashboard; enlace de la notificación de pre-inscripción (topbar).
+
+**Hay que revisarlo a mano:**
+- [ ] `inscripcion-publica`: además del config, setear el secret `PUBLIC_ENROLLMENT_ENABLED=true`
+      de la Edge Function `public-enrollment` (fix-193-b).
+- [ ] Baja de promociones: hoy el correo promocional dice que la pidan en la escuela o por el
+      correo de la sede (fix-232-b, S5). Con el portal alumno abierto, evaluar un enlace de baja
+      directo (Ajustes → consentimientos ya lo permite).
+- [ ] QA visual del portal instructor (ASG-b-100) y del portal alumno.
+- [ ] Correos al alumno que mencionan el portal (ASG-m-010).
+
 ## Infraestructura de guardrails
 
 - [ ] `Architect Guard` hook (`.claude/hooks/pre-write-guard.js`, protegido — requiere

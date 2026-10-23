@@ -205,6 +205,27 @@ export const KNOWN_ERRORS: KnownError[] = [
 Una entrada sin `reason` detiene la suite entera. Si el error es un bug real, se reporta
 (fix/asignación) en vez de agregarlo a la lista.
 
+## Accesibilidad (axe) en el barrido — spec 0054-b
+
+`e2e/barrido-rutas.spec.ts` corre axe (WCAG 2 A/AA) en cada celda (ruta × rol × ancho × tema) como
+chequeo **C7**:
+
+- **Por defecto solo reporta.** Cada test adjunta `a11y.json` (violaciones por celda: regla,
+  impacto, nodos, ejemplos de selector) y una anotación `a11y` con el conteo por impacto. No falla.
+- **Línea base:** `e2e/a11y-baseline/<ruta>-<rol>.json` — claves `"<tema>:<regla>"` de lo que ya
+  existe. Se regenera con:
+
+  ```bash
+  E2E_A11Y_WRITE_BASELINE=1 npx playwright test e2e/barrido-rutas.spec.ts
+  ```
+
+  Regenerarla solo después de **corregir** violaciones (para que la línea base baje), nunca para
+  "aceptar" una nueva.
+- **Modo estricto (apagado hasta que el equipo lo acuerde):** `E2E_A11Y_STRICT=1` hace fallar una
+  celda si aparece una regla `serious`/`critical` que no está en la línea base de esa ruta × rol ×
+  tema. La comparación es por regla, no por selector.
+- axe no cubre teclado, foco ni lectores de pantalla: eso sigue siendo revisión manual.
+
 ## Cuentas de prueba
 
 Todas usan la contraseña `Test123456` (la misma que muestra la pantalla de login).

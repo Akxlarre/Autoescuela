@@ -1,6 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import type { DmsViewerDocument } from '@core/models/ui/dms.model';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { documentDownloadUrl } from '@core/utils/document-download.utils';
 
 @Injectable({ providedIn: 'root' })
 export class DmsViewerService {
@@ -42,6 +43,21 @@ export class DmsViewerService {
       name,
       type: isPdf ? 'pdf' : isImage ? 'image' : 'other',
     });
+  }
+
+  /**
+   * Descarga el documento (fix-468-m). Con una URL de Storage, la descarga es real
+   * (`documentDownloadUrl`); con otra URL, se abre en una pestaña nueva como antes.
+   */
+  download(doc: Pick<DmsViewerDocument, 'url' | 'name'>): void {
+    const downloadUrl = documentDownloadUrl(doc.url, doc.name);
+    const link = document.createElement('a');
+    link.href = downloadUrl ?? doc.url;
+    if (!downloadUrl) link.target = '_blank';
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   /**

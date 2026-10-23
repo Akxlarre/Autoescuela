@@ -1,3 +1,4 @@
+import { chileWallTimeToInstant } from './chile-time.utils';
 import type { Task, TaskFromRole, TaskToRole } from '@core/models/dto/task.model';
 import type { TaskRow } from '@core/models/ui/task.model';
 
@@ -14,9 +15,63 @@ export function canSendTo(fromRole: TaskFromRole, toRole: TaskToRole): boolean {
   return ALLOWED[fromRole]?.includes(toRole) ?? false;
 }
 
-export function isOverdue(dueDate: string | null, now: Date): boolean {
-  if (!dueDate) return false;
+/**
+ * Una tarea completada nunca está vencida (S10, hotfix-100-b): antes salía "Vencida" y contaba
+ * en el KPI aunque ya estuviera hecha.
+ */
+export function isOverdue(dueDate: string | null, now: Date, status?: Task['status']): boolean {
+  if (!dueDate || status === 'completed') return false;
   return new Date(dueDate) < now;
+}
+
+/**
+ * Instante que se guarda en `tasks.due_date` (timestamptz) para una fecha límite elegida como
+ * día `AAAA-MM-DD`: las 23:59 de ese día en Chile (S9, hotfix-100-b). Guardar el día tal cual
+ * era medianoche UTC = 21:00 del día anterior en Chile — se mostraba un día antes y salía
+ * "Vencida" desde la noche previa.
+ */
+export function dueDateToInstant(day: string): string {
+  return chileWallTimeToInstant(day, '23:59');
+}
+
+/**
+ * Filtro PostgREST (`.or(...)`) de la lista de tareas con una sede elegida (hotfix-101-b, S8):
+ * la sede acota las tareas ajenas, pero lo que el usuario envió o recibió se ve siempre. Una
+ * tarea secretaria → admin queda con la sede de la secretaria; filtrar solo por `branch_id`
+ * le escondía al admin lo que le mandaban desde la otra sede.
+ */
+export function taskBranchScopeFilter(branchId: number, userId: number): string {
+  return `branch_id.eq.${branchId},from_user_id.eq.${userId},to_user_id.eq.${userId}`;
+}
+
+/**
+ * Pestaña "Enviadas" de la secretaria (hotfix-102-b, S23): todo lo que envió que no es una
+ * observación — tareas y consultas, al admin y a instructores, incluidas las completadas.
+ * Antes solo veía lo enviado a instructores: lo que le mandaba al admin no aparecía en ningún lado.
+ */
+export function sentNonObservations<T extends Pick<Task, 'type'>>(sent: T[]): T[] {
+  return sent.filter((t) => t.type !== 'observation');
+}
+
+/** Campos que el emisor puede corregir de una tarea pendiente (spec 0053-b). */
+export interface TaskEditChanges {
+  subject: string;
+  body: string | null;
+  /** `AAAA-MM-DD` del selector, o null. */
+  due_date: string | null;
+}
+
+/**
+ * UPDATE de una edición (spec 0053-b): asunto recortado, descripción vacía → null y fecha límite
+ * con la misma regla que al crear (23:59 de Chile, hotfix-100-b), solo en tareas.
+ */
+export function taskEditPayload(
+  type: Task['type'],
+  changes: TaskEditChanges,
+): { subject: string; body: string | null; due_date: string | null } {
+  const body = changes.body?.trim() ? changes.body.trim() : null;
+  const due = type === 'task' && changes.due_date ? dueDateToInstant(changes.due_date) : null;
+  return { subject: changes.subject.trim(), body, due_date: due };
 }
 
 export function canEditTask(task: Task, currentUserId: number): boolean {
@@ -28,8 +83,16 @@ export function canDeleteTask(task: Task, currentUserId: number, currentRole: st
   return task.from_user_id === currentUserId && task.status === 'pending';
 }
 
+/**
+ * La tarea sigue abierta (cuenta en los contadores de pendientes): pendiente o en curso. Una
+ * completada o una observación ya vista (fix-231-b) no.
+ */
+export function isTaskOpen(status: Task['status']): boolean {
+  return status === 'pending' || status === 'in_progress';
+}
+
 export function canChangeStatus(task: Task, currentUserId: number): boolean {
-  if (task.status === 'completed') return false;
+  if (!isTaskOpen(task.status)) return false;
   if (task.to_user_id === currentUserId) return true;
   // Question sender can also close the question once satisfied with the answer
   if (task.type === 'question' && task.from_user_id === currentUserId) return true;
@@ -65,7 +128,7 @@ export function mapTaskDtoToRow(
     senderName,
     recipientName,
     replyCount,
-    isOverdue: isOverdue(dto.due_date, now),
+    isOverdue: isOverdue(dto.due_date, now, dto.status),
     ageInDays,
     recipientInactive,
     canEdit: canEditTask(dto, currentUserId),

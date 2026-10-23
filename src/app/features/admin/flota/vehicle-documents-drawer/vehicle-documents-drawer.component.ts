@@ -15,7 +15,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
-import { validateDocumentFile } from '@core/utils/document-file-validation.util';
+import { checkDocumentFile } from '@core/utils/document-file-validation.util';
 import { VEHICLE_DOC_TYPES } from '@core/utils/vehicle-doc-types.util';
 import type { DocStatus } from '@core/models/ui/vehicle-table.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -355,12 +355,14 @@ export class VehicleDocumentsDrawerComponent {
     this.formError.set(null);
   }
 
-  onFileChange(event: Event): void {
+  async onFileChange(event: Event): Promise<void> {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    const error = validateDocumentFile(file);
+    const error = await checkDocumentFile(file);
     if (error) {
       this.formError.set(error);
+      // fix-474-m: un archivo inválido descarta el anterior.
+      this.editFile.set(null);
       return;
     }
     this.formError.set(null);

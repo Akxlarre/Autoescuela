@@ -62,7 +62,7 @@
   height: 44px;
   border-radius: var(--radius-full);
   background: var(--color-primary-tint);
-  color: var(--ds-brand);
+  color: var(--brand-strong);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -126,13 +126,13 @@
   &--completed {
     width: 8px;
     height: 8px;
-    background: var(--ds-brand);
+    background: var(--brand-strong);
   }
 
   &--active {
     width: 13px;
     height: 13px;
-    background: var(--ds-brand);
+    background: var(--brand-strong);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-brand) 25%, transparent);
   }
 
@@ -151,7 +151,7 @@
   transition: background-color var(--duration-normal) var(--ease-standard);
 
   &--filled {
-    background: var(--ds-brand);
+    background: var(--brand-strong);
   }
 }
 
@@ -200,7 +200,7 @@
 }
 
 .btn-resume {
-  background: var(--ds-brand);
+  background: var(--brand-strong);
   color: var(--color-primary-text);
   border: none;
 

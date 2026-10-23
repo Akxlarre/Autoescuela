@@ -22,6 +22,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { filterCertificadoAlumnos } from '@core/utils/certificate-list.utils';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import type {
   CertificacionAlumnoRow,
@@ -90,7 +91,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
             />
             <input
               type="text"
-              placeholder="Buscar por nombre o RUT..."
+              placeholder="Buscar por Nº, nombre o RUT..."
               class="w-full list-search-input h-9 pl-8 pr-3 text-sm rounded-lg border outline-none transition-colors border-border-default bg-surface text-text-primary"
               data-llm-description="Search students by name or RUT"
               [value]="searchQuery()"
@@ -216,6 +217,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
             <table class="w-full text-sm">
               <thead class="sticky top-0 z-10 bg-surface">
                 <tr class="border-b border-(--border-default)">
+                  <th class="micro-label text-left px-4 py-2" title="Nº de matrícula">Nº</th>
                   <th class="micro-label text-left px-4 py-2">Alumno</th>
                   <th class="micro-label text-left px-4 py-2">RUT</th>
                   <th class="micro-label text-left px-4 py-2">Curso</th>
@@ -229,22 +231,27 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
               <tbody>
                 @for (alumno of pagedAlumnos(); track alumno.enrollmentId) {
                   <!-- Fila principal -->
-                  <tr
-                    class="border-b border-(--border-default) last:border-b-0 transition-colors"
-                    [class.bg-[var(--bg-subtle)]]="pendingConfirmId() === alumno.enrollmentId"
-                  >
+                  <tr class="border-b border-(--border-default) last:border-b-0 transition-colors">
+                    <!-- fix-484-m: el Nº de matrícula identifica al alumno -->
+                    <td class="px-4 py-2 item-title whitespace-nowrap tabular-nums">
+                      {{ alumno.numeroMatricula ?? '—' }}
+                    </td>
                     <td class="px-4 py-2 font-medium text-text-primary">
                       {{ alumno.nombre }}
                     </td>
-                    <td class="px-4 py-2 text-brand">
+                    <td class="px-4 py-2 text-brand whitespace-nowrap">
                       {{ alumno.rut }}
                     </td>
                     <td class="px-4 py-2">
                       <app-badge variant="brand">{{ alumno.curso }}</app-badge>
                     </td>
-                    <!-- Prácticas: siempre 12/12 si aparece en esta lista -->
+                    <!-- Prácticas: verde solo completas (el admin ve también incompletos, hotfix-165-m) -->
                     <td class="px-4 py-2 text-center">
-                      <span class="font-semibold text-success">
+                      <span
+                        class="font-semibold"
+                        [class.text-success]="alumno.clasesCompletadas >= alumno.clasesTotales"
+                        [class.text-warning]="alumno.clasesCompletadas < alumno.clasesTotales"
+                      >
                         {{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }}
                       </span>
                     </td>
@@ -315,6 +322,22 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                           </button>
                           <button
                             class="inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                            data-llm-action="regenerate-certificate"
+                            title="Volver a generar el PDF con los datos y la plantilla actuales"
+                            [disabled]="generatingId() !== null"
+                            [appStableWidth]="generatingId() === alumno.enrollmentId"
+                            (click)="regenerarCertificado.emit(alumno.enrollmentId)"
+                          >
+                            @if (generatingId() === alumno.enrollmentId) {
+                              <app-icon name="loader-circle" [size]="13" class="animate-spin" />
+                              Generando...
+                            } @else {
+                              <app-icon name="refresh-cw" [size]="13" />
+                              Regenerar
+                            }
+                          </button>
+                          <button
+                            class="inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
                             data-llm-action="send-certificate-email"
                             [disabled]="sendingEmailId() === alumno.enrollmentId"
                             [appStableWidth]="sendingEmailId() === alumno.enrollmentId"
@@ -335,104 +358,6 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                       </div>
                     </td>
                   </tr>
-
-                  <!-- Fila de confirmación inline — envío de email -->
-                  @if (emailConfirmId() === alumno.enrollmentId) {
-                    <tr class="border-b border-(--border-default)">
-                      <td colspan="9" class="px-4 py-3">
-                        <div
-                          class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3 bg-brand/8 border border-brand/30"
-                        >
-                          <app-icon name="send" [size]="18" class="text-brand shrink-0" />
-                          <p class="text-sm flex-1 text-text-secondary">
-                            Se enviará el certificado de
-                            <strong class="text-text-primary">{{ alumno.nombre }}</strong>
-                            @if (alumno.email) {
-                              al correo
-                              <strong class="text-brand">{{ alumno.email }}</strong
-                              >.
-                            }
-                            @if (alumno.emailEnviado) {
-                              <span class="text-text-muted"> (ya fue enviado anteriormente)</span>
-                            }
-                          </p>
-                          <div class="flex items-center gap-2 shrink-0">
-                            <button
-                              class="inline-flex items-center font-semibold transition-all active:scale-95 btn-primary btn-sm"
-                              data-llm-action="confirm-send-certificate-email"
-                              (click)="confirmarEmail()"
-                            >
-                              <app-icon name="send" [size]="13" />
-                              Confirmar envío
-                            </button>
-                            <button
-                              class="btn-ghost btn-sm"
-                              data-llm-action="cancel-send-certificate-email"
-                              (click)="cancelarEmail()"
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  }
-
-                  <!-- Fila de confirmación inline — visible solo si el admin bypassea prácticas incompletas -->
-                  @if (pendingConfirmId() === alumno.enrollmentId) {
-                    <tr class="border-b border-(--border-default)">
-                      <td colspan="9" class="px-4 py-3">
-                        <div
-                          class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3 bg-warning-subtle border border-warning"
-                        >
-                          <app-icon
-                            name="alert-triangle"
-                            [size]="18"
-                            class="text-warning shrink-0"
-                          />
-                          <p class="text-sm flex-1 text-text-secondary">
-                            <span class="font-semibold text-warning">Prácticas incompletas:</span>
-                            {{ alumno.nombre }} lleva
-                            <strong
-                              >{{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }}</strong
-                            >
-                            clases prácticas completadas. ¿Confirmar generación del certificado de
-                            todos modos?
-                          </p>
-                          <div class="flex items-center gap-2 shrink-0">
-                            <button
-                              class="group inline-flex items-center justify-center font-semibold transition-all active:scale-95 btn-primary btn-sm disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
-                              data-llm-action="confirm-generate-certificate-partial-practicas"
-                              [disabled]="generatingId() !== null"
-                              [appStableWidth]="generatingId() === pendingConfirmId()"
-                              (click)="confirmarGenerar()"
-                            >
-                              @if (generatingId() === pendingConfirmId()) {
-                                <app-icon name="loader-2" [size]="13" class="animate-spin" />
-                                Generando...
-                              } @else {
-                                <span class="group-hover:hidden flex items-center gap-1.5">
-                                  <app-icon name="check" [size]="13" />
-                                  Confirmar de todos modos
-                                </span>
-                                <span class="hidden group-hover:flex items-center gap-1.5">
-                                  <app-icon name="mouse-pointer-click" [size]="13" />
-                                  Confirmar de todos modos
-                                </span>
-                              }
-                            </button>
-                            <button
-                              class="btn-ghost btn-sm"
-                              data-llm-action="cancel-generate-certificate"
-                              (click)="cancelarGenerar()"
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  }
                 }
               </tbody>
             </table>
@@ -443,16 +368,10 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
             class="mobile-view show-on-squeeze flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-2"
           >
             @for (alumno of pagedAlumnos(); track alumno.enrollmentId) {
-              <div
-                class="card flex flex-col gap-2.5"
-                appCardHover
-                [class.border-brand]="
-                  pendingConfirmId() === alumno.enrollmentId ||
-                  emailConfirmId() === alumno.enrollmentId
-                "
-              >
+              <div class="card flex flex-col gap-2.5" appCardHover>
                 <div class="flex items-start justify-between gap-2">
                   <div class="min-w-0">
+                    <p class="micro-label m-0">Matrícula {{ alumno.numeroMatricula ?? '—' }}</p>
                     <p class="item-title truncate m-0">
                       {{ alumno.nombre }}
                     </p>
@@ -474,7 +393,11 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                   class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary"
                 >
                   <app-badge variant="brand">{{ alumno.curso }}</app-badge>
-                  <span class="font-semibold text-success">
+                  <span
+                    class="font-semibold"
+                    [class.text-success]="alumno.clasesCompletadas >= alumno.clasesTotales"
+                    [class.text-warning]="alumno.clasesCompletadas < alumno.clasesTotales"
+                  >
                     {{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }} prácticas
                   </span>
                   @if (alumno.fechaTermino) {
@@ -529,6 +452,20 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                     </button>
                     <button
                       class="flex-1 inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                      data-llm-action="regenerate-certificate"
+                      [disabled]="generatingId() !== null"
+                      (click)="regenerarCertificado.emit(alumno.enrollmentId)"
+                    >
+                      @if (generatingId() === alumno.enrollmentId) {
+                        <app-icon name="loader-circle" [size]="13" class="animate-spin" />
+                        Generando...
+                      } @else {
+                        <app-icon name="refresh-cw" [size]="13" />
+                        Regenerar
+                      }
+                    </button>
+                    <button
+                      class="flex-1 inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
                       data-llm-action="send-certificate-email"
                       [disabled]="sendingEmailId() === alumno.enrollmentId"
                       (click)="onClickEmail(alumno)"
@@ -546,65 +483,6 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                     </button>
                   }
                 </div>
-
-                <!-- Confirmación inline — envío de email -->
-                @if (emailConfirmId() === alumno.enrollmentId) {
-                  <div
-                    class="flex flex-col gap-2 rounded-lg px-3 py-2.5 bg-brand/8 border border-brand/30"
-                  >
-                    <p class="text-xs text-text-secondary m-0">
-                      Se enviará el certificado
-                      @if (alumno.email) {
-                        al correo <strong class="text-brand">{{ alumno.email }}</strong
-                        >.
-                      }
-                      @if (alumno.emailEnviado) {
-                        <span class="text-text-muted"> (ya fue enviado anteriormente)</span>
-                      }
-                    </p>
-                    <div class="flex items-center gap-2">
-                      <button
-                        class="flex-1 inline-flex items-center justify-center font-semibold btn-primary btn-sm"
-                        data-llm-action="confirm-send-certificate-email"
-                        (click)="confirmarEmail()"
-                      >
-                        <app-icon name="send" [size]="12" />
-                        Confirmar envío
-                      </button>
-                      <button class="btn-ghost btn-sm" (click)="cancelarEmail()">Cancelar</button>
-                    </div>
-                  </div>
-                }
-
-                <!-- Confirmación inline — bypass prácticas incompletas -->
-                @if (pendingConfirmId() === alumno.enrollmentId) {
-                  <div
-                    class="flex flex-col gap-2 rounded-lg px-3 py-2.5 bg-warning-subtle border border-warning"
-                  >
-                    <p class="text-xs text-text-secondary m-0">
-                      <span class="font-semibold text-warning">Prácticas incompletas:</span> lleva
-                      {{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }}. ¿Confirmar de todos
-                      modos?
-                    </p>
-                    <div class="flex items-center gap-2">
-                      <button
-                        class="flex-1 inline-flex items-center justify-center font-semibold btn-primary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                        data-llm-action="confirm-generate-certificate-partial-practicas"
-                        [disabled]="generatingId() !== null"
-                        (click)="confirmarGenerar()"
-                      >
-                        @if (generatingId() === pendingConfirmId()) {
-                          <app-icon name="loader-2" [size]="12" class="animate-spin" />
-                          Generando...
-                        } @else {
-                          <app-icon name="check" [size]="12" />
-                          Confirmar
-                        }
-                      </button>
-                      <button class="btn-ghost btn-sm" (click)="cancelarGenerar()">Cancelar</button>
-                    </div>
-                  </div>
-                }
               </div>
             }
           </div>
@@ -692,11 +570,12 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   readonly isAdmin = input(false);
 
   // ── Outputs ──
+  /** fix-466-m: el facade confirma con un modal (avisos, deuda) y decide el bypass admin. */
   readonly generarCertificado = output<number>();
-  /** fix-011-i (H-025): bypass admin explícito — el consumidor debe pasar force=true al facade. */
-  readonly generarCertificadoForzado = output<number>();
   readonly verCertificado = output<{ storagePath: string; nombre: string }>();
   readonly enviarEmail = output<number>();
+  /** fix-464-m: reemitir el PDF de un certificado ya generado (conserva el folio). */
+  readonly regenerarCertificado = output<number>();
   readonly abrirHistorialDrawer = output<void>();
   readonly abrirGenerarPendientesDrawer = output<void>();
   readonly abrirEnviarMasivoDrawer = output<void>();
@@ -706,10 +585,6 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   readonly estadoFilter = signal<EstadoFilter>(null);
   readonly searchQuery = signal('');
   readonly currentPageAlumnos = signal(0);
-  /** ID de la matrícula esperando confirmación para generar (teoría incompleta). */
-  readonly pendingConfirmId = signal<number | null>(null);
-  /** ID de la matrícula esperando confirmación para enviar email. */
-  readonly emailConfirmId = signal<number | null>(null);
 
   // ── Pagination ──
   readonly PAGE_SIZE = 10;
@@ -771,27 +646,10 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
 
   // ── Computed ──
 
-  readonly filteredAlumnos = computed(() => {
-    const filter = this.estadoFilter();
-    const query = this.searchQuery().trim().toLowerCase();
-    const all = this.alumnos();
-
-    let result = !filter ? all : all.filter((a) => a.certificadoStatus === filter);
-
-    if (query) {
-      // Normalize: strip diacritics so "Gonza" matches "González"
-      const normalize = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-      const queryNorm = normalize(query).replace(/[.\-]/g, '');
-      result = result.filter((a) => {
-        const nameMatch = normalize(a.nombre).includes(normalize(query));
-        const rutNorm = a.rut.replace(/[.\-]/g, '').toLowerCase();
-        const rutMatch = rutNorm.includes(queryNorm);
-        return nameMatch || rutMatch;
-      });
-    }
-
-    return result;
-  });
+  /** fix-484-m: estado + texto (Nº de matrícula, nombre o RUT), igual que Profesional. */
+  readonly filteredAlumnos = computed(() =>
+    filterCertificadoAlumnos(this.alumnos(), this.estadoFilter(), this.searchQuery()),
+  );
 
   readonly totalPagesAlumnos = computed(() =>
     Math.ceil(this.filteredAlumnos().length / this.PAGE_SIZE),
@@ -803,8 +661,12 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
     return this.filteredAlumnos().slice(start, start + this.PAGE_SIZE);
   });
 
+  /** fix-462-m: los que "Generar pendientes" emite — mismo criterio que `pendientesElegibles`. */
   readonly pendientesCount = computed(
-    () => this.alumnos().filter((a) => a.certificadoStatus === 'pendiente').length,
+    () =>
+      this.alumnos().filter(
+        (a) => a.certificadoStatus === 'pendiente' && a.clasesCompletadas >= a.clasesTotales,
+      ).length,
   );
 
   /** Alumnos con certificado generado que aún no recibieron el correo. */
@@ -844,60 +706,23 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   // ── Handlers de generación ──
 
   /**
-   * Punto de entrada del botón "Generar".
-   * - Prácticas completas (12/12) → emite directamente.
-   * - Prácticas incompletas + admin → abre la fila de confirmación inline (bypass).
-   * - Prácticas incompletas + secretaria → bloqueado, no emite (checkeo obligatorio).
-   */
-  /**
    * fix-011-i (H-025): secretaría nunca puede saltarse el gate de prácticas —
    * el botón queda deshabilitado (antes: clickeaba y no pasaba nada, sin feedback).
-   * Admin no se bloquea acá: su click abre la fila de confirmación de bypass.
+   * Admin no se bloquea acá: el modal del facade le avisa las prácticas que faltan (fix-466-m).
    */
   isBlockedForRow(alumno: CertificacionAlumnoRow): boolean {
     return !this.isAdmin() && alumno.clasesCompletadas < alumno.clasesTotales;
   }
 
+  /** Botón "Generar": la confirmación (y el bypass admin) la resuelve el facade (fix-466-m). */
   onClickGenerar(alumno: CertificacionAlumnoRow): void {
-    if (alumno.clasesCompletadas >= alumno.clasesTotales) {
-      this.generarCertificado.emit(alumno.enrollmentId);
-      return;
-    }
-    if (!this.isAdmin()) return;
-    this.pendingConfirmId.set(alumno.enrollmentId);
+    if (this.isBlockedForRow(alumno)) return;
+    this.generarCertificado.emit(alumno.enrollmentId);
   }
 
-  /** Confirmó generar a pesar de prácticas incompletas (bypass admin). */
-  confirmarGenerar(): void {
-    const id = this.pendingConfirmId();
-    if (id !== null) {
-      this.generarCertificadoForzado.emit(id);
-      this.pendingConfirmId.set(null);
-    }
-  }
-
-  /** Canceló la confirmación de generación. */
-  cancelarGenerar(): void {
-    this.pendingConfirmId.set(null);
-  }
-
-  /** Abre la confirmación inline de envío de email. */
+  /** fix-466-m: el facade confirma el envío con un modal (antes, una fila inline). */
   onClickEmail(alumno: CertificacionAlumnoRow): void {
-    this.emailConfirmId.set(alumno.enrollmentId);
-  }
-
-  /** Confirma y dispara el envío del certificado por email. */
-  confirmarEmail(): void {
-    const id = this.emailConfirmId();
-    if (id !== null) {
-      this.enviarEmail.emit(id);
-      this.emailConfirmId.set(null);
-    }
-  }
-
-  /** Cancela la confirmación de envío de email. */
-  cancelarEmail(): void {
-    this.emailConfirmId.set(null);
+    this.enviarEmail.emit(alumno.enrollmentId);
   }
 
   ngAfterViewInit(): void {

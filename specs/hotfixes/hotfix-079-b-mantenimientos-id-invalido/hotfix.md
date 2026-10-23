@@ -1,7 +1,7 @@
 # Hotfix: `/flota/abc/mantenimientos` muestra un vehículo vacío en vez de "no encontrado"
 > id: hotfix-079-b-mantenimientos-id-invalido
 > refs: ASG-i-032 (checklist 032, L12 y L15)
-> status: closed
+> status: done
 > created: 2026-10-16
 
 ## Problema

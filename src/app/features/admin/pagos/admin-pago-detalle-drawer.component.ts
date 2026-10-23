@@ -320,7 +320,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
       padding: 9px 20px;
       border-radius: var(--radius-md);
       border: none;
-      background: var(--ds-brand);
+      background: var(--brand-strong);
       color: #fff;
       font-size: var(--text-sm);
       font-weight: var(--font-semibold);

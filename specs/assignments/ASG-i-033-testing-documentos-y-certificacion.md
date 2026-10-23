@@ -1,14 +1,14 @@
 # Asignación ASG-i-033 — Testing: Documentos (DMS), plantillas y certificación Clase B
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-09-29
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-10-18
+> **resulting_track:** fix-447-m-testing-documentos-certificacion
 
 ---
 

@@ -1,6 +1,14 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  untracked,
+} from '@angular/core';
 import { CertificacionClaseBFacade } from '@core/facades/certificacion-clase-b.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { CertificacionClaseBContentComponent } from '@shared/components/certificacion-clase-b-content/certificacion-clase-b-content.component';
 import { HistorialEmisionesDrawerComponent } from '@features/admin/certificacion/drawers/historial-emisiones-drawer.component';
@@ -32,6 +40,7 @@ import { EnviarMasivoDrawerComponent } from '@features/admin/certificacion/drawe
       (generarCertificado)="facade.generarCertificado($event)"
       (verCertificado)="facade.verCertificado($event.storagePath, $event.nombre)"
       (enviarEmail)="facade.enviarEmail($event)"
+      (regenerarCertificado)="facade.regenerarCertificado($event)"
       (abrirHistorialDrawer)="openHistorialDrawer()"
       (abrirGenerarPendientesDrawer)="openGenerarPendientesDrawer()"
       (abrirEnviarMasivoDrawer)="openEnviarMasivoDrawer()"
@@ -39,15 +48,28 @@ import { EnviarMasivoDrawerComponent } from '@features/admin/certificacion/drawe
     />
   `,
 })
-export class SecretariaCertificadosComponent implements OnInit {
+export class SecretariaCertificadosComponent {
   protected readonly facade = inject(CertificacionClaseBFacade);
   private readonly authFacade = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   protected readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
 
-  ngOnInit(): void {
-    void this.facade.initialize();
+  constructor() {
+    // hotfix-161-m: una secretaria con acceso a ambas sedes tiene selector; se recarga al cambiarlo.
+    let previousBranchId: number | null | undefined = undefined;
+
+    effect(() => {
+      const branchId = this.branchFacade.selectedBranchId();
+
+      if (previousBranchId === undefined) {
+        untracked(() => void this.facade.initialize());
+      } else if (previousBranchId !== branchId) {
+        untracked(() => void this.facade.reload());
+      }
+      previousBranchId = branchId;
+    });
   }
 
   protected openHistorialDrawer(): void {

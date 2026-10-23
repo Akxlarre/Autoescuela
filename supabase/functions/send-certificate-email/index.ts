@@ -15,6 +15,7 @@ import { chileYear } from '../_shared/chile-time.ts';
 //   200  { success: true; recipientEmail: string }
 //   400  { error: '...' }
 //   401  { error: 'No autorizado' }
+//   403  { error: '...' }  — no es staff, o la matrícula es de otra sede (fix-448-m)
 //   404  { error: '...' }
 //   500  { error: '...' }
 //
@@ -26,6 +27,16 @@ import { chileYear } from '../_shared/chile-time.ts';
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@6';
+import {
+  authErrorResponse,
+  denyIfEnrollmentOutOfScope,
+  requireStaff,
+} from '../_shared/staff-auth.ts';
+import {
+  type ContractEmailTheme,
+  resolveContractEmailTheme,
+  schoolInitials,
+} from '../_shared/contract-email.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,7 +50,25 @@ function jsonResponse(data: unknown, status = 200) {
   });
 }
 
-function buildEmailHtml(nombre: string, folio: string, tipo: 'class_b' | 'professional'): string {
+function escapeHtml(text: string): string {
+  return text
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+// hotfix-159-m: nombre, iniciales y colores de la sede de la matrícula (antes "Conductores Chillán" fijo).
+function buildEmailHtml(
+  nombre: string,
+  folio: string,
+  tipo: 'class_b' | 'professional',
+  schoolName: string,
+  theme: ContractEmailTheme,
+): string {
+  const school = escapeHtml(schoolName);
+  const initials = escapeHtml(schoolInitials(schoolName));
+  nombre = escapeHtml(nombre);
   const tipoLabel = tipo === 'professional' ? 'Clase Profesional' : 'Clase B';
   return `<!DOCTYPE html>
 <html lang="es">
@@ -53,17 +82,17 @@ function buildEmailHtml(nombre: string, folio: string, tipo: 'class_b' | 'profes
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif; background-color: #f1f5f9; line-height: 1.6; }
     .email-wrapper { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-    .email-header { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 60%, #8b5cf6 100%); padding: 44px 36px 40px; text-align: center; position: relative; overflow: hidden; }
+    .email-header { background-color: ${theme.brandColor}; background: ${theme.gradientHero}; padding: 44px 36px 40px; text-align: center; position: relative; overflow: hidden; }
     .email-header::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(to right, rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.06) 1px, transparent 1px); background-size: 36px 36px; }
     .logo-badge { width: 60px; height: 60px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px; backdrop-filter: blur(8px); }
     .logo-badge span { color: #fff; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
     .company-name { color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
     .email-body { padding: 44px 36px 36px; }
-    .greeting { font-size: 13px; font-weight: 600; color: #0ea5e9; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
+    .greeting { font-size: 13px; font-weight: 600; color: ${theme.brandColor}; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
     .title { font-size: 28px; font-weight: 800; color: #0f172a; line-height: 1.2; margin-bottom: 12px; }
     .subtitle { font-size: 15px; color: #64748b; margin-bottom: 28px; line-height: 1.7; }
     .divider { height: 1px; background: linear-gradient(to right, transparent, #e2e8f0, transparent); margin: 24px 0; }
-    .info-box { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 3px solid #0ea5e9; padding: 18px 20px; border-radius: 10px; margin-bottom: 28px; }
+    .info-box { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 3px solid ${theme.brandColor}; padding: 18px 20px; border-radius: 10px; margin-bottom: 28px; }
     .info-box-label { font-size: 11px; font-weight: 700; color: #0369a1; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
     .info-box-value { font-size: 16px; font-weight: 700; color: #0c4a6e; }
     .attachment-note { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 12px; }
@@ -78,8 +107,8 @@ function buildEmailHtml(nombre: string, folio: string, tipo: 'class_b' | 'profes
 <body>
 <div class="email-wrapper">
   <div class="email-header">
-    <div class="logo-badge"><span>CC</span></div>
-    <p class="company-name">Conductores Chillán</p>
+    <div class="logo-badge"><span>${initials}</span></div>
+    <p class="company-name">${school}</p>
   </div>
   <div class="email-body">
     <p class="greeting">${tipoLabel} · Finalización de Curso</p>
@@ -100,8 +129,8 @@ function buildEmailHtml(nombre: string, folio: string, tipo: 'class_b' | 'profes
   </div>
   <div class="email-footer">
     <div class="footer-divider"></div>
-    <p class="footer-brand">Conductores Chillán</p>
-    <p class="footer-text">Este correo fue enviado automáticamente. Por favor no responder.<br>© 2026 Conductores Chillán. Todos los derechos reservados.</p>
+    <p class="footer-brand">${school}</p>
+    <p class="footer-text">Este correo fue enviado automáticamente. Por favor no responder.<br>© ${chileYear()} ${school}. Todos los derechos reservados.</p>
   </div>
 </div>
 </body>
@@ -114,32 +143,15 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // ── Validar autenticación ────────────────────────────────────────────────
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return jsonResponse({ error: 'No autorizado' }, 401);
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-
-    // Validar que el solicitante está autenticado como admin/secretaria
-    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const {
-      data: { user },
-    } = await supabaseUser.auth.getUser();
-    if (!user) return jsonResponse({ error: 'No autorizado' }, 401);
+    // fix-448-m: solo staff (spec 0009-i). Antes bastaba cualquier sesión, incluida la de un alumno.
+    const access = await requireStaff(req, ['admin', 'secretary']);
+    if (!access.ok) return authErrorResponse(access, corsHeaders);
 
     // Service role para operaciones de BD (bypass RLS)
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Obtener user_id del admin/secretaria para el log
-    const { data: adminUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('supabase_uid', user.id)
-      .maybeSingle();
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
 
     // ── Validar body ─────────────────────────────────────────────────────────
     const body = await req.json();
@@ -153,12 +165,17 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: 'enrollment_id (number) es requerido' }, 400);
     }
 
+    // fix-448-m: la matrícula tiene que ser de una sede que quien llama puede ver (DG-112).
+    const outOfScope = await denyIfEnrollmentOutOfScope(access, enrollment_id);
+    if (outOfScope) return authErrorResponse(outOfScope, corsHeaders);
+
     // ── 1. Obtener datos del enrollment + alumno ─────────────────────────────
     const { data: enrollment, error: enrollmentError } = await supabase
       .from('enrollments')
       .select(
         `
         id,
+        branch_id,
         certificate_b_pdf_url,
         certificate_professional_pdf_url,
         certificates(id, folio, created_at),
@@ -197,11 +214,18 @@ Deno.serve(async (req: Request) => {
     const nombre = `${firstName} ${lastName}`.trim();
     const email = studentUser.email as string;
 
-    const certYear = cert.created_at
-      ? chileYear(new Date(cert.created_at))
-      : chileYear();
+    const certYear = cert.created_at ? chileYear(new Date(cert.created_at)) : chileYear();
     const folioPrefix = tipo === 'professional' ? 'CERT-PROF' : 'CERT';
     const folio = `${folioPrefix}-${certYear}-${String(cert.folio).padStart(4, '0')}`;
+
+    // Marca de la sede de la matrícula (mismo origen que el correo del contrato).
+    const { data: websiteConfig } = await supabase
+      .from('website_config')
+      .select('config')
+      .eq('branch_id', enrollment.branch_id)
+      .maybeSingle();
+    const brand = websiteConfig?.config?.brand;
+    const schoolName = (brand?.name ?? 'Autoescuela').normalize('NFC');
 
     // ── 2. Descargar el PDF desde Storage ────────────────────────────────────
     const { data: signedData, error: signedError } = await supabase.storage
@@ -238,8 +262,8 @@ Deno.serve(async (req: Request) => {
     await transporter.sendMail({
       from,
       to: email,
-      subject: `Tu Certificado de Finalización — ${tipoLabel} · ${folio}`,
-      html: buildEmailHtml(nombre, folio, tipo),
+      subject: `Tu Certificado de Finalización — ${tipoLabel} · ${folio} — ${schoolName}`,
+      html: buildEmailHtml(nombre, folio, tipo, schoolName, resolveContractEmailTheme(brand?.theme)),
       attachments: [
         {
           filename: `Certificado_${safeNombre}.pdf`,
@@ -253,7 +277,7 @@ Deno.serve(async (req: Request) => {
     await supabase.from('certificate_issuance_log').insert({
       certificate_id: cert.id,
       action: 'email_sent',
-      user_id: adminUser?.id ?? null,
+      user_id: access.userId,
     });
 
     return jsonResponse({ success: true, recipientEmail: email });

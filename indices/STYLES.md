@@ -56,9 +56,13 @@ Overrides de tokens que aplican SOLO bajo un selector de scope (nunca en `:root`
 
 ### Tokens `@theme` disponibles (→ clases Tailwind generadas)
 
+> **Marca como texto o fondo sólido → `var(--brand-strong)`** (spec 0055-b, contraste WCAG AA).
+> `--ds-brand` / `--color-primary` (celeste brillante) quedan para bordes, degradados, foco e íconos
+> decorativos: como texto sobre blanco dan 2,77:1.
+
 | Token CSS (`var(--)`) | Clase `bg-*` | Clase `border-*` | Clase `text-*` |
 |-----------------------|-------------|-----------------|---------------|
-| `--ds-brand` | `bg-brand` / `bg-brand/N` | `border-brand` / `border-brand/N` | `text-brand` |
+| `--brand-strong` (spec 0055-b: `#0369a1` claro / `#38bdf8` oscuro) | `bg-brand` / `bg-brand/N` | `border-brand` / `border-brand/N` | `text-brand` |
 | `--color-primary-muted` | `bg-brand-muted` | `border-brand-muted` | — |
 | `--color-primary-tint` | `bg-brand-tint` | — | — |
 | `--color-primary-dark` | `bg-brand-dark` / `bg-brand-dark/N` | — | — |
@@ -325,8 +329,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 445 | `#38bdf8` |
-| `--text-muted` | 383 | `rgba(255, 255, 255, 0.55)` |
+| `--text-muted` | 387 | `rgba(255, 255, 255, 0.55)` |
+| `--ds-brand` | 385 | `#38bdf8` |
 | `--text-primary` | 264 | `var(--color-primary-text)` |
 | `--state-error` | 247 | `#f87171` |
 | `--text-secondary` | 230 | `rgba(255, 255, 255, 0.78)` |
@@ -334,29 +338,29 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--bg-surface` | 192 | `#18181b` |
 | `--state-success` | 178 | `#4ade80` |
 | `--border-default` | 140 | `rgba(255, 255, 255, 0.28)` |
-| `--color-primary` | 133 | `#38bdf8` |
-| `--state-warning` | 129 | `#fbbf24` |
+| `--state-warning` | 131 | `#fbbf24` |
+| `--color-primary` | 113 | `#38bdf8` |
+| `--brand-strong` | 78 | `#38bdf8` |
 | `--bg-elevated` | 77 | `#27272a` |
 | `--text-sm` | 67 | `0.875rem` |
 | `--radius-md` | 58 | `10px` |
 | `--duration-fast` | 54 | `200ms` |
 | `--font-display` | 53 | `'Bricolage Grotesque', system-ui, sans-serif` |
 | `--text-xs` | 52 | `0.75rem` |
-| `--bg-subtle` | 50 | `rgba(255, 255, 255, 0.1)` |
 | `--color-primary-muted` | 47 | `rgba(56, 189, 248, 0.15)` |
+| `--bg-subtle` | 46 | `rgba(255, 255, 255, 0.1)` |
 | `--color-success` | 39 | `—` |
 | `--color-primary-text` | 39 | `#ffffff` |
 | `--border-muted` | 36 | `var(--border-subtle)` |
 | `--bg-base` | 28 | `#09090b` |
 | `--state-error-bg` | 25 | `rgba(248, 113, 113, 0.1)` |
-| `--radius-full` | 24 | `9999px` |
 
 ## Clases semánticas del Design System
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
+| `.item-title` | 197 | `src/styles/tokens/_variables.scss` |
 | `.micro-label` | 195 | `src/styles/tokens/_variables.scss` |
-| `.item-title` | 194 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 24 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 14 | `src/styles/tokens/_variables.scss` |
 | `.surface-glass` | 13 | `src/styles/tokens/_variables.scss` |
@@ -459,8 +463,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
-| Tamaño display (`text-4xl/3xl/2xl`) | 47 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 877 | Informativo — legítimo en botones/headers/títulos |
+| Tamaño display (`text-4xl/3xl/2xl`) | 45 | Candidatas a `.kpi-value` o heading semántico |
+| Peso de fuente (`font-bold/semibold`) | 866 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -477,12 +481,12 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | 10 | `text-lg font-semibold text-text-primary` |
 | 10 | `text-sm font-bold text-text-primary` |
 | 9 | `text-xs font-semibold text-text-muted mb-1 block` |
-| 8 | `text-2xl font-semibold text-text-primary` |
 | 8 | `w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle` |
 | 8 | `text-left text-xs font-semibold text-text-secondary pb-2 pr-4` |
 | 7 | `m-0 font-semibold text-text-primary` |
 | 6 | `text-xs font-bold uppercase tracking-wider text-text-primary` |
 | 6 | `text-xs font-semibold uppercase tracking-wider` |
+| 6 | `text-2xl font-semibold text-text-primary` |
 
 
 <!-- AUTO-GENERATED:END -->

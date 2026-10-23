@@ -372,12 +372,12 @@ type FilterTab = 'all' | 'active' | 'expiring' | 'expired';
     }
     .filter-pill:hover {
       border-color: var(--ds-brand);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
     .filter-pill--active {
       border-color: var(--ds-brand);
       background: color-mix(in srgb, var(--ds-brand) 8%, transparent);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
     }
     .filter-pill--warning {
       border-color: var(--state-warning);
@@ -455,7 +455,7 @@ type FilterTab = 'all' | 'active' | 'expiring' | 'expired';
       height: 32px;
       border-radius: 50%;
       background: color-mix(in srgb, var(--ds-brand) 8%, transparent);
-      color: var(--ds-brand);
+      color: var(--brand-strong);
       font-size: var(--text-sm);
       font-weight: 600;
     }

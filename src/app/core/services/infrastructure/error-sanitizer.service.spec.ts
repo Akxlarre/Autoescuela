@@ -34,6 +34,15 @@ describe('ErrorSanitizerService', () => {
     expect(result.code).toBe('23505');
   });
 
+  it.each(['PGRST303', 'PGRST301'])(
+    'B07 (hotfix-093-b): sesión expirada (%s) → dice qué hacer',
+    (code) => {
+      const result = service.sanitize({ code, message: 'JWT expired' });
+      expect(result.message).toBe('Tu sesión expiró. Recarga la página o vuelve a iniciar sesión.');
+      expect(result.code).toBe(code);
+    },
+  );
+
   it('should handle HttpErrorResponse 500', () => {
     const error = new HttpErrorResponse({ status: 500, statusText: 'Internal Server Error' });
     const result = service.sanitize(error);

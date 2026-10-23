@@ -37,7 +37,7 @@ interface FilaReagendar extends ClasePendienteReagendarUI {
       <div class="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
         <div class="flex items-start gap-3 rounded-lg p-2.5 bg-brand/6 border border-brand/20">
           <app-icon name="info" [size]="16" color="var(--ds-brand)" />
-          <p class="text-xs leading-relaxed" style="color: var(--ds-brand)">
+          <p class="text-xs leading-relaxed text-brand">
             Todas las clases pendientes vienen preseleccionadas. Desmarca las que NO quieras
             reagendar ahora — el resto se agenda en el siguiente paso, todas de una vez.
           </p>

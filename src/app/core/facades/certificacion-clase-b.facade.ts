@@ -10,10 +10,14 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { formatRut } from '@core/utils/rut.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
-import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
+import {
+  edgeFunctionUserMessage,
+  readEdgeFunctionError,
+} from '@core/utils/edge-function-error.utils';
+import { bulkCertificateSummary } from '@core/utils/certificate-confirmation.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
-import { assertWriteOk, toFriendlyDbMessage } from '@core/utils/db-error.utils';
-import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { CertificadoAutorizacionFacade } from '@core/facades/certificado-autorizacion.facade';
+import { isBlockedInPilot } from '@core/config/pilot-phase.config';
 import type {
   CertificacionAlumnoRow,
   CertificacionKpis,
@@ -25,7 +29,7 @@ import type {
  *
  * Query: enrollments (license_group='class_b', status='active'|'completed').
  * Admin: sin filtro certificate_enabled — puede certificar cualquier alumno activo/completado.
- * Secretaria: solo alumnos con certificate_enabled=true (trigger al completar clase #12).
+ * Secretaria: los que completaron todas las clases del curso o ya tienen certificado (fix-459-m).
  * JOIN v_student_progress_b para pct_theory_attendance.
  * JOIN certificates + certificate_issuance_log para estado y log.
  *
@@ -39,7 +43,7 @@ export class CertificacionClaseBFacade {
   private readonly toast = inject(ToastService);
   private readonly dmsViewer = inject(DmsViewerService);
   private readonly notifications = inject(NotificationsFacade);
-  private readonly confirmModal = inject(ConfirmModalService);
+  private readonly autorizacion = inject(CertificadoAutorizacionFacade);
 
   // ── Estado privado ──
   private readonly _alumnos = signal<CertificacionAlumnoRow[]>([]);
@@ -90,6 +94,17 @@ export class CertificacionClaseBFacade {
     };
   });
 
+  /**
+   * fix-462-m: pendientes que "Generar pendientes" puede emitir sin bypass — todas las clases del
+   * curso completadas, mismo criterio que el botón y `generate-certificate-b-pdf`. El admin ve
+   * también a los que no cumplen; esos se emiten uno a uno, forzando con confirmación.
+   */
+  public readonly pendientesElegibles = computed(() =>
+    this._alumnos().filter(
+      (a) => a.certificadoStatus === 'pendiente' && a.clasesCompletadas >= a.clasesTotales,
+    ),
+  );
+
   // ── SWR: initialize ──
   async initialize(): Promise<void> {
     if (this._initialized) {
@@ -131,10 +146,32 @@ export class CertificacionClaseBFacade {
    * persiste el PATH en `enrollments.certificate_b_pdf_url` y abre el visor
    * con la signed URL devuelta directamente por la Edge Function (TTL 1h).
    */
-  async generarCertificado(enrollmentId: number, force = false): Promise<void> {
-    // Spec 0010-i (AC8): con deuda, se emite solo si quien genera confirma con motivo. La
-    // habilitación queda registrada (y avisa a los admins) y recién ahí se reintenta.
-    const result = await this.invokeConAutorizacionDeDeuda(enrollmentId, force);
+  async generarCertificado(
+    enrollmentId: number,
+    fueraDeLista?: { nombre: string; completadas: number; requeridas: number },
+  ): Promise<void> {
+    // fix-466-m: con las clases completas se emite directo. Si faltan, solo el admin puede seguir:
+    // confirma el aviso en un modal y el pedido va con `force`. La deuda la confirma el modal de la
+    // spec 0010-i cuando la edge function la rechaza.
+    const enLista = this._alumnos().find((a) => a.enrollmentId === enrollmentId);
+    const datos = enLista
+      ? {
+          nombre: enLista.nombre,
+          completadas: enLista.clasesCompletadas,
+          requeridas: enLista.clasesTotales,
+        }
+      : fueraDeLista;
+    if (!datos) return;
+    const incompletas = datos.completadas < datos.requeridas;
+    if (incompletas && this.authFacade.currentUser()?.role !== 'admin') return;
+
+    const confirmado = await this.autorizacion.confirmarAvisos({
+      nombre: datos.nombre,
+      practicasIncompletas: { completadas: datos.completadas, requeridas: datos.requeridas },
+    });
+    if (!confirmado) return;
+
+    const result = await this.invokeConAutorizacionDeDeuda(enrollmentId, incompletas);
     if (!result) return;
     this.toast.success('Certificado generado correctamente');
     const alumno = this._alumnos().find((a) => a.enrollmentId === enrollmentId);
@@ -174,12 +211,14 @@ export class CertificacionClaseBFacade {
 
   /**
    * Notifica al alumno que su certificado quedó disponible en el portal (AC7).
-   * Solo se llama al generar (no en `descargarPdf`/`enviarEmail`, para no duplicar).
+   * Solo se llama al generar (no al regenerar ni en `enviarEmail`, para no duplicar).
    * Fire-and-forget: un fallo nunca rompe el flujo de generación (AC-E1).
    */
   private notifyCertificateReady(
     alumno: Pick<CertificacionAlumnoRow, 'enrollmentId' | 'studentId' | 'curso'>,
   ): void {
+    // fix-463-m: con el portal del alumno en piloto no hay portal donde verlo (ni cuenta, fix-393-m).
+    if (isBlockedInPilot('alumno')) return;
     this.resolveStudentUserId(alumno.studentId)
       .then((userId) => {
         if (!userId) return;
@@ -222,12 +261,19 @@ export class CertificacionClaseBFacade {
   }
 
   /**
-   * Re-invoca la Edge Function (upsert idempotente) y abre el visor.
-   * Botón PDF cuando el certificado ya fue generado.
+   * fix-464-m: vuelve a generar el PDF de un certificado ya emitido (nombre o plantilla
+   * corregidos). Conserva el folio: `issue_certificate` devuelve el registro existente. El admin
+   * regenera con `force` porque el original pudo emitirse con el bypass; para la secretaria la
+   * función lo ignora igual.
    */
-  async descargarPdf(enrollmentId: number): Promise<void> {
-    const result = await this.invokeConAutorizacionDeDeuda(enrollmentId);
+  async regenerarCertificado(enrollmentId: number): Promise<void> {
+    if (!(await this.autorizacion.confirmarRegeneracion())) return;
+
+    const force = this.authFacade.currentUser()?.role === 'admin';
+    const result = await this.invokeConAutorizacionDeDeuda(enrollmentId, force);
     if (!result) return;
+    this.toast.success('Certificado regenerado');
+    void this.refreshSilently();
     this.dmsViewer.openByUrl(result.url, 'Certificado Clase B');
   }
 
@@ -242,7 +288,7 @@ export class CertificacionClaseBFacade {
     const result = await this.invokeGenerateCertificate(enrollmentId, force);
     if (!result || !('deuda' in result)) return result;
 
-    const habilitado = await this.autorizarCertificadoConDeuda(enrollmentId, result.deuda);
+    const habilitado = await this.autorizacion.autorizarDeuda(enrollmentId, result.deuda);
     if (!habilitado) return null;
 
     const retry = await this.invokeGenerateCertificate(enrollmentId, force);
@@ -251,53 +297,6 @@ export class CertificacionClaseBFacade {
       return null;
     }
     return retry;
-  }
-
-  /**
-   * Spec 0010-i (AC8): pide confirmación con motivo y registra la habilitación `certificado`.
-   * Devuelve true solo si quedó guardada (la Edge Function la exige para emitir con deuda).
-   */
-  private async autorizarCertificadoConDeuda(
-    enrollmentId: number,
-    mensajeDeuda: string,
-  ): Promise<boolean> {
-    const motivo = await this.confirmModal.confirmWithReason({
-      title: 'Certificado con deuda',
-      message: `${mensajeDeuda}\n¿Emitir el certificado igual? Quedará registrado quién lo autorizó y por qué, y se avisará a los administradores.`,
-      severity: 'warn',
-      confirmLabel: 'Emitir igual',
-      reason: {
-        label: 'Motivo',
-        placeholder: 'Ej. Paga el viernes, acordado con el admin',
-        minLength: 5,
-      },
-    });
-    if (motivo === null) return false;
-
-    const createdBy = this.authFacade.currentUser()?.dbId ?? null;
-    if (createdBy === null) {
-      this.toast.error('No se pudo identificar tu usuario. Vuelve a iniciar sesión.');
-      return false;
-    }
-
-    try {
-      assertWriteOk(
-        await this.supabase.client
-          .from('enrollment_payment_overrides')
-          .insert({
-            enrollment_id: enrollmentId,
-            kind: 'certificado',
-            reason: motivo,
-            created_by: createdBy,
-          })
-          .select('id'),
-        { requireRows: true },
-      );
-      return true;
-    } catch (err) {
-      this.toast.error(toFriendlyDbMessage(err, 'No se pudo registrar la autorización'));
-      return false;
-    }
   }
 
   /**
@@ -352,7 +351,16 @@ export class CertificacionClaseBFacade {
     return data.signedUrl;
   }
 
+  /** fix-466-m: confirma con un modal (antes, una fila dentro de la tabla). */
   async enviarEmail(enrollmentId: number): Promise<void> {
+    const alumno = this._alumnos().find((a) => a.enrollmentId === enrollmentId);
+    const confirmado = await this.autorizacion.confirmarEnvioEmail({
+      nombre: alumno?.nombre ?? 'este alumno',
+      email: alumno?.email || null,
+      yaEnviado: alumno?.emailEnviado ?? false,
+    });
+    if (!confirmado) return;
+
     this._sendingEmailId.set(enrollmentId);
     try {
       const { data, error } = await this.supabase.client.functions.invoke(
@@ -360,7 +368,10 @@ export class CertificacionClaseBFacade {
         { body: { enrollment_id: enrollmentId } },
       );
       if (error || !data?.success) {
-        this.toast.error('No se pudo enviar el certificado por correo');
+        // hotfix-160-m: el motivo del rechazo ("El alumno no tiene email…") en vez de un genérico.
+        this.toast.error(
+          await edgeFunctionUserMessage(error, 'No se pudo enviar el certificado por correo'),
+        );
         return;
       }
       this.toast.success('Certificado enviado', `Correo enviado a ${data.recipientEmail}`);
@@ -373,7 +384,7 @@ export class CertificacionClaseBFacade {
   }
 
   async generarPendientes(): Promise<void> {
-    const pendientes = this._alumnos().filter((a) => a.certificadoStatus === 'pendiente');
+    const pendientes = this.pendientesElegibles();
     if (pendientes.length === 0) return;
 
     this._generatingPendientes.set(true);
@@ -406,18 +417,9 @@ export class CertificacionClaseBFacade {
     this._generatingId.set(null);
     this._generatingPendientes.set(false);
 
-    if (errores.length === 0 && conDeuda.length === 0) {
-      this.toast.success(
-        `${generados} certificado${generados !== 1 ? 's' : ''} generado${generados !== 1 ? 's' : ''} correctamente`,
-      );
-    } else {
-      const partes = [`${generados} generado${generados !== 1 ? 's' : ''}`];
-      if (conDeuda.length > 0) {
-        partes.push(`${conDeuda.length} con deuda (emítelos uno a uno)`);
-      }
-      if (errores.length > 0) partes.push(`${errores.length} con error`);
-      this.toast.warning(partes.join(', '));
-    }
+    const resumen = bulkCertificateSummary(generados, conDeuda.length, errores.length);
+    if (resumen.ok) this.toast.success(resumen.message);
+    else this.toast.warning(resumen.message);
 
     void this.refreshSilently();
   }
@@ -549,14 +551,14 @@ export class CertificacionClaseBFacade {
     const branchId = this.getActiveBranchId();
     const isAdmin = this.authFacade.currentUser()?.role === 'admin';
 
-    // Step 1: Enrollments para certificado.
-    // Admin: todos los activos/completados (sin restricción de certificate_enabled).
-    // Secretaria: solo los habilitados por el trigger (12 prácticas completadas).
+    // Step 1: Enrollments para certificado (activos/completados). El filtro de la secretaria se
+    // aplica después de contar las clases (fix-459-m), no con `certificate_enabled`.
     let enrollmentQuery = this.supabase.client
       .from('enrollments')
       .select(
         `
         id,
+        number,
         branch_id,
         certificate_b_pdf_url,
         courses!inner(name, type, practical_hours, is_reinforcement),
@@ -571,10 +573,6 @@ export class CertificacionClaseBFacade {
       .in('status', ['active', 'completed'])
       // Refuerzo Clase B (6 clases) nunca es candidato a certificado — spec 0006-m.
       .eq('courses.is_reinforcement', false);
-
-    if (!isAdmin) {
-      enrollmentQuery = enrollmentQuery.eq('certificate_enabled', true);
-    }
 
     if (branchId !== null) {
       enrollmentQuery = enrollmentQuery.eq('branch_id', branchId);
@@ -656,6 +654,7 @@ export class CertificacionClaseBFacade {
       return {
         enrollmentId: e.id,
         studentId: student.id,
+        numeroMatricula: e.number ?? null,
         nombre,
         rut: formatRut(user.rut || ''),
         curso: e.courses?.name || 'Clase B',
@@ -677,8 +676,16 @@ export class CertificacionClaseBFacade {
       } satisfies CertificacionAlumnoRow;
     });
 
+    // fix-459-m: la secretaria ve lo que el botón y `generate-certificate-b-pdf` consideran
+    // elegible (todas las clases del curso completadas) y lo ya certificado, para verlo o
+    // reenviarlo. Antes usaba `certificate_enabled`, que el trigger prende con la clase #12
+    // completada aunque falten otras.
+    const visibles = isAdmin
+      ? rows
+      : rows.filter((r) => r.certificadoId !== null || r.clasesCompletadas >= r.clasesTotales);
+
     // Pendientes primero, luego por nombre.
-    rows.sort((a, b) => {
+    visibles.sort((a, b) => {
       if (a.certificadoStatus !== b.certificadoStatus) {
         return a.certificadoStatus === 'pendiente' ? -1 : 1;
       }
@@ -686,7 +693,7 @@ export class CertificacionClaseBFacade {
     });
 
     if (!this.certGuard.isCurrent(token)) return;
-    this._alumnos.set(rows);
+    this._alumnos.set(visibles);
   }
 
   private async fetchLog(token: number): Promise<void> {

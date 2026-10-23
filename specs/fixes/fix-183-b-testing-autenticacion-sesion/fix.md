@@ -116,3 +116,99 @@ alumno o secretaria sin sede (portal del instructor/alumno bloqueado en el pilot
 secretarias activan por correo, revisar cuáles siguen aplicando), E06, E08–E10, F09, F10, G34,
 H04, H05, H08, H09, I01, I06, I07, J02, J04, J09–J12, K05–K08, K10, L02–L05, M01–M08, N01, N02, N04,
 O01, O04–O06.
+
+## Tercera tanda (2026-10-19)
+
+`e2e/auth-sesion-3.spec.ts`: **16/16 en verde** (sin escrituras: red lenta, 401 y errores simulados).
+
+| Casos | Resultado |
+|---|---|
+| B03 / S17 | ✅ recargar con 3 s de demora en cada consulta termina en la pantalla correcta, sin rebotar a /login |
+| **B07** | ❌ → `hotfix-093-b` (#309): sesión expirada al guardar decía "…procesando la solicitud (PGRST303)" |
+| E06, E08 | ✅ al cambiar de usuario no queda la búsqueda del anterior; la API solo entrega notificaciones propias |
+| **E10** | ❌ → `hotfix-091-b` (#307): "Sí, salir" sin red dejaba la sesión abierta en el equipo |
+| F09 | ✅ la ficha de un alumno de la otra sede muestra un mensaje claro, no una ficha rota |
+| F10 | ✅ Configuración web y Contabilidad › Cursos abren para la secretaria (son rutas suyas) |
+| I01, I07 | ✅ grupos del menú del admin; `/app/admin/notificaciones` existe sin ítem de menú (anotado) |
+| **J04 / S16** | ❌ → `hotfix-092-b` (#308): al recargar, "Volver al inicio de sesión" aparecía a un admin |
+| J09, J12 | ✅ política en 375 px sin scroll horizontal; 404 legible en modo oscuro |
+| L02 / S8 | ✅ la pestaña del admin no queda con la sesión de la secretaria que entró en otra |
+| N01 | ✅ con sesión de la secretaria de la sede 1, la API no entrega matrículas de la sede 2 |
+| O04, O06 | ✅ el error de login tiene `role="alert"` + `aria-live="assertive"`; un mensaje largo no ensancha la card |
+
+**Siguen pendientes (manuales o bloqueados):** A16, A18, A19 (decisiones), B04–B06 (tiempo real:
+token de 1 h, suspensión, sesión invalidada desde otro equipo), C02–C13 (primer login, revisar
+vigencia tras `fix-182-b`), D03–D08, D10 (dominio), E09, G20–G30, G34, H04–H09, I06, J02, J05,
+J10, J11, K05–K08, K10, L03–L05, M01–M08 (borrador de matrícula), N02, N04, O01, O05.
+
+## Decisiones del owner (2026-10-19)
+
+| Caso | Decisión | Track |
+|---|---|---|
+| A18 | Después del login se vuelve a la pantalla pedida (solo rutas internas `/app/...`) | `hotfix-096-b` (#315) |
+| A19 | "Mantener sesión iniciada" se implementa: desmarcada, la sesión dura mientras el navegador esté abierto | `fix-229-b` (#317) |
+
+## Cuarta tanda (2026-10-19)
+
+`e2e/auth-sesion-4.spec.ts`: **12/12 en verde** (sin escrituras).
+
+| Casos | Resultado |
+|---|---|
+| H04, H05 | ✅ secretaria con grant en "Todas": la página profesional salta a Conductores y deshabilita "Todas"; al salir, el selector vuelve a quedar libre |
+| **H08, H09** | ❌ → `hotfix-098-b` (#320): "Conmutar Sede" a veces decía "No se encontró una sede profesional disponible" (3 de 6 intentos; la lista de sedes aún no cargaba). Tras el fix: 6/6 |
+| J10, J11 | ✅ la política se ve igual con sesión (sin menú) y en vista de impresión |
+| K10 | ✅ Ajustes muestra la cuenta "Activo" |
+| L03 | ✅ cambiar la sede en una pestaña no cambia la otra hasta recargar; al recargar toma la última |
+| M04 | ✅ salir del wizard recién abierto (sin borrador) no pide confirmación |
+| O01 | ✅ login, Módulo no disponible y 404 legibles en modo oscuro |
+
+**Quedan (manuales o bloqueados):** A16 (sin cuenta sin perfil), B04–B06 (tiempo real), C02–C13
+(primer login, desde `fix-182-b` las secretarias activan por correo), D03–D08/D10 (dominio),
+E09/M01–M03/M06–M08 (crean un borrador de matrícula real), G20–G30, H06/H07, I06, J02, J05
+(cuentas de instructor/alumno/sin sede), G34, K08, L04, L05,
+N02, N04, O05.
+
+## Quinta tanda (2026-10-19)
+
+`e2e/auth-sesion-5.spec.ts`: **2/2 en verde, 3 corridas seguidas**. Escribe en las cuentas de
+prueba `secretaria@test.com` / `secretaria2@test.com` y deja los valores originales en `finally`
+(verificado en la BD después de cada corrida).
+
+| Casos | Resultado |
+|---|---|
+| K05 | ✅ el admin da el grant multisede → el selector de sede aparece sin recargar (canal Realtime `user-self`) |
+| K06 | ✅ el admin lo quita → el selector desaparece y la marca queda en la sede propia |
+| K07 | ✅ el admin cambia la sede → la marca del menú cambia sin recargar y se mantiene al recargar |
+
+Nota: el cambio llega por Realtime cuando el canal ya está unido; el test espera 5 s después de
+cargar para representar al admin actuando sobre una sesión asentada.
+
+## Sexta y séptima tanda (2026-10-19)
+
+`e2e/auth-sesion-6.spec.ts` (borrador de matrícula) y `e2e/auth-sesion-7.spec.ts` (portales
+bloqueados, API, dos equipos, sin sede, sin rol): **13/13 en verde, 2 corridas**.
+- La sexta siembra alumnos E2E- con un borrador vigente y el harness los borra al terminar.
+- La séptima usa las cuentas de prueba `instructor@test.com` y `alumno@test.com` (las mismas que
+  muestra el login). Para H06/H07 y J05 cambia `branch_id` / `role_id` de `secretaria2@test.com` y
+  los restaura en `finally` (verificado en la BD).
+
+| Casos | Resultado |
+|---|---|
+| M01, M02, M03 | ✅ con borrador, el menú pide "¿Deseas salir?"; "Quedarse" sigue en el wizard; "Sí, salir" navega y el borrador sigue en la lista |
+| M06 | ✅ "Atrás" del navegador muestra el mismo aviso |
+| E09, M08 | ✅ cerrar sesión con un borrador abierto: pide confirmar el cierre **y además** el aviso del borrador (dos confirmaciones), y termina en `/login` con la sesión cerrada de verdad |
+| G21–G26, I06, J02 | ✅ instructor: el login cae en MND sin menú; las 11 rutas del portal terminan en MND; "Volver al inicio de sesión" cierra la sesión sin bucle |
+| G27–G30 | ✅ alumno: igual, 9 rutas; ninguna ruta de pago (incluido `/pagar/retorno?token_ws=x`) llama a una Edge Function |
+| N04 | ✅ por API, el instructor ve 0 pagos y 0 alumnos; el alumno ve solo lo suyo (3 pagos, 1 alumno), de 186 pagos de la escuela |
+| L04 | ✅ la misma secretaria en dos equipos: ambos siguen funcionando |
+| H06 | ✅ sin sede, la ruta profesional redirige al dashboard |
+| H07 | ❌ → `hotfix-099-b`: sin sede veía el dashboard en 0 sin aviso y podía guardar (fallaba por RLS o quedaba sin sede). Ahora cae en `/sin-sede` ("Tu cuenta no tiene una sede asignada" + "Cerrar sesión"); entra sola cuando el admin le asigna sede |
+| J05 | ✅ sin rol reconocido: se queda en el login con "No se pudo cargar tu perfil. Si el problema continúa, contacta al administrador."; el botón de MND cierra la sesión |
+
+**Siguen sin automatizar:**
+- A16 (usuario sin fila en `users`: J05 cubre el mensaje).
+- B04–B06 (horas de espera o cerrar todas las sesiones de una cuenta compartida por la suite).
+- C02–C13 (primer login; desde `fix-182-b` se activa por correo).
+- D03–D08, D10 (dominio).
+- G20, G34, K08 (cubierto por `secretarias-cambio-correo-real.spec.ts`), L05, M07 (decisión),
+  N02, O05 (autocompletar del navegador).

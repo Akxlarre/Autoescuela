@@ -1,7 +1,7 @@
 # Hotfix: patente duplicada → "Error al guardar el vehículo", sin decir por qué
 > id: hotfix-078-b-patente-duplicada
 > refs: ASG-i-032 (checklist 032, E06 y F10)
-> status: closed
+> status: done
 > created: 2026-10-16
 
 ## Problema

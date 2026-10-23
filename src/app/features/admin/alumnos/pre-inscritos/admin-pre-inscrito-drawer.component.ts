@@ -11,7 +11,7 @@ import {
   viewChild,
   OnDestroy,
 } from '@angular/core';
-import { SlicePipe } from '@angular/common';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { FormsModule } from '@angular/forms';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
@@ -48,7 +48,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
     TagModule,
     TooltipModule,
     IconComponent,
-    SlicePipe,
+    ChileDatePipe,
     SelectModule,
     SkeletonBlockComponent,
     BadgeComponent,
@@ -359,7 +359,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                           <p class="text-xs text-text-secondary">
                             {{ p.psychEvaluatedByName }}
                             @if (p.psychEvaluatedAt) {
-                              · {{ p.psychEvaluatedAt | slice: 0 : 10 }}
+                              · {{ p.psychEvaluatedAt | chileDate: 'yyyy-MM-dd' }}
                             }
                           </p>
                         }

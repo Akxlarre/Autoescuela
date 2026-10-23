@@ -31,6 +31,7 @@ lugar por capa:
 | Días entre dos fechas | `diffDaysIso(desde, hasta)` | restar instantes y dividir por 86.400.000 |
 | Leer hora, día o mes de un instante | `chileParts(instante)` | `getHours()`, `getMonth()`, `getFullYear()` |
 | Mostrar una fecha u hora | `formatChileDate`, `formatChileTime`, pipe `chileDate` | `toLocaleDateString` sin `timeZone`, pipe `date` de Angular |
+| Mostrar en un template el día de un instante | `{{ x \| chileDate: 'yyyy-MM-dd' }}` | `{{ x \| slice: 0 : 10 }}` (corta el ISO en UTC) |
 | Valor de un selector de fechas (PrimeNG) | `calendarDateToIso(date)` / `isoToCalendarDate(iso)` | tratarlo como un instante |
 | Una hora de pared de Chile → instante | `chileWallTimeToInstant(dia, 'HH:MM')` | concatenar un offset fijo `-03:00` |
 

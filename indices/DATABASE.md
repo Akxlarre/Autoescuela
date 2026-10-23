@@ -8,7 +8,7 @@
 | `branches` | M1 - Usuarios | `id`, `slug`, `has_professional` (BOOL, def false) | Ninguna | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida · `20260403110000`: añadida `has_professional`; branch 2 (Conductores Chillán) = true |
 | `roles` | M1 - Usuarios | `id`, `name` | Ninguna | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `users` | M1 - Usuarios | `id`, `rut`, `email` | `role_id`, `branch_id` | Admin: CRUD, Sec: R, Inst: R (self), Stu: R (self) | ✅ Definida · `20260612120000`: COMMENT ON COLUMN `users.gender` y `professional_pre_registrations.gender` — valores M/F/X (ley REC Chile 2022). |
-| `students` | M1 - Usuarios | `id`, `user_id`, `address` (sin `region`/`district`), `status` (TEXT: 'active'\|'pending'\|'inactive'\|'graduated'\|**'archived'** — sin CHECK constraint) | `user_id` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida · `20260426000001`: documentado `'archived'` como valor de soft-delete. `AdminAlumnosFacade` excluye `.neq('status','archived')` de la query. · `20260624120000` (spec 0017): SELECT de `secretary` ahora `branch_visible` sobre la sede del user dueño (antes sin filtro). · Realtime habilitado (`20260827160000`, para el canal del dashboard). |
+| `students` | M1 - Usuarios | `id`, `user_id`, `address` (sin `region`/`district`), `status` (TEXT: 'active'\|'pending'\|'inactive'\|'graduated'\|**'archived'** — sin CHECK constraint) | `user_id` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida · `20260426000001`: documentado `'archived'` como valor de soft-delete. `AdminAlumnosFacade` excluye `.neq('status','archived')` de la query. · `20260624120000` (spec 0017): SELECT de `secretary` ahora `branch_visible` sobre la sede del user dueño (antes sin filtro). · **`20261018120000` (fix-456-m):** la secretaria también ve a los alumnos con **alguna matrícula en su sede** aunque su `users.branch_id` sea la otra (DG-115). · Realtime habilitado (`20260827160000`, para el canal del dashboard). |
 | `courses` | M1 - Usuarios | `id`, `code`, `schedule_days`, `schedule_blocks`, `is_convalidation` (BOOL, default false), `max_classes_per_day` (INT, default 1) | `branch_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida · `cc_class_b` + `cc_class_b_sence` agregados para branch 2 (`20260311100000`) · `is_convalidation` + cursos `conv_a4`/`conv_a3` agregados (`20260313100000`). Los cursos con `is_convalidation=true` NO generan enrollments ni cuentan contra cupo. · **`20260513000001`:** `schedule_blocks` cambiado de rangos continuos a **slots exactos** (cada elemento `{"from","to"}` es un slot de 45 min, no un rango). Nuevos horarios L-V: 08:30-09:15 · 09:20-10:05 · 10:10-10:55 · 11:00-11:45 · 11:50-12:35 · 12:40-13:25 · 15:00-15:45 · 15:50-16:35 · 16:40-17:25 · 17:30-18:15 · 18:20-19:05 · 19:10-19:55 · 20:00-20:45. Aplica a ambas sedes. · **`20260613000000`:** `max_classes_per_day` añadido para permitir agendamientos intensivos. |
 | `sence_codes` | M1 - Usuarios | `id`, `code` | `course_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `audit_log` | M1 - Usuarios | `id`, `user_id` | `user_id` | Admin: R · INSERT: solo el trigger `log_change()` | ✅ Definida **fix-408-m (`20261013162000`):** `select_audit_log` = admin o `user_id = auth_user_id()`, con las funciones dentro de `(SELECT …)` para que se evalúen una vez por consulta (DG-016); mismas filas visibles. |
@@ -68,14 +68,14 @@
 | `payment_attempts` | M6 - Matrí. | `id`, `session_token` (UNIQUE), `status` ('pending'\|'confirmed'\|'failed'), `draft_snapshot` jsonb, `enrollment_id`, `transbank_token` | `enrollment_id` (SET NULL) | Sin políticas públicas — solo service role (Edge Function `public-enrollment`) | ✅ Definida (`20260317100000`) · Idempotencia de pagos por `session_token` (UUID almacenado en `localStorage`). Cuando se integre Transbank: `transbank_token` almacena el token de Webpay y `status` refleja el resultado. |
 | `public_enrollment_throttle` | M6 - Matrí. | `id` (bigserial), `ip`, `action`, `created_at` | Ninguna | Sin políticas públicas — solo service role (Edge Function `public-enrollment`) | ✅ Definida (`20260603120000`) · **Spec 0010 (S1).** Rate-limiting server-side cero-deps: una fila por request de mutación; la EF cuenta por `(ip, action)` en ventana deslizante (10 req / 10 min) y responde `429` al exceder. Índice `(ip, action, created_at)`. Limpieza vía `cleanup_public_enrollment_throttle()`. |
 | `professional_pre_registrations`| M6 - Matrí. | `id`, `temp_user_id`, `branch_id`, `requested_license_class`, `convalidates_simultaneously` (BOOL), `registration_channel` ('online'\|'presencial'), `notes`, `psych_test_answers` (JSONB, array 81 bool), `psych_test_status` ('not_started'\|'completed'), `psych_test_result` (null\|'fit'\|'unfit'), `psych_test_completed_at` (TIMESTAMPTZ), `psych_evaluated_by` (INT FK users), `psych_evaluated_at` (TIMESTAMPTZ), `psych_rejection_reason` (TEXT), `birth_date` (DATE), `gender` (CHAR(1)), `address` (TEXT), `status` ('pending_review'\|'approved'\|'enrolled'\|'expired'\|'rejected') | `temp_user_id`, `branch_id`, `converted_enrollment_id`, `psych_evaluated_by` | Admin: CRUD, Sec: CRUD, Stu: R (suyas) | ✅ Definida · `20260319100000`: añadidos `psych_test_answers` (JSONB) y `psych_test_completed_at`. · `20260320000000`: añadidos `branch_id`, `requested_license_class`, `convalidates_simultaneously`, `registration_channel`, `notes`. · `20260407000001`: añadidos `psych_evaluated_by` (FK users — quien evaluó), `psych_evaluated_at` y `psych_rejection_reason`. · `20260408000001`: añadidos `birth_date` y `gender` — capturados en el formulario público y guardados en la pre-inscripción para que el admin no los repita al completar matrícula. |
-| `enrollments` | M6 - Matrí. | `id`, `number`, `current_step` (1-6), `payment_mode` ('total'\|'partial') — ⚠️ corregido 2026-07-10 (Spec 0026): el índice documentaba 'deposit', pero el valor real usado en producción es 'partial' (verificado contra 44 enrollments reales), `license_group` ('class_b'\|'professional'), `status` ('draft'\|'pending_payment'\|'active'\|'inactive'\|'completed'\|'cancelled'), `registration_channel` ('presential'\|'online'), `certificate_enabled` (BOOL, false), `certificate_b_pdf_url` (TEXT, null hasta generar), `certificate_professional_pdf_url` (TEXT, null hasta generar), `license_pdf_url` (TEXT, **legacy** — ya no se escribe), `license_initial_url` (TEXT, null hasta generar — carnet 6 clases/amarillo), `license_full_url` (TEXT, null hasta generar — carnet 12 clases/verde), `theory_cycle_id` (INT, null — ciclo teórico asignado) | `student_id`, `course_id`, `branch_id`, `sence_code_id`, `promotion_course_id`, `registered_by`, `theory_cycle_id`→class_b_theory_cycles | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida · Fix `20260312100000`: UNIQUE(`number`, `branch_id`, `license_group`). · **`20260630000000` (Spec 0001-m):** `theory_cycle_id` — asignado automáticamente por trigger `trg_assign_theory_cycle` al activar una matrícula Clase B (RF-04/05/06). · Fix `20260317150000`: `chk_enrollment_number` actualizado. · **`20260412000001`:** `certificate_enabled` pasa a `true` cuando el trigger `trg_enable_certificate_b` detecta que la **clase práctica #12** fue completada. · **`20260413000000`:** añadida `certificate_professional_pdf_url` (TEXT) — path relativo del PDF de certificado Clase Profesional en bucket 'documents'. · **`20260501000001`:** añadida `license_pdf_url` (TEXT) — path relativo del PDF de carnet Clase B en bucket `documents/student-licenses/`; generado por EF `generate-student-license-pdf`. · **`20260621000001` (fix-019-m):** carnet dual — `license_initial_url` (6 clases, fondo amarillo) y `license_full_url` (12 clases, fondo verde) reemplazan a `license_pdf_url` (que queda legacy, backfilled a `license_initial_url`). La EF recibe `variant: 'initial'\|'full'` y escribe la columna correspondiente; ambos carnets coexisten. |
-| `student_documents` | M6 - Matrí. | `id`, `type` | `enrollment_id`, `reviewed_by`; **UNIQUE(`enrollment_id`,`type`)** | Admin: CRUD · Sec: CRUD (sede propia vía `branch_visible` en enrollment) · Inst: R (solo alumnos con `class_b_sessions` asignadas) · Stu: CR (self) · Fix `20260310140000`: DELETE incluye secretary · **Fix `20260413000002`: SELECT acotado — Sec filtra por sede, Inst solo sus alumnos** · **Fix `20260723000000` (H-028): UPDATE ahora sí incluye secretary (sede propia) — antes solo admin/student, bloqueaba upsert de matrícula Profesional con 403** | ✅ Definida · Fix `20260317140000`: fotos subidas en flujo público se insertan vía Edge Function (service role) desde ruta temporal `public-uploads/carnet/{sessionToken}` tras crear el enrollment · **`20260413000001`: `storage_url` ahora almacena path relativo** (ej: `students/42/id_photo`), no URL pública. |
+| `enrollments` | M6 - Matrí. | `id`, `number`, `current_step` (1-6), `payment_mode` ('total'\|'partial') — ⚠️ corregido 2026-07-10 (Spec 0026): el índice documentaba 'deposit', pero el valor real usado en producción es 'partial' (verificado contra 44 enrollments reales), `license_group` ('class_b'\|'professional'), `status` ('draft'\|'pending_payment'\|'active'\|'inactive'\|'completed'\|'cancelled'), `registration_channel` ('presential'\|'online'), `certificate_enabled` (BOOL, false), `certificate_b_pdf_url` (TEXT, null hasta generar), `certificate_professional_pdf_url` (TEXT, null hasta generar), `license_pdf_url` (TEXT, **legacy** — ya no se escribe), `license_initial_url` (TEXT, null hasta generar — carnet 6 clases/amarillo), `license_full_url` (TEXT, null hasta generar — carnet 12 clases/verde), `theory_cycle_id` (INT, null — ciclo teórico asignado) | `student_id`, `course_id`, `branch_id`, `sence_code_id`, `promotion_course_id`, `registered_by`, `theory_cycle_id`→class_b_theory_cycles | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida · Fix `20260312100000`: UNIQUE(`number`, `branch_id`, `license_group`). · **`20260630000000` (Spec 0001-m):** `theory_cycle_id` — asignado automáticamente por trigger `trg_assign_theory_cycle` al activar una matrícula Clase B (RF-04/05/06). · Fix `20260317150000`: `chk_enrollment_number` actualizado. · **`20260412000001`:** `certificate_enabled` pasa a `true` cuando el trigger `trg_enable_certificate_b` detecta que la **clase práctica #12** fue completada. · **`20261018130000` (fix-460-m):** `certificate_enabled` = clases `completed` ≥ `round(courses.practical_hours*60/45)` (12 por defecto), la misma regla que `generate-certificate-b-pdf`. Lo recalcula `recalc_class_b_certificate_enabled(enrollment_id)` (SECURITY DEFINER, solo escribe si cambia) desde `trg_enable_certificate_b`, que ahora corre en `INSERT OR UPDATE OF status, enrollment_id OR DELETE` de `class_b_sessions` sin `WHEN`: sube y baja. Backfill de todas las matrículas Clase B. · **`20260413000000`:** añadida `certificate_professional_pdf_url` (TEXT) — path relativo del PDF de certificado Clase Profesional en bucket 'documents'. · **`20260501000001`:** añadida `license_pdf_url` (TEXT) — path relativo del PDF de carnet Clase B en bucket `documents/student-licenses/`; generado por EF `generate-student-license-pdf`. · **`20260621000001` (fix-019-m):** carnet dual — `license_initial_url` (6 clases, fondo amarillo) y `license_full_url` (12 clases, fondo verde) reemplazan a `license_pdf_url` (que queda legacy, backfilled a `license_initial_url`). La EF recibe `variant: 'initial'\|'full'` y escribe la columna correspondiente; ambos carnets coexisten. |
+| `student_documents` | M6 - Matrí. | `id`, `type` | `enrollment_id`, `reviewed_by`; **UNIQUE(`enrollment_id`,`type`)** | Admin: CRUD · Sec: CRUD (sede propia vía `branch_visible` en enrollment) · Inst: R (solo alumnos con `class_b_sessions` asignadas) · Stu: CR (self) · Fix `20260310140000`: DELETE incluye secretary (acotado a borradores por **fix-477-m**, `20261020150000`) · **Fix `20260413000002`: SELECT acotado — Sec filtra por sede, Inst solo sus alumnos** · **Fix `20260723000000` (H-028): UPDATE ahora sí incluye secretary (sede propia) — antes solo admin/student, bloqueaba upsert de matrícula Profesional con 403** | ✅ Definida · Fix `20260317140000`: fotos subidas en flujo público se insertan vía Edge Function (service role) desde ruta temporal `public-uploads/carnet/{sessionToken}` tras crear el enrollment · **`20260413000001`: `storage_url` ahora almacena path relativo** (ej: `students/42/id_photo`), no URL pública. |
 | `digital_contracts` | M6 - Matrí. | `id`, `content_hash`, `signed_contract_url` (TEXT, null — path relativo del PDF firmado escaneado; solo para flujo online) | `enrollment_id` (UNIQUE) | Admin: CRUD · Sec: CRUD (sede propia vía `branch_visible` en enrollment) · Stu: CR (self) · Fix `20260310140000`: DELETE incluye secretary · Fix `20260313130000`: UPDATE incluye secretary (necesario para upsert con `onConflict`) · **Fix `20260413000002`: SELECT acotado — Sec filtra por sede vía enrollment** | ✅ Definida · `20260404120000`: eliminado `student_id` redundante. · **`20260413000001`: `file_url` almacena path relativo** (ej: `contracts/42/contract.pdf`). · **`20260501000002`: añadida `signed_contract_url`** — path relativo del contrato físicamente firmado. `null` en flujo online hasta que se suba; en flujo presencial `file_url` ya es el firmado. |
 | `consents` | M6 - Matrí. | `id` (bigserial), `user_id` (null en leads), `subject_rut`, `branch_id` (**NOT NULL** — ante qué responsable se otorgó), `consent_type` (`matricula_datos`\|`certificado_medico`\|`preinscripcion`\|`test_psicologico`\|`comunicaciones_operativas`\|`comunicaciones_promocionales`), `granted` (BOOL NOT NULL — **`false` = negativa expresa, se registra como fila**), `granted_at`, `revoked_at` (única columna actualizable), `ip` (la escribe el trigger), `policy_version`, `source` (`public`\|`secretaria` — **sin `papel`**: nunca se digita una matrícula en ficha física), `granted_by_representative` (BOOL — lo otorgó el apoderado de un menor; **su identidad NO se guarda acá**, consta en la autorización notarial del expediente) | `user_id`→users, `enrollment_id`→enrollments, `branch_id`→branches · CHECK `consents_subject_identifiable` (user_id O subject_rut) | Admin/Sec: SELECT (`select_consents`) · **Titular: SELECT** de sus propias filas, **todas** las finalidades (`select_consents_self`, `20260909130000` — sin restricción por `consent_type`: leer los propios datos es un derecho de acceso general, Art. 14 ter/ARCO, no algo acotado a esta spec) · authenticated: INSERT · Admin: UPDATE (acotado a `revoked_at` por trigger) · **Titular (self-service): UPDATE** de `revoked_at` en sus propias filas, **solo** `consent_type='comunicaciones_promocionales'` (`update_consents_self_revoke_promocional`) · **DELETE: ninguna policy, en ningún rol** · **`anon`: ninguna policy + REVOKE ALL** — el flujo público escribe vía Edge Function con `service_role` | ✅ Definida (`20260817130000`) · **Spec 0009-m (Ley 21.719).** APPEND-ONLY: `trg_consents_append_only` lanza excepción ante cualquier UPDATE que no sea `revoked_at` (RLS no restringe por columna). IP server-side vía `trg_consents_set_ip` + `request_client_ip()` — ⚠️ la función del trigger es **SECURITY INVOKER a propósito**: en una DEFINER, `current_user` es el dueño y la rama `service_role` nunca se toma, guardando la IP del runtime de la EF en vez de la del alumno. · **`20260818130000` (spec 0010-m, Ley 21.719 Art. 16):** agregado `test_psicologico` al CHECK de `consent_type` — consentimiento reforzado del test psicométrico EPQ. Gate de persistencia en dos capas (cliente en `PublicEnrollmentFacade.submitPreInscription()` + servidor en `handleSubmitPreInscription()` de la EF `public-enrollment`): sin un draft `test_psicologico` con `granted:true`, `professional_pre_registrations.psych_test_answers` queda `NULL` aunque el body traiga las 81 respuestas — verificado empíricamente en Supabase local. · **`20260909120000` (spec 0040-b, Ley 21.719):** agregadas `comunicaciones_operativas`/`comunicaciones_promocionales` al CHECK de `consent_type`. **No son simétricas**: la operativa se ampara en Art. 13 c) (ejecución del contrato) y siempre se persiste con `granted=true` (es un acuse de información, no una elección — pedirla como checkbox violaría el Art. 12 inciso 5°, que presume no libremente otorgado el consentimiento recabado para algo ya necesario para el contrato); la promocional es consentimiento real bajo Art. 12, con su propia policy de auto-revocación (`update_consents_self_revoke_promocional`) porque el Art. 12 exige que el medio de revocación esté "permanentemente disponible" para el titular. · **`20260909130000` (spec 0040-b, hallazgo durante T3.4):** agregada `select_consents_self` — hasta esta migración el titular no podía ni SELECT sus propios consentimientos (`select_consents` solo cubría admin/secretaria), lo que dejaba `ConsentsFacade.loadByUser()` devolviendo `[]` para cualquier alumno sin ningún error visible — un falso "no tienes registros". Detectado al construir `AlumnoPrivacidadComponent`, antes de llegar a QA. |
 | `enrollment_payment_overrides` | M6 - Matrí. | `id` (serial), `enrollment_id` (FK enrollments), `kind` (`clases`\|`certificado`), `reason` (≥ 5 letras), `pending_at_override` (**lo fija la BD**, trigger `set_payment_override_pending`), `created_by` (FK users), `created_at` | `enrollment_id`, `created_by` | **Solo inserción** (sin policy UPDATE/DELETE). SELECT/INSERT: admin, o secretaria de la sede de la matrícula (o ambas sedes); INSERT exige `created_by = auth_user_id()`. Auditada (`trg_audit_enrollment_payment_overrides`). **Spec 0010-i** (`20261013120000`): habilitación sin pago de las clases 7–12 (`clases`) o del certificado con deuda (`certificado`, Entrega 2). AFTER INSERT → aviso a todos los admins activos (`notify_payment_override`) | ✅ Definida |
 | `certificate_issuance_log` | M6 - Matrí. | `id`, `action` | `certificate_id`, `user_id` | Admin: CRUD, Sec: R | ✅ Definida |
 | `school_documents` | M6 - Matrí. | `id`, `type` | `branch_id`, `uploaded_by` | Admin: CRUD, Sec: CR | ✅ Definida |
-| `document_templates` | M6 - Matrí. | `id`, `branch_id`, `document_type`, `content` (JSONB) | `updated_by`, `branch_id` | Admin: CRUD (solo admin, sin acceso Sec/Stu/Inst) | ✅ Definida · **Reestructurada spec 0016-m (`20260916000000`)**: de "archivo descargable" (columnas `file_url`/`format`/`version`/`download_count`/`active`/`category`, en desuso real) a "contenido editable por cláusula/sección" que alimenta `generate-contract-pdf`/`generate-certificate-*-pdf`. RLS cerrada a admin-only (antes SELECT abierto a cualquier autenticado). |
+| `document_templates` | M6 - Matrí. | `id`, `branch_id`, `document_type`, `content` (JSONB) | `updated_by`, `branch_id` | Admin: CRUD (solo admin, sin acceso Sec/Stu/Inst) | ✅ Definida · **Reestructurada spec 0016-m (`20260916000000`)**: de "archivo descargable" (columnas `file_url`/`format`/`version`/`download_count`/`active`/`category`, en desuso real) a "contenido editable por cláusula/sección" que alimenta `generate-contract-pdf`/`generate-certificate-*-pdf`. RLS cerrada a admin-only (antes SELECT abierto a cualquier autenticado). **fix-483-m (`20261022120000`):** `certificate_professional` suma la clave `convalidacion` (texto con `{{claseConvalidada}}` que se agrega a `{{cursoLabel}}` solo si la matrícula tiene `license_validations`; vacío = no se menciona). |
 | `vehicles` | M7 - Flota | `id`, `license_plate` (UNIQUE NOT NULL), `both_branches` (BOOL, def false) | `branch_id` | Admin: CRUD, Sec: **CRU por sede** (`insert`/`update` acotado a su propia sede, nunca `both_branches=true` — spec 0004-m; antes admin-only pese a documentar "Sec: CRUD"), Inst: R | ✅ Definida · `20260730100000` (spec 0004-m): columna `both_branches` + RLS `insert_vehicles`/`update_vehicles` habilitada para secretary |
 | `vehicle_documents` | M7 - Flota | `id`, `type` | `vehicle_id` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `maintenance_records` | M7 - Flota | `id`, `type` | `vehicle_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
@@ -86,7 +86,7 @@
 | `disciplinary_notes` | M10 - Reglas| `id`, `student_id` | `student_id`, `recorded_by` | Admin: CRUD, Sec: CRUD, Stu: R (suyas) | ✅ Definida |
 | `pricing_seasons` | M10 - Reglas| `id`, `name` | `created_by` | Admin: CRUD, Sec: R | ✅ Definida |
 | `certificate_batches` | M10 - Reglas| `id`, `batch_code` | `branch_id`, `received_by` | Admin: CRUD, Sec: R | ✅ Definida |
-| `certificates` | M10 - Reglas| `id`, `folio` | `batch_id`, `enrollment_id`, `student_id`, `issued_by` | Admin: CRUD, Sec: CRUD, Stu: R (self) | ✅ Definida |
+| `certificates` | M10 - Reglas| `id`, `folio` (UNIQUE global) | `batch_id`, `enrollment_id`, `student_id`, `issued_by` | Admin: CRUD, Sec: CRUD, Stu: R (self) | ✅ Definida · **`20261018140000` (fix-461-m):** UNIQUE `(enrollment_id, type)` (`certificates_enrollment_type_key`) y RPC `issue_certificate(p_enrollment_id, p_student_id, p_type, p_issued_by)` → `(id, folio, created)`: emisión atómica bajo `pg_advisory_xact_lock` (devuelve el existente o inserta con `max(folio)+1`, `issued_date = chile_today()`). SECURITY DEFINER, solo `service_role`. La usan `generate-certificate-b-pdf` y `generate-certificate-professional-pdf`; **no insertar en `certificates` a mano** (el folio volvería a chocar). |
 | `student_surveys` | M15 - Calidad| `id`, `obtained_license`, `satisfaction_rating` | `enrollment_id` | Admin: R, Sec: R | ✅ Definida (`20260408000000`) |
 | `professional_weekly_signatures` | M5 - Prof. | `id`, `week_start_date` (DATE, siempre lunes), `signed_at`, `notes` | `promotion_course_id` (CASCADE), `enrollment_id` (CASCADE), `recorded_by` · UNIQUE(`enrollment_id`, `week_start_date`) | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (suyas vía enrollment) | ✅ Definida (`20260403100000`) |
 | `website_config` | M6 - Matrí. | `id`, `branch_id`, `config` (JSONB) | `branch_id` (UNIQUE FK branches) · `config->courses[*].course_id` lógica → `courses(id)` validada por trigger | PUBLIC: SELECT · Admin: CRUD · Sec: CRUD (sede propia vía `branch_visible`) | ✅ Definida (`20260522000000`) · **`20260523000000` (Spec 0004):** shape de `config.courses[]` refactorizado a `{course_id, description, priceNote, duration, includes, highlighted, badge, priceOverride, displayOrder}`. FK lógica obligatoria validada por trigger `trg_validate_website_config_courses_fk`. Datos legacy vaciados a `[]` en la misma migración. |
@@ -97,7 +97,7 @@
 |-------|---------|-------------|--------------------------|
 | `v_student_progress_b` | M4 - Acad. B | Progreso prácticas (0-12) `completed_practices`/`pct_practices`/`last_practice_session` por matrícula Clase B. **`20260630000000` (Spec 0001-m): eliminada `pct_theory_attendance`** — la asistencia teórica ya no existe. | Admin, Sec, Inst (propias), Stu (propia) |
 | `v_professional_attendance` | M5 - Prof. | Semáforo `green`/`yellow`/`red` de asistencia por matrícula profesional (RF-070) | Admin, Sec, Stu (propia) |
-| `v_dms_student_documents` | M6 - Matrí. | Documentos del alumno unificados (`student_documents` + `digital_contracts`) | Admin, Sec, Stu (propios) |
+| `v_dms_student_documents` | M6 - Matrí. | Documentos del alumno unificados (`student_documents` + `digital_contracts` + carnets; desde fix-470-m también contrato firmado online y certificados B/Prof., `source='enrollment_file'`) | Admin, Sec, Stu (propios) |
 | `v_class_b_schedule_availability` | M4 - Acad. B | **Slots de 45 min (disponibles y ocupados)** por instructor+vehículo en las próximas 4 semanas. Columna `slot_status TEXT ('available'\|'occupied')` indica disponibilidad. Horarios derivados de `courses.schedule_days`/`schedule_blocks` (cada elemento del JSONB es un slot exacto, no un rango). NO filtra los slots ocupados, los expone con `slot_status='occupied'` para que la UI los muestre en gris. Usar para agenda de matrícula (RF-046). **`20260513000001`:** Vista recreada — ya no usa `generate_series` de 45 min; expande directamente los slots del JSONB a los días operativos de las próximas 4 semanas. **`20260730100000` (spec 0004-m):** un instructor `both_branches=true` genera filas para las dos sedes (join de `course_slots` ya no ancla solo a su sede); el vehículo asignado debe cubrir la sede del slot (`v.branch_id = cs.branch_id OR v.both_branches`) — si su vehículo no es `both_branches`, la sede no cubierta queda **sin filas** (no "occupied", ausente). Los `NOT EXISTS` de conflicto siguen siendo globales por `instructor_id`/`vehicle_id` sin filtro de sede (sin cambios): un instructor u vehículo ocupado en una sede ya bloqueaba el mismo horario en la otra. **`20261007120000` (fix-196-b):** el choque se calcula en `class_b_slot_occupied()` (`SECURITY DEFINER`) — con `security_invoker` la RLS de `class_b_sessions` se evaluaba fila por fila (~5 s por semana de Agenda, 21 s los 28 días) y ocultaba las clases de la otra sede (turno compartido ocupado allá se veía disponible). La vista sigue `security_invoker` y sin `MATERIALIZED`. | Admin, Sec (acceso completo) · Inst (solo sí mismo) · Stu: sin acceso (ver nota) |
 
 > **Nota `v_class_b_schedule_availability`:** El rol `student` no puede ver `instructors` ni `vehicles` según sus policies actuales, por lo que la vista devuelve vacío si la consulta un alumno. Si se requiere self-service de selección de horario, implementar un RPC `SECURITY DEFINER` específico.
@@ -200,6 +200,7 @@
 | `20261015120000_fix224_vehiculo_no_operativo_sin_turnos.sql` | **fix-224-b.** `vehicle_is_operational(text)` (IMMUTABLE, espejo de `isVehicleOperational()` en `core/utils/vehicle-status.utils.ts`: no operativo = `maintenance`/`mantenimiento`/`out_of_service`/`blocked`) y `v_class_b_schedule_availability` filtra el join de `vehicles` con ella: un vehículo en Mantenimiento o Fuera de servicio no genera turnos (matrícula, Agenda, ficha, pago online). Las clases ya agendadas no se tocan. |
 | `20261016120000_fix225_aviso_vencimiento_sin_duplicados.sql` | **fix-225-b.** `notify_vehicle_document_expiry()` no repite un aviso que el destinatario ya recibió hoy (Chile) para el mismo vehículo y con el mismo texto: una segunda corrida del cron (o una ejecución manual) no duplica. |
 | `20261016150000_fix228_horarios_plazo_y_pasados.sql` | **fix-228-b.** `v_class_b_schedule_availability` cubre hasta hoy + 4 meses (antes 28 días; la Agenda deja navegar 2–4 meses) y no ofrece bloques que ya empezaron (`slot_start > now()`; antes a las 10:00 seguía ofreciendo el de las 08:30). Tiempo medido: una semana 140–250 ms, el plazo de un instructor 15–90 ms. |
+| `20261019120000_spec0052_feriados.sql` | **Spec 0052-b.** Tabla `holidays` (fecha PK, nombre, `scope` national/local, fuente; RLS: lectura `authenticated`, escritura solo `service_role`), la llena la Edge Function `sync-holidays` (año actual y siguiente desde la API oficial → boostr → nager, + el **20 de agosto** de Chillán y Chillán Viejo como `local`). `v_class_b_schedule_availability` no genera bloques en esas fechas. Cron `sync-holidays-monthly` (`0 7 1 * *`). ⚠️ Feriados regionales dependen de la comuna: con una sede en otra comuna, pasar `holidays` a alcance por sede (`branch_id`). |
 | `20261016130000_fix226_grant_vehicle_is_operational.sql` | **fix-226-b.** `GRANT EXECUTE` de `vehicle_is_operational(text)` a `authenticated` (y `service_role`). Regresión de fix-224-b: la vista `v_class_b_schedule_availability` es `security_invoker` y sin el permiso fallaba con sesión de admin/secretaria. **Toda función nueva usada por una vista `security_invoker` o por RLS necesita su GRANT en la misma migración** (las funciones nuevas no lo heredan, fix-191-b). |
 | `20261016140000_fix227_horarios_ambas_sin_duplicados.sql` | **fix-227-b.** `v_class_b_schedule_availability` con `SELECT DISTINCT` en la salida: un instructor + vehículo "Ambas" recibía el mismo bloque una vez por sede (H4/S19 de fix-186-b). El estado no cambia (el choque es global). Medido: sin regresión de tiempo (semana completa 92 ms, por instructor 23 ms). |
 | `20260625120000_enable_realtime_users.sql` | **Spec 0017 / AC-E3.** Habilita Supabase Realtime en `users` (`ALTER PUBLICATION supabase_realtime ADD TABLE`, idempotente vía `pg_publication_tables`). Permite que `AuthFacade` refleje el otorgar/revocar del grant `can_access_both_branches` en caliente (sin re-login) suscribiéndose a su propia fila (`id=eq.{dbId}`). Realtime respeta RLS. |
@@ -234,7 +235,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 > esta sección refleja el SQL real.
 
 <!-- AUTO-GENERATED:BEGIN -->
-## Esquema efectivo (86 tablas, acumulado de las migraciones)
+## Esquema efectivo (87 tablas, acumulado de las migraciones)
 
 ### `absence_evidence` — 🔒 RLS
 
@@ -542,6 +543,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | delete_certificates | DELETE | `auth_user_role() = 'admin'` | — |
 | select_certificates | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 | insert_certificates | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
+
+**Índices:** `certificates_enrollment_type_key`
 
 ### `class_b_exam_attempts` — 🔒 RLS
 
@@ -1215,6 +1218,25 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | update_fixed_expenses | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_fixed_expenses | DELETE | `auth_user_role() = 'admin'` | — |
 
+### `holidays` — 🔒 RLS
+
+> Spec 0052-b: feriados que no ofrecen horarios de Clase B. La llena la Edge Function sync-holidays '
+  '(cron mensual). scope=local: feriado de la comuna de las sedes (20 de agosto, Chillán).
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `date` PK | DATE | NO | — | — |
+| `name` | TEXT | NO | — | — |
+| `scope` | TEXT | NO | — | — |
+| `source` | TEXT | NO | — | — |
+| `updated_at` | TIMESTAMPTZ | NO | `now()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_holidays | SELECT | `true` | — |
+
 ### `instructor_advances` — 🔒 RLS
 
 > Cuenta corriente interna de anticipos a instructores (RF-038)
@@ -1535,7 +1557,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | select_notifications | SELECT | `auth_user_role() = 'admin' OR recipient_id = auth_user_id()` | — |
 | update_notifications | UPDATE | `auth_user_role() = 'admin' OR recipient_id = auth_user_id()` | — |
 | delete_notifications | DELETE | `auth_user_role() = 'admin'` | — |
-| insert_notifications | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| insert_notifications | INSERT | — | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` |
 
 **Índices:** `idx_notifications_not_deleted`, `idx_unread_notifications`
 
@@ -2178,12 +2200,6 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `voided_by` | INT | sí | — | → `users.id` |
 | `void_reason` | TEXT | sí | — | — |
 
-`status` admite `completed`, `pending` y `anulado` (fix-443-m, `20261016130000`). Una venta **no se
-borra: se anula** como un pago de matrícula (spec 0025-m). El trigger
-`trg_special_service_sales_guard_anulacion` (`guard_anulacion_venta_servicio()`) exige rol admin y
-motivo, fija `voided_by`/`voided_at`, deja `paid = false` (todas las sumas de ingresos filtran
-`paid = true`) y prohíbe "desanular" o modificar una anulada (salvo desvincular `service_id`).
-
 **Policies:**
 
 | Policy | Cmd | USING | WITH CHECK |
@@ -2191,8 +2207,6 @@ motivo, fija `voided_by`/`voided_at`, deja `paid = false` (todas las sumas de in
 | select_special_service_sales | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 | insert_special_service_sales | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
 | update_special_service_sales | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
-
-Sin policy de DELETE desde fix-443-m: nadie borra una venta desde la app.
 
 **Índices:** `idx_special_service_sales_branch_id`
 
@@ -2277,7 +2291,7 @@ Sin policy de DELETE desde fix-443-m: nadie borra una venta desde la app.
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | select_student_documents | SELECT | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND enrollment…` | — |
-| delete_student_documents | DELETE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND enrollment…` | — |
+| delete_student_documents | DELETE | `admin` OR (`secretary` AND matrícula `status = 'draft'` AND `branch_visible(e.branch_id)`) — **fix-477-m** (`20261020150000`): la secretaria ya no borra documentos de matrículas confirmadas (usa Reemplazar) | — |
 | update_student_documents | UPDATE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND enrollment…` | — |
 | insert_student_documents | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
 
@@ -2324,10 +2338,10 @@ Sin policy de DELETE desde fix-443-m: nadie borra una venta desde la app.
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_students | SELECT | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND ( (SELECT …` | — |
 | insert_students | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` |
 | update_students | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
 | delete_students | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND ((SELECT au…` | — |
+| select_students | SELECT | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND ( (SELECT …` | — |
 
 ### `task_replies` — 🔒 RLS
 
@@ -2382,8 +2396,8 @@ Sin policy de DELETE desde fix-443-m: nadie borra una venta desde la app.
 |--------|-----|-------|------------|
 | tasks_select | SELECT | `deleted_at IS NULL AND ( (auth_user_role() = 'admin' AND branch_visible(branc…` | — |
 | tasks_delete | DELETE | `auth_user_role() = 'admin' AND branch_visible(branch_id)` | — |
-| tasks_insert | INSERT | — | `( auth_user_role() = 'admin' AND from_user_id = auth_user_id() AND from_role …` |
 | tasks_update | UPDATE | `deleted_at IS NULL AND EXISTS ( SELECT 1 FROM public.users u JOIN public.role…` | `EXISTS ( SELECT 1 FROM public.users u JOIN public.roles r ON r.id = u.role_id…` |
+| tasks_insert | INSERT | — | `( auth_user_role() = 'admin' AND from_user_id = auth_user_id() AND from_role …` |
 
 **Índices:** `idx_tasks_branch_status`, `idx_tasks_due_date`, `idx_tasks_from_user_status`, `idx_tasks_to_user_status`
 
@@ -2524,8 +2538,8 @@ Sin policy de DELETE desde fix-443-m: nadie borra una venta desde la app.
 
 | Vista | Definida en |
 |-------|-------------|
-| `v_class_b_schedule_availability` | `20261015120000_fix224_vehiculo_no_operativo_sin_turnos.sql` |
-| `v_dms_student_documents` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
+| `v_class_b_schedule_availability` | `20261019120000_spec0052_feriados.sql` |
+| `v_dms_student_documents` | `20261020140000_fix470_dms_contrato_firmado_y_certificados.sql` (antes `20260404120000_academic_alter_remove_redundant_student_id.sql`) |
 | `v_professional_attendance` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_student_progress_b` | `20260630000000_class_b_theory_cycles.sql` |
 
@@ -2581,11 +2595,14 @@ Sin policy de DELETE desde fix-443-m: nadie borra una venta desde la app.
 | `get_next_enrollment_number` | `(p_course_id integer)` |
 | `get_student_payment_status` | `(p_supabase_uid TEXT)` |
 | `guard_anulacion_pago` | `()` |
+| `guard_anulacion_venta_servicio` | `()` |
 | `guard_cierre_definitivo` | `()` |
+| `guard_egreso_en_caja_cerrada` | `()` |
 | `guard_movimiento_caja_cerrada` | `()` |
 | `guard_pago_en_caja_cerrada` | `()` |
 | `guard_venta_servicio_caja_cerrada` | `()` |
 | `instructor_enrollment_ids` | `()` |
+| `issue_certificate` | `(p_enrollment_id INT, p_student_id INT, p_type TEXT, p_issued_by INT)` |
 | `log_change` | `()` |
 | `mark_end_of_day_class_b_absences` | `()` |
 | `notify_class_b_completed` | `()` |
@@ -2603,14 +2620,17 @@ Sin policy de DELETE desde fix-443-m: nadie borra una venta desde la app.
 | `prevent_early_class_b_no_show` | `()` |
 | `prevent_student_double_booking_class_b_sessions` | `()` |
 | `prevent_vehicle_double_booking_class_b_sessions` | `()` |
+| `recalc_class_b_certificate_enabled` | `(p_enrollment_id INT)` |
 | `recalc_instructor_monthly_hours` | `(p_instructor_id INT, p_period TEXT)` |
 | `recalculate_enrollment_balance` | `()` |
 | `record_enrollment_payment` | `(p_enrollment_id integer, p_payment_method text, p_total_amount integer, p_discount_id integer DEFAULT NULL, p_discount_amount integer DEFAULT 0, p_is_deposit boolean DEFAULT false, p_document_number text DEFAULT NULL)` |
+| `registrar_ajuste_cuadratura` | `(p_cuadratura_id INT, p_tipo TEXT, p_monto INT, p_motivo TEXT, p_categoria TEXT DEFAULT NULL, p_vehiculo_id INT DEFAULT NULL)` |
 | `request_client_ip` | `()` |
 | `reschedule_class_b_sessions` | `(p_enrollment_id INT, p_instructor_id INT, p_items JSONB, p_reason TEXT, p_reason_other TEXT DEFAULT NULL)` |
 | `reserve_next_promotion_slot` | `(p_branch_id INT)` |
 | `restrict_instructor_vehicle_update` | `()` |
 | `run_class_b_absences_cutoff` | `()` |
+| `secretary_can_notify` | `(p_recipient_id integer)` |
 | `secretary_extra_visible_user_ids` | `()` |
 | `secretary_last_sign_in` | `(p_user_ids integer[])` |
 | `servicios_especiales_kpis` | `(p_branch_id INT DEFAULT NULL)` |

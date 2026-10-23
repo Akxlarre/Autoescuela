@@ -17,6 +17,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { isBlockedInPilot } from '@core/config/pilot-phase.config';
+import { chileToday, formatChilePattern } from '@core/utils/chile-time.utils';
+import { promotionAllowsCertificate } from '@core/utils/professional-certificate.utils';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
@@ -121,9 +123,9 @@ export function resolveListadoLabel(
 export type CertificadoBAction = 'generate' | 'confirm-forced' | 'blocked';
 
 /**
- * Con las prácticas completas se genera directo. Si faltan, solo el admin puede seguir: confirma
- * y el pedido va con force (la Edge Function rechaza el bypass sin él — fix-289-m). La secretaria
- * queda bloqueada.
+ * Si faltan prácticas, solo el admin puede seguir (el pedido va con force; la Edge Function
+ * rechaza el bypass sin él — fix-289-m). La secretaria queda bloqueada. Desde fix-466-m toda
+ * emisión pasa por el modal de CertificadoAutorizacionFacade, que avisa lo que falta.
  */
 export function resolveCertificadoBAction(
   completadas: number,
@@ -405,7 +407,13 @@ export function resolveCertificadoBAction(
               <div class="flex flex-col gap-2">
                 <!-- fix-336-m: en Profesional puede quedar vacía; sin esto deja un hueco extra -->
                 @if (secondaryActions().length > 0 || showsClaseBActions(alumno.licenseGroup)) {
-                  <div class="grid grid-cols-2 gap-2">
+                  <!-- hotfix-167-m: con una sola acción (Profesional) ocupa todo el ancho -->
+                  <div
+                    class="grid gap-2"
+                    [class.grid-cols-2]="
+                      secondaryActions().length > 1 || showsClaseBActions(alumno.licenseGroup)
+                    "
+                  >
                     @for (action of secondaryActions(); track action.id) {
                       <button
                         type="button"
@@ -702,7 +710,7 @@ export function resolveCertificadoBAction(
                 <app-empty-state
                   icon="book-open"
                   message="Asistencia y evaluaciones aún no habilitadas"
-                  subtitle="La asistencia, las notas y el certificado de Clase Profesional se registran en módulos que no están disponibles en esta etapa."
+                  subtitle="La asistencia y las notas de Clase Profesional se registran en módulos que no están disponibles en esta etapa."
                 />
               </div>
             }
@@ -1119,7 +1127,7 @@ export function resolveCertificadoBAction(
     }
     .progress-fill-brand {
       height: 100%;
-      background: var(--ds-brand);
+      background: var(--brand-strong);
       border-radius: var(--radius-full);
       display: flex;
       align-items: center;
@@ -1421,6 +1429,12 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
    */
   protected readonly academicoProfVisible = !isBlockedInPilot('clase-profesional-recorte');
 
+  /** fix-467-m: fecha de término de la promoción de la matrícula mostrada (null en Clase B). */
+  protected readonly promotionEndDate = computed(() => {
+    const alumno = this.facade.alumno();
+    return alumno?.enrollments.find((e) => e.id === alumno.enrollmentId)?.promotionEndDate ?? null;
+  });
+
   // ── Secciones fijas: configuración de Hero ───────────────────────────────────
   protected readonly heroActions = computed<SectionHeroAction[]>(() => {
     const alumno = this.facade.alumno();
@@ -1442,11 +1456,19 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
           loading: isViewingCert,
           disabled: isViewingCert,
         };
-      } else if (!this.academicoProfVisible) {
-        // fix-332-m (D12): los criterios (asistencia, nota) salen de módulos bloqueados en el
-        // piloto; el botón saldría siempre "Certificado (1/3 criterios)" deshabilitado.
-        certAction = null;
-      } else if (this.facade.elegibleProf()) {
+      } else if (!promotionAllowsCertificate(this.promotionEndDate(), chileToday())) {
+        // fix-467-m: nunca antes del último día de la promoción (admin y secretaria). Mismo patrón
+        // que Clase B con las clases incompletas: deshabilitado y el motivo en el label.
+        certAction = {
+          id: 'generar-certificado',
+          label: `Certificado (desde ${formatChilePattern(this.promotionEndDate(), 'dd-MM-yyyy') ?? '—'})`,
+          icon: 'file-text',
+          primary: false,
+          disabled: true,
+        };
+      } else {
+        // fix-466-m: ningún criterio académico bloquea (ni en el piloto); el modal del facade
+        // avisa la asistencia baja y pide motivo si hay deuda (spec 0010-i).
         certAction = {
           id: 'generar-certificado',
           label: isGeneratingCert ? 'Generando...' : 'Generar Certificado',
@@ -1454,16 +1476,6 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
           primary: false,
           loading: isGeneratingCert,
           disabled: isGeneratingCert,
-        };
-      } else {
-        const e = this.facade.elegibilidadProf();
-        const metCount = [e.teoria, e.pago, e.nota].filter(Boolean).length;
-        certAction = {
-          id: 'generar-certificado',
-          label: `Certificado (${metCount}/3 criterios)`,
-          icon: 'file-text',
-          primary: false,
-          disabled: true,
         };
       }
     } else {
@@ -1864,19 +1876,14 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
         }
         return;
       }
-      // Práctica incompleta: advertencia (criterio flexible, no bloquea)
-      if (!this.facade.elegibilidadProf().practica) {
-        const pct = this.facade.progresoPracticaProf().pct ?? 0;
-        const confirmed = await this.confirmModal.confirm({
-          title: 'Asistencia práctica incompleta',
-          message: `${alumno.nombre} registra ${pct}% de asistencia práctica. ¿Deseas generar el certificado de todas formas?`,
-          severity: 'warn',
-          confirmLabel: 'Generar',
-          cancelLabel: 'Cancelar',
-        });
-        if (!confirmed) return;
-      }
-      await this.certProfFacade.generarCertificado(alumno.enrollmentId);
+      // fix-466-m: el facade confirma con un modal (avisos de asistencia, deuda con motivo).
+      // Sin módulos académicos (piloto) no hay porcentajes que avisar.
+      if (!promotionAllowsCertificate(this.promotionEndDate(), chileToday())) return;
+      await this.certProfFacade.generarCertificado(alumno.enrollmentId, {
+        nombre: alumno.nombre,
+        pctTeoria: this.academicoProfVisible ? this.facade.progresoTeoriaProf().pct : null,
+        pctPractica: this.academicoProfVisible ? this.facade.progresoPracticaProf().pct : null,
+      });
       await this.facade.refresh();
     } else {
       // Clase B
@@ -1899,18 +1906,14 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
       // Solo el admin ve el botón habilitado con prácticas incompletas — la secretaria
       // nunca llega aquí (acción deshabilitada en heroActions).
       if (action === 'blocked') return;
-      if (action === 'confirm-forced') {
-        const confirmed = await this.confirmModal.confirm({
-          title: 'Prácticas incompletas',
-          message: `${alumno.nombre} lleva ${progreso.completadas}/${progreso.requeridas} clases prácticas completadas. ¿Deseas generar el certificado de todas formas?`,
-          severity: 'warn',
-          confirmLabel: 'Generar',
-          cancelLabel: 'Cancelar',
-        });
-        if (!confirmed) return;
-      }
 
-      await this.certFacade.generarCertificado(alumno.enrollmentId, action === 'confirm-forced');
+      // fix-466-m: el facade confirma con un modal (prácticas que faltan, deuda con motivo) y
+      // aplica el bypass admin cuando faltan prácticas.
+      await this.certFacade.generarCertificado(alumno.enrollmentId, {
+        nombre: alumno.nombre,
+        completadas: progreso.completadas,
+        requeridas: progreso.requeridas,
+      });
       await this.facade.refresh();
     }
   }

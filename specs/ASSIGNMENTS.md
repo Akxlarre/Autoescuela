@@ -20,10 +20,8 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-i-058 | Unificar los helpers de autorización de las edge functions (`staff-auth.ts` + `user-edit-authz.ts`) | `cualquiera` | fix | P2 | i | Orden, no seguridad: hoy la resolución del llamador está repetida y los formatos de error difieren (`error` vs `message`). Coordinar con Benjamín |
 | ASG-i-061 | Dashboard ejecutivo: medir todo el negocio, no solo Clase B | `cualquiera` | spec | P2 | i | **Después del piloto.** Hoy cuenta solo ingresos de Clase B (spec 0044-b); se dejó así en `fix-047-i`. Criterio de ingreso: solo `paid` (060 descartada, `pending` va sin fecha) |
 | ASG-i-063 | Cerrar una matrícula y reiniciar el curso (Clase B) | `cualquiera` | spec | P1 | i | **Decisión de negocio primero.** Cerrar con motivo; deuda: perdonar o mantener; ¿también la secretaria? (el admin es el dueño y no siempre está) |
-| ASG-i-065 | Revisión de accesibilidad con axe en los tests e2e | `cualquiera` | spec | P2 | i | Mejora de herramientas, no un fix. Empezar solo reportando; después fallar con problemas graves nuevos. Ya encontró: gris `text-muted` con contraste 2.56:1 |
 | ASG-b-100 | QA visual del portal del Instructor cuando se levante la fase piloto | `cualquiera` | fix | P2 | b | Bloqueada hasta que se levante la fase. `ASG-i-012` dejó este portal fuera de alcance. Incluye cerrar AC1b de `fix-169-b`. ⚠️ `instructor@test.com` tiene 0 alumnos — hay que sembrar datos antes |
 
 ### Tanda testing profundo del piloto por módulo — 2026-09-29
@@ -85,9 +83,6 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-029 | Testing: Contabilidad | `i` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
-| ASG-i-032 | Testing: Flota y mantenimientos | `b` | fix | P1 | i | Funcional · Media |
-| ASG-i-033 | Testing: Documentos (DMS) y certificación B | `m` | fix | P1 | i | Funcional · Media |
-| ASG-i-035 | Testing: Tareas, notificaciones y comunicados | `b` | fix | P1 | i | Integración · Media |
 | ASG-i-036 | Testing: Auditoría y Configuración web | `i` | fix | P2 | i | Funcional · Baja |
 
 ### Tanda fixes del testing del piloto — 2026-09-30
@@ -272,9 +267,7 @@
 | ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
 | ASG-i-034 | Testing: Gestión de instructores, secretarias y usuarios | `b` | [fix-197-b-testing-instructores-secretarias-usuarios](fixes/fix-197-b-testing-instructores-secretarias-usuarios/fix.md) | 2026-10-07 |
-| ASG-i-032 | Testing: Flota, documentos de vehículo y mantenimientos | `b` | [fix-220-b-testing-flota-mantenimientos](fixes/fix-220-b-testing-flota-mantenimientos/fix.md) | 2026-10-12 |
 | ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `i` | [0010-i-clase-7-bloqueada-sin-segundo-pago](specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | 2026-10-13 |
-| ASG-i-064 | Arreglar el test de mantenciones de vehículo (falta `basePath` en la ruta simulada) | `b` | [hotfix-076-b-test-mantenimientos-basepath](hotfixes/hotfix-076-b-test-mantenimientos-basepath/hotfix.md) | 2026-10-15 |
 | ASG-i-023 | Testing: Matrícula presencial (Clase B, refuerzo y Clase Profesional) | `i` | [fix-058-i-testing-matricula-presencial](fixes/fix-058-i-testing-matricula-presencial/fix.md) | 2026-10-18 |
 <!-- AUTO-GENERATED:END -->
 
@@ -435,6 +428,7 @@
 | ASG-i-049 | Pagos duplicados (doble Enter) y sobrepago con pagos simultáneos | [fix-045-i-pagos-duplicados-y-sobrepago](fixes/fix-045-i-pagos-duplicados-y-sobrepago/fix.md) | 2026-10-10 |
 | ASG-i-052 | "Borrar horarios" y "Reactivar" cambian clases en masa sin confirmación | [fix-364-m-acciones-masivas-clases-sin-confirmacion](fixes/fix-364-m-acciones-masivas-clases-sin-confirmacion/fix.md) | 2026-10-10 |
 | ASG-i-053 | Verificar si el trigger viejo de deserción sigue activo (2 faltas cancelan la matrícula) | [hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b](hotfixes/hotfix-150-m-eliminar-trigger-viejo-de-desercion-clase-b/hotfix.md) | 2026-10-10 |
+| ASG-i-032 | Testing: Flota, documentos de vehículo y mantenimientos | [fix-220-b-testing-flota-mantenimientos](fixes/fix-220-b-testing-flota-mantenimientos/fix.md) | 2026-10-12 |
 | ASG-i-050 | Matrícula queda activa aunque el mensaje dice "no se confirmó" | [fix-046-i-matricula-activa-sin-consentimiento](fixes/fix-046-i-matricula-activa-sin-consentimiento/fix.md) | 2026-10-12 |
 | ASG-i-051 | Ventas de servicios especiales fuera de Reportes y Dashboard; efectivo registrado como tarjeta | [fix-047-i-servicios-especiales-como-ingreso](fixes/fix-047-i-servicios-especiales-como-ingreso/fix.md) | 2026-10-12 |
 | ASG-i-027 | Testing: Asistencia Clase B, inasistencias y penalización | [fix-366-m-testing-asistencia-clase-b](fixes/fix-366-m-testing-asistencia-clase-b/fix.md) | 2026-10-13 |
@@ -443,6 +437,12 @@
 | ASG-i-028 | Testing: Pagos, abonos y descuentos | [fix-048-i-testing-pagos-y-descuentos](fixes/fix-048-i-testing-pagos-y-descuentos/fix.md) | 2026-10-14 |
 | ASG-i-030 | Testing: Dashboards (admin, ejecutivo y secretaria) | [fix-395-m-testing-dashboards](fixes/fix-395-m-testing-dashboards/fix.md) | 2026-10-14 |
 | ASG-i-031 | Testing: Servicios especiales | [fix-429-m-testing-servicios-especiales](fixes/fix-429-m-testing-servicios-especiales/fix.md) | 2026-10-15 |
+| ASG-i-064 | Arreglar el test de mantenciones de vehículo (falta `basePath` en la ruta simulada) | [hotfix-076-b-test-mantenimientos-basepath](hotfixes/hotfix-076-b-test-mantenimientos-basepath/hotfix.md) | 2026-10-15 |
+| ASG-i-033 | Testing: Documentos (DMS), plantillas y certificación Clase B | [fix-447-m-testing-documentos-certificacion](fixes/fix-447-m-testing-documentos-certificacion/fix.md) | 2026-10-20 |
+| ASG-i-035 | Testing: Tareas/observaciones, notificaciones y comunicados | [fix-230-b-testing-tareas-notificaciones-comunicados](fixes/fix-230-b-testing-tareas-notificaciones-comunicados/fix.md) | 2026-10-20 |
+| ASG-i-058 | Unificar los helpers de autorización de las edge functions | [fix-235-b-unificar-autorizacion-edge-functions](fixes/fix-235-b-unificar-autorizacion-edge-functions/fix.md) | 2026-10-20 |
+| ASG-i-065 | Revisión de accesibilidad con axe en los tests e2e | [0054-b-axe-accesibilidad-en-e2e](specs/0054-b-axe-accesibilidad-en-e2e/spec.md) | 2026-10-20 (ver acceptance.md) |
+| ASG-m-011 | Testing: Certificación Profesional en el piloto | [fix-480-m-testing-certificacion-profesional](fixes/fix-480-m-testing-certificacion-profesional/fix.md) | 2026-10-22 |
 <!-- AUTO-GENERATED:END -->
 
 ---

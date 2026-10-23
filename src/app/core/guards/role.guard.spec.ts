@@ -11,7 +11,9 @@ describe('hasRoleGuard (fix-184-b)', () => {
 
   beforeEach(() => {
     authSpy = { whenReady: Promise.resolve(), currentUser: vi.fn().mockReturnValue(null) };
-    routerSpy = { createUrlTree: vi.fn((cmds: string[]) => ({ __urlTree: cmds })) };
+    routerSpy = {
+      createUrlTree: vi.fn((cmds: string[], extras?: unknown) => ({ __urlTree: cmds, extras })),
+    };
     toastSpy = { warning: vi.fn(), info: vi.fn(), error: vi.fn(), success: vi.fn() };
 
     TestBed.configureTestingModule({
@@ -42,8 +44,19 @@ describe('hasRoleGuard (fix-184-b)', () => {
   });
 
   it('sin sesión → /login, sin aviso', async () => {
-    expect(await run(['admin'])).toEqual({ __urlTree: ['/login'] });
+    expect(await run(['admin'])).toMatchObject({ __urlTree: ['/login'] });
     expect(toastSpy.warning).not.toHaveBeenCalled();
+  });
+
+  it('A18 (hotfix-096-b): sin sesión → /login con la pantalla pedida en returnUrl', async () => {
+    const result = await TestBed.runInInjectionContext(
+      () =>
+        hasRoleGuard(['admin'])({} as any, { url: '/app/admin/pagos' } as any) as Promise<unknown>,
+    );
+    expect(result).toEqual({
+      __urlTree: ['/login'],
+      extras: { queryParams: { returnUrl: '/app/admin/pagos' } },
+    });
   });
 
   it('primer login pendiente → /force-password-change, sin aviso', async () => {

@@ -118,6 +118,13 @@ export const DOCUMENT_TEMPLATE_SECTIONS: Record<
       maxLength: 400,
       availableTokens: ['cursoLabel', 'fechaInicio', 'fechaFin'],
     },
+    // fix-483-m: se agrega a {{cursoLabel}} solo si el alumno convalida; vacío = no se menciona.
+    {
+      id: 'convalidacion',
+      label: 'Convalidación (solo si el alumno convalida)',
+      maxLength: 120,
+      availableTokens: ['claseConvalidada'],
+    },
     { id: 'cierre', label: 'Cierre', maxLength: 200, availableTokens: [] },
     { id: 'firma_nombre', label: 'Firma — Nombre', maxLength: 80, availableTokens: [] },
     { id: 'firma_cargo', label: 'Firma — Cargo', maxLength: 80, availableTokens: [] },

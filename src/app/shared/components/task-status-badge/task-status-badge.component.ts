@@ -28,6 +28,13 @@ const STATUS_CONFIG: Record<TaskStatus, BadgeConfig> = {
     colorVar: 'var(--state-success)',
     bgVar: 'var(--state-success-bg)',
   },
+  // fix-231-b: observación abierta por su destinatario (spec 0001-b AC5).
+  seen: {
+    icon: 'eye',
+    label: 'Vista',
+    colorVar: 'var(--state-info)',
+    bgVar: 'var(--state-info-bg)',
+  },
 };
 
 @Component({

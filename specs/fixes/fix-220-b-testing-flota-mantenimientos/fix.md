@@ -1,7 +1,7 @@
 # Fix: Testing — Flota, documentos de vehículo y mantenimientos
 > id: fix-220-b-testing-flota-mantenimientos
 > refs: ASG-i-032
-> status: closed
+> status: done
 > created: 2026-10-12
 
 ## Root Cause

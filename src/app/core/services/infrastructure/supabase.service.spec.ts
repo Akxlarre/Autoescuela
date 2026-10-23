@@ -35,6 +35,84 @@ describe('SupabaseService', () => {
     result.catch(() => {});
   });
 
+  describe('Mantener sesión iniciada (fix-229-b, A19)', () => {
+    const storageKey = () => (service.client.auth as unknown as { storageKey: string }).storageKey;
+    const borrarCookie = () =>
+      (document.cookie = 'auth_alive=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
+
+    afterEach(() => {
+      localStorage.clear();
+      borrarCookie();
+    });
+
+    it('desmarcada: guarda la preferencia y la marca de navegador abierto', () => {
+      service.setRememberSession(false);
+      expect(localStorage.getItem('auth:remember')).toBe('0');
+      expect(document.cookie).toContain('auth_alive=1');
+    });
+
+    it('marcada: borra la preferencia y la marca', () => {
+      service.setRememberSession(false);
+      service.setRememberSession(true);
+      expect(localStorage.getItem('auth:remember')).toBeNull();
+      expect(document.cookie).not.toContain('auth_alive=1');
+    });
+
+    it('al iniciar: preferencia "no recordar" sin la marca (navegador cerrado) → descarta la sesión', () => {
+      const key = storageKey();
+      localStorage.setItem(key, '{"access_token":"x"}');
+      localStorage.setItem('auth:remember', '0');
+      borrarCookie();
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({});
+      TestBed.inject(SupabaseService);
+
+      expect(localStorage.getItem(key)).toBeNull();
+      expect(localStorage.getItem('auth:remember')).toBeNull();
+    });
+
+    it('al iniciar: con la marca (navegador abierto) la sesión se conserva', () => {
+      const key = storageKey();
+      localStorage.setItem(key, '{"access_token":"x"}');
+      localStorage.setItem('auth:remember', '0');
+      document.cookie = 'auth_alive=1; path=/';
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({});
+      TestBed.inject(SupabaseService);
+
+      expect(localStorage.getItem(key)).not.toBeNull();
+    });
+  });
+
+  describe('signOut (hotfix-091-b, E10)', () => {
+    const storageKey = () => (service.client.auth as unknown as { storageKey: string }).storageKey;
+
+    afterEach(() => localStorage.clear());
+
+    it('si el servidor no responde, borra igual la sesión guardada en el navegador', async () => {
+      localStorage.setItem(storageKey(), '{"access_token":"x"}');
+      vi.spyOn(service.client.auth, 'signOut').mockResolvedValue({
+        error: new Error('Failed to fetch'),
+      } as never);
+
+      await service.signOut();
+
+      expect(localStorage.getItem(storageKey())).toBeNull();
+    });
+
+    it('si el servidor responde bien, no toca nada más', async () => {
+      localStorage.setItem('otra-clave', 'sigue');
+      vi.spyOn(service.client.auth, 'signOut').mockResolvedValue({ error: null } as never);
+
+      const { error } = await service.signOut();
+
+      expect(error).toBeNull();
+      expect(localStorage.getItem('otra-clave')).toBe('sigue');
+    });
+  });
+
   it('signIn() should be a function', () => {
     expect(typeof service.signIn).toBe('function');
   });

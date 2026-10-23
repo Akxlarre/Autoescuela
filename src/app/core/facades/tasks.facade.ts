@@ -3,7 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
-import { assertWriteOk } from '@core/utils/db-error.utils';
+import { assertWriteOk, NoRowsAffectedError } from '@core/utils/db-error.utils';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -15,7 +15,15 @@ import type {
   CreateTaskPayload,
   RecipientOption,
 } from '@core/models/ui/task.model';
-import { canSendTo, isOverdue, mapTaskDtoToRow } from '@core/utils/task.utils';
+import {
+  canSendTo,
+  dueDateToInstant,
+  isOverdue,
+  mapTaskDtoToRow,
+  taskBranchScopeFilter,
+  taskEditPayload,
+  type TaskEditChanges,
+} from '@core/utils/task.utils';
 
 // Maps currentUser().role (runtime value = DB roles.name) → TaskFromRole
 // DB seed stores 'secretary' (English), not 'secretaria'
@@ -45,6 +53,9 @@ type RawTaskRow = Task & {
   to_user: { first_names: string; paternal_last_name: string; active: boolean } | null;
   reply_count: Array<{ count: number }>;
 };
+
+/** Broadcast de tarea eliminada (hotfix-104-b): el soft delete no llega por postgres_changes. */
+const TASK_DELETED_EVENT = 'task-deleted';
 
 @Injectable({ providedIn: 'root' })
 export class TasksFacade {
@@ -168,7 +179,7 @@ export class TasksFacade {
       .or(`status.neq.completed,created_at.gte.${ninetyDaysAgo}`);
 
     if (branchId !== null) {
-      query = query.eq('branch_id', branchId);
+      query = query.or(taskBranchScopeFilter(branchId, currentUser.dbId));
     }
 
     const { data, error } = await query.order('created_at', { ascending: false });
@@ -227,7 +238,7 @@ export class TasksFacade {
     };
 
     if (payload.type === 'task' && payload.due_date) {
-      insertPayload['due_date'] = payload.due_date;
+      insertPayload['due_date'] = dueDateToInstant(payload.due_date);
     }
 
     try {
@@ -273,7 +284,55 @@ export class TasksFacade {
     }
   }
 
-  async markSeen(taskId: string): Promise<void> {
+  /**
+   * El emisor corrige asunto, descripción o fecha límite de una tarea pendiente (spec 0053-b).
+   * El filtro `status = 'pending'` cubre AC-E1: si la iniciaron mientras se editaba, no se toca.
+   */
+  async updateTask(
+    task: Pick<Task, 'id' | 'type' | 'to_user_id'>,
+    changes: TaskEditChanges,
+  ): Promise<boolean> {
+    const payload = taskEditPayload(task.type, changes);
+    try {
+      assertWriteOk(
+        await this.supabase.client
+          .from('tasks')
+          .update(payload)
+          .eq('id', task.id)
+          .eq('status', 'pending')
+          .select('id'),
+        { requireRows: true },
+      );
+    } catch (err) {
+      if (err instanceof NoRowsAffectedError) {
+        this.toast.warning('La tarea ya no está pendiente; no se puede editar.');
+        await this.refreshSilently();
+      } else {
+        this.toast.error('No se pudo actualizar la tarea');
+      }
+      return false;
+    }
+
+    this.notifications
+      .createNotification({
+        recipientId: task.to_user_id,
+        type: 'system',
+        subject: `Tarea modificada: ${payload.subject}`,
+        message: `Se actualizó la tarea: ${payload.subject}`,
+        referenceType: 'task',
+      })
+      .catch(() => undefined);
+    await this.refreshSilently();
+    this.toast.success('Tarea actualizada');
+    return true;
+  }
+
+  /**
+   * El destinatario abrió la observación (spec 0001-b AC5): queda `seen`, no `completed` —
+   * completarla disparaba "Tarea completada" y cerraba el hilo (fix-231-b). Se avisa a quien la
+   * mandó desde acá: el trigger de la BD solo notifica al pasar a `completed`.
+   */
+  async markSeen(task: Pick<Task, 'id' | 'from_user_id' | 'subject'>): Promise<void> {
     const currentUser = this.auth.currentUser();
     if (!currentUser?.dbId) return;
 
@@ -283,15 +342,23 @@ export class TasksFacade {
         await this.supabase.client
           .from('tasks')
           .update({
-            status: 'completed',
-            completed_at: now,
+            status: 'seen',
             seen_at: now,
             seen_by: currentUser.dbId,
           })
-          .eq('id', taskId)
+          .eq('id', task.id)
           .select('id'),
         { requireRows: true },
       );
+      this.notifications
+        .createNotification({
+          recipientId: task.from_user_id,
+          type: 'system',
+          subject: 'Observación vista',
+          message: `${currentUser.name} vio tu observación: ${task.subject}`,
+          referenceType: 'task',
+        })
+        .catch(() => undefined);
       await this.refreshSilently();
     } catch {
       // fix-362-m: antes fallaba en silencio y la observación seguía "sin ver" sin explicación.
@@ -337,12 +404,21 @@ export class TasksFacade {
   }
 
   async softDelete(taskId: string): Promise<boolean> {
+    const task = this._tasks().find((t) => t.id === taskId);
     try {
       const { data, error } = await this.supabase.client.rpc('soft_delete_task', {
         p_task_id: taskId,
       });
       if (error) throw error;
-      if (!data) return false;
+      if (!data) {
+        // hotfix-107-b (S22): antes devolvía false sin decir nada y el botón parecía no funcionar.
+        this.toast.warning(
+          'No puedes eliminar esta tarea: ya no está pendiente o no la creaste tú.',
+        );
+        await this.refreshSilently();
+        return false;
+      }
+      if (task) this.broadcastDeleted(task);
       await this.refreshSilently();
       return true;
     } catch {
@@ -456,6 +532,7 @@ export class TasksFacade {
         { event: '*', schema: 'public', table: 'tasks', filter: `from_user_id=eq.${dbId}` },
         () => this.refreshSilently(),
       )
+      .on('broadcast', { event: TASK_DELETED_EVENT }, () => this.refreshSilently())
       .subscribe();
 
     this._receivedChannel = this.supabase.client
@@ -465,7 +542,28 @@ export class TasksFacade {
         { event: '*', schema: 'public', table: 'tasks', filter: `to_user_id=eq.${dbId}` },
         () => this.refreshSilently(),
       )
+      .on('broadcast', { event: TASK_DELETED_EVENT }, () => this.refreshSilently())
       .subscribe();
+  }
+
+  /**
+   * hotfix-104-b (S14): el soft delete deja la fila invisible por RLS para la otra persona, así
+   * que Realtime no le entrega el UPDATE. Se le avisa por broadcast (REST, sin unirse al canal)
+   * en los mismos canales que ya escucha. Best-effort: si falla, la verá al recargar.
+   */
+  private broadcastDeleted(task: Pick<Task, 'id' | 'from_user_id' | 'to_user_id'>): void {
+    const me = this.auth.currentUser()?.dbId;
+    const topics = [
+      task.to_user_id !== me ? `tasks-received-${task.to_user_id}` : null,
+      task.from_user_id !== me ? `tasks-sent-${task.from_user_id}` : null,
+    ].filter((t): t is string => t !== null);
+    for (const topic of topics) {
+      const channel = this.supabase.client.channel(topic);
+      void channel
+        .httpSend(TASK_DELETED_EVENT, { id: task.id })
+        .catch(() => undefined)
+        .finally(() => void this.supabase.client.removeChannel(channel));
+    }
   }
 
   private disposeRealtime(): void {

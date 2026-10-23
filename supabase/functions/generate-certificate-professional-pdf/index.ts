@@ -35,6 +35,12 @@ import {
   wrapLines as wrap,
 } from '../_shared/pdf-utils.ts';
 import { substituteTokens } from '../_shared/template-tokens.ts';
+import { checkCertificateDebt, overrideCounterFrom } from '../_shared/certificate-debt.ts';
+import {
+  checkPromotionFinished,
+  DEFAULT_CONVALIDACION,
+  professionalCourseLabel,
+} from '../_shared/promotion-certificate.ts';
 
 // ─── CORS ───
 const corsHeaders = {
@@ -60,24 +66,15 @@ const SCHOOL = {
 const SAMPLE_STUDENT = {
   fullName: 'ALUMNO DE PRUEBA EJEMPLO',
   rut: '11.111.111-1',
-  courseLabel: 'Licencia Profesional Clase A4',
+  licenseClass: 'A5',
+  /** fix-483-m: convalida, para que la vista previa muestre el texto de "Convalidación". */
+  convalidatedLicense: 'A3',
   startDate: '01-01-2026',
   endDate: '30-06-2026',
 };
 
 const LOGO_URL =
   'https://skvekggejikzxhzsjmkz.supabase.co/storage/v1/object/public/assets/chillan_capacita.png';
-
-// ─── Nombre del curso según clase de licencia ───
-function getCourseLabel(licenseClass: string): string {
-  const map: Record<string, string> = {
-    A2: 'Licencia Profesional Clase A2',
-    A3: 'Licencia Profesional Clase A3',
-    A4: 'Licencia Profesional Clase A4',
-    A5: 'Licencia Profesional Clase A5',
-  };
-  return map[licenseClass?.toUpperCase()] ?? 'Licencia Profesional';
-}
 
 // ─── Main ───
 Deno.serve(async (req: Request) => {
@@ -122,6 +119,7 @@ Deno.serve(async (req: Request) => {
         `
         id,
         branch_id,
+        pending_balance,
         students!inner(
           id,
           users!inner(first_names, paternal_last_name, maternal_last_name, rut)
@@ -139,6 +137,25 @@ Deno.serve(async (req: Request) => {
       return jsonRes({ error: `Enrollment ${enrollment_id} no encontrado` }, 404);
     }
 
+    // 1.0 fix-467-m: nunca antes del último día de la promoción, para cualquier rol. Va antes de la
+    //     deuda: no tiene sentido pedir un motivo si igual no se puede emitir.
+    // El join es a una sola fila (FK), aunque el cliente lo tipa como arreglo.
+    const promotionCourse = enrollment.promotion_courses as unknown as {
+      professional_promotions: { end_date: string | null } | null;
+    } | null;
+    const promotionEnd = promotionCourse?.professional_promotions?.end_date ?? null;
+    const promotion = checkPromotionFinished(promotionEnd, chileToday());
+    if (!promotion.ok) return jsonRes(promotion.body, promotion.status);
+
+    // 1.1 fix-466-m: misma convención de deuda que Clase B (spec 0010-i, AC8) — con saldo, solo se
+    //     emite si hay una habilitación `certificado` registrada con motivo. Vale para todo rol.
+    const debt = await checkCertificateDebt(
+      overrideCounterFrom(supabase),
+      enrollment_id,
+      enrollment.pending_balance,
+    );
+    if (!debt.ok) return jsonRes(debt.body, debt.status);
+
     const u = enrollment.students.users;
     const fullName = [u.paternal_last_name, u.maternal_last_name, u.first_names]
       .filter(Boolean)
@@ -147,7 +164,13 @@ Deno.serve(async (req: Request) => {
     const rut = u.rut ?? '';
 
     const licenseClass = enrollment.courses?.license_class ?? 'A4';
-    const courseLabel = getCourseLabel(licenseClass);
+    // fix-483-m: la convalidación simultánea va en el nombre del curso.
+    const { data: validation } = await supabase
+      .from('license_validations')
+      .select('convalidated_license')
+      .eq('enrollment_id', enrollment_id)
+      .maybeSingle();
+    const convalidatedLicense: string | null = validation?.convalidated_license ?? null;
 
     const promo = enrollment.promotion_courses?.professional_promotions;
     const startDate = promo?.start_date ? fmtDateShort(promo.start_date) : '';
@@ -158,6 +181,12 @@ Deno.serve(async (req: Request) => {
       loadPngForPdf(LOGO_URL),
       fetchDocumentContent(supabase, enrollment.branch_id, 'certificate_professional'),
     ]);
+    // fix-483-m: el texto de la convalidación sale de la plantilla (campo "convalidacion").
+    const courseLabel = professionalCourseLabel(
+      licenseClass,
+      convalidatedLicense,
+      content['convalidacion'] ?? DEFAULT_CONVALIDACION,
+    );
 
     // 4. Build PDF
     const pdfBytes = buildCertificatePdf({
@@ -189,52 +218,30 @@ Deno.serve(async (req: Request) => {
       .update({ certificate_professional_pdf_url: storagePath })
       .eq('id', enrollment_id);
 
-    // 7. Upsert registro en `certificates` y registrar en `certificate_issuance_log`
+    // 7. Registro en `certificates` (fix-461-m): emisión atómica vía RPC (mismo folio global que
+    //    Clase B; antes "max(folio)+1" fuera de transacción chocaba y el error se ignoraba).
     const studentId: number = enrollment.students.id;
-    let certId: number | null = null;
+    const { data: issued, error: issueErr } = await supabase
+      .rpc('issue_certificate', {
+        p_enrollment_id: enrollment_id,
+        p_student_id: studentId,
+        p_type: 'professional',
+        p_issued_by: callerUserId,
+      })
+      .single();
 
-    const { data: existingCert } = await supabase
-      .from('certificates')
-      .select('id')
-      .eq('enrollment_id', enrollment_id)
-      .eq('type', 'professional')
-      .maybeSingle();
-
-    if (existingCert) {
-      certId = existingCert.id;
-    } else {
-      const { data: maxFolioRes } = await supabase
-        .from('certificates')
-        .select('folio')
-        .order('folio', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const nextFolio = (maxFolioRes?.folio ?? 0) + 1;
-
-      const { data: newCert, error: certErr } = await supabase
-        .from('certificates')
-        .insert({
-          folio: nextFolio,
-          enrollment_id,
-          student_id: studentId,
-          type: 'professional',
-          status: 'issued',
-          issued_date: chileToday(),
-          issued_by: callerUserId,
-        })
-        .select('id')
-        .single();
-
-      if (!certErr && newCert) certId = newCert.id;
+    if (issueErr || !issued) {
+      return jsonRes(
+        { error: `No se pudo registrar el certificado: ${issueErr?.message ?? 'sin respuesta'}` },
+        500,
+      );
     }
 
-    if (certId !== null) {
-      await supabase.from('certificate_issuance_log').insert({
-        certificate_id: certId,
-        action: 'generated',
-        user_id: callerUserId,
-      });
-    }
+    await supabase.from('certificate_issuance_log').insert({
+      certificate_id: issued.id,
+      action: 'generated',
+      user_id: callerUserId,
+    });
 
     // 8. Signed URL de corta vida (1 hora)
     const { data: signedData, error: signErr } = await supabase.storage
@@ -314,7 +321,11 @@ async function handlePreviewOrSample(
   const pdfBytes = buildCertificatePdf({
     fullName: SAMPLE_STUDENT.fullName,
     rut: SAMPLE_STUDENT.rut,
-    courseLabel: SAMPLE_STUDENT.courseLabel,
+    courseLabel: professionalCourseLabel(
+      SAMPLE_STUDENT.licenseClass,
+      SAMPLE_STUDENT.convalidatedLicense,
+      content['convalidacion'] ?? DEFAULT_CONVALIDACION,
+    ),
     startDate: SAMPLE_STUDENT.startDate,
     endDate: SAMPLE_STUDENT.endDate,
     todayText: todayInSpanish(),
@@ -336,7 +347,6 @@ function sanitize(name: string): string {
 function fmtDateShort(ts: string): string {
   return formatChilePattern(ts, 'dd-MM-yyyy') ?? '';
 }
-
 
 function todayInSpanish(): string {
   const meses = [

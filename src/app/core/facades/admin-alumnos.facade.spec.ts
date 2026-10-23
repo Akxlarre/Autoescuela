@@ -936,48 +936,112 @@ describe('AdminAlumnosFacade', () => {
   });
 
   // ─── fix-027: aislamiento por sede de la secretaria ────────────────────────
-  describe('aislamiento por sede (fix-027, AC-F27-1/3)', () => {
-    /** Builder que captura las llamadas a `.eq(...)` (el filtro de sede). */
-    function mockStudentsCapturingEq(): { eq: any } {
+  describe('aislamiento por sede (fix-027, AC-F27-1/3; fix-458-m)', () => {
+    /**
+     * fix-458-m: la sede ya no se filtra en la query (`users.branch_id`) sino con
+     * `scopeStudentsToBranch()` sobre las matrículas — un alumno es de cada sede donde tiene
+     * matrícula (DG-115). Estos tests miran qué filas quedan, no qué `.eq()` se llamó.
+     */
+    const PARA_SEDE = [
+      // id, sede del usuario, sedes de sus matrículas
+      [1, 1, [1]], // de la sede 1, matrícula en la 1
+      [2, 2, [1]], // de la sede 2 con matrícula en la 1 (Samuel, #0008)
+      [3, 1, [2]], // de la sede 1, re-matriculado solo en la 2
+      [4, 2, [2]], // de la sede 2, matrícula en la 2
+    ] as const;
+
+    function mockStudentsForBranches(): { eq: any } {
+      const data = PARA_SEDE.map(([id, userBranch, enrBranches]) => ({
+        id,
+        status: 'active',
+        address: null,
+        users: {
+          id,
+          rut: `${id}-0`,
+          first_names: 'N',
+          paternal_last_name: `A${id}`,
+          maternal_last_name: null,
+          email: null,
+          phone: null,
+          branch_id: userBranch,
+          branches: { name: `Usuario sede ${userBranch}` },
+        },
+        enrollments: enrBranches.map((b, i) => ({
+          id: id * 10 + i,
+          number: `${id}${i}`,
+          status: 'active',
+          payment_status: 'paid',
+          pending_balance: 0,
+          total_paid: 0,
+          docs_complete: true,
+          created_at: '2026-01-01T00:00:00Z',
+          license_group: 'class_b',
+          branch_id: b,
+          branches: { name: `Matrícula sede ${b}` },
+          courses: { id: 1, name: 'Clase B' },
+          student_documents: [],
+        })),
+        standalone_course_enrollments: [],
+      }));
       const eq = vi.fn(() => builder);
       const builder: any = {
         select: vi.fn(() => builder),
         neq: vi.fn(() => builder),
         eq,
-        order: vi.fn(() => Promise.resolve({ data: [], error: null })),
+        in: vi.fn(() => builder),
+        not: vi.fn(() => builder),
+        order: vi.fn(() => Promise.resolve({ data, error: null })),
       };
       supabaseSpy.client.from = vi.fn(() => builder);
       return { eq };
     }
 
-    it('secretaria: filtra por su branchId aunque el selector (admin) sea null', async () => {
+    const ids = () =>
+      facade
+        .alumnos()
+        .map((r) => r.id)
+        .sort();
+
+    it('secretaria sede 1: sus alumnos + los de otra sede con matrícula en la 1; no los re-matriculados en la 2', async () => {
       authFacadeSpy.currentUser.mockReturnValue({ role: 'secretaria', branchId: 1 });
       branchFacadeSpy.selectedBranchId.mockReturnValue(null);
-      const { eq } = mockStudentsCapturingEq();
+      const { eq } = mockStudentsForBranches();
 
       await facade.initialize();
 
-      expect(eq).toHaveBeenCalledWith('users.branch_id', 1);
+      expect(ids()).toEqual(['1', '2']);
+      expect(eq).not.toHaveBeenCalledWith('users.branch_id', expect.anything());
     });
 
-    it('secretaria sin sede (misconfig): filtra por sentinel → ninguna fila, NUNCA todas', async () => {
+    it('la columna Sede muestra la sede de la matrícula, no la del usuario (fix-458-m)', async () => {
+      authFacadeSpy.currentUser.mockReturnValue({ role: 'secretaria', branchId: 1 });
+      branchFacadeSpy.selectedBranchId.mockReturnValue(null);
+      mockStudentsForBranches();
+
+      await facade.initialize();
+
+      const samuel = facade.alumnos().find((r) => r.id === '2');
+      expect(samuel?.sucursal).toBe('Matrícula sede 1');
+    });
+
+    it('secretaria sin sede (misconfig): ninguna fila, NUNCA todas', async () => {
       authFacadeSpy.currentUser.mockReturnValue({ role: 'secretaria', branchId: null });
       branchFacadeSpy.selectedBranchId.mockReturnValue(null);
-      const { eq } = mockStudentsCapturingEq();
+      mockStudentsForBranches();
 
       await facade.initialize();
 
-      expect(eq).toHaveBeenCalledWith('users.branch_id', -1);
+      expect(ids()).toEqual([]);
     });
 
-    it('admin con "Todas las escuelas" (null): NO aplica filtro de sede', async () => {
+    it('admin con "Todas las escuelas" (null): todos los alumnos', async () => {
       authFacadeSpy.currentUser.mockReturnValue({ role: 'admin', branchId: null });
       branchFacadeSpy.selectedBranchId.mockReturnValue(null);
-      const { eq } = mockStudentsCapturingEq();
+      mockStudentsForBranches();
 
       await facade.initialize();
 
-      expect(eq).not.toHaveBeenCalled();
+      expect(ids()).toEqual(['1', '2', '3', '4']);
     });
   });
 
@@ -1016,17 +1080,58 @@ describe('AdminAlumnosFacade', () => {
   });
 
   describe('grant multi-sede (spec 0017, AC1/AC2)', () => {
-    function mockStudentsCapturingEq(): { eq: any } {
-      const eq = vi.fn(() => builder);
+    /** Un alumno con matrícula en la sede 1 (id 1) y otro con matrícula en la sede 2 (id 2). */
+    function mockStudentsOnePerBranch(): void {
+      const data = [1, 2].map((b) => ({
+        id: b,
+        status: 'active',
+        address: null,
+        users: {
+          id: b,
+          rut: `${b}-0`,
+          first_names: 'N',
+          paternal_last_name: `A${b}`,
+          maternal_last_name: null,
+          email: null,
+          phone: null,
+          branch_id: b,
+          branches: { name: `Sede ${b}` },
+        },
+        enrollments: [
+          {
+            id: b * 10,
+            number: `${b}0`,
+            status: 'active',
+            payment_status: 'paid',
+            pending_balance: 0,
+            total_paid: 0,
+            docs_complete: true,
+            created_at: '2026-01-01T00:00:00Z',
+            license_group: 'class_b',
+            branch_id: b,
+            branches: { name: `Sede ${b}` },
+            courses: { id: 1, name: 'Clase B' },
+            student_documents: [],
+          },
+        ],
+        standalone_course_enrollments: [],
+      }));
       const builder: any = {
         select: vi.fn(() => builder),
         neq: vi.fn(() => builder),
-        eq,
-        order: vi.fn(() => Promise.resolve({ data: [], error: null })),
+        eq: vi.fn(() => builder),
+        in: vi.fn(() => builder),
+        not: vi.fn(() => builder),
+        order: vi.fn(() => Promise.resolve({ data, error: null })),
       };
       supabaseSpy.client.from = vi.fn(() => builder);
-      return { eq };
     }
+
+    const ids = () =>
+      facade
+        .alumnos()
+        .map((r) => r.id)
+        .sort();
 
     it('secretaria con grant: respeta el selector (sede elegida), no su sede propia', async () => {
       authFacadeSpy.currentUser.mockReturnValue({
@@ -1035,25 +1140,25 @@ describe('AdminAlumnosFacade', () => {
         canAccessBothBranches: true,
       });
       branchFacadeSpy.selectedBranchId.mockReturnValue(2);
-      const { eq } = mockStudentsCapturingEq();
+      mockStudentsOnePerBranch();
 
       await facade.initialize();
 
-      expect(eq).toHaveBeenCalledWith('users.branch_id', 2);
+      expect(ids()).toEqual(['2']);
     });
 
-    it('secretaria con grant + "Todas" (null): NO aplica filtro de sede (como admin)', async () => {
+    it('secretaria con grant + "Todas" (null): sin filtro de sede (como admin)', async () => {
       authFacadeSpy.currentUser.mockReturnValue({
         role: 'secretaria',
         branchId: 1,
         canAccessBothBranches: true,
       });
       branchFacadeSpy.selectedBranchId.mockReturnValue(null);
-      const { eq } = mockStudentsCapturingEq();
+      mockStudentsOnePerBranch();
 
       await facade.initialize();
 
-      expect(eq).not.toHaveBeenCalled();
+      expect(ids()).toEqual(['1', '2']);
     });
   });
 });

@@ -1,7 +1,7 @@
 # Hotfix: "Reenviar invitación" usa el correo del formulario, no el guardado
 > id: hotfix-067-b-reenviar-invitacion-correo-guardado
 > refs: ASG-i-034 (sospecha S10, confirmada en fix-197-b)
-> status: closed
+> status: done
 > created: 2026-10-07
 
 ## Problema

@@ -252,10 +252,6 @@ export class AdminAlumnoDetalleFacade {
   readonly progresoPracticaProf = this._progresoPracticaProf.asReadonly();
   readonly notaPromedioProf = this._notaPromedioProf.asReadonly();
   readonly elegibilidadProf = this._elegibilidadProf.asReadonly();
-  readonly elegibleProf = computed(() => {
-    const e = this._elegibilidadProf();
-    return e.teoria && e.pago && e.nota;
-  });
 
   readonly instructores = this._instructores.asReadonly();
   readonly scheduleGrid = this._scheduleGrid.asReadonly();
@@ -488,6 +484,7 @@ export class AdminAlumnoDetalleFacade {
             certificate_b_pdf_url, certificate_professional_pdf_url,
             license_initial_url, license_full_url,
             courses!inner(name, practical_hours, is_reinforcement),
+            promotion_courses(professional_promotions(end_date)),
             digital_contracts(file_url, signed_contract_url)
           )
         `,
@@ -546,6 +543,8 @@ export class AdminAlumnoDetalleFacade {
             branchId: (e.branch_id as number | null) ?? null,
             licenseGroup: lg,
             promotionCourseId: (e.promotion_course_id as number | null) ?? null,
+            promotionEndDate:
+              (e.promotion_courses?.professional_promotions?.end_date as string | null) ?? null,
             createdAt: e.created_at,
             status: e.status ?? '',
             certPdfUrl:

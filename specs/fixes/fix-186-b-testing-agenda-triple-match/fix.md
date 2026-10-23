@@ -113,3 +113,29 @@ verificado después que no quedó nada) + regresión `supabase/tests/rls/0047-b-
 **Regresión encontrada y corregida el mismo día:** `fix-226-b` (#293) — la función nueva de
 `fix-224-b` no tenía `GRANT EXECUTE` para `authenticated` y la vista (security_invoker) fallaba con
 sesión de admin/secretaria desde el 15-oct: Agenda y elección de horarios caídas ~1 día.
+
+## Segunda tanda (2026-10-19)
+
+`e2e/agenda-2.spec.ts` (solo lectura): **14/14 en verde**. Sin bugs nuevos.
+
+| Casos | Resultado |
+|---|---|
+| A05, A09 | ✅ primera carga 5,8 s (< 10 s); al volver, grilla al instante |
+| B04 | ✅ indicador "ahora" solo en la semana actual y dentro de un bloque (en la pausa de 5 min entre bloques no aparece) |
+| B06 | ✅ leyenda con los 5 estados |
+| C07 | ✅ con el límite en 2 meses se navegan 8 semanas |
+| C11 | ✅ "Ir a fecha" eligiendo hoy desde otra semana vuelve a la actual |
+| C13 | ✅ navegar rápido con red lenta termina en la semana pedida |
+| D07 | anotado: al salir y volver se conserva el instructor elegido |
+| E08 | ✅ Tab + Enter sobre un horario abre el detalle |
+| P05, P06 | ✅ barra sin superposiciones a 820 px; con Tab se llega a todos los controles |
+
+## Decisiones del owner (2026-10-19)
+
+| Caso | Decisión | Track |
+|---|---|---|
+| P03 | En el celular la Agenda abre en el día de hoy | `hotfix-094-b` (#313) |
+| E11 | El detalle de una clase tiene "Ver ficha del alumno" | `hotfix-095-b` (#314) |
+| B11 | Desactivar un instructor con clases futuras avisa y pide reasignarlas (ya lo hacía `fix-205-b`); además la Agenda mostraba "#id" en sus clases | `hotfix-097-b` (#316) |
+| B15 / M09 | Los feriados no ofrecen horarios; lista sincronizada sola (mensual) e incluye el 20 de agosto de Chillán | spec `0052-b` (#318) |
+| C08 | El límite de semanas de la Agenda sigue siendo una preferencia por equipo (desde fix-228-b los horarios cubren los 4 meses igual) | — (queda así) |

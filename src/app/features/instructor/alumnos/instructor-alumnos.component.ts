@@ -461,7 +461,7 @@ const PAGE_SIZE = 9;
         transition: 0.15s;
       }
       .filter-pill--active {
-        background: var(--color-primary);
+        background: var(--brand-strong);
         color: #fff;
         border-color: transparent;
       }
@@ -531,7 +531,7 @@ const PAGE_SIZE = 9;
         gap: 4px;
         font-size: var(--text-xs);
         font-weight: var(--font-bold);
-        color: var(--color-primary);
+        color: var(--brand-strong);
         padding: var(--space-1) var(--space-2);
         border-radius: var(--radius-sm);
         background: color-mix(in sRGB, var(--color-primary) 8%, transparent);

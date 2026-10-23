@@ -1,7 +1,7 @@
 # Hotfix: el test de Mantenimientos de un vehículo falla desde spec 0051-b
 > id: hotfix-076-b-test-mantenimientos-basepath
 > refs: spec 0051-b (Flota para la secretaria)
-> status: closed
+> status: done
 > created: 2026-10-15
 
 ## Problema

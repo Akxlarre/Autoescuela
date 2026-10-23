@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { isDevMode } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { LoginComponent } from './login.component';
 import loginSource from './login.component.ts?raw';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -17,7 +17,11 @@ describe('LoginComponent — credenciales de prueba (hotfix-007-i)', () => {
       imports: [LoginComponent],
       providers: [
         { provide: AuthFacade, useValue: { login: vi.fn(), resetPassword: vi.fn() } },
-        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: Router, useValue: { navigate: vi.fn(), navigateByUrl: vi.fn() } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: convertToParamMap({}) } },
+        },
         { provide: GsapAnimationsService, useValue: { animateHero: vi.fn() } },
         { provide: ErrorSanitizerService, useValue: { sanitize: vi.fn() } },
       ],
@@ -68,7 +72,11 @@ describe('LoginComponent — doble envío (hotfix-090-b)', () => {
       imports: [LoginComponent],
       providers: [
         { provide: AuthFacade, useValue: { login, resetPassword: vi.fn() } },
-        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: Router, useValue: { navigate: vi.fn(), navigateByUrl: vi.fn() } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: convertToParamMap({}) } },
+        },
         { provide: GsapAnimationsService, useValue: { animateHero: vi.fn() } },
         { provide: ErrorSanitizerService, useValue: { sanitize: vi.fn() } },
       ],
@@ -82,5 +90,48 @@ describe('LoginComponent — doble envío (hotfix-090-b)', () => {
     await Promise.all([primero, segundo]);
 
     expect(login).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─── hotfix-096-b (A18 de ASG-i-022): tras entrar se vuelve a la pantalla pedida. ───
+describe('LoginComponent — vuelve a la pantalla pedida (hotfix-096-b)', () => {
+  function setup(returnUrl: string | null) {
+    const navigateByUrl = vi.fn();
+    TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        {
+          provide: AuthFacade,
+          useValue: { login: vi.fn().mockResolvedValue({ error: null }), resetPassword: vi.fn() },
+        },
+        { provide: Router, useValue: { navigate: vi.fn(), navigateByUrl } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { queryParamMap: convertToParamMap(returnUrl ? { returnUrl } : {}) },
+          },
+        },
+        { provide: GsapAnimationsService, useValue: { animateHero: vi.fn() } },
+        { provide: ErrorSanitizerService, useValue: { sanitize: vi.fn() } },
+      ],
+    });
+    const component = TestBed.createComponent(LoginComponent).componentInstance;
+    return { component, navigateByUrl };
+  }
+  const datos = { email: 'a@b.cl', password: 'x', rememberMe: true };
+
+  it('con returnUrl interno, entra a esa pantalla', async () => {
+    const { component, navigateByUrl } = setup('/app/admin/pagos');
+    await component.onSubmit(datos);
+    expect(navigateByUrl).toHaveBeenCalledWith('/app/admin/pagos');
+  });
+
+  it('sin returnUrl o con uno externo, entra a /app', async () => {
+    for (const raw of [null, 'https://otro-sitio.cl/app/admin']) {
+      TestBed.resetTestingModule();
+      const { component, navigateByUrl } = setup(raw);
+      await component.onSubmit(datos);
+      expect(navigateByUrl).toHaveBeenCalledWith('/app');
+    }
   });
 });
