@@ -29,11 +29,14 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@6';
 import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
+import { chileYear } from '../_shared/chile-time.ts';
 import {
   buildZoomEmailContent,
   escapeHtml,
   parseEnrollmentIds,
+  resolveZoomEmailBrand,
   selectZoomRecipients,
+  type ZoomEmailBrand,
 } from '../_shared/zoom-email.ts';
 
 const corsHeaders = {
@@ -48,8 +51,20 @@ function jsonResponse(data: unknown, status = 200) {
   });
 }
 
-/** Todos los argumentos se escapan aquí: ninguno se interpola crudo en el HTML (fix-367-m). */
-function buildEmailHtml(rawName: string, rawTopic: string, rawDate: string, rawLink: string): string {
+/**
+ * Todos los argumentos se escapan aquí: ninguno se interpola crudo en el HTML (fix-367-m).
+ * fix-062-i: nombre, iniciales y colores de la sede del ciclo (antes "Conductores Chillán" fijo).
+ */
+function buildEmailHtml(
+  rawName: string,
+  rawTopic: string,
+  rawDate: string,
+  rawLink: string,
+  brand: ZoomEmailBrand,
+): string {
+  const { theme } = brand;
+  const school = escapeHtml(brand.schoolName);
+  const initials = escapeHtml(brand.initials);
   const name = escapeHtml(rawName);
   const topic = escapeHtml(rawTopic);
   const date = escapeHtml(rawDate);
@@ -66,28 +81,28 @@ function buildEmailHtml(rawName: string, rawTopic: string, rawDate: string, rawL
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif; background-color: #f1f5f9; line-height: 1.6; }
     .email-wrapper { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-    .email-header { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 60%, #8b5cf6 100%); padding: 44px 36px 40px; text-align: center; position: relative; overflow: hidden; }
+    .email-header { background-color: ${theme.brandColor}; background: ${theme.gradientHero}; padding: 44px 36px 40px; text-align: center; position: relative; overflow: hidden; }
     .email-header::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(to right, rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.06) 1px, transparent 1px); background-size: 36px 36px; }
     .logo-badge { width: 60px; height: 60px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px; backdrop-filter: blur(8px); }
     .logo-badge span { color: #fff; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
     .company-name { color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
     .email-body { padding: 44px 36px 36px; }
-    .greeting { font-size: 13px; font-weight: 600; color: #0ea5e9; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
+    .greeting { font-size: 13px; font-weight: 600; color: ${theme.brandColor}; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
     .title { font-size: 28px; font-weight: 800; color: #0f172a; line-height: 1.2; margin-bottom: 12px; }
     .subtitle { font-size: 15px; color: #64748b; margin-bottom: 28px; line-height: 1.7; }
     .divider { height: 1px; background: linear-gradient(to right, transparent, #e2e8f0, transparent); margin: 24px 0; }
-    .info-box { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 3px solid #0ea5e9; padding: 18px 20px; border-radius: 10px; margin-bottom: 28px; }
-    .info-box-label { font-size: 11px; font-weight: 700; color: #0369a1; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
-    .info-box-value { font-size: 16px; font-weight: 700; color: #0c4a6e; }
+    .info-box { background: ${theme.brandColorLight}; border-left: 3px solid ${theme.brandColor}; padding: 18px 20px; border-radius: 10px; margin-bottom: 28px; }
+    .info-box-label { font-size: 11px; font-weight: 700; color: ${theme.brandColorDark}; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+    .info-box-value { font-size: 16px; font-weight: 700; color: ${theme.brandColorDark}; }
     .topic-label { font-size: 12px; font-weight: 600; color: #0369a1; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
-    .topic-value { font-size: 14px; color: #0369a1; margin-top: 10px; }
+    .topic-value { font-size: 14px; color: ${theme.brandColorDark}; margin-top: 10px; }
     .cta-section { text-align: center; margin: 28px 0 20px; }
     .cta-label { font-size: 13px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
-    .cta-button { display: inline-block; background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%); color: #ffffff !important; text-decoration: none; padding: 16px 48px; border-radius: 12px; font-weight: 700; font-size: 16px; letter-spacing: 0.3px; box-shadow: 0 4px 20px rgba(14,165,233,0.35); }
+    .cta-button { display: inline-block; background-color: ${theme.brandColor}; background: ${theme.gradientHero}; color: #ffffff !important; text-decoration: none; padding: 16px 48px; border-radius: 12px; font-weight: 700; font-size: 16px; letter-spacing: 0.3px; }
     .fallback-label { font-size: 12px; color: #94a3b8; margin: 20px 0 8px; text-align: center; }
     .fallback-link { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; font-size: 12px; color: #475569; word-break: break-all; }
     .email-footer { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 28px 36px; text-align: center; }
-    .footer-divider { width: 40px; height: 2px; background: linear-gradient(to right, #0ea5e9, #6366f1); border-radius: 2px; margin: 0 auto 14px; }
+    .footer-divider { width: 40px; height: 2px; background: ${theme.brandColor}; border-radius: 2px; margin: 0 auto 14px; }
     .footer-brand { font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 6px; }
     .footer-text { font-size: 12px; color: #94a3b8; line-height: 1.6; }
   </style>
@@ -95,8 +110,8 @@ function buildEmailHtml(rawName: string, rawTopic: string, rawDate: string, rawL
 <body>
 <div class="email-wrapper">
   <div class="email-header">
-    <div class="logo-badge"><span>CC</span></div>
-    <p class="company-name">Conductores Chillán</p>
+    <div class="logo-badge"><span>${initials}</span></div>
+    <p class="company-name">${school}</p>
   </div>
   <div class="email-body">
     <p class="greeting">Clase Teórica · Clase B</p>
@@ -117,8 +132,8 @@ function buildEmailHtml(rawName: string, rawTopic: string, rawDate: string, rawL
   </div>
   <div class="email-footer">
     <div class="footer-divider"></div>
-    <p class="footer-brand">Conductores Chillán</p>
-    <p class="footer-text">Este correo fue enviado automáticamente. Por favor no responder.<br>© 2026 Conductores Chillán. Todos los derechos reservados.</p>
+    <p class="footer-brand">${school}</p>
+    <p class="footer-text">Este correo fue enviado automáticamente. Por favor no responder.<br>© ${chileYear()} ${school}. Todos los derechos reservados.</p>
   </div>
 </div>
 </body>
@@ -161,6 +176,21 @@ Deno.serve(async (req: Request) => {
     const content = buildZoomEmailContent(session);
     if (!content) return jsonResponse({ error: 'La clase no tiene un enlace Zoom válido (https)' }, 400);
 
+    // fix-062-i: marca de la sede del ciclo (website_config es de lectura pública).
+    const { data: cycle } = await supabaseUser
+      .from('class_b_theory_cycles')
+      .select('branch_id')
+      .eq('id', session.cycle_id)
+      .maybeSingle();
+    const { data: websiteConfig } = cycle?.branch_id
+      ? await supabaseUser
+          .from('website_config')
+          .select('config')
+          .eq('branch_id', cycle.branch_id)
+          .maybeSingle()
+      : { data: null };
+    const brand = resolveZoomEmailBrand(websiteConfig?.config?.brand);
+
     const { data: rows, error: rowsError } = await supabaseUser
       .from('enrollments')
       .select('id, theory_cycle_id, status, students!inner(users!inner(first_names, paternal_last_name, email))')
@@ -195,7 +225,7 @@ Deno.serve(async (req: Request) => {
           from,
           to: recipient.email,
           subject: content.subject,
-          html: buildEmailHtml(recipient.name, content.topic, content.date, content.zoomLink),
+          html: buildEmailHtml(recipient.name, content.topic, content.date, content.zoomLink, brand),
         });
         result.sent++;
       } catch (err) {

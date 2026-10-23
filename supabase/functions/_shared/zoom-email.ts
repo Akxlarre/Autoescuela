@@ -5,6 +5,11 @@
 // navegador — el body solo trae `classId` y `enrollmentIds`.
 
 import { formatChileDate } from './chile-time.ts';
+import {
+  type ContractEmailTheme,
+  resolveContractEmailTheme,
+  schoolInitials,
+} from './contract-email.ts';
 
 /** Fila de `class_b_theory_sessions` que usa el correo. */
 export interface ZoomSessionRow {
@@ -109,6 +114,28 @@ export function selectZoomRecipients(
     out.push({ name: name || 'Alumno', email });
   }
   return out;
+}
+
+export interface ZoomEmailBrand {
+  schoolName: string;
+  initials: string;
+  theme: ContractEmailTheme;
+}
+
+/**
+ * Marca del correo según la sede del ciclo (fix-062-i): `website_config.config.brand` de esa sede,
+ * igual que los correos del certificado y del contrato (hotfix-159-m). Sin marca → "Autoescuela"
+ * con el tema azul.
+ */
+export function resolveZoomEmailBrand(
+  brand: { name?: string | null; theme?: string | null } | null | undefined,
+): ZoomEmailBrand {
+  const schoolName = (brand?.name?.trim() || 'Autoescuela').normalize('NFC');
+  return {
+    schoolName,
+    initials: schoolInitials(schoolName),
+    theme: resolveContractEmailTheme(brand?.theme),
+  };
 }
 
 /** `enrollmentIds` del body: enteros positivos, sin repetir, a lo más `max`. Null si es inválido. */

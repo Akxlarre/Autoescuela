@@ -396,6 +396,54 @@ describe('CiclosTeoricosFacade', () => {
 
       expect(facade.sendingClassId()).toBeNull();
     });
+
+    // fix-062-i: antes estampaba zoom_sent_at aunque no saliera ningún correo.
+    it('si no salió ningún correo, no marca la clase como enviada y avisa con un error', async () => {
+      mock.invoke.mockResolvedValueOnce({ data: { sent: 0, errors: ['j@x.cl'] }, error: null });
+
+      await facade.sendZoomEmail(11, [100]);
+
+      expect(mock.updateCalls.some((c) => c.table === 'class_b_theory_sessions')).toBe(false);
+      expect(facade.clases()[0].zoomSentAt).toBeNull();
+      expect(toast.error).toHaveBeenCalledWith(
+        'No se envió ningún correo',
+        expect.stringContaining('j@x.cl'),
+      );
+      expect(toast.warning).not.toHaveBeenCalled();
+    });
+
+    it('con al menos un correo enviado marca la clase y avisa envío parcial (AC-F4)', async () => {
+      mock.invoke.mockResolvedValueOnce({ data: { sent: 1, errors: ['otro@x.cl'] }, error: null });
+
+      await facade.sendZoomEmail(11, [100]);
+
+      expect(facade.clases()[0].zoomSentAt).not.toBeNull();
+      expect(toast.warning).toHaveBeenCalledWith('Envío parcial', expect.any(String));
+    });
+
+    // fix-062-i (DG-085): el motivo real viene en error.context, no en error.message.
+    it('si la función rechaza el envío, muestra el motivo que devolvió', async () => {
+      const context = new Response(
+        JSON.stringify({ error: 'Sin destinatarios con correo en este ciclo' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+      mock.invoke.mockResolvedValueOnce({
+        data: null,
+        error: {
+          name: 'FunctionsHttpError',
+          message: 'Edge Function returned a non-2xx status code',
+          context,
+        },
+      });
+
+      await facade.sendZoomEmail(11, [100]);
+
+      expect(toast.error).toHaveBeenCalledWith(
+        'No se envió el enlace',
+        'Sin destinatarios con correo en este ciclo',
+      );
+      expect(facade.clases()[0].zoomSentAt).toBeNull();
+    });
   });
 
   describe('saveZoomLink', () => {

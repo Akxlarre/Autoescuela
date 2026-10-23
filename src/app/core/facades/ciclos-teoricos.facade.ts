@@ -6,6 +6,7 @@ import { formatCycleLabel } from '@core/utils/theory-cycle';
 import { buildDayLabel, monthsAgoIso } from '@core/utils/date.utils';
 import { buildStudentDisplayName, sortByPaternalLastNameAsc } from '@core/utils/student-name.util';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
+import { edgeFunctionUserMessage } from '@core/utils/edge-function-error.utils';
 import type {
   CicloAlumno,
   CicloAlumnoMovible,
@@ -268,10 +269,28 @@ export class CiclosTeoricosFacade {
       const { data, error } = await this.supabase.client.functions.invoke('send-zoom-email', {
         body: { classId, enrollmentIds: [...idSet] },
       });
-      if (error) throw error;
+      if (error) {
+        // fix-062-i (DG-085): el motivo real (sin destinatarios, enlace inválido…) viene en
+        // error.context; error.message es siempre un texto genérico.
+        this._emailResult.set({ sent: 0, errors: recipients.map((r) => r.email) });
+        this.toast.error(
+          'No se envió el enlace',
+          await edgeFunctionUserMessage(error, 'Error al enviar los correos'),
+        );
+        return;
+      }
 
       const result = data as ZoomEmailResult;
       this._emailResult.set(result);
+
+      // fix-062-i: sin ningún correo enviado la clase no queda como "enviada".
+      if (result.sent === 0) {
+        this.toast.error(
+          'No se envió ningún correo',
+          `Fallaron todos los destinatarios: ${result.errors.join(', ')}.`,
+        );
+        return;
+      }
 
       const { error: stampError } = await this.supabase.client
         .from('class_b_theory_sessions')

@@ -10,6 +10,7 @@ import {
   escapeHtml,
   isSafeZoomLink,
   parseEnrollmentIds,
+  resolveZoomEmailBrand,
   selectZoomRecipients,
   type ZoomEnrollmentRow,
 } from './zoom-email.ts';
@@ -100,4 +101,23 @@ Deno.test('parseEnrollmentIds valida y deduplica', () => {
   assertEquals(parseEnrollmentIds([0]), null);
   assertEquals(parseEnrollmentIds([1.5]), null);
   assertEquals(parseEnrollmentIds([1, 2, 3], 2), null);
+});
+
+// fix-062-i: antes el correo decía "Conductores Chillán" / "CC" a los alumnos de las dos sedes.
+Deno.test('la marca sale de la sede: nombre, iniciales y tema', () => {
+  const brand = resolveZoomEmailBrand({ name: 'Autoescuela Chillán', theme: 'roja' });
+  assertEquals(brand.schoolName, 'Autoescuela Chillán');
+  assertEquals(brand.initials, 'AC');
+  assertEquals(brand.theme.brandColor, '#fd2018');
+
+  const other = resolveZoomEmailBrand({ name: 'Conductores Chillán', theme: 'azul' });
+  assertEquals(other.initials, 'CC');
+  assertEquals(other.theme.brandColor, '#0ea5e9');
+});
+
+Deno.test('sin marca configurada usa "Autoescuela" y el tema azul', () => {
+  const brand = resolveZoomEmailBrand(null);
+  assertEquals(brand.schoolName, 'Autoescuela');
+  assertEquals(brand.theme.brandColor, '#0ea5e9');
+  assertEquals(resolveZoomEmailBrand({ name: '  ', theme: 'verde' }).schoolName, 'Autoescuela');
 });
