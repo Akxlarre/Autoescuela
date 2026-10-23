@@ -54,6 +54,7 @@ import { BranchGateComponent } from '@shared/components/branch-gate/branch-gate.
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
+import { PlainStepperDirective } from '@core/directives/plain-stepper.directive';
 
 const DEFAULT_PERSONAL_DATA: EnrollmentPersonalData = {
   rut: '',
@@ -96,6 +97,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
     ConfirmationComponent,
     DraftListComponent,
     BranchGateComponent,
+    PlainStepperDirective,
     SkeletonBlockComponent,
     ScrollRevealDirective,
     AnimateInDirective,

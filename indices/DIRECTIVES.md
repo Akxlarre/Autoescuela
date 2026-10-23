@@ -28,6 +28,7 @@
 |-----------|----------|-----------|--------|--------|
 | `ModalOverlayDirective` | `[appModalOverlay]` | Teleporta el modal al overlay container (z-index > topbar) | `appModalOverlay: boolean` | ✅ Estable |
 | `ModalFocusDirective` | `[appModalFocus]` | Foco del teclado en un modal (fix-390-m): lo lleva adentro al abrir (a `data-modal-autofocus` o al primer control), no deja salir a Tab y lo devuelve al control que lo abrió. Va en el `role="dialog"` dentro de un `@if`. No cierra con Escape | — | ✅ Estable |
+| `PlainStepperDirective` | `[appPlainStepper]` | Quita `role` y `aria-controls` del host (fix-068-i). Para `p-stepper` y cada `p-step-panel` usados **sin** `p-step-list` (solo para mostrar un panel por paso): PrimeNG declara `tablist`/`tabpanel` igual y axe marca `aria-required-children` + `aria-valid-attr-value` (críticos). Funciona porque los `host` bindings de la directiva se aplican después de los de PrimeNG. Uso: wizard de matrícula. No usar si hay `p-step-list`. | — | ✅ Estable |
 | `ScrollContainerDirective` | `[appScrollContainer]` | Scroll interno vertical/horizontal con `max-height` configurable. Evita desborde en páginas y drawers. Scrollbar usa tokens del DS. | `maxHeight: string` (`'65vh'`), `scrollX: boolean` (`false`) | ✅ Estable |
 
 ## Auto-Index — Directivas detectadas por AST (generado automáticamente)
