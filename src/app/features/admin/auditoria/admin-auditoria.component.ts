@@ -20,8 +20,9 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
-import { MODULE_OPTIONS } from '@core/models/ui/audit-log-row.model';
-import type { AuditLogRow } from '@core/models/ui/audit-log-row.model';
+import { AUDIT_ACTOR_OPTIONS, MODULE_OPTIONS } from '@core/models/ui/audit-log-row.model';
+import type { AuditActor, AuditLogRow } from '@core/models/ui/audit-log-row.model';
+import { auditUserLabel, usuariosForActor } from '@core/utils/audit-actor.utils';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { withAllOption } from '@core/utils/filter-options.utils';
@@ -62,8 +63,8 @@ const ACTION_OPTIONS = withAllOption(
         [animateOnInit]="false"
         [loading]="facade.isLoading()"
         title="Log de Auditoría"
-        subtitle="Registro inmutable de todas las acciones de las secretarias"
-        contextLine="Solo acciones de secretarias"
+        subtitle="Registro inmutable de lo que hacen secretarias, administradores y el sistema"
+        contextLine="Filtra por quién hizo la acción"
         [actions]="[]"
       />
 
@@ -74,7 +75,7 @@ const ACTION_OPTIONS = withAllOption(
       >
         <!-- Toolbar de filtros -->
         <div class="p-5 border-b border-border-default">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-4">
             <!-- Fecha desde -->
             <div class="flex flex-col gap-1">
               <app-date-input
@@ -97,18 +98,33 @@ const ACTION_OPTIONS = withAllOption(
               />
             </div>
 
-            <!-- Secretaria -->
+            <!-- Quién (fix-069-i) -->
             <div class="flex flex-col gap-1">
-              <label class="text-xs font-medium text-text-secondary">Secretaria</label>
+              <label class="text-xs font-medium text-text-secondary">Quién</label>
               <p-select
-                [options]="secretariaOptions()"
-                [(ngModel)]="secretariaModel"
+                [options]="actorOptions"
+                [(ngModel)]="quienModel"
+                optionLabel="label"
+                optionValue="value"
+                styleClass="w-full"
+                aria-label="Filtrar por quién hizo la acción"
+                data-llm-description="Filtrar logs por secretarias, administradores o el sistema automático"
+              />
+            </div>
+
+            <!-- Usuario -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-medium text-text-secondary">Usuario</label>
+              <p-select
+                [options]="usuarioOptions()"
+                [(ngModel)]="usuarioModel"
                 optionLabel="label"
                 optionValue="value"
                 placeholder="Todos los usuarios"
                 styleClass="w-full"
-                aria-label="Filtrar por secretaria"
-                data-llm-description="Filtrar logs por secretaria específica"
+                [disabled]="filtroQuien() === 'sistema'"
+                aria-label="Filtrar por usuario"
+                data-llm-description="Filtrar logs por un usuario específico"
               />
             </div>
 
@@ -261,13 +277,16 @@ const ACTION_OPTIONS = withAllOption(
                 <!-- Usuario -->
                 <div class="flex flex-col gap-0.5">
                   <span class="item-title">{{ log.usuarioNombre }}</span>
-                  <a
-                    [href]="'mailto:' + log.usuarioEmail"
-                    class="text-xs brand-link"
-                    (click)="$event.stopPropagation()"
-                  >
-                    {{ log.usuarioEmail }}
-                  </a>
+                  <span class="micro-label">{{ log.usuarioRol }}</span>
+                  @if (log.usuarioEmail !== '—') {
+                    <a
+                      [href]="'mailto:' + log.usuarioEmail"
+                      class="text-xs brand-link"
+                      (click)="$event.stopPropagation()"
+                    >
+                      {{ log.usuarioEmail }}
+                    </a>
+                  }
                 </div>
 
                 @if (showSedeColumn()) {
@@ -486,7 +505,8 @@ export class AdminAuditoriaComponent {
   // ── Filtros locales (UI state) ──────────────────────────────────────────────
   protected readonly fechaDesde = signal<string | null>(null);
   protected readonly fechaHasta = signal<string | null>(null);
-  protected readonly filtroSecretaria = signal<number | null>(null);
+  protected readonly filtroQuien = signal<AuditActor>('todos');
+  protected readonly filtroUsuario = signal<number | null>(null);
   protected readonly filtroAccion = signal<string | null>(null);
   protected readonly filtroModulo = signal<string | null>(null);
 
@@ -497,11 +517,12 @@ export class AdminAuditoriaComponent {
     MODULE_OPTIONS.map((m) => ({ label: m, value: m })),
     'Todos los módulos',
   );
-  protected readonly secretariaOptions = computed(() =>
+  protected readonly actorOptions = AUDIT_ACTOR_OPTIONS;
+  protected readonly usuarioOptions = computed(() =>
     withAllOption(
-      this.facade.secretarias().map((s) => ({
-        label: s.nombre,
-        value: s.id,
+      usuariosForActor(this.facade.usuarios(), this.filtroQuien()).map((u) => ({
+        label: this.filtroQuien() === 'todos' ? `${u.nombre} (${auditUserLabel(u.rol)})` : u.nombre,
+        value: u.id,
       })),
       'Todos los usuarios',
     ),
@@ -512,7 +533,8 @@ export class AdminAuditoriaComponent {
     () =>
       !!this.fechaDesde() ||
       !!this.fechaHasta() ||
-      this.filtroSecretaria() !== null ||
+      this.filtroQuien() !== 'todos' ||
+      this.filtroUsuario() !== null ||
       this.filtroAccion() !== null ||
       this.filtroModulo() !== null,
   );
@@ -523,11 +545,21 @@ export class AdminAuditoriaComponent {
   protected readonly showSedeColumn = computed(() => this.branchFacade.selectedBranchId() === null);
 
   // Modelos two-way p-select
-  protected get secretariaModel(): number | null {
-    return this.filtroSecretaria();
+  protected get quienModel(): AuditActor {
+    return this.filtroQuien();
   }
-  protected set secretariaModel(v: number | null) {
-    this.filtroSecretaria.set(v);
+  protected set quienModel(v: AuditActor) {
+    this.filtroQuien.set(v ?? 'todos');
+    // El usuario elegido puede no pertenecer al nuevo Quién.
+    this.filtroUsuario.set(null);
+    this.applyFilters();
+  }
+
+  protected get usuarioModel(): number | null {
+    return this.filtroUsuario();
+  }
+  protected set usuarioModel(v: number | null) {
+    this.filtroUsuario.set(v);
     this.applyFilters();
   }
 
@@ -551,7 +583,8 @@ export class AdminAuditoriaComponent {
     this.facade.setFilters({
       fechaDesde: this.fechaDesde(),
       fechaHasta: this.fechaHasta(),
-      secretariaId: this.filtroSecretaria(),
+      quien: this.filtroQuien(),
+      usuarioId: this.filtroUsuario(),
       accion: this.filtroAccion(),
       modulo: this.filtroModulo(),
     });
@@ -560,7 +593,8 @@ export class AdminAuditoriaComponent {
   protected clearFilters(): void {
     this.fechaDesde.set(null);
     this.fechaHasta.set(null);
-    this.filtroSecretaria.set(null);
+    this.filtroQuien.set('todos');
+    this.filtroUsuario.set(null);
     this.filtroAccion.set(null);
     this.filtroModulo.set(null);
     this.facade.clearFilters();

@@ -91,4 +91,69 @@ describe('AuditoriaFacade', () => {
       expect(q.lt).toHaveBeenCalledWith('created_at', '2026-10-07T03:00:00.000Z');
     });
   });
+
+  // fix-069-i: Auditoría deja de mostrar solo secretarias. Filtro "Quién".
+  describe('filtro Quién (fix-069-i)', () => {
+    function chainableQuery(rows: unknown[] = []): any {
+      const q: any = {};
+      for (const m of ['select', 'eq', 'order', 'range', 'gte', 'lt', 'in', 'not', 'is']) {
+        q[m] = vi.fn().mockReturnValue(q);
+      }
+      q.then = (resolve: (v: unknown) => unknown) =>
+        resolve({ data: rows, error: null, count: rows.length });
+      return q;
+    }
+
+    it('por defecto muestra todos: no exige usuario ni filtra por rol', async () => {
+      const q = chainableQuery();
+      supabaseSpy.client.from = vi.fn().mockReturnValue(q);
+      await facade.initialize();
+
+      const auditSelect = q.select.mock.calls.find((c: string[]) => c[0].includes('action'))[0];
+      expect(auditSelect).not.toContain('users!inner');
+      expect(q.eq).not.toHaveBeenCalledWith('users.roles.name', expect.anything());
+    });
+
+    it('Administradores filtra por el rol admin', async () => {
+      const q = chainableQuery();
+      supabaseSpy.client.from = vi.fn().mockReturnValue(q);
+      facade.setFilters({ quien: 'admin' });
+      await facade.initialize();
+
+      expect(q.eq).toHaveBeenCalledWith('users.roles.name', 'admin');
+      // Sin !inner en roles, el filtro solo vacía el rol anidado y la fila de la secretaria sigue
+      // apareciendo (visto en el navegador).
+      const auditSelect = q.select.mock.calls.find((c: string[]) => c[0].includes('action'))[0];
+      expect(auditSelect).toContain('users!inner');
+      expect(auditSelect).toContain('roles!inner');
+    });
+
+    it('Sistema trae solo las filas sin usuario', async () => {
+      const q = chainableQuery();
+      supabaseSpy.client.from = vi.fn().mockReturnValue(q);
+      facade.setFilters({ quien: 'sistema' });
+      await facade.initialize();
+
+      expect(q.is).toHaveBeenCalledWith('user_id', null);
+    });
+
+    it('una fila sin usuario se muestra como Sistema', async () => {
+      const q = chainableQuery([
+        {
+          id: 1,
+          action: 'UPDATE',
+          entity: 'enrollments',
+          detail: 'x',
+          ip: null,
+          created_at: '2026-10-24T06:00:00Z',
+          users: null,
+        },
+      ]);
+      supabaseSpy.client.from = vi.fn().mockReturnValue(q);
+      await facade.initialize();
+
+      expect(facade.logs()[0].usuarioNombre).toBe('Sistema');
+      expect(facade.logs()[0].usuarioRol).toBe('Sistema');
+    });
+  });
 });

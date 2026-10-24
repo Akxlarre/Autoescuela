@@ -170,6 +170,70 @@ describe('SecretariaMatriculaComponent — branch-gate reactivity (fix-067)', ()
     });
   });
 
+  // fix-069-i: un borrador con pago se descarta con motivo (el pago queda anulado en la BD).
+  describe('descartar un borrador con pago (fix-069-i)', () => {
+    const conPago = {
+      enrollmentId: 9,
+      studentName: 'Ana Soto',
+      paidAmount: 150000,
+      hasLivePayment: true,
+    };
+    const sinPago = {
+      enrollmentId: 10,
+      studentName: 'Luis Pérez',
+      paidAmount: 0,
+      hasLivePayment: false,
+    };
+    let toast: any;
+
+    beforeEach(() => {
+      toast = TestBed.inject(ToastService);
+      enrollmentFacadeSpy.activeDrafts = vi.fn().mockReturnValue([conPago, sinPago]);
+      enrollmentFacadeSpy.confirm = vi.fn().mockResolvedValue(true);
+      enrollmentFacadeSpy.confirmWithReason = vi.fn().mockResolvedValue('Se arrepintió');
+      enrollmentFacadeSpy.discardDraft = vi.fn().mockResolvedValue(true);
+      enrollmentFacadeSpy.error = vi.fn().mockReturnValue(null);
+    });
+
+    it('con pago pide el motivo y lo manda al descarte', async () => {
+      await component.onDiscardDraft(9);
+
+      expect(enrollmentFacadeSpy.confirmWithReason).toHaveBeenCalled();
+      expect(enrollmentFacadeSpy.confirm).not.toHaveBeenCalled();
+      expect(enrollmentFacadeSpy.discardDraft).toHaveBeenCalledWith(9, 'Se arrepintió');
+      expect(toast.success).toHaveBeenCalled();
+    });
+
+    it('si cancela el motivo no descarta nada', async () => {
+      enrollmentFacadeSpy.confirmWithReason = vi.fn().mockResolvedValue(null);
+
+      await component.onDiscardDraft(9);
+
+      expect(enrollmentFacadeSpy.discardDraft).not.toHaveBeenCalled();
+    });
+
+    it('sin pago usa la confirmación de siempre, sin motivo', async () => {
+      await component.onDiscardDraft(10);
+
+      expect(enrollmentFacadeSpy.confirm).toHaveBeenCalled();
+      expect(enrollmentFacadeSpy.confirmWithReason).not.toHaveBeenCalled();
+      expect(enrollmentFacadeSpy.discardDraft).toHaveBeenCalledWith(10, undefined);
+    });
+
+    it('si el descarte falla avisa el motivo y vuelve a la lista', async () => {
+      enrollmentFacadeSpy.discardDraft = vi.fn().mockResolvedValue(false);
+      enrollmentFacadeSpy.error = vi.fn().mockReturnValue('La caja de ese día ya está cerrada.');
+
+      await component.onDiscardDraft(9);
+
+      expect(toast.error).toHaveBeenCalledWith(
+        'No se pudo descartar la matrícula',
+        'La caja de ese día ya está cerrada.',
+      );
+      expect(component.viewMode()).toBe('draft-list');
+    });
+  });
+
   describe('sede elegida en el wizard (fix-309-m)', () => {
     // BranchFacade recuerda la sede en localStorage: los tests anteriores dejan una elegida.
     beforeEach(() => branchFacade.reset());

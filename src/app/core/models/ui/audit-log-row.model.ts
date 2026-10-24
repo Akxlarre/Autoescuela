@@ -1,9 +1,29 @@
 export type AuditAction = 'Crear' | 'Actualizar' | 'Eliminar';
 
+/** Filtro "Quién" de Auditoría (fix-069-i). `sistema` = filas sin usuario (limpieza automática). */
+export type AuditActor = 'todos' | 'secretarias' | 'admin' | 'sistema';
+
+export const AUDIT_ACTOR_OPTIONS: { label: string; value: AuditActor }[] = [
+  { label: 'Todos', value: 'todos' },
+  { label: 'Secretarias', value: 'secretarias' },
+  { label: 'Administradores', value: 'admin' },
+  { label: 'Sistema (automático)', value: 'sistema' },
+];
+
+/** Opción del filtro de usuario: secretarias y administradores (fix-069-i). */
+export interface AuditUsuarioOption {
+  id: number;
+  nombre: string;
+  email: string;
+  rol: string;
+}
+
 export interface AuditLogRow {
   id: number;
   fechaHora: string; // ISO string
   usuarioNombre: string;
+  /** Rol legible de quien hizo la acción, o "Sistema" (fix-069-i). */
+  usuarioRol: string;
   usuarioEmail: string;
   sedeNombre: string;
   accion: AuditAction;

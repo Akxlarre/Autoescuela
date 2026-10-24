@@ -11,7 +11,9 @@ import { chileDayRange, chileToday, formatChilePattern } from '../_shared/chile-
 //   branch_id    : number | null  — null = admin (todas las sedes)
 //   fecha_desde  : string | null  — 'YYYY-MM-DD'
 //   fecha_hasta  : string | null  — 'YYYY-MM-DD'
-//   secretaria_id: number | null
+//   quien        : 'todos' | 'secretarias' | 'admin' | 'sistema' (fix-069-i; sin valor = 'secretarias',
+//                  lo que hacía antes)
+//   usuario_id   : number | null  (antes secretaria_id, que se sigue aceptando)
 //   accion       : 'Crear' | 'Actualizar' | 'Eliminar' | null  — label UI
 //   modulo       : string | null  — label UI (ej. 'Usuarios', 'Pagos')
 //
@@ -61,6 +63,14 @@ const ENTITY_MODULE_MAP: Record<string, string> = {
 };
 
 const KNOWN_ENTITIES = Object.keys(ENTITY_MODULE_MAP);
+
+// Espejo de auditUserLabel() (core/utils/audit-actor.utils.ts).
+const ROLE_LABEL: Record<string, string> = {
+  secretary: 'Secretaria',
+  admin: 'Administrador',
+  instructor: 'Instructor',
+  student: 'Alumno',
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -165,7 +175,9 @@ Deno.serve(async (req: Request) => {
     const branchId: number | null = body.branch_id ?? null;
     const fechaDesde: string | null = body.fecha_desde ?? null;
     const fechaHasta: string | null = body.fecha_hasta ?? null;
-    const secretariaId: number | null = body.secretaria_id ?? null;
+    // fix-069-i: el reporte ya no es solo de secretarias.
+    const quien: 'todos' | 'secretarias' | 'admin' | 'sistema' = body.quien ?? 'secretarias';
+    const usuarioId: number | null = body.usuario_id ?? body.secretaria_id ?? null;
     const accionLabel: string | null = body.accion ?? null;
     const moduloLabel: string | null = body.modulo ?? null;
 
@@ -192,39 +204,39 @@ Deno.serve(async (req: Request) => {
       if (branch) branchName = branch.name;
     }
 
-    // ── Paso 1: obtener IDs de secretarias (evita filtros en joins anidados) ───
-    let usersQuery = adminClient
-      .from('users')
-      .select('id, first_names, paternal_last_name, email, roles!inner(name)')
-      .eq('roles.name', 'secretary');
+    // ── Paso 1: usuarios del rol elegido (evita filtros en joins anidados) ─────
+    // Secretarias filtra la sede por la de la secretaria (como antes); Administradores, Sistema
+    // y Todos, por la sede de la acción (audit_log.branch_id), la única que tiene una fila del
+    // Sistema (limpieza automática, sin usuario).
+    const roleName = quien === 'secretarias' ? 'secretary' : quien === 'admin' ? 'admin' : null;
+    let roleUserIds: number[] | null = null;
+    if (roleName) {
+      let usersQuery = adminClient
+        .from('users')
+        .select('id, roles!inner(name)')
+        .eq('roles.name', roleName);
+      if (branchId !== null && roleName === 'secretary') {
+        usersQuery = usersQuery.eq('branch_id', branchId);
+      }
+      const { data: roleUsers, error: usersError } = await usersQuery;
+      if (usersError) throw usersError;
+      roleUserIds = (roleUsers ?? []).map((u: any) => u.id);
+    }
 
-    if (branchId !== null) usersQuery = usersQuery.eq('branch_id', branchId);
-    if (secretariaId !== null) usersQuery = usersQuery.eq('id', secretariaId);
-
-    const { data: secretaryUsers, error: usersError } = await usersQuery;
-    if (usersError) throw usersError;
-
-    const secretaryUserIds: number[] = (secretaryUsers ?? []).map((u: any) => u.id);
-    const usersMap = new Map(
-      (secretaryUsers ?? []).map((u: any) => [
-        u.id,
-        { nombre: `${u.first_names} ${u.paternal_last_name}`, email: u.email },
-      ]),
-    );
-
-    // ── Paso 2: query audit_log filtrando por user_ids conocidos ─────────────
+    // ── Paso 2: query audit_log ──────────────────────────────────────────────
     let query = adminClient
       .from('audit_log')
       .select('id, action, entity, detail, ip, created_at, user_id')
       .order('created_at', { ascending: false })
       .limit(5000);
 
-    if (secretaryUserIds.length > 0) {
-      query = query.in('user_id', secretaryUserIds);
-    } else {
-      // Sin secretarias → resultado vacío
-      query = query.eq('user_id', -1);
+    if (roleUserIds !== null) {
+      // Sin usuarios del rol → resultado vacío
+      query = roleUserIds.length > 0 ? query.in('user_id', roleUserIds) : query.eq('user_id', -1);
     }
+    if (quien === 'sistema') query = query.is('user_id', null);
+    if (usuarioId !== null && quien !== 'sistema') query = query.eq('user_id', usuarioId);
+    if (branchId !== null && quien !== 'secretarias') query = query.eq('branch_id', branchId);
 
     // Días de Chile como rango semiabierto de instantes.
     if (fechaDesde) query = query.gte('created_at', chileDayRange(fechaDesde).start);
@@ -249,12 +261,31 @@ Deno.serve(async (req: Request) => {
     const { data, error } = await query;
     if (error) throw error;
 
+    // ── Paso 3: nombre y rol de quienes aparecen ─────────────────────────────
+    const userIds = [...new Set((data ?? []).map((r: any) => r.user_id).filter((id: any) => id != null))];
+    const usersMap = new Map<number, { nombre: string; email: string }>();
+    if (userIds.length > 0) {
+      const { data: users, error: namesError } = await adminClient
+        .from('users')
+        .select('id, first_names, paternal_last_name, email, roles(name)')
+        .in('id', userIds);
+      if (namesError) throw namesError;
+      for (const u of (users ?? []) as any[]) {
+        const rol: string | undefined = u.roles?.name;
+        usersMap.set(u.id, {
+          nombre: `${u.first_names} ${u.paternal_last_name} (${(rol && ROLE_LABEL[rol]) ?? rol ?? '-'})`,
+          email: u.email,
+        });
+      }
+    }
+
     // ── Mapear filas ──────────────────────────────────────────────────────────
     const rows: AuditRow[] = (data ?? []).map((raw: any) => {
-      const u = usersMap.get(raw.user_id);
+      const u = raw.user_id != null ? usersMap.get(raw.user_id) : undefined;
       return {
         fechaHora: raw.created_at,
-        usuarioNombre: u?.nombre ?? '-',
+        // Sin usuario = limpieza automática (fix-069-i).
+        usuarioNombre: raw.user_id == null ? 'Sistema (automático)' : (u?.nombre ?? '-'),
         usuarioEmail: u?.email ?? '-',
         accion: ACTION_LABEL_MAP[raw.action] ?? raw.action,
         modulo: ENTITY_MODULE_MAP[raw.entity] ?? raw.entity ?? '-',

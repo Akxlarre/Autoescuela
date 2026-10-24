@@ -16,6 +16,7 @@ describe('AdminAuditoriaComponent', () => {
     id: 97,
     fechaHora: '2026-05-21T21:53:47.000Z',
     usuarioNombre: 'María Torres',
+    usuarioRol: 'Secretaria',
     usuarioEmail: 'secretaria2@test.com',
     sedeNombre: 'Conductores Chillán',
     accion: 'Crear',
@@ -30,7 +31,10 @@ describe('AdminAuditoriaComponent', () => {
       logs: signal([mockLog]),
       totalCount: signal(1),
       currentPage: signal(1),
-      secretarias: signal([]),
+      usuarios: signal([
+        { id: 1, nombre: 'María Torres', email: 'm@x', rol: 'secretary' },
+        { id: 2, nombre: 'Pedro Admin', email: 'p@x', rol: 'admin' },
+      ]),
       isExporting: signal(false),
       selectedLog: signal(null),
       initialize: vi.fn(),
@@ -89,6 +93,28 @@ describe('AdminAuditoriaComponent', () => {
 
       (component as any).clearFilters();
       expect((component as any).hasActiveFilters()).toBe(false);
+    });
+  });
+
+  // fix-069-i: filtro Quién.
+  describe('filtro Quién (fix-069-i)', () => {
+    it('cambiar el Quién limpia el usuario elegido y filtra por el nuevo Quién', () => {
+      const c = component as any;
+      c.usuarioModel = 1;
+      c.quienModel = 'admin';
+
+      expect(c.filtroUsuario()).toBeNull();
+      expect(facadeSpy.setFilters).toHaveBeenLastCalledWith(
+        expect.objectContaining({ quien: 'admin', usuarioId: null }),
+      );
+    });
+
+    it('la lista de usuarios sigue al Quién', () => {
+      const c = component as any;
+      c.quienModel = 'secretarias';
+      expect(c.usuarioOptions().map((o: any) => o.value)).toEqual([null, 1]);
+      c.quienModel = 'sistema';
+      expect(c.usuarioOptions().map((o: any) => o.value)).toEqual([null]);
     });
   });
 });

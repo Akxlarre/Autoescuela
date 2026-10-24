@@ -7,27 +7,37 @@ import { BranchFacade } from './branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
-import type { AuditLogRow } from '@core/models/ui/audit-log-row.model';
+import type {
+  AuditActor,
+  AuditLogRow,
+  AuditUsuarioOption,
+} from '@core/models/ui/audit-log-row.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import {
   ACTION_LABEL_MAP,
   ENTITY_MODULE_MAP,
   KNOWN_ENTITIES,
 } from '@core/models/ui/audit-log-row.model';
+import { auditActorPlan, auditUserLabel } from '@core/utils/audit-actor.utils';
 
 export interface AuditFilters {
   fechaDesde: string | null;
   fechaHasta: string | null;
-  secretariaId: number | null;
+  /** fix-069-i: quién hizo la acción. Antes la pantalla mostraba solo secretarias. */
+  quien: AuditActor;
+  usuarioId: number | null;
   accion: string | null;
   modulo: string | null;
 }
 
-export interface SecretariaOption {
-  id: number;
-  nombre: string;
-  email: string;
-}
+const EMPTY_FILTERS: AuditFilters = {
+  fechaDesde: null,
+  fechaHasta: null,
+  quien: 'todos',
+  usuarioId: null,
+  accion: null,
+  modulo: null,
+};
 
 const PAGE_SIZE = 25;
 
@@ -43,16 +53,10 @@ export class AuditoriaFacade {
   private _logs = signal<AuditLogRow[]>([]);
   private _isLoading = signal(false);
   private _error = signal<string | null>(null);
-  private _secretarias = signal<SecretariaOption[]>([]);
+  private _usuarios = signal<AuditUsuarioOption[]>([]);
   private _totalCount = signal(0);
   private _currentPage = signal(1);
-  private _filters = signal<AuditFilters>({
-    fechaDesde: null,
-    fechaHasta: null,
-    secretariaId: null,
-    accion: null,
-    modulo: null,
-  });
+  private _filters = signal<AuditFilters>({ ...EMPTY_FILTERS });
 
   private _isExporting = signal(false);
   readonly isExporting = this._isExporting.asReadonly();
@@ -67,7 +71,8 @@ export class AuditoriaFacade {
   readonly logs = this._logs.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
-  readonly secretarias = this._secretarias.asReadonly();
+  /** Secretarias y administradores, para el filtro de usuario (fix-069-i). */
+  readonly usuarios = this._usuarios.asReadonly();
   readonly totalCount = this._totalCount.asReadonly();
   readonly currentPage = this._currentPage.asReadonly();
   readonly filters = this._filters.asReadonly();
@@ -94,7 +99,7 @@ export class AuditoriaFacade {
     this._currentPage.set(1);
     this._isLoading.set(true);
     try {
-      await Promise.all([this.fetchSecretarias(), this.fetchLogs()]);
+      await Promise.all([this.fetchUsuarios(), this.fetchLogs()]);
     } finally {
       this._isLoading.set(false);
     }
@@ -119,13 +124,7 @@ export class AuditoriaFacade {
   }
 
   clearFilters(): void {
-    this._filters.set({
-      fechaDesde: null,
-      fechaHasta: null,
-      secretariaId: null,
-      accion: null,
-      modulo: null,
-    });
+    this._filters.set({ ...EMPTY_FILTERS });
     this._currentPage.set(1);
     void this.fetchLogs();
   }
@@ -150,8 +149,10 @@ export class AuditoriaFacade {
       const offset = (this._currentPage() - 1) * PAGE_SIZE;
 
       const branchId = this.getActiveBranchId();
+      // fix-069-i: hasta acá la consulta era siempre `users!inner` + rol secretaria. Lo que hacía
+      // el admin (anular un pago) y la limpieza automática (sin usuario) no aparecía nunca.
+      const plan = auditActorPlan(f.quien);
 
-      // Construir query base: audit_log JOIN users (solo secretarias)
       let query = this.supabase.client
         .from('audit_log')
         .select(
@@ -163,23 +164,25 @@ export class AuditoriaFacade {
           detail,
           ip,
           created_at,
-          users!inner (
+          branch_id,
+          ${plan.innerUsers ? 'users!inner' : 'users'} (
             id,
             first_names,
             paternal_last_name,
             email,
             branch_id,
-            roles!inner ( name ),
+            ${plan.roleName ? 'roles!inner' : 'roles'} ( name ),
             branches ( name )
           )
         `,
           { count: 'exact' },
         )
-        .eq('users.roles.name', 'secretary')
         .order('created_at', { ascending: false })
         .range(offset, offset + PAGE_SIZE - 1);
 
-      if (branchId !== null) query = query.eq('users.branch_id', branchId);
+      if (plan.roleName) query = query.eq('users.roles.name', plan.roleName);
+      if (plan.onlySystem) query = query.is('user_id', null);
+      if (branchId !== null) query = query.eq(plan.branchColumn, branchId);
 
       // Filtros opcionales
       if (f.fechaDesde) {
@@ -188,8 +191,8 @@ export class AuditoriaFacade {
       if (f.fechaHasta) {
         query = query.lt('created_at', chileDayRange(f.fechaHasta).endExclusive);
       }
-      if (f.secretariaId) {
-        query = query.eq('user_id', f.secretariaId);
+      if (f.usuarioId && !plan.onlySystem) {
+        query = query.eq('user_id', f.usuarioId);
       }
       if (f.accion) {
         // "Crear"→INSERT, "Actualizar"→UPDATE, "Eliminar"→DELETE
@@ -226,28 +229,32 @@ export class AuditoriaFacade {
     }
   }
 
-  private async fetchSecretarias(): Promise<void> {
+  private async fetchUsuarios(): Promise<void> {
     const branchId = this.getActiveBranchId();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query: any = this.supabase.client
       .from('users')
-      .select('id, first_names, paternal_last_name, email, roles!inner(name)')
-      .eq('roles.name', 'secretary')
+      .select('id, first_names, paternal_last_name, email, branch_id, roles!inner(name)')
+      .in('roles.name', ['secretary', 'admin'])
       .order('first_names');
-
-    if (branchId !== null) query = query.eq('branch_id', branchId);
 
     const { data, error } = await query;
 
     if (error || !data) return;
 
-    this._secretarias.set(
-      data.map((u: any) => ({
-        id: u.id,
-        nombre: `${u.first_names} ${u.paternal_last_name}`,
-        email: u.email,
-      })),
+    this._usuarios.set(
+      data
+        // Las secretarias, de la sede elegida; los admin no tienen sede propia y van siempre.
+        .filter(
+          (u: any) => branchId === null || u.roles?.name === 'admin' || u.branch_id === branchId,
+        )
+        .map((u: any) => ({
+          id: u.id,
+          nombre: `${u.first_names} ${u.paternal_last_name}`,
+          email: u.email,
+          rol: u.roles?.name ?? '',
+        })),
     );
   }
 
@@ -264,7 +271,8 @@ export class AuditoriaFacade {
           branch_id: branchId,
           fecha_desde: f.fechaDesde,
           fecha_hasta: f.fechaHasta,
-          secretaria_id: f.secretariaId,
+          quien: f.quien,
+          usuario_id: f.usuarioId,
           accion: f.accion,
           modulo: f.modulo,
         },
@@ -305,9 +313,17 @@ export class AuditoriaFacade {
     return {
       id: raw.id,
       fechaHora: raw.created_at,
-      usuarioNombre: user ? `${user.first_names} ${user.paternal_last_name}` : '—',
+      // fix-069-i: sin usuario = lo hizo la limpieza automática (log_change ya no lo atribuye a
+      // quien registró la fila).
+      usuarioNombre: user ? `${user.first_names} ${user.paternal_last_name}` : 'Sistema',
+      usuarioRol: user ? (user.roles?.name ? auditUserLabel(user.roles.name) : '—') : 'Sistema',
       usuarioEmail: user?.email ?? '—',
-      sedeNombre: user?.branches?.name ?? '—',
+      // fix-069-i: el admin no tiene sede propia y el Sistema no tiene usuario: se muestra la sede
+      // de la acción.
+      sedeNombre:
+        user?.branches?.name ??
+        this.branchFacade.branches().find((b) => b.id === raw.branch_id)?.name ??
+        '—',
       accion: ACTION_LABEL_MAP[raw.action] ?? raw.action,
       modulo: ENTITY_MODULE_MAP[raw.entity] ?? raw.entity ?? '—',
       detalle: raw.detail ?? '—',

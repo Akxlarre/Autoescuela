@@ -96,7 +96,7 @@ Ninguno de código en este track. Cada bug va a su propio fix/hotfix.
 | S17 promociones llenas se pueden elegir | ✅ resuelta en la UI | `promotionOptionStatus` → `full` y la opción se deshabilita ("SIN CUPO"); la BD no lo valida |
 | S18 la UI promete cosas que no hace | ◐ en parte | el correo con el contrato firmado ya existe (fix-318-m); quedan "Comprobante de Pago", "Activar Cámara", "Máx 2MB", HVC 30 días |
 | S19 aviso falso de "no se pudo crear la cuenta" | ⏸ no aplica en el piloto | fix-393-m: con el portal alumno bloqueado no se invoca `activate-student-account`; el aviso por 409/400 sigue latente para después del piloto |
-| S20 re-matrícula: Retirado y Refuerzo | ❌ sigue (decisión de negocio) | `HISTORICAL_STATUSES` = `completed`, `cancelled` (sin `withdrawn`); Clase B y Refuerzo comparten `license_class` (casos C08–C10) |
+| S20 re-matrícula: Retirado y Refuerzo | ✅ decidido 2026-10-24: se mantiene el bloqueo (Refuerzo con Clase B activa queda bloqueado) | `HISTORICAL_STATUSES` = `completed`, `cancelled` (sin `withdrawn`); Clase B y Refuerzo comparten `license_class` (casos C08–C10) |
 | S21 admin cambia de sede a mitad del wizard | ❓ probar | el efecto limpia el formulario del paso 1 y recarga cursos, pero el borrador sigue en la sede original |
 | S23 N° del contrato impreso ≠ N° final | ❓ probar | número "previsto" sin reservar |
 | S24 descuentos (% sobre el abono, motivo manual no se guarda) | ❓ probar (decisión H02/H08/H15) | el motivo del descuento manual sigue sin `discount_applications` (solo los predefinidos la crean) |
@@ -116,7 +116,11 @@ Ninguno de código en este track. Cada bug va a su propio fix/hotfix.
 
 **B1-1 — S8 confirmada.** Decisión de negocio pendiente (casos K12/K13/O11 del checklist): un pago
 ya cobrado en un borrador que se descarta o vence, ¿se conserva, se anula con registro, o el pago
-se registra recién al firmar? → su propio fix cuando haya decisión.
+se registra recién al firmar? → su propio fix cuando haya decisión. → **Resuelto en `fix-069-i`**
+(2026-10-24, decisión de Ignacio): el pago se **anula** con su motivo (no se borra) y la matrícula
+queda cancelada. La secretaria lo hace al descartar su borrador (pide motivo; caja del día cerrada →
+lo resuelve el admin); la limpieza nocturna ya no toca un borrador con pago vivo. Auditoría muestra
+la anulación y ahora incluye admin y Sistema (filtro "Quién").
 
 **B1-2 — La limpieza de borradores se cae con un borrador que tenga consentimientos.** Latente: hoy
 no hay ninguno. Arreglo probable: borrar (o desvincular) `consents` del borrador en
@@ -128,7 +132,7 @@ no hay ninguno. Arreglo probable: borrar (o desvincular) `consents` del borrador
 | Caso | Resultado | Evidencia |
 |---|---|---|
 | S10 error del pago en el paso 4 | ❌ **B2-1** | RPC simulada con el aviso de caja cerrada (fix-051-i): `payment.error()` = "Error al registrar pago: La caja del 18-10-2026 ya está cerrada…", pero **no se ve en pantalla**; el wizard queda en el paso 4 sin mensaje (el banner solo lee `enrollment.error()`) |
-| S11 menor de 17 en Clase B | ❌ **B2-2** | el paso 3 solo tiene la foto (1 input de archivo); el aviso "Se requiere Autorización Notarial… Súbela en la sección de documentos del expediente" no ofrece dónde subirla ni la exige. Ver si el DMS la permite (ASG-i-033, Matías) |
+| S11 menor de 17 en Clase B | ❌ **B2-2** | el paso 3 solo tiene la foto (1 input de archivo); el aviso "Se requiere Autorización Notarial… Súbela en la sección de documentos del expediente" no ofrece dónde subirla ni la exige. Ver si el DMS la permite (ASG-i-033, Matías). **2026-10-24: Ignacio lo revisa con Matías** (pendiente) |
 | B07–B10, B12, B15 validaciones del paso 1 | ✅ | `canAdvance` de `personal-data`: nombre/apellido < 2 letras o solo espacios, email `juan@` / `juan@x`, teléfono de 7 dígitos, fecha vacía y sin curso → no avanza. Sin apellido materno sí avanza. RUT con DV malo → no avanza |
 | B12 fecha 31/02 | ✅ (no alcanzable) | `canAdvance` la dejaría pasar (edad "none"), pero `app-date-input` es un calendario que solo emite fechas válidas |
 | D06 SENCE | ✅ | sin código no avanza; con código sí (que se guarde es S14, Bloque 3) |
@@ -140,7 +144,7 @@ no hay ninguno. Arreglo probable: borrar (o desvincular) `consents` del borrador
 | C01 precarga por RUT (egresado Alumno62) | ✅ | nombre, email, teléfono, nacimiento se precargan |
 | C04 / C05 egresado + Clase B | ✅ | aviso "Re-matrícula en el mismo curso… se conserva como historial" con confirmación; "Cancelar" deja el paso 1 sin crear nada |
 | C06 Clase B activa (Alumno79) + Clase B | ✅ | "Matrícula duplicada… No es posible crear una nueva" |
-| C08 Clase B activa + Refuerzo | ❌ **B2-4** → ✅ mensaje resuelto en `fix-066-i` · decisión S20 pendiente | bloquea (S20, decisión de negocio pendiente) y además el mensaje es **engañoso**: "ya tiene una matrícula en curso en Refuerzo Clase B", cuando lo activo es Clase B (nombra el curso elegido, no el existente) |
+| C08 Clase B activa + Refuerzo | ❌ **B2-4** → ✅ mensaje resuelto en `fix-066-i` · S20 decidido (2026-10-24): se mantiene el bloqueo | bloquea (S20, decisión de negocio pendiente) y además el mensaje es **engañoso**: "ya tiene una matrícula en curso en Refuerzo Clase B", cuando lo activo es Clase B (nombra el curso elegido, no el existente) |
 | C13 / C14 email de otra persona (también con mayúsculas) | ✅ | "Este correo ya está registrado por otra persona…"; no avanza y el botón no queda pegado |
 | C07, C10–C12, C15–C17 | → Bloque 3 | requieren datos que no existen hoy (retirado, cancelado, funcionario, archivado, otra sede) o crear la matrícula |
 | S21 admin cambia de sede a mitad del wizard | ❌ **B2-3** → ✅ resuelto en `fix-065-i` | en el paso 3, sede 1 → 2: sigue en el paso 3 con el mismo borrador (de la sede 1), el formulario del paso 1 queda vacío, se cargan los cursos de la sede 2 (aparece Profesional) y no hay aviso |

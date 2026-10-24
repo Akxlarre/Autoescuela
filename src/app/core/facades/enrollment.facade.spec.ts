@@ -1961,4 +1961,92 @@ describe('EnrollmentFacade', () => {
       expect(mockSupabase.client.from).toHaveBeenCalledWith('digital_contracts');
     });
   });
+
+  // fix-069-i: un borrador con pagos o consentimientos se cancela en la BD (anula el pago con
+  // motivo) en vez de borrarse a medias desde el front.
+  describe('discardDraft — borrador con pago (fix-069-i)', () => {
+    beforeEach(() => {
+      (mockSupabase.client.storage as any).from = vi.fn().mockReturnValue({
+        list: vi.fn().mockResolvedValue({ data: [], error: null }),
+        remove: vi.fn().mockResolvedValue({ error: null }),
+      });
+    });
+
+    it('si la BD lo cancela, no borra nada más y lo saca de la lista', async () => {
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: true, error: null });
+      mockSupabase.client.from = vi.fn().mockReturnValue(createMockQueryBuilder());
+
+      const ok = await facade.discardDraft(77, 'Se arrepintió');
+
+      expect(ok).toBe(true);
+      expect(mockSupabase.client.rpc).toHaveBeenCalledWith('descartar_borrador_con_historial', {
+        p_enrollment_id: 77,
+        p_motivo: 'Se arrepintió',
+      });
+      expect(mockSupabase.client.from).not.toHaveBeenCalled();
+      expect(mockSupabase.client.storage.from).not.toHaveBeenCalled();
+    });
+
+    it('con la caja del día cerrada no borra nada y explica que lo resuelve el admin', async () => {
+      mockSupabase.client.rpc = vi
+        .fn()
+        .mockResolvedValue({ data: null, error: { message: 'CAJA_CERRADA', code: 'P0001' } });
+      mockSupabase.client.from = vi.fn().mockReturnValue(createMockQueryBuilder());
+
+      const ok = await facade.discardDraft(77, 'Se arrepintió');
+
+      expect(ok).toBe(false);
+      expect(facade.error()).toContain('administrador');
+      expect(mockSupabase.client.from).not.toHaveBeenCalled();
+    });
+
+    it('sin pagos ni consentimientos (la BD responde false) sigue con el borrado de siempre', async () => {
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: false, error: null });
+      mockSupabase.client.from = vi.fn().mockReturnValue(createMockQueryBuilder());
+
+      const ok = await facade.discardDraft(77);
+
+      expect(ok).toBe(true);
+      expect(mockSupabase.client.from).toHaveBeenCalledWith('enrollments');
+    });
+  });
+
+  describe('loadActiveDrafts — borradores con pago (fix-069-i)', () => {
+    const vencido = '2020-01-01T00:00:00.000Z';
+    const vigente = '2999-01-01T00:00:00.000Z';
+    function row(
+      id: number,
+      expiresAt: string,
+      payments: { total_amount: number; status: string }[],
+    ) {
+      return {
+        id,
+        current_step: 4,
+        created_at: '2026-10-24T12:00:00.000Z',
+        expires_at: expiresAt,
+        students: { id: 1, users: { first_names: 'Ana', paternal_last_name: 'Soto', rut: '1-9' } },
+        courses: { name: 'Clase B' },
+        payments,
+      };
+    }
+
+    it('lista el vencido con pago vivo con su monto, y esconde el vencido sin pago', async () => {
+      mockSupabase.client.from = vi
+        .fn()
+        .mockReturnValue(
+          createMockQueryBuilder([
+            row(1, vencido, [{ total_amount: 150000, status: 'paid' }]),
+            row(2, vencido, []),
+            row(3, vigente, []),
+          ]),
+        );
+
+      const drafts = await facade.loadActiveDrafts(1);
+
+      expect(drafts.map((d) => d.enrollmentId)).toEqual([1, 3]);
+      expect(drafts[0].paidAmount).toBe(150000);
+      expect(drafts[0].hasLivePayment).toBe(true);
+      expect(drafts[1].hasLivePayment).toBe(false);
+    });
+  });
 });

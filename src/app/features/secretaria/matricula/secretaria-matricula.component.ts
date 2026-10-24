@@ -14,6 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { calcAge } from '@core/utils/age.utils';
 import { normalizePhoto } from '@core/utils/image.utils';
 import { hasUnsavedPersonalData } from '@core/utils/enrollment-unsaved.utils';
+import { discardDraftWithPaymentMessage } from '@core/utils/draft-payment.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StepperModule } from 'primeng/stepper';
 import { ButtonModule } from 'primeng/button';
@@ -630,19 +631,50 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Descarta un borrador tras confirmación y actualiza la vista. */
+  /**
+   * Descarta un borrador tras confirmación y actualiza la vista.
+   * fix-069-i: con un pago vivo pide el motivo; el pago queda anulado y la matrícula cancelada.
+   */
   async onDiscardDraft(enrollmentId: number): Promise<void> {
-    const confirmed = await this.enrollment.confirm({
-      title: '¿Descartar matrícula?',
-      message: 'Se eliminarán todos los datos del borrador. Esta acción no se puede deshacer.',
-      severity: 'danger',
-      confirmLabel: 'Sí, descartar',
-      cancelLabel: 'Cancelar',
-    });
-    if (!confirmed) return;
+    const draft = this.enrollment.activeDrafts().find((d) => d.enrollmentId === enrollmentId);
+    let motivo: string | undefined;
+
+    if (draft?.hasLivePayment) {
+      const reason = await this.enrollment.confirmWithReason({
+        title: '¿Descartar matrícula con pago?',
+        message: discardDraftWithPaymentMessage(draft.paidAmount),
+        severity: 'danger',
+        confirmLabel: 'Anular pago y descartar',
+        cancelLabel: 'Cancelar',
+        reason: {
+          label: 'Motivo de la anulación',
+          placeholder: 'Ej: el alumno se arrepintió y se le devolvió el efectivo',
+          minLength: 5,
+        },
+      });
+      if (reason === null) return;
+      motivo = reason;
+    } else {
+      const confirmed = await this.enrollment.confirm({
+        title: '¿Descartar matrícula?',
+        message: 'Se eliminarán todos los datos del borrador. Esta acción no se puede deshacer.',
+        severity: 'danger',
+        confirmLabel: 'Sí, descartar',
+        cancelLabel: 'Cancelar',
+      });
+      if (!confirmed) return;
+    }
 
     this._viewMode.set('loading');
-    await this.enrollment.discardDraft(enrollmentId);
+    const ok = await this.enrollment.discardDraft(enrollmentId, motivo);
+    if (!ok) {
+      this.toast.error('No se pudo descartar la matrícula', this.enrollment.error() ?? '');
+      this._viewMode.set('draft-list');
+      return;
+    }
+    if (motivo) {
+      this.toast.success('Matrícula descartada', 'El pago quedó anulado con su motivo.');
+    }
     if (this.enrollment.activeDrafts().length === 0) {
       await this.startFreshWizard();
     } else {

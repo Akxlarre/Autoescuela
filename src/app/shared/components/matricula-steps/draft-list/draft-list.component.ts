@@ -2,13 +2,15 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
+import { draftPaymentBadgeLabel } from '@core/utils/draft-payment.utils';
 
 import type { DraftSummary, EnrollmentWizardStep } from '@core/models/ui/enrollment-wizard.model';
 
 @Component({
   selector: 'app-draft-list',
   standalone: true,
-  imports: [ChileDatePipe, IconComponent],
+  imports: [ChileDatePipe, IconComponent, BadgeComponent],
   styleUrls: ['./draft-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -45,6 +47,12 @@ import type { DraftSummary, EnrollmentWizardStep } from '@core/models/ui/enrollm
                   <span class="draft-info__rut">{{ draft.studentRut }}</span>
                 </div>
                 <p class="draft-info__course">{{ draft.courseLabel }}</p>
+                <!-- fix-069-i: la plata ya recibida queda a la vista; descartar anula el pago. -->
+                @if (draft.hasLivePayment) {
+                  <app-badge variant="warning" data-llm-description="draft has a live payment">
+                    {{ paymentLabel(draft.paidAmount) }}
+                  </app-badge>
+                }
               </div>
             </div>
 
@@ -121,6 +129,8 @@ export class DraftListComponent {
   readonly startNew = output<void>();
 
   readonly stepNumbers: EnrollmentWizardStep[] = [1, 2, 3, 4, 5, 6];
+
+  protected readonly paymentLabel = draftPaymentBadgeLabel;
 
   /**
    * Clic en el cuerpo de la tarjeta → retomar (comodidad de mouse). Los clics que vienen de un

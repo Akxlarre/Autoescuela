@@ -29,6 +29,7 @@
 | `src/app/core/utils/announcement-template.utils.ts` | `TemplateDraftError`, `TemplateDraftValidation`, `renderTemplate`, `extractUsedVariables`, `isScheduledForValid`, `InsertionResult`, `insertAtCursor`, `validateTemplateDraft` |
 | `src/app/core/utils/anulacion-pago.utils.ts` | `ingresoSeAnula`, `etiquetaAnularIngreso`, `formatAnulacionDetalle`, `resumenConAnulados` |
 | `src/app/core/utils/archive-confirmation.utils.ts` | `ARCHIVE_CONFIRMATION_WORD`, `buildFutureClassesBlockMessage`, `CLASE_B_ARCHIVE_WARNING`, `isArchiveConfirmationText` |
+| `src/app/core/utils/audit-actor.utils.ts` | `AuditActorPlan`, `auditActorPlan`, `auditUserLabel`, `usuariosForActor` — filtro "Quién" de Auditoría (fix-069-i). Espejo de `auditUserLabel` en `generate-audit-report` (`ROLE_LABEL`). |
 | `src/app/core/utils/auth-errors.utils.ts` | `mapAuthError` |
 | `src/app/core/utils/avatar-palette.ts` | `AvatarPaletteEntry`, `AVATAR_PALETTES`, `avatarPalette` |
 | `src/app/core/utils/beca.utils.ts` | `esBecaCompleta` |
@@ -61,6 +62,7 @@
 | `src/app/core/utils/document-download.utils.ts` | `documentDownloadUrl` — URL de Storage con `download=<nombre>` para descargar de verdad (fix-468-m); `null` si no es de Storage |
 | `src/app/core/utils/dms-documents.utils.ts` | `isDeletableStudentDoc` — solo `student_document` y `digital_contract` se borran desde el DMS (fix-470-m) |
 | `src/app/core/utils/document-template-options.utils.ts` | `editableDocumentTypes` |
+| `src/app/core/utils/draft-payment.utils.ts` | `DraftPaymentRow`, `DraftPaymentSummary`, `summarizeDraftPayments`, `isDraftListed`, `draftPaymentBadgeLabel`, `discardDraftWithPaymentMessage` — borradores con pago (fix-069-i). |
 | `src/app/core/utils/drawer-navigation.utils.ts` | `isRouteChange` |
 | `src/app/core/utils/edge-function-error.utils.ts` | `EdgeFunctionError`, `readEdgeFunctionError`, `edgeFunctionUserMessage` |
 | `src/app/core/utils/egresado-status.utils.ts` | `EgresadoAccountStatus`, `getEgresadoAccountStatus` |

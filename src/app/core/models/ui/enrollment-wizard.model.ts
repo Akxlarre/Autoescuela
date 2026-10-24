@@ -67,6 +67,10 @@ export interface DraftSummary {
   stepLabel: string;
   createdAt: string;
   expiresAt: string;
+  /** Plata ya recibida en el borrador (fix-069-i). */
+  paidAmount: number;
+  /** Tiene un pago no anulado: descartarlo lo anula y pide motivo (fix-069-i). */
+  hasLivePayment: boolean;
 }
 
 export const ENROLLMENT_STEPS: StepConfig[] = [

@@ -38,6 +38,8 @@ import {
 } from '@core/utils/promotion-code.utils';
 import { calcAge } from '@core/utils/age.utils';
 import { PAYMENT_STATUS_ANULADO } from '@core/utils/payment-status.utils';
+import { isDraftListed, summarizeDraftPayments } from '@core/utils/draft-payment.utils';
+import { toFriendlyDbMessage } from '@core/utils/db-error.utils';
 import {
   buildEnrollmentConsents,
   buildCommunicationsConsents,
@@ -122,6 +124,13 @@ export class EnrollmentFacade {
     severity?: 'info' | 'warn' | 'success' | 'danger' | 'secondary';
   }): Promise<boolean> {
     return this.confirmModal.confirm(config);
+  }
+
+  /** Confirmación con motivo obligatorio: resuelve con el motivo, o null si cancela (fix-069-i). */
+  confirmWithReason(
+    config: Parameters<ConfirmModalService['confirmWithReason']>[0],
+  ): Promise<string | null> {
+    return this.confirmModal.confirmWithReason(config);
   }
 
   openDocument(url: string, fileName?: string): void {
@@ -1801,10 +1810,12 @@ export class EnrollmentFacade {
            id,
            users!inner(first_names, paternal_last_name, maternal_last_name, rut)
          ),
-         courses!inner(name)`,
+         courses!inner(name),
+         payments(total_amount, status)`,
       )
-      .eq('status', 'draft')
-      .gt('expires_at', new Date().toISOString());
+      // fix-069-i: sin filtro de vencimiento en la consulta. Un borrador vencido con un pago vivo
+      // se sigue mostrando (la limpieza ya no lo borra); el filtro va abajo, con isDraftListed().
+      .eq('status', 'draft');
 
     if (branchId != null) {
       query = query.eq('branch_id', branchId) as typeof query;
@@ -1827,11 +1838,14 @@ export class EnrollmentFacade {
       6: 'Confirmación',
     };
 
-    const drafts: DraftSummary[] = (data ?? []).map((row: any) => {
+    const now = new Date();
+    const drafts: DraftSummary[] = (data ?? []).flatMap((row: any) => {
       const user = row.students?.users;
       const fullName = user
         ? `${user.first_names} ${user.paternal_last_name} ${user.maternal_last_name ?? ''}`.trim()
         : 'Sin nombre';
+      const { paidAmount, hasLivePayment } = summarizeDraftPayments(row.payments);
+      if (!isDraftListed(row.expires_at, hasLivePayment, now)) return [];
 
       return {
         enrollmentId: row.id,
@@ -1842,6 +1856,8 @@ export class EnrollmentFacade {
         stepLabel: stepLabels[row.current_step] ?? `Paso ${row.current_step}`,
         createdAt: row.created_at,
         expiresAt: row.expires_at,
+        paidAmount,
+        hasLivePayment,
       };
     });
 
@@ -2036,12 +2052,36 @@ export class EnrollmentFacade {
   /**
    * Descarta un borrador: elimina todos los datos asociados y el enrollment.
    * Actualiza la lista de drafts activos.
+   *
+   * fix-069-i: un borrador con pagos o consentimientos no se borra. La RPC
+   * `descartar_borrador_con_historial` lo cancela en una transacción, anula sus pagos vivos con
+   * `motivo` (obligatorio si hay uno) y libera sus clases reservadas. Responde `false` cuando no
+   * hay historial que conservar, y solo entonces se sigue con el borrado de siempre.
    */
-  async discardDraft(enrollmentId: number): Promise<boolean> {
+  async discardDraft(enrollmentId: number, motivo?: string): Promise<boolean> {
     this._isLoading.set(true);
     this._error.set(null);
 
     try {
+      const { data: cancelled, error: rpcError } = await this.supabase.client.rpc(
+        'descartar_borrador_con_historial',
+        { p_enrollment_id: enrollmentId, p_motivo: motivo?.trim() || null },
+      );
+      if (rpcError) {
+        this._error.set(
+          rpcError.message?.includes('CAJA_CERRADA')
+            ? 'El pago es de un día con la caja ya cerrada, así que no se puede anular desde aquí. Pide a un administrador que lo revise.'
+            : toFriendlyDbMessage(rpcError, 'No se pudo descartar la matrícula.'),
+        );
+        return false;
+      }
+      if (cancelled === true) {
+        this._activeDrafts.update((drafts) =>
+          drafts.filter((d) => d.enrollmentId !== enrollmentId),
+        );
+        return true;
+      }
+
       // 0. Obtener IDs para posible limpieza de registros huérfanos posteriores
       const { data: enrInfo } = await this.supabase.client
         .from('enrollments')

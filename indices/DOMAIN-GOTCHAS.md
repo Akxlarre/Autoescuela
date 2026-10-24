@@ -1974,6 +1974,25 @@
 - **Fuente:** `specs/fixes/fix-060-i-limpieza-borradores-con-consentimientos`, migración
   `20261022130000`, test `supabase/tests/rls/fix-060-i-cleanup-borradores-consentimientos.sql`.
 
+### DG-119 — Un borrador con pago no se borra: se cancela y su pago se anula; y `audit_log.user_id` NULL es "Sistema"
+
+- **Trampa:** limpiar o descartar un borrador de matrícula con `DELETE` de sus `payments`, o creer
+  que lo que muestra la auditoría a nombre de una secretaria lo hizo ella.
+- **Realidad:** un pago del paso "Pago" ya es plata recibida y está en la caja del día. Se
+  **anula** (queda la fila con motivo, quién y cuándo), nunca se borra, y la matrícula pasa a
+  `cancelled`. La secretaria puede anular **solo** pagos de un `draft` de su sede y **solo** por la
+  RPC `descartar_borrador_con_historial` (`update_payments` sigue siendo solo admin); con la caja de
+  ese día cerrada no se anula (`CAJA_CERRADA`). `cleanup_expired_drafts()` salta los borradores con
+  un pago vivo. En `audit_log`, `user_id` NULL = acción sin sesión ni service key (pg_cron): hasta
+  `20261024120000` `log_change()` tomaba `registered_by` y la limpieza aparecía hecha por quien
+  registró la fila.
+- **Regla de aplicabilidad:** todo camino nuevo que quite una matrícula sin confirmar revisa si
+  tiene `payments` (cualquier estado) o `consents` y en ese caso cancela (DG-118) en vez de borrar;
+  toda pantalla o reporte de auditoría trata `user_id` NULL como "Sistema" y no lo excluye con un
+  join `!inner`.
+- **Fuente:** `specs/fixes/fix-069-i-borrador-con-pago-y-auditoria`, migración `20261024120000`,
+  test `supabase/tests/rls/fix-069-i-borrador-con-pago.sql`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:
