@@ -67,8 +67,7 @@ Ninguno de una spec — bug de testing (`fix-058-i` B1-1). Criterios de este fix
 - [x] Front: descarte + lista de borradores (tests primero).
 - [x] Auditoría: filtro Quién (front + edge function).
 - [x] Verificación en navegador, suite completa, `tsc`, `lint:arch`, índices y cierre.
-- [ ] Deploy de `generate-audit-report` (pendiente de confirmación de Ignacio; el front nuevo
-      funciona con la versión vieja, solo que el Excel/PDF sigue trayendo solo secretarias).
+- [x] Deploy de `generate-audit-report` (2026-10-24, con OK de Ignacio).
 
 ## Verificación
 
