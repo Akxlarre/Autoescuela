@@ -35,6 +35,13 @@ portales de Admin/Secretaría: 7 hallazgos que ninguna lectura de código había
   procedimiento.
 - Completar al menos una vez los recorridos reales del instructor (ver su clase del día,
   iniciar/finalizar una clase, evaluar), no solo que cada pantalla cargue.
+- **Casos heredados de `fix-197-b` (ASG-i-034, cerrado el 2026-10-29)** — checklist
+  `specs/testing-piloto/034-instructores-secretarias-usuarios.md`. Quedaron fuera porque exigen
+  que el instructor inicie sesión o reciba la invitación (bloqueado por `fix-214-b` durante el
+  piloto):
+  - **E05** cambio de correo de un instructor: probar como M02 (`e2e/secretarias-cambio-correo-real.spec.ts`)
+    y confirmar que entra con el correo nuevo.
+  - **C28, H02, H04, H07** invitación y reenvío de invitación del instructor.
 
 ## Fuera de alcance
 

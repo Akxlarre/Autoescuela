@@ -267,7 +267,6 @@
 | ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | `b` | [fix-181-b-recuperar-contrasena-punta-a-punta](fixes/fix-181-b-recuperar-contrasena-punta-a-punta/fix.md) | 2026-10-01 |
 | ASG-i-022 | Testing: Autenticación, sesión, roles y bloqueo de fase piloto | `b` | [fix-183-b-testing-autenticacion-sesion](fixes/fix-183-b-testing-autenticacion-sesion/fix.md) | 2026-10-05 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
-| ASG-i-034 | Testing: Gestión de instructores, secretarias y usuarios | `b` | [fix-197-b-testing-instructores-secretarias-usuarios](fixes/fix-197-b-testing-instructores-secretarias-usuarios/fix.md) | 2026-10-07 |
 | ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `i` | [0010-i-clase-7-bloqueada-sin-segundo-pago](specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | 2026-10-13 |
 | ASG-i-023 | Testing: Matrícula presencial (Clase B, refuerzo y Clase Profesional) | `i` | [fix-058-i-testing-matricula-presencial](fixes/fix-058-i-testing-matricula-presencial/fix.md) | 2026-10-18 |
 <!-- AUTO-GENERATED:END -->
@@ -445,6 +444,7 @@
 | ASG-i-065 | Revisión de accesibilidad con axe en los tests e2e | [0054-b-axe-accesibilidad-en-e2e](specs/0054-b-axe-accesibilidad-en-e2e/spec.md) | 2026-10-20 (ver acceptance.md) |
 | ASG-m-011 | Testing: Certificación Profesional en el piloto | [fix-480-m-testing-certificacion-profesional](fixes/fix-480-m-testing-certificacion-profesional/fix.md) | 2026-10-22 |
 | ASG-i-066 | Prueba real del correo del Zoom (cierra fix-062-i) | [fix-062-i-correo-zoom-sede-y-envio-fallido](fixes/fix-062-i-correo-zoom-sede-y-envio-fallido/fix.md) | 2026-10-23 |
+| ASG-i-034 | Testing: Gestión de instructores, secretarias y usuarios | [fix-197-b-testing-instructores-secretarias-usuarios](fixes/fix-197-b-testing-instructores-secretarias-usuarios/fix.md) | 2026-10-29 |
 <!-- AUTO-GENERATED:END -->
 
 ---
