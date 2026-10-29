@@ -421,7 +421,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                     } @else {
                       <button
                         class="text-sm font-medium hover:underline cursor-pointer shrink-0"
-                        [style.color]="'var(--color-primary)'"
+                        [style.color]="'var(--brand-strong)'"
                         [disabled]="otherCycleOptions().length === 0"
                         title="Cambiar de ciclo"
                         data-llm-action="cambiar-alumno-de-ciclo"

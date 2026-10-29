@@ -251,7 +251,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
       border-radius: var(--radius-md);
       border: none;
       background: var(--brand-strong);
-      color: white;
+      color: var(--btn-primary-text);
       font-size: var(--text-sm);
       font-family: inherit;
       font-weight: 500;

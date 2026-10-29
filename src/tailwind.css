@@ -42,6 +42,8 @@
   /* spec 0055-b: text-brand / bg-brand → tono profundo (contraste AA). Bordes y detalles en SCSS
      siguen con --ds-brand (celeste brillante). */
   --color-brand: var(--brand-strong);
+  /* fix-236-b: texto sobre bg-brand (blanco en claro, azul marino en oscuro) */
+  --color-on-brand: var(--btn-primary-text);
   --color-brand-hover: var(--color-primary-hover);
   --color-brand-dark: var(--color-primary-dark);
   --color-brand-muted: var(--color-primary-muted);
@@ -603,7 +605,7 @@
   justify-content: center;
   gap: var(--badge-gap);
   background: var(--color-primary-muted);
-  color: var(--ds-brand);
+  color: var(--brand-strong); /* fix-236-b: el celeste brillante daba 2,56:1 */
   border: 1px solid var(--accent-border);
   border-radius: var(--badge-radius);
   padding: var(--badge-padding-y) var(--badge-padding-x);

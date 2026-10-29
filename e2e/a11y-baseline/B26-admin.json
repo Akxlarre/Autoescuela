@@ -1,6 +1,4 @@
 [
-  "dark:color-contrast",
   "dark:nested-interactive",
-  "light:color-contrast",
   "light:nested-interactive"
 ]

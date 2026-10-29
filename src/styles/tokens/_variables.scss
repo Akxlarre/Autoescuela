@@ -172,8 +172,9 @@
   --text-primary: #09090b;
   --text-secondary: #52525b;
   /* spec 0055-b: #a1a1aa daba 2,56:1 sobre blanco (WCAG AA pide 4,5). #6b6b74 da ≥4,8 sobre
-     blanco, --bg-base y el tinte de marca, y sigue más claro que --text-secondary. */
-  --text-muted: #6b6b74;
+     blanco, --bg-base y el tinte de marca, y sigue más claro que --text-secondary.
+     fix-236-b: #63636b para cumplir también sobre --bg-subtle (#e4e4e7 → 4,69). */
+  --text-muted: #63636b;
   --text-disabled: #d4d4d8;
 
   /* Bordes */
@@ -196,7 +197,8 @@
      state-* = resultado de acciones del sistema
      ("guardado con éxito", "error de formulario", "información") */
   /* WCAG AA compliant (≥4.5:1) sobre fondos pastel — variantes -700 de Tailwind */
-  --state-success: #15803d;
+  /* fix-236-b: -800 — el -700 daba 4,27:1 sobre los fondos tintados de éxito */
+  --state-success: #166534;
   --state-success-bg: #f0fdf4;
   --state-success-border: #bbf7d0;
 
@@ -425,8 +427,9 @@
   /* ── Capa 2: Tipografía ── */
   --text-primary: #f4f4f5;
   --text-secondary: #a1a1aa;
-  /* spec 0055-b: #71717a daba 3,67:1 sobre --bg-surface. #929299 da ≥5,4 sobre las superficies. */
-  --text-muted: #929299;
+  /* spec 0055-b: #71717a daba 3,67:1 sobre --bg-surface. fix-236-b: #98989f cumple también sobre
+     --bg-subtle (#2d2d30 → 4,79). */
+  --text-muted: #98989f;
   --text-disabled: #52525b;
 
   /* ── Capa 2: Bordes ──

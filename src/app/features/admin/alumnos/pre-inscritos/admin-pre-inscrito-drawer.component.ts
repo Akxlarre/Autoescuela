@@ -65,7 +65,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
           <p class="text-sm text-text-secondary font-mono">{{ p.rut }}</p>
           <div class="flex items-center gap-2">
             <span
-              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold text-white bg-brand"
+              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold text-on-brand bg-brand"
             >
               {{ p.licencia }}
             </span>

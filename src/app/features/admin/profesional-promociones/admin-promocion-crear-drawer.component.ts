@@ -360,7 +360,7 @@ function generatePromoName(startIso: string, code: string): string {
     }
     .monday-btn.selected {
       background: var(--brand-strong);
-      color: white;
+      color: var(--btn-primary-text);
       border-color: var(--color-primary);
       font-weight: 600;
     }

@@ -111,7 +111,7 @@ const PAYMENT_METHODS: {
           @for (step of [1, 2]; track step) {
             <div
               class="flex items-center gap-2 text-xs font-semibold"
-              [style.color]="facade.wizardStep() >= step ? 'var(--ds-brand)' : 'var(--text-muted)'"
+              [style.color]="facade.wizardStep() >= step ? 'var(--brand-strong)' : 'var(--text-muted)'"
             >
               <div
                 class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold transition-colors"

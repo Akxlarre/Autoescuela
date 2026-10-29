@@ -462,7 +462,7 @@ const PAGE_SIZE = 9;
       }
       .filter-pill--active {
         background: var(--brand-strong);
-        color: #fff;
+        color: var(--btn-primary-text);
         border-color: transparent;
       }
       .filter-pill__dot {

@@ -426,7 +426,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
       border-radius: var(--radius-lg);
       border: none;
       background: var(--brand-strong);
-      color: white;
+      color: var(--btn-primary-text);
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;

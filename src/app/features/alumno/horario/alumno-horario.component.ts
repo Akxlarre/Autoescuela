@@ -250,7 +250,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                   >
                     <span
                       class="text-2xs uppercase font-bold tracking-wider"
-                      [style.color]="day.isToday ? 'var(--ds-brand)' : 'var(--text-muted)'"
+                      [style.color]="day.isToday ? 'var(--brand-strong)' : 'var(--text-muted)'"
                     >
                       {{ dayAbbr(day.date) }}
                     </span>
@@ -268,7 +268,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                     </span>
                     <span
                       class="text-2xs leading-none mt-0.5"
-                      [style.color]="day.isToday ? 'var(--ds-brand)' : 'var(--text-muted)'"
+                      [style.color]="day.isToday ? 'var(--brand-strong)' : 'var(--text-muted)'"
                     >
                       {{ monthAbbr(day.date) }}
                     </span>

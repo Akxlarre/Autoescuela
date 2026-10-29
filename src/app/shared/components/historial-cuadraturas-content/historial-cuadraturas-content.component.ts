@@ -135,7 +135,7 @@ function formatCLP(value: number): string {
       height: 22px;
       border-radius: 50%;
       background: var(--brand-strong);
-      color: #fff;
+      color: var(--btn-primary-text);
       display: flex;
       align-items: center;
       justify-content: center;

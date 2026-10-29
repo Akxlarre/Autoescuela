@@ -70,8 +70,8 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
               </p>
             </div>
           } @else if (pagos().length === 0) {
-            <div class="flex flex-col items-center justify-center gap-3 py-8 opacity-40">
-              <app-icon name="receipt" [size]="32" />
+            <div class="flex flex-col items-center justify-center gap-3 py-8 text-text-muted">
+              <app-icon name="receipt" [size]="32" class="opacity-40" />
               <p class="text-xs font-medium text-center">No hay pagos registrados</p>
             </div>
           }
