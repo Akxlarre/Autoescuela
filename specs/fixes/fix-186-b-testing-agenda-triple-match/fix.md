@@ -139,3 +139,59 @@ sesión de admin/secretaria desde el 15-oct: Agenda y elección de horarios caí
 | B11 | Desactivar un instructor con clases futuras avisa y pide reasignarlas (ya lo hacía `fix-205-b`); además la Agenda mostraba "#id" en sus clases | `hotfix-097-b` (#316) |
 | B15 / M09 | Los feriados no ofrecen horarios; lista sincronizada sola (mensual) e incluye el 20 de agosto de Chillán | spec `0052-b` (#318) |
 | C08 | El límite de semanas de la Agenda sigue siendo una preferencia por equipo (desde fix-228-b los horarios cubren los 4 meses igual) | — (queda así) |
+
+## Tercera tanda (2026-10-29) — grupo 1 (la Agenda en sí)
+
+Reparto del resto del checklist acordado con el owner: **(1)** la Agenda en sí, **(2)** reprogramar /
+reagendar desde la ficha y eliminar / reactivar horario, **(3)** iniciar y finalizar la clase,
+**(4)** cron de fin de jornada, **(5)** la matriz Triple Match. Se empieza por el 1 (casi todo de
+solo lectura) y se cierra el 5 con referencias.
+
+`e2e/agenda-3.spec.ts`: **5/5 en verde, 2 corridas** (`--workers=1`). Los tests con clases siembran
+un alumno E2E- por API y lo borran al terminar; usan un instructor de la sede 1 distinto del 223 de
+`agenda.spec.ts` para no chocar con los tests que inician clases. Verificado después de cada
+corrida: sin datos E2E- sobrantes.
+
+| Casos | Resultado |
+|---|---|
+| B05, E06 | ✅ una clase "No asistió" de la semana pasada sale tachada (`slot-block--no_show`, `line-through`) y su detalle dice "No asistió" |
+| B07 | ✅ la clase cancelada no aparece y su horario vuelve a ofrecerse como "Disponible" |
+| B09 | ✅ un apellido de 45 caracteres no desborda la celda |
+| B10 | ✅ la clase sale en la fila de su hora Chile |
+| G01 | ✅ con la Agenda abierta (secretaria), una clase agendada desde otra sesión aparece sin recargar |
+| G02 | ✅ al iniciarla y cerrarla desde otra sesión, el slot pasa a "En progreso" y luego a "Completada" sin recargar |
+| E05 | anotado: el detalle de una clase **en curso no muestra el KM inicial** (solo las completadas muestran KM). Pendiente de decisión del owner |
+| A07, E10 | ✅ "Agenda" en las acciones rápidas del dashboard de la secretaria abre la Agenda en el drawer; el detalle de un horario se apila y "Volver" regresa a la grilla |
+| C12 | ✅ 8 semanas atrás: "Semana anterior" sigue habilitado (sin tope) y no hay ningún "Disponible" |
+| D05 | ✅ el filtro no ofrece instructores teóricos. Hoy **no hay ninguno en la BD**, así que el test queda como protección; el filtro ya excluye `type = 'theory'` en `AgendaFacade` |
+
+**Hallazgo al automatizar (para quien siembre clases cerradas):** completar una clase con `km_end`
+sube `vehicles.current_km` (trigger de `fix-222-b`) y le crea un aviso al alumno; sin borrar ese aviso
+el alumno E2E- no se puede borrar (FK de `notifications`). El test usa el KM actual del vehículo y
+borra el aviso. Una corrida intermedia dejó el alumno 9154 sin borrar: se limpió a mano (aviso +
+usuario) y se comprobó que ningún vehículo cambió de KM.
+
+**Grupo 1 cerrado como cubierto por otro track o decidido:**
+- B11 → `hotfix-097-b` (nombre del instructor inactivo, no "#id"). B13 → `hotfix-077-b` (patente del
+  vehículo "ambas sedes"). B14 → `fix-224-b` + `fix-226-b` (mantención no ofrece horarios). B15 →
+  spec `0052-b` (feriados). B16 → `fix-227-b` (un solo "libre" por horario). C08 → decisión del
+  2026-10-19 (preferencia por equipo). F05 → `fix-196-b` (choque de la otra sede, test SQL). G03 →
+  O06 / test SQL de concurrencia.
+- C02 → test C01–C03 de `agenda.spec.ts`. D04 → A02, F01 y F04 de `agenda.spec.ts`.
+
+**Grupo 1 que sigue abierto:** B03 (semana sin clases), B08 (horario `reserved` de un borrador, S14),
+B12 (aviso de SOAP vencido: falta un vehículo con documentos vencidos en los datos), C09 / C10 ("Ir a
+fecha" a otra semana y fechas bloqueadas), D08 (sede sin instructores: no hay datos), E07, F02, F03,
+F06, F07, F08 (sedes y multisede en la Agenda), G04–G07 (ráfagas de recarga, instructor nuevo, canal
+al salir, página + drawer a la vez), P07 (tooltips), P08 (animación).
+
+**Grupo 5 — matriz Triple Match, cerrada con referencias:** L01 y L03 (instructor ocupado, alumno
+con otra clase) → `supabase/tests/agenda/fix-186-b-triple-match-bd.sql`; L02 (vehículo ocupado) →
+`fix-187-b`; L04 y L05 (horario pasado, límite de fecha) → `fix-228-b`; L06 (tope por día) → la app
+lee `courses.max_classes_per_day`; L08 y L09 (instructor "ambas sedes", choque en la otra sede) →
+spec `0004-m` + `fix-196-b`; L10 (mantención) → `fix-224-b`; L11 (dos secretarias a la vez) → O06.
+**L07** (aviso de SOAP / revisión técnica en cada flujo) queda con B12 y con los casos H11 / I12 de
+los flujos.
+
+**Casos H (paso 2 de la matrícula presencial):** H08, H10, H13, H14, H16, H18 y H21 pasan a
+`fix-058-i` (ASG-i-023, Ignacio), que ya prueba ese flujo.

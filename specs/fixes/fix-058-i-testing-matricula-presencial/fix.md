@@ -202,3 +202,16 @@ no hay ninguno. Arreglo probable: borrar (o desvincular) `consents` del borrador
 **Resumen Bloque 0:** 8 resueltas (S1, S2, S3, S4, S5, S9, S17, S22), 1 no aplica en el piloto
 (S19), 1 en parte (S18), 6 siguen abiertas por código (S6, S7, S8, S10, S13, S14 + S20 de
 negocio) y 7 hay que probarlas en navegador o SQL (S11, S12, S15, S16, S21, S23, S24).
+
+## Casos heredados de `fix-186-b` (2026-10-29, Benjamín)
+
+Del checklist `specs/testing-piloto/026-agenda-triple-match.md`, sección H (paso 2 de la matrícula,
+elegir horarios). Se pasan acá porque se pisan con esta pasada de matrícula presencial; los pasos
+numerados de H08 y H10 están en la §4 de ese checklist.
+- **H08** horizonte de agendamiento: hasta qué fecha se ofrecen horarios.
+- **H10** horario libre pero tomado por un borrador expirado (clases `reserved`).
+- **H13** horario ocupado por el vehículo (clase de otro instructor con ese vehículo).
+- **H14** alumno con otra matrícula B activa y clases ya agendadas.
+- **H16** cambiar de instructor rápido 3 veces con red lenta.
+- **H18** retomar un borrador.
+- **H21** matrícula desde el drawer de la Base de Alumnos.
