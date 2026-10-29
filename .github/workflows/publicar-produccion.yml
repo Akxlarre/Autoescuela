@@ -84,7 +84,9 @@ jobs:
             if [ -n "$LAST" ]; then
               echo "Cambios desde **$LAST** (la versión publicada más reciente):"
               echo
-              git log --no-merges --format='- %s (%an, `%h`)' "$LAST..HEAD" | head -60
+              # -n en vez de "| head": con pipefail, head cortaba el pipe y git log moría por
+              # SIGPIPE (exit 141) cuando había más de 60 commits sin publicar.
+              git log --no-merges --format='- %s (%an, `%h`)' -n 60 "$LAST..HEAD"
             else
               echo "Primera versión con Release. Últimos commits de main:"
               echo
