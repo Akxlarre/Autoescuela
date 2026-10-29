@@ -246,7 +246,22 @@ respuesta del perfil; cambio de clave y logout interceptados). Regresión `contr
 
 **Pasan a `fix-181-b`** (esperan el dominio definitivo y la URL de Auth): D05, D07, D08, D10, L05.
 
-**Quedan (prueba manual única, antes de cerrar este track):**
-- B04 app abierta más de 1 h y seguir usándola; B05 suspender el equipo 2+ h y volver; B06 cerrar
-  la sesión desde otro lado (en una cuenta que no use la suite).
-- O05 autocompletar del navegador / gestor de contraseñas en el login.
+
+## Novena tanda (2026-10-29)
+
+`e2e/auth-sesion-9.spec.ts`: **4/4 en verde, 3 corridas** (dos seguidas con `--workers=1` y una en
+paralelo junto con la octava tanda). El tiempo es el reloj falso de Playwright (`page.clock`); la
+renovación y la revocación de la sesión son reales contra Supabase. Cada test inicia sesión por la
+UI en un contexto propio (`secretaria2@test.com`), sin la sesión guardada de la suite, para que
+renovarla o revocarla no invalide la de los demás tests. En la primera corrida B06 falló una vez y
+no se reprodujo en las tres siguientes: anotado por si vuelve a aparecer.
+
+| Casos | Resultado |
+|---|---|
+| B04 | ✅ 61 min después el token se renueva solo (200) y la navegación siguiente no tiene consultas fallidas |
+| B05 | ✅ "suspendido" (pestaña oculta + sin red + 2 h 10 min): al volver renueva la sesión y la app sigue funcionando |
+| B06 | ✅ con la sesión revocada en Supabase (scope local), la app se entera al renovar, vuelve a `/login` sin errores de página |
+| O05 | ✅ simulado: con valores autocompletados (input + change) el botón se habilita. Anotado: un gestor que dispare **solo** `change` no lo habilitaría (`ngModel` escucha `input`); Chrome, 1Password y Bitwarden disparan `input` |
+
+**Queda (manual, ~1 min) antes de cerrar este track:** O05 con el autocompletar real de Chrome o un
+gestor de contraseñas. B05 se simuló: una suspensión real del equipo no se puede automatizar.
