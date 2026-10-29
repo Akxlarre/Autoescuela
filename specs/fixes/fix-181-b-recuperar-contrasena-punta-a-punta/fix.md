@@ -72,3 +72,13 @@ redirects solo a localhost → en producción el link del correo abre localhost.
 no cambiarlo hasta tener el dominio definitivo** (`app.autoescuelachillan.cl` es provisional).
 Al tenerlo: Site URL = `https://<dominio>`, redirects `https://<dominio>/**` (manteniendo
 `http://localhost:4200/**` para los tests), y la prueba manual de punta a punta de arriba.
+
+## Casos heredados de `fix-183-b` (2026-10-29)
+
+Del checklist `specs/testing-piloto/022-autenticacion-sesion-fase-piloto.md`, a probar en la misma
+pasada manual de punta a punta, cuando exista el dominio:
+- **D05** el correo llega en español, con remitente reconocible y enlace al dominio (no a localhost).
+- **D07** abrir el enlace dos veces o uno viejo → "enlace vencido o usado", no pantalla en blanco.
+- **D08** pedir dos correos seguidos → aviso claro de esperar.
+- **D10** abrir el enlace con otra cuenta logueada en ese navegador → queda claro con qué cuenta se está.
+- **L05** recuperar la clave en un equipo con la sesión abierta en otro → anotar si la otra se cierra.
