@@ -1,6 +1,7 @@
 # Hotfix: "Publicar en producción" falla con exit 141 si hay más de 60 commits sin publicar
 > id: hotfix-108-b-publicar-produccion-sigpipe
-> status: in_progress
+> status: done
+> closed: 2026-10-29
 > created: 2026-10-28
 
 ## Problema
