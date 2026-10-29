@@ -1,6 +1,7 @@
 # Hotfix: deploys duplicados (Vercel Production y workflow Astro sin uso)
 > id: hotfix-109-b-limpiar-deploys-duplicados
-> status: in_progress
+> status: done
+> closed: 2026-10-29
 > created: 2026-10-28
 
 ## Problema
