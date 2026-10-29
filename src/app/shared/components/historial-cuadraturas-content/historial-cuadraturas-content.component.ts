@@ -271,6 +271,9 @@ function formatCLP(value: number): string {
         <!-- Grid de celdas | DESKTOP SOLO -->
         <div
           class="hidden lg:grid grid-cols-7 gap-px bg-border-muted/30 flex-1 min-h-0 overflow-y-auto"
+          tabindex="0"
+          role="region"
+          aria-label="Calendario de cuadraturas del mes"
         >
           @if (isLoading()) {
             @for (i of skeletonCells; track i) {

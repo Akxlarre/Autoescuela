@@ -32,6 +32,6 @@ hora/día corresponde cada celda. axe lo marca como `aria-required-children` (en
 - `ng build` ✅ · `lint:arch` ✅
 
 ## Test de regresión
-- `agenda-semanal.component.spec.ts`: todas las celdas del grid tienen un `role="row"` como padre y el
-  grid solo tiene filas como hijos.
+- `e2e/agenda.spec.ts` B17: todas las celdas del grid tienen un `role="row"` como padre y el grid solo
+  tiene filas como hijos (los specs de componente no corren en vitest en este proyecto).
 - Análisis axe de B08 + barrido.

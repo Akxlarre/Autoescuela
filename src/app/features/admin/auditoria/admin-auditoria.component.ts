@@ -279,13 +279,9 @@ const ACTION_OPTIONS = withAllOption(
                   <span class="item-title">{{ log.usuarioNombre }}</span>
                   <span class="micro-label">{{ log.usuarioRol }}</span>
                   @if (log.usuarioEmail !== '—') {
-                    <a
-                      [href]="'mailto:' + log.usuarioEmail"
-                      class="text-xs brand-link"
-                      (click)="$event.stopPropagation()"
-                    >
-                      {{ log.usuarioEmail }}
-                    </a>
+                    <!-- fix-238-b: texto, no enlace: la fila entera es un botón y un control
+                         dentro de otro confunde al teclado y al lector. El mailto está en el detalle. -->
+                    <span class="text-xs text-text-secondary">{{ log.usuarioEmail }}</span>
                   }
                 </div>
 

@@ -169,7 +169,12 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
           <app-tabs [tabs]="tabs" [activeId]="activeTab()" (activeIdChange)="setTab($event)" />
         </div>
 
-        <div class="flex-1 min-h-0 overflow-y-auto pr-1">
+        <div
+          class="flex-1 min-h-0 overflow-y-auto pr-1"
+          tabindex="0"
+          role="region"
+          aria-label="Contenido de la pestaña"
+        >
           @switch (activeTab()) {
             @case ('tendencias') {
               @if (facade.sectionError('series')) {
