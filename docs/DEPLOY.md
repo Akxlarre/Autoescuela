@@ -86,15 +86,16 @@ La lógica vive en `scripts/lib/deploy-manifest.js`, con su test en
 | Secret `FTP_SERVER` | hostname **del servidor** que figura en el certificado TLS (hoy `rs7-va.serverhostgroup.com`), no `ftp.<dominio>` — ver Problemas conocidos |
 | Secret `FTP_USERNAME` | cuenta FTP dedicada, **enjaulada en el docroot del subdominio** |
 | Secret `FTP_PASSWORD` | contraseña de esa cuenta |
-| Variable `APP_DOMAIN` | dominio sin `https://` (hoy `app.autoescuelachillan.cl`) |
+| Variable `APP_DOMAIN` | dominio sin `https://` (hoy `app.conductorchillan.cl`) |
 
 Los secrets van **en el environment**, no como *Repository secrets*: así solo los lee el job que
 pasó la aprobación.
 
 ## Cambiar de dominio
 
-El dominio actual es **provisorio**. Ni el workflow ni el `.htaccess` lo nombran, así que no hace
-falta tocar código. Al cambiarlo:
+Desde 2026-10-28 el dominio es `app.conductorchillan.cl` (reemplazó al provisorio
+`app.autoescuelachillan.cl`). Ni el workflow ni el `.htaccess` lo nombran, así que no hace falta
+tocar código. Al cambiarlo:
 
 - [ ] **cPanel**: crear el subdominio (con SSL activo) y una cuenta FTP enjaulada en su docroot.
 - [ ] **GitHub**: actualizar `APP_DOMAIN` y los secrets FTP del environment `Production`.
@@ -108,6 +109,11 @@ falta tocar código. Al cambiarlo:
 - [ ] **Supabase Edge Functions → secret `APP_URL`** = `https://<dominio>`. Sin esto, Webpay
       devuelve al usuario a otra URL (`public-enrollment` y `student-payment` usan
       `localhost:4200` por defecto).
+- [ ] **Supabase Edge Functions → secret `PUBLIC_ENROLLMENT_ALLOWED_ORIGINS`**: agregar
+      `https://<dominio>` a la lista (CSV, sin `/` final). Es la allowlist de CORS de
+      `public-enrollment`: un origen que no está en la lista recibe `Access-Control-Allow-Origin: null`
+      y la inscripción pública (`/inscripcion`) falla en el navegador. No requiere redeploy.
+      Verificar con un preflight `OPTIONS` con header `Origin: https://<dominio>`.
 - [ ] Publicar un tag y verificar `https://<dominio>/version.json`.
 
 ## Problemas conocidos
