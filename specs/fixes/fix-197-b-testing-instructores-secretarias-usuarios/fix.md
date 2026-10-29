@@ -1,7 +1,8 @@
 # Fix: Testing — Gestión de instructores, secretarias y usuarios
 > id: fix-197-b-testing-instructores-secretarias-usuarios
 > refs: ASG-i-034
-> status: in_progress
+> status: done
+> closed: 2026-10-29
 > created: 2026-10-07
 
 ## Root Cause
@@ -181,3 +182,22 @@ correo y activa la cuenta.
 - E05 (cambio de correo de un instructor): el cambio se puede probar igual que M02, pero "entra con el correo nuevo" exige que el instructor pueda iniciar sesión, y su portal está en piloto.
 - Bloqueados por el piloto del portal de instructores (no se envían ni reenvían invitaciones,
   fix-214-b): C28, H02, H04, H07.
+
+## Cierre (2026-10-29)
+
+Decisiones del owner:
+
+| Pendiente | Decisión | Destino |
+|---|---|---|
+| V07/V08 pestañas del drawer Ajustes sin `role="tab"` | Corregir ya | `hotfix-168-b` |
+| E05, C28, H02, H04, H07 (necesitan que el instructor entre o reciba invitación) | Se mueven a la asignación que espera el fin del piloto del portal | `ASG-b-100` |
+| Datos de prueba del 12-oct | Se quedan como datos E2E permanentes (no se borra nada de la BD compartida) | ver abajo |
+
+**Datos E2E permanentes** (no borrarlos sin avisar; los usan o pueden usarlos otros tests):
+- Instructores 237 y 238 (`users` 8426 y 8427, correos `e2e.alta.*@e2e.test`, con cuenta de Auth),
+  asignación 56, documentos 3 y 4 (archivos en `instructor-docs/237/`).
+- Vehículo `ZZ4103` (id 36, sede A): lo usa además `fix-220-b` (flota).
+- Secretaria "Zzprueba Secretaria" (`users` 8428, cuenta de Auth `117f7de0-…`): la usa M02.
+
+Con esto T1–T3 quedan cumplidos: S1–S22 confirmadas/descartadas/decididas, los casos automatizables
+están en `e2e/` y los manuales restantes tienen dueño.

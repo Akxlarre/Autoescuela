@@ -51,40 +51,30 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   template: `
     <div class="ajustes-container flex h-full flex-col">
       <!-- Tabs Navigation -->
-      <div class="flex border-b border-border-subtle shrink-0 mb-4">
-        <button
-          type="button"
-          class="flex-1 py-3 text-sm font-semibold border-b-2 transition-all cursor-pointer"
-          [class.border-brand]="activeTab() === 'perfil'"
-          [class.text-brand]="activeTab() === 'perfil'"
-          [class.border-transparent]="activeTab() !== 'perfil'"
-          [class.text-text-secondary]="activeTab() !== 'perfil'"
-          (click)="setTab('perfil')"
-        >
-          Mi Perfil
-        </button>
-        <button
-          type="button"
-          class="flex-1 py-3 text-sm font-semibold border-b-2 transition-all cursor-pointer"
-          [class.border-brand]="activeTab() === 'config'"
-          [class.text-brand]="activeTab() === 'config'"
-          [class.border-transparent]="activeTab() !== 'config'"
-          [class.text-text-secondary]="activeTab() !== 'config'"
-          (click)="setTab('config')"
-        >
-          Ajustes
-        </button>
-        @if (isAdmin()) {
+      <!-- hotfix-168-b (V07/V08): patrón tablist de WAI-ARIA, con flechas/Inicio/Fin y
+           tabindex itinerante. -->
+      <div
+        class="flex border-b border-border-subtle shrink-0 mb-4"
+        role="tablist"
+        aria-label="Secciones de ajustes"
+      >
+        @for (tab of tabs(); track tab.id) {
           <button
             type="button"
+            role="tab"
             class="flex-1 py-3 text-sm font-semibold border-b-2 transition-all cursor-pointer"
-            [class.border-brand]="activeTab() === 'seguridad'"
-            [class.text-brand]="activeTab() === 'seguridad'"
-            [class.border-transparent]="activeTab() !== 'seguridad'"
-            [class.text-text-secondary]="activeTab() !== 'seguridad'"
-            (click)="setTab('seguridad')"
+            [id]="'ajustes-tab-' + tab.id"
+            [attr.aria-selected]="activeTab() === tab.id"
+            [attr.aria-controls]="'ajustes-panel-' + tab.id"
+            [attr.tabindex]="activeTab() === tab.id ? 0 : -1"
+            [class.border-brand]="activeTab() === tab.id"
+            [class.text-brand]="activeTab() === tab.id"
+            [class.border-transparent]="activeTab() !== tab.id"
+            [class.text-text-secondary]="activeTab() !== tab.id"
+            (click)="setTab(tab.id)"
+            (keydown)="onTabKeydown($event)"
           >
-            Seguridad
+            {{ tab.label }}
           </button>
         }
       </div>
@@ -93,7 +83,12 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
       <app-drawer-form>
         <!-- ── TAB: PERFIL ────────────────────────────────────────── -->
         @if (activeTab() === 'perfil') {
-          <div class="space-y-5">
+          <div
+            class="space-y-5"
+            role="tabpanel"
+            id="ajustes-panel-perfil"
+            aria-labelledby="ajustes-tab-perfil"
+          >
             <!-- Identity Header -->
             <div class="flex flex-col items-center gap-3 pt-2 pb-2">
               <!-- Avatar -->
@@ -239,7 +234,12 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 
         <!-- ── TAB: CONFIGURACIONES ──────────────────────────────── -->
         @if (activeTab() === 'config') {
-          <div class="space-y-6">
+          <div
+            class="space-y-6"
+            role="tabpanel"
+            id="ajustes-panel-config"
+            aria-labelledby="ajustes-tab-config"
+          >
             <!-- spec 0048-b AC8: la pestaña se agrupa en preferencias personales, reglas de la
                  escuela y catálogos. Cada título se muestra solo si el rol ve algún bloque. -->
             <section class="space-y-3">
@@ -603,7 +603,12 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 
         <!-- ── TAB: SEGURIDAD (SOLO ADMIN) ────────────────────────── -->
         @if (activeTab() === 'seguridad' && isAdmin()) {
-          <div class="space-y-4">
+          <div
+            class="space-y-4"
+            role="tabpanel"
+            id="ajustes-panel-seguridad"
+            aria-labelledby="ajustes-tab-seguridad"
+          >
             <div class="flex items-center justify-between">
               <h3 class="font-bold text-text-primary">Historial de Auditoría</h3>
               <button
@@ -673,6 +678,13 @@ export class AjustesDrawerComponent {
   protected readonly currentUser = this.auth.currentUser;
   protected readonly isAdmin = computed(() => this.currentUser()?.role === 'admin');
   protected readonly isAlumno = computed(() => this.currentUser()?.role === 'alumno');
+  protected readonly tabs = computed<{ id: 'perfil' | 'config' | 'seguridad'; label: string }[]>(
+    () => [
+      { id: 'perfil', label: 'Mi Perfil' },
+      { id: 'config', label: 'Ajustes' },
+      ...(this.isAdmin() ? [{ id: 'seguridad' as const, label: 'Seguridad' }] : []),
+    ],
+  );
 
   /**
    * Comunicaciones promocionales (spec 0040-b, Ley 21.719, AC7/AC8). Acotado a
@@ -764,6 +776,33 @@ export class AjustesDrawerComponent {
 
   setTab(tab: 'perfil' | 'config' | 'seguridad'): void {
     this.activeTab.set(tab);
+  }
+
+  /** Flechas, Inicio y Fin mueven la pestaña activa y el foco (patrón tablist). */
+  onTabKeydown(event: KeyboardEvent): void {
+    const ids = this.tabs().map((t) => t.id);
+    const current = ids.indexOf(this.activeTab());
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight':
+        next = (current + 1) % ids.length;
+        break;
+      case 'ArrowLeft':
+        next = (current - 1 + ids.length) % ids.length;
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = ids.length - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    this.setTab(ids[next]);
+    const tablist = (event.currentTarget as HTMLElement).parentElement;
+    tablist?.querySelector<HTMLElement>(`#ajustes-tab-${ids[next]}`)?.focus();
   }
 
   formatConsentDate(iso: string | null): string {
