@@ -212,3 +212,41 @@ bloqueados, API, dos equipos, sin sede, sin rol): **13/13 en verde, 2 corridas**
 - D03–D08, D10 (dominio).
 - G20, G34, K08 (cubierto por `secretarias-cambio-correo-real.spec.ts`), L05, M07 (decisión),
   N02, O05 (autocompletar del navegador).
+
+## Octava tanda y decisiones del owner (2026-10-29)
+
+`e2e/auth-sesion-8.spec.ts`: **6/6 en verde** (sin escrituras reales: primer ingreso simulado en la
+respuesta del perfil; cambio de clave y logout interceptados). Regresión `contrasena-requisitos`
+4/4 en verde.
+
+| Casos | Resultado |
+|---|---|
+| **C03** | ❌ → `hotfix-169-b`: la pantalla de crear contraseña no tenía salida. Ahora "Cerrar sesión" lleva a `/login` y, sin sesión, la pantalla también manda al login (C11) |
+| C02 | ✅ en primer ingreso, `/app/secretaria/dashboard`, `/app` y `/app/admin/dashboard` vuelven a `/force-password-change` |
+| C10 | ✅ con la clave ya creada, `/force-password-change` lleva al dashboard |
+| **C12** | ❌ → `hotfix-169-b`: el doble clic en "Guardar y entrar" mandaba **dos** cambios de clave. Tras el fix: uno |
+| C13 | ✅ sin red: mensaje de error en `role="alert"`, se queda en la pantalla y se puede reintentar |
+| G34 | ✅ `/inscripcion?sede=1` y `/inscripcion?curso=…&utm_source=qr` terminan en MND con "Volver al inicio de sesión" |
+
+**Cerrados como cubiertos por otros tracks:**
+- A16 (usuario sin perfil) → el mensaje lo prueba J05 (séptima tanda).
+- K08 (cambiar el correo de una secretaria) → M02 de `fix-197-b` (`secretarias-cambio-correo-real.spec.ts`).
+- C05 (mínimo de caracteres) → spec `0050-b`: mínimo 8 + confirmación, en cliente y servidor.
+- C04 → `contrasena-requisitos.spec.ts`. C06 ya no aplica (desde `fix-182-b` no hay clave inicial).
+  C07–C09 (crear la clave real y entrar con ella) → L01 de `fix-197-b` (activación real por correo).
+- G20 → `fix-328-m`: con Pre-inscritos bloqueado en el piloto, la notificación solo cierra el panel
+  (test unitario de `resolveNotificationRoute`).
+
+**Decisiones:**
+| Caso | Decisión |
+|---|---|
+| C03 | Agregar "Cerrar sesión" → `hotfix-169-b` |
+| M07 | **Sin aviso** del navegador al recargar o cerrar con un borrador: el borrador ya vive en la BD y sigue en la lista |
+| N02 | **No bloquear**: un usuario con primer ingreso pendiente puede leer por API los datos de su sede. La cuenta la crea el admin y la RLS ya limita a su sede; bloquearlo exigiría tocar la RLS de muchas tablas por poco riesgo |
+
+**Pasan a `fix-181-b`** (esperan el dominio definitivo y la URL de Auth): D05, D07, D08, D10, L05.
+
+**Quedan (prueba manual única, antes de cerrar este track):**
+- B04 app abierta más de 1 h y seguir usándola; B05 suspender el equipo 2+ h y volver; B06 cerrar
+  la sesión desde otro lado (en una cuenta que no use la suite).
+- O05 autocompletar del navegador / gestor de contraseñas en el login.

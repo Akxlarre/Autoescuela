@@ -132,6 +132,17 @@ import { PasswordRequirementsComponent } from '@shared/components/password-requi
               }
               {{ copy.submit }}
             </button>
+
+            <!-- hotfix-169-b (C03): sin esto, quien entra con la cuenta equivocada queda atrapado -->
+            <button
+              type="button"
+              class="btn-ghost mt-3 w-full justify-center"
+              [disabled]="loading()"
+              data-llm-action="cerrar-sesion-cambio-clave"
+              (click)="cerrarSesion()"
+            >
+              Cerrar sesión
+            </button>
           </form>
         </div>
       </div>
@@ -231,6 +242,10 @@ export class ForcePasswordChangeComponent {
     }
   }
 
+  cerrarSesion(): void {
+    void this.auth.logout();
+  }
+
   togglePasswordVisibility(): void {
     this.showPassword.update((val) => !val);
   }
@@ -244,7 +259,9 @@ export class ForcePasswordChangeComponent {
   }
 
   async onSubmit(): Promise<void> {
-    if (!this.canSubmit()) return;
+    // hotfix-169-b (C12): el segundo clic de un doble clic llega antes de que el botón se pinte
+    // deshabilitado.
+    if (!this.canSubmit() || this.loading()) return;
 
     this.hideError();
     this.loading.set(true);
