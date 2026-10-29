@@ -18,3 +18,10 @@ con Tab.
   contenido con `role="tabpanel"` + `aria-labelledby`. Flechas izquierda/derecha, Inicio y Fin
   cambian de pestaña y mueven el foco. Las pestañas salen de un `computed` (Seguridad solo para
   admin, igual que antes). Sin cambios visuales.
+- **Archivo:** `e2e/ajustes-pestanas.spec.ts` — admin (3 pestañas) y secretaria (2): roles,
+  `aria-selected`, `aria-controls`/`aria-labelledby`, tabindex, flechas con vuelta, Inicio/Fin y clic.
+
+## Verificación
+- `tsc` limpio; `lint:arch` 0 errores; Vitest `src/app/shared` 342/342.
+- Navegador (2026-10-29, Chrome con `ng serve`, BD de desarrollo): `e2e/ajustes-pestanas.spec.ts`
+  2/2 en verde; regresión K10 de `auth-sesion-4.spec.ts` (Ajustes muestra "Activo") en verde.
