@@ -59,7 +59,12 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
         <div class="h-px bg-border-subtle w-full my-1"></div>
 
         <!-- History List -->
-        <div class="flex flex-col gap-3 ficha-pagos-grow ficha-pagos-scroll custom-scrollbar pr-1">
+        <div
+          class="flex flex-col gap-3 ficha-pagos-grow ficha-pagos-scroll custom-scrollbar pr-1"
+          tabindex="0"
+          role="region"
+          aria-label="Historial de pagos"
+        >
           @if (becaCompleta()) {
             <!-- fix-057-i: la beca no registra un pago de $0; se explica aquí -->
             <div class="flex flex-col items-center justify-center gap-2 py-8 text-center">

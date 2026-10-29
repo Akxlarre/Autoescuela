@@ -104,6 +104,7 @@ import { ACCION_LABELS_PROF } from '@core/models/ui/certificacion-profesional.mo
                   class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                   [disabled]="currentPage() >= totalPages() - 1"
                   data-llm-action="next-page"
+                  aria-label="Página siguiente"
                   (click)="nextPage()"
                 >
                   <app-icon name="chevron-right" [size]="16" />

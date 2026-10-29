@@ -47,8 +47,13 @@ import type { BranchOption } from '@core/models/ui/branch.model';
         <p class="branch-gate__subtitle">{{ reason() }}</p>
       </div>
 
-      <!-- Cards de sedes -->
-      <div class="branch-gate__grid" role="listbox" aria-label="Seleccionar sede">
+      <!-- Cards de sedes. fix-238-b: solo es listbox cuando hay opciones; sin sedes (o mientras
+           cargan) un listbox vacío con un párrafo adentro es ARIA inválido. -->
+      <div
+        class="branch-gate__grid"
+        [attr.role]="visibleBranches().length ? 'listbox' : null"
+        [attr.aria-label]="visibleBranches().length ? 'Seleccionar sede' : null"
+      >
         @for (branch of visibleBranches(); track branch.id; let first = $first) {
           <button
             type="button"

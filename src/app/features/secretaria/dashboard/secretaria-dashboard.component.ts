@@ -166,6 +166,8 @@ import {
             <div class="scroll-fade flex-1 min-h-0">
               <ul
                 class="m-0 p-0 list-none flex flex-col gap-1 h-full overflow-y-auto custom-scrollbar pr-2"
+                tabindex="0"
+                aria-label="Actividad reciente"
               >
                 @for (item of visibleActivities(); track item.id; let i = $index) {
                   <li
@@ -259,6 +261,8 @@ import {
             <div class="scroll-fade flex-1 min-h-0">
               <ul
                 class="m-0 p-0 list-none flex flex-col gap-1 h-full overflow-y-auto custom-scrollbar pr-2"
+                tabindex="0"
+                aria-label="Alertas importantes"
               >
                 @for (alert of visibleAlerts(); track alert.id; let i = $index) {
                   <li

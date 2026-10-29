@@ -98,6 +98,7 @@ import { ACCION_LABELS } from '@core/models/ui/certificacion-clase-b.model';
                 <button
                   class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                   [disabled]="currentPage() >= totalPages() - 1"
+                  aria-label="Página siguiente"
                   (click)="nextPage()"
                   data-llm-action="pagina-siguiente-historial-emisiones"
                 >

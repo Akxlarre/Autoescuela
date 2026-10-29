@@ -158,6 +158,7 @@ const STATUS_BADGE_VARIANT: Record<VehicleStatus, BadgeVariant> = {
             pButton
             class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
             pTooltip="Mantenimientos"
+            aria-label="Mantenimientos"
             [routerLink]="[basePath(), 'flota', vehiculo().id, 'mantenimientos']"
             data-llm-nav="mantenimientos-vehiculo-card"
           >

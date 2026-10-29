@@ -202,7 +202,8 @@
   --state-success-bg: #f0fdf4;
   --state-success-border: #bbf7d0;
 
-  --state-warning: #b45309;
+  /* fix-238-b: -800 — el -700 daba 4,08:1 sobre los fondos tintados de advertencia */
+  --state-warning: #92400e;
   --state-warning-bg: #fffbeb;
   --state-warning-border: #fde68a;
 
