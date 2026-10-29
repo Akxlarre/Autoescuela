@@ -124,6 +124,7 @@ export function resolveNotificationRoute(
       <!-- Selector de sede (solo admin) / breadcrumb -->
       <div
         class="flex-1 flex items-center overflow-visible min-w-0"
+        role="group"
         aria-label="Contexto de sede activa"
       >
         @if (canSeeBranchSelector()) {

@@ -343,6 +343,7 @@ import { VehiculoCardComponent } from '../vehiculo-card/vehiculo-card.component'
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
                           [routerLink]="[basePath(), 'flota', v.id, 'mantenimientos']"
                           pTooltip="Mantenimientos"
+                          aria-label="Mantenimientos"
                           data-llm-nav="mantenimientos-vehiculo"
                         >
                           <app-icon name="wrench" [size]="16" />

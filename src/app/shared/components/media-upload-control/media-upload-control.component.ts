@@ -82,6 +82,7 @@ import { ToastService } from '@core/services/ui/toast.service';
           (onClick)="clearValue()"
           [disabled]="disabled() || isUploading()"
           styleClass="w-10 px-0 flex items-center justify-center"
+          ariaLabel="Quitar archivo"
           data-llm-action="limpiar-media-adjunta"
         >
           <app-icon name="rotate-ccw" [size]="13" />

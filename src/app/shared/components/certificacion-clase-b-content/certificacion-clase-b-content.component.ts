@@ -513,6 +513,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                 <button
                   class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                   [disabled]="currentPageAlumnos() >= totalPagesAlumnos() - 1"
+                  aria-label="Página siguiente"
                   (click)="nextPageAlumnos()"
                 >
                   <app-icon name="chevron-right" [size]="16" />
