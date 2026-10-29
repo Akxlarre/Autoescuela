@@ -195,3 +195,24 @@ los flujos.
 
 **Casos H (paso 2 de la matrícula presencial):** H08, H10, H13, H14, H16, H18 y H21 pasan a
 `fix-058-i` (ASG-i-023, Ignacio), que ya prueba ese flujo.
+
+## Cuarta tanda (2026-10-29) — grupo 4 (cron de fin de jornada)
+
+`supabase/tests/agenda/fix-186-b-cron-fin-de-jornada.sql`: **8/8 reglas en verde** contra la BD de
+desarrollo (`skvekggejikzxhzsjmkz`). Llama a `mark_end_of_day_class_b_absences()` (lo que corre
+pg_cron a las 21:00 Chile) en vez de esperar a la noche, sobre clases creadas a las 03:07 / 05:07
+Chile (fuera de la grilla). Cada caso se deshace solo; verificado después: configuración de
+penalización igual que antes (apagada en las 2 sedes), sin feriados, justificaciones ni clases de
+prueba.
+
+| Caso | Resultado |
+|---|---|
+| M01 | ✅ clase de ayer sin iniciar → "No asistió" + asistencia "Ausente" |
+| M02 | ✅ clase en progreso sin cerrar → sigue "En progreso" (a propósito; bloquea al instructor, K10) |
+| M04 | ✅ clase completada → no la toca |
+| M05 | ✅ clase de pasado mañana → no la toca |
+| M03 | ✅ 2 faltas seguidas: con la cancelación automática **apagada** (configuración de hoy, spec `0048-b`) no cancela nada; **encendida**, cancela las futuras y marca la penalización en la matrícula |
+| M06 | ✅ una sola falta, encendida → no cancela |
+| M07 | ✅ una falta justificada en el día + otra falta, encendida → no cancela (la justificada no cuenta) y la justificación queda intacta |
+| M08 | cerrado por decisión: es M01 a las 20:00 — el cron marca "No asistió" toda clase no iniciada; desde spec `0048-b` eso ya no cancela la agenda (cancelación apagada en las 2 sedes) |
+| M09 | **anotado, decisión del owner:** una clase agendada en un día que después quedó como feriado, si nadie la inicia, **el cron la marca "No asistió"**. Desde spec `0052-b` los feriados no ofrecen horarios, así que solo pasa con clases agendadas antes de que el feriado entrara a la lista |
