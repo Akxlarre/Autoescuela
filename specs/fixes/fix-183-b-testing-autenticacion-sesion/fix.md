@@ -1,7 +1,8 @@
 # Fix: Testing — autenticación, sesión, roles y bloqueo de fase piloto
 > id: fix-183-b-testing-autenticacion-sesion
 > refs: ASG-i-022
-> status: in_progress
+> status: done
+> closed: 2026-10-29
 > created: 2026-10-05
 
 ## Root Cause
@@ -263,5 +264,14 @@ no se reprodujo en las tres siguientes: anotado por si vuelve a aparecer.
 | B06 | ✅ con la sesión revocada en Supabase (scope local), la app se entera al renovar, vuelve a `/login` sin errores de página |
 | O05 | ✅ simulado: con valores autocompletados (input + change) el botón se habilita. Anotado: un gestor que dispare **solo** `change` no lo habilitaría (`ngModel` escucha `input`); Chrome, 1Password y Bitwarden disparan `input` |
 
-**Queda (manual, ~1 min) antes de cerrar este track:** O05 con el autocompletar real de Chrome o un
-gestor de contraseñas. B05 se simuló: una suspensión real del equipo no se puede automatizar.
+B05 se simuló: una suspensión real del equipo no se puede automatizar.
+
+## Cierre (2026-10-29)
+
+**O05 manual:** ✅ en Chrome con su gestor de contraseñas (`localhost:4200`, cuenta `admin@test.com`
+guardada): al elegir la sugerencia se completan correo y contraseña sin escribir, el botón
+"Iniciar Sesión" se habilita y entra al dashboard. Probado por el owner.
+
+Con esto queda todo el checklist 022 con resultado, decisión o dueño: automatizado en
+`e2e/auth-sesion*.spec.ts` (tandas 1–9), corregido en su propio track, cerrado como cubierto por
+otro track o traspasado a `fix-181-b` (D05, D07, D08, D10, L05, que esperan el dominio).
