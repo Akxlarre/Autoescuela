@@ -311,134 +311,142 @@ interface CellSummary {
             role="grid"
             [attr.aria-label]="'Grilla de horarios, semana ' + (weekData()?.weekLabel ?? '')"
           >
-            <!-- Header: esquina vacía + cabeceras de días -->
-            <div class="agenda-corner" role="columnheader" aria-label="Hora"></div>
-            @for (day of filteredDays(); track day.date; let dayIdx = $index) {
-              <div
-                class="agenda-day-header"
-                [class.agenda-day-header--today]="day.isToday"
-                [class.agenda-day-header--disabled]="isDayBeyondLimit(day)"
-                [class.agenda-col--mobile-hidden]="dayIdx !== mobileDayIndex()"
-                role="columnheader"
-                [attr.aria-label]="day.label"
-                [attr.aria-disabled]="isDayBeyondLimit(day) || null"
-              >
-                {{ day.label }}
-              </div>
-            }
+            <!-- Header: esquina vacía + cabeceras de días.
+                 fix-237-b: cada fila es un role=row con display:contents — sus celdas siguen
+                 siendo items del CSS grid, pero un lector de pantalla puede recorrer por fila. -->
+            <div class="agenda-row" role="row">
+              <div class="agenda-corner" role="columnheader" aria-label="Hora"></div>
+              @for (day of filteredDays(); track day.date; let dayIdx = $index) {
+                <div
+                  class="agenda-day-header"
+                  [class.agenda-day-header--today]="day.isToday"
+                  [class.agenda-day-header--disabled]="isDayBeyondLimit(day)"
+                  [class.agenda-col--mobile-hidden]="dayIdx !== mobileDayIndex()"
+                  role="columnheader"
+                  [attr.aria-label]="day.label"
+                  [attr.aria-disabled]="isDayBeyondLimit(day) || null"
+                >
+                  {{ day.label }}
+                </div>
+              }
+            </div>
 
             <!-- Filas de tiempo -->
             @for (time of timeRows(); track time) {
-              <!-- Etiqueta de hora -->
-              <div
-                class="agenda-time-label"
-                [class.agenda-time-label--now]="nowTimeRow() === time"
-                role="rowheader"
-              >
-                {{ time }}
-              </div>
+              <div class="agenda-row" role="row">
+                <!-- Etiqueta de hora -->
+                <div
+                  class="agenda-time-label"
+                  [class.agenda-time-label--now]="nowTimeRow() === time"
+                  role="rowheader"
+                >
+                  {{ time }}
+                </div>
 
-              <!-- Celdas por día -->
-              @for (day of filteredDays(); track day.date; let dayIdx = $index) {
-                @if (isMasterView()) {
-                  <!-- MASTER VIEW: Vista condensada con indicadores -->
-                  <div
-                    class="agenda-cell cell-condensed"
-                    [class.agenda-cell--now]="nowTimeRow() === time"
-                    [class.agenda-cell--today]="day.isToday"
-                    [class.agenda-col--mobile-hidden]="dayIdx !== mobileDayIndex()"
-                    [class.cell-condensed--empty]="getCellSummary(day, time).total === 0"
-                    [class.agenda-cell--beyond-limit]="isDayBeyondLimit(day)"
-                    role="gridcell"
-                    [attr.aria-label]="
-                      day.label + ' ' + time + ' — ' + getCellSummary(day, time).total + ' slots'
-                    "
-                    [attr.aria-disabled]="isDayBeyondLimit(day) || null"
-                    [class.cell-condensed--expanded]="expandedCellKey() === cellKey(day.date, time)"
-                    (click)="
-                      getCellSummary(day, time).total > 0 &&
-                        !isDayBeyondLimit(day) &&
-                        toggleCell(day.date, time)
-                    "
-                  >
-                    @if (expandedCellKey() === cellKey(day.date, time)) {
-                      <!-- Expandido: slots individuales -->
-                      <div class="cell-expanded-content" appAnimateIn>
-                        @for (slot of getCell(day, time); track slot.id) {
-                          <app-agenda-slot
-                            [slot]="slot"
-                            [compact]="true"
-                            [disabled]="isDayBeyondLimit(day)"
-                            [showVehicleWarnings]="showVehicleWarnings()"
-                            (slotClicked)="slotClick.emit($event)"
-                          />
-                        }
-                        <button
-                          class="cell-collapse-btn"
-                          (click)="toggleCell(day.date, time); $event.stopPropagation()"
-                          aria-label="Colapsar celda"
-                        >
-                          <app-icon name="chevron-up" [size]="10" />
-                        </button>
-                      </div>
-                    } @else {
-                      <!-- Condensado: pills de disponibilidad -->
-                      @if (getCellSummary(day, time).total > 0) {
-                        <div class="cell-pills">
-                          @if (getCellSummary(day, time).available > 0) {
-                            <span class="cell-pill cell-pill--available">
-                              {{ getCellSummary(day, time).available }}
-                              libre{{ getCellSummary(day, time).available !== 1 ? 's' : '' }}
-                            </span>
+                <!-- Celdas por día -->
+                @for (day of filteredDays(); track day.date; let dayIdx = $index) {
+                  @if (isMasterView()) {
+                    <!-- MASTER VIEW: Vista condensada con indicadores -->
+                    <div
+                      class="agenda-cell cell-condensed"
+                      [class.agenda-cell--now]="nowTimeRow() === time"
+                      [class.agenda-cell--today]="day.isToday"
+                      [class.agenda-col--mobile-hidden]="dayIdx !== mobileDayIndex()"
+                      [class.cell-condensed--empty]="getCellSummary(day, time).total === 0"
+                      [class.agenda-cell--beyond-limit]="isDayBeyondLimit(day)"
+                      role="gridcell"
+                      [attr.aria-label]="
+                        day.label + ' ' + time + ' — ' + getCellSummary(day, time).total + ' slots'
+                      "
+                      [attr.aria-disabled]="isDayBeyondLimit(day) || null"
+                      [class.cell-condensed--expanded]="
+                        expandedCellKey() === cellKey(day.date, time)
+                      "
+                      (click)="
+                        getCellSummary(day, time).total > 0 &&
+                          !isDayBeyondLimit(day) &&
+                          toggleCell(day.date, time)
+                      "
+                    >
+                      @if (expandedCellKey() === cellKey(day.date, time)) {
+                        <!-- Expandido: slots individuales -->
+                        <div class="cell-expanded-content" appAnimateIn>
+                          @for (slot of getCell(day, time); track slot.id) {
+                            <app-agenda-slot
+                              [slot]="slot"
+                              [compact]="true"
+                              [disabled]="isDayBeyondLimit(day)"
+                              [showVehicleWarnings]="showVehicleWarnings()"
+                              (slotClicked)="slotClick.emit($event)"
+                            />
                           }
-                          @if (occupiedCount(getCellSummary(day, time)) > 0) {
-                            <span class="cell-pill cell-pill--occupied">
-                              {{ occupiedCount(getCellSummary(day, time)) }} ocup.
-                            </span>
-                          }
+                          <button
+                            class="cell-collapse-btn"
+                            (click)="toggleCell(day.date, time); $event.stopPropagation()"
+                            aria-label="Colapsar celda"
+                          >
+                            <app-icon name="chevron-up" [size]="10" />
+                          </button>
                         </div>
-                        <span class="cell-expand-hint">
-                          <app-icon name="chevron-down" [size]="10" />
-                        </span>
                       } @else {
-                        <!-- Celda vacía: marcador sutil, mantiene la textura de la grilla -->
-                        <span class="cell-empty-marker" aria-hidden="true"></span>
+                        <!-- Condensado: pills de disponibilidad -->
+                        @if (getCellSummary(day, time).total > 0) {
+                          <div class="cell-pills">
+                            @if (getCellSummary(day, time).available > 0) {
+                              <span class="cell-pill cell-pill--available">
+                                {{ getCellSummary(day, time).available }}
+                                libre{{ getCellSummary(day, time).available !== 1 ? 's' : '' }}
+                              </span>
+                            }
+                            @if (occupiedCount(getCellSummary(day, time)) > 0) {
+                              <span class="cell-pill cell-pill--occupied">
+                                {{ occupiedCount(getCellSummary(day, time)) }} ocup.
+                              </span>
+                            }
+                          </div>
+                          <span class="cell-expand-hint">
+                            <app-icon name="chevron-down" [size]="10" />
+                          </span>
+                        } @else {
+                          <!-- Celda vacía: marcador sutil, mantiene la textura de la grilla -->
+                          <span class="cell-empty-marker" aria-hidden="true"></span>
+                        }
                       }
-                    }
-                  </div>
-                } @else {
-                  <!-- FILTERED VIEW: Vista detallada con slots compactos -->
-                  <div
-                    class="agenda-cell"
-                    [class.agenda-cell--now]="nowTimeRow() === time"
-                    [class.agenda-cell--today]="day.isToday"
-                    [class.agenda-col--mobile-hidden]="dayIdx !== mobileDayIndex()"
-                    [class.agenda-cell--empty]="getCell(day, time).length === 0"
-                    [class.agenda-cell--beyond-limit]="isDayBeyondLimit(day)"
-                    role="gridcell"
-                    [attr.aria-label]="day.label + ' ' + time"
-                    [attr.aria-disabled]="isDayBeyondLimit(day) || null"
-                  >
-                    @for (slot of getCell(day, time); track slot.id) {
-                      <app-agenda-slot
-                        [slot]="slot"
-                        [compact]="true"
-                        [disabled]="isDayBeyondLimit(day)"
-                        [showVehicleWarnings]="showVehicleWarnings()"
-                        (slotClicked)="slotClick.emit($event)"
-                      />
-                    }
-                    @if (getCell(day, time).length === 0) {
-                      <!-- Celda vacía: sin slot definido para este instructor/horario —
+                    </div>
+                  } @else {
+                    <!-- FILTERED VIEW: Vista detallada con slots compactos -->
+                    <div
+                      class="agenda-cell"
+                      [class.agenda-cell--now]="nowTimeRow() === time"
+                      [class.agenda-cell--today]="day.isToday"
+                      [class.agenda-col--mobile-hidden]="dayIdx !== mobileDayIndex()"
+                      [class.agenda-cell--empty]="getCell(day, time).length === 0"
+                      [class.agenda-cell--beyond-limit]="isDayBeyondLimit(day)"
+                      role="gridcell"
+                      [attr.aria-label]="day.label + ' ' + time"
+                      [attr.aria-disabled]="isDayBeyondLimit(day) || null"
+                    >
+                      @for (slot of getCell(day, time); track slot.id) {
+                        <app-agenda-slot
+                          [slot]="slot"
+                          [compact]="true"
+                          [disabled]="isDayBeyondLimit(day)"
+                          [showVehicleWarnings]="showVehicleWarnings()"
+                          (slotClicked)="slotClick.emit($event)"
+                        />
+                      }
+                      @if (getCell(day, time).length === 0) {
+                        <!-- Celda vacía: sin slot definido para este instructor/horario —
                            marcador sutil (NO clickeable: no hay slot real que agendar). -->
-                      <span
-                        class="cell-empty-marker cell-empty-marker--filtered"
-                        aria-hidden="true"
-                      ></span>
-                    }
-                  </div>
+                        <span
+                          class="cell-empty-marker cell-empty-marker--filtered"
+                          aria-hidden="true"
+                        ></span>
+                      }
+                    </div>
+                  }
                 }
-              }
+              </div>
             }
           </div>
 
@@ -677,6 +685,9 @@ interface CellSummary {
 
     /* ── CSS Grid del calendario ─────────────────────────────── */
 
+    .agenda-row {
+      display: contents;
+    }
     .agenda-grid {
       display: grid;
       /* grid-template-columns set via [style] binding */

@@ -232,6 +232,25 @@ test.describe('B. Grilla', () => {
     await expect(rows.first()).toHaveText('08:30');
     await expect(rows.last()).toHaveText('20:00');
   });
+
+  test('B17: estructura ARIA — el grid solo tiene filas y cada celda vive en una fila (fix-237-b)', async ({
+    pageAs,
+  }) => {
+    const page = await pageAs('admin');
+    await openAgenda(page, 'admin');
+    const estructura = await grid(page).evaluate((g) => {
+      const hijosNoFila = [...g.children].filter((c) => c.getAttribute('role') !== 'row').length;
+      const celdas = [
+        ...g.querySelectorAll('[role="gridcell"],[role="columnheader"],[role="rowheader"]'),
+      ];
+      const sinFila = celdas.filter((c) => c.parentElement?.getAttribute('role') !== 'row').length;
+      return { hijosNoFila, celdas: celdas.length, sinFila };
+    });
+    expect(estructura.celdas).toBeGreaterThan(0);
+    expect(estructura).toMatchObject({ hijosNoFila: 0, sinFila: 0 });
+    // 1 fila de cabecera + 13 bloques horarios.
+    await expect(grid(page).getByRole('row')).toHaveCount(14);
+  });
 });
 
 // ── C. Navegación de semanas y límite ─────────────────────────────────────────
