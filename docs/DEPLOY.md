@@ -9,6 +9,12 @@
 La app se publica en el hosting cPanel de la escuela, vía GitHub Actions y FTPS. **Vercel queda
 solo para previews de PRs**: no es producción. Por ahora no hay ambiente QA.
 
+El único environment de deploy real es `Production` (cPanel). Vercel solo genera `Preview –
+autoescuela` en cada PR: el `vercel.json` de la raíz apaga sus deploys de `main`
+(`git.deploymentEnabled.main: false`). Las webs públicas Astro (`webs/`) no se despliegan
+(hotfix-109-b): su workflow `deploy-cpanel.yml` y su proyecto Vercel se eliminaron. Si se
+retoman, el workflow se recupera desde git.
+
 ---
 
 ## Publicar una versión (2 clics + aprobación)
