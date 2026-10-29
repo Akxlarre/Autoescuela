@@ -444,7 +444,7 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                 <div class="min-w-52 bg-brand/5 px-4 py-2 rounded-xl border border-brand/10">
                   <div class="flex items-center justify-between gap-4">
                     <span
-                      class="text-2xs font-black uppercase tracking-widest opacity-80 text-brand"
+                      class="text-2xs font-black uppercase tracking-widest text-brand"
                     >
                       Total Ingresos
                     </span>
@@ -687,7 +687,7 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                 <div class="min-w-52 bg-warning/5 px-4 py-2 rounded-xl border border-warning/10">
                   <div class="flex items-center justify-between gap-4">
                     <span
-                      class="text-2xs font-black uppercase tracking-widest opacity-80 text-warning"
+                      class="text-2xs font-black uppercase tracking-widest text-warning"
                     >
                       Total Egresos
                     </span>

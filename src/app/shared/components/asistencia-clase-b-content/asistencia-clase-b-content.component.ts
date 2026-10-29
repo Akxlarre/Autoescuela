@@ -120,7 +120,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
             [attr.aria-selected]="activeTab() === 'practicas'"
             class="flex-1 px-5 py-3 rounded-lg text-base font-semibold transition-colors cursor-pointer border-0 flex items-center justify-center gap-2"
             [style.background]="activeTab() === 'practicas' ? 'var(--bg-surface)' : 'transparent'"
-            [style.color]="activeTab() === 'practicas' ? 'var(--ds-brand)' : 'var(--text-muted)'"
+            [style.color]="activeTab() === 'practicas' ? 'var(--brand-strong)' : 'var(--text-muted)'"
             [style.boxShadow]="
               activeTab() === 'practicas'
                 ? 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12)), inset 0 0 0 1.5px var(--ds-brand)'
@@ -138,7 +138,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
             [attr.aria-selected]="activeTab() === 'ciclos'"
             class="flex-1 px-5 py-3 rounded-lg text-base font-semibold transition-colors cursor-pointer border-0 flex items-center justify-center gap-2"
             [style.background]="activeTab() === 'ciclos' ? 'var(--bg-surface)' : 'transparent'"
-            [style.color]="activeTab() === 'ciclos' ? 'var(--ds-brand)' : 'var(--text-muted)'"
+            [style.color]="activeTab() === 'ciclos' ? 'var(--brand-strong)' : 'var(--text-muted)'"
             [style.boxShadow]="
               activeTab() === 'ciclos'
                 ? 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12)), inset 0 0 0 1.5px var(--ds-brand)'
@@ -223,7 +223,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 <button
                   class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
                   [class.bg-brand]="activeStatusFilter() === f.value"
-                  [class.text-white]="activeStatusFilter() === f.value"
+                  [class.text-on-brand]="activeStatusFilter() === f.value"
                   [class.border-brand]="activeStatusFilter() === f.value"
                   [class.bg-transparent]="activeStatusFilter() !== f.value"
                   [class.text-text-secondary]="activeStatusFilter() !== f.value"
@@ -232,7 +232,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 >
                   {{ f.label }}
                   @if (countByStatus(f.value) > 0) {
-                    <span class="ml-1 opacity-80">({{ countByStatus(f.value) }})</span>
+                    <span class="ml-1">({{ countByStatus(f.value) }})</span>
                   }
                 </button>
               }
@@ -591,7 +591,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                     <!-- Línea 1: avatar + nombre completo -->
                     <div class="flex items-center gap-2">
                       <div
-                        class="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-2xs font-bold text-white"
+                        class="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-2xs font-bold text-surface"
                         [class.bg-error]="alerta.nivel === 'danger'"
                         [class.bg-warning]="alerta.nivel !== 'danger'"
                       >

@@ -133,7 +133,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
                 <span class="item-title">{{ facade.weekLabel() }}</span>
                 @if (!facade.isCurrentWeek()) {
                   <button
-                    class="mt-0.5 text-2xs font-bold uppercase tracking-wider bg-brand text-white px-2 py-0.5 rounded-full transition-transform hover:scale-105 active:scale-95"
+                    class="mt-0.5 text-2xs font-bold uppercase tracking-wider bg-brand text-on-brand px-2 py-0.5 rounded-full transition-transform hover:scale-105 active:scale-95"
                     (click)="facade.goToCurrentWeek()"
                   >
                     Volver a Hoy
@@ -196,7 +196,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
               [attr.aria-selected]="activeTab() === 'firma'"
               class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer border-0 flex items-center gap-2"
               [style.background]="activeTab() === 'firma' ? 'var(--bg-surface)' : 'transparent'"
-              [style.color]="activeTab() === 'firma' ? 'var(--ds-brand)' : 'var(--text-muted)'"
+              [style.color]="activeTab() === 'firma' ? 'var(--brand-strong)' : 'var(--text-muted)'"
               [style.boxShadow]="
                 activeTab() === 'firma'
                   ? 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12)), inset 0 0 0 1.5px var(--ds-brand)'
@@ -214,7 +214,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
               [attr.aria-selected]="activeTab() === 'resumen'"
               class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer border-0 flex items-center gap-2"
               [style.background]="activeTab() === 'resumen' ? 'var(--bg-surface)' : 'transparent'"
-              [style.color]="activeTab() === 'resumen' ? 'var(--ds-brand)' : 'var(--text-muted)'"
+              [style.color]="activeTab() === 'resumen' ? 'var(--brand-strong)' : 'var(--text-muted)'"
               [style.boxShadow]="
                 activeTab() === 'resumen'
                   ? 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12)), inset 0 0 0 1.5px var(--ds-brand)'

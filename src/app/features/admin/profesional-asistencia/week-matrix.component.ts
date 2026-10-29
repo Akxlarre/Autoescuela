@@ -22,7 +22,7 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
         <div class="day-head" [class.is-today]="day.isToday">
           <span
             class="day-name"
-            [style.color]="day.isToday ? 'var(--ds-brand)' : 'var(--text-muted)'"
+            [style.color]="day.isToday ? 'var(--brand-strong)' : 'var(--text-muted)'"
           >
             {{ day.dayLabel }}
           </span>

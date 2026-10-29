@@ -89,7 +89,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
               [attr.title]="s.label"
               [attr.data-llm-nav]="'libro-clases-' + s.id"
               [style.background]="s.id === activeId() ? 'var(--bg-surface)' : 'transparent'"
-              [style.color]="s.id === activeId() ? 'var(--ds-brand)' : 'var(--text-muted)'"
+              [style.color]="s.id === activeId() ? 'var(--brand-strong)' : 'var(--text-muted)'"
               [style.boxShadow]="
                 s.id === activeId()
                   ? 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12)), inset 0 0 0 1.5px var(--ds-brand)'
