@@ -315,19 +315,18 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     const pd = this.enrollment.personalData();
     const summary = this.enrollment.studentSummary() ?? EMPTY_SUMMARY;
     const view = pd?.courseCategory === 'professional' ? 'professional' : 'class-b';
+    const isMinor = pd ? this.calcAge(pd.birthDate) < 18 : false;
     return {
       view,
       studentSummary: summary,
-      isMinor: pd ? this.calcAge(pd.birthDate) < 18 : false,
+      isMinor,
       photoTab: this.docs.photoTab(),
       cameraState: this.docs.cameraState(),
       carnetPhoto: this.docs.carnetPhoto(),
       photoNeedsConfirmation: this.docs.photoNeedsConfirmation(),
       uploadedDocuments: this.docs.documents(),
-      requiredDocuments:
-        view === 'professional'
-          ? this.docs.getRequirements('professional', pd ? this.calcAge(pd.birthDate) < 18 : false)
-          : [],
+      // fix-070-i: en Clase B era `[]` fijo y la autorización notarial del menor nunca aparecía.
+      requiredDocuments: pd ? this.docs.getRequirements(pd.courseCategory, isMinor) : [],
       hvcValidation: this.docs.hvcValidation(),
       notarialAuthorization: this.docs.documents().get('autorizacion_notarial') ?? null,
       uploadError: this.docs.error(),

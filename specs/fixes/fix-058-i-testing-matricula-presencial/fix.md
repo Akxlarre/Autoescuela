@@ -132,7 +132,7 @@ no hay ninguno. Arreglo probable: borrar (o desvincular) `consents` del borrador
 | Caso | Resultado | Evidencia |
 |---|---|---|
 | S10 error del pago en el paso 4 | ❌ **B2-1** | RPC simulada con el aviso de caja cerrada (fix-051-i): `payment.error()` = "Error al registrar pago: La caja del 18-10-2026 ya está cerrada…", pero **no se ve en pantalla**; el wizard queda en el paso 4 sin mensaje (el banner solo lee `enrollment.error()`) |
-| S11 menor de 17 en Clase B | ❌ **B2-2** | el paso 3 solo tiene la foto (1 input de archivo); el aviso "Se requiere Autorización Notarial… Súbela en la sección de documentos del expediente" no ofrece dónde subirla ni la exige. Ver si el DMS la permite (ASG-i-033, Matías). **2026-10-24: Ignacio lo revisa con Matías** (pendiente) |
+| S11 menor de 17 en Clase B | ❌ **B2-2** | el paso 3 solo tiene la foto (1 input de archivo); el aviso "Se requiere Autorización Notarial… Súbela en la sección de documentos del expediente" no ofrece dónde subirla ni la exige. Ver si el DMS la permite (ASG-i-033, Matías). → **Resuelto en `fix-070-i`** (2026-11-03): en Clase B el paso 3 pide la autorización notarial del menor como obligatoria |
 | B07–B10, B12, B15 validaciones del paso 1 | ✅ | `canAdvance` de `personal-data`: nombre/apellido < 2 letras o solo espacios, email `juan@` / `juan@x`, teléfono de 7 dígitos, fecha vacía y sin curso → no avanza. Sin apellido materno sí avanza. RUT con DV malo → no avanza |
 | B12 fecha 31/02 | ✅ (no alcanzable) | `canAdvance` la dejaría pasar (edad "none"), pero `app-date-input` es un calendario que solo emite fechas válidas |
 | D06 SENCE | ✅ | sin código no avanza; con código sí (que se guarde es S14, Bloque 3) |

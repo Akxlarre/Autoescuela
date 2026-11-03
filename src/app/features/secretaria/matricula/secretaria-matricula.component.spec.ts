@@ -665,3 +665,90 @@ describe('SecretariaMatriculaComponent — finishWizard (fix-307-m)', () => {
     });
   });
 });
+
+// fix-070-i (B2-2 de fix-058-i): en Clase B el paso 3 no pedía la autorización notarial del menor.
+describe('SecretariaMatriculaComponent — autorización notarial del menor en Clase B (fix-070-i)', () => {
+  const NOTARIAL = {
+    type: 'autorizacion_notarial',
+    label: 'Autorización Notarial',
+    required: true,
+  };
+
+  function setup(birthDate: string) {
+    const docsSpy: any = {
+      reset: vi.fn(),
+      photoTab: vi.fn().mockReturnValue('upload'),
+      cameraState: vi.fn().mockReturnValue('idle'),
+      carnetPhoto: vi.fn().mockReturnValue(null),
+      photoNeedsConfirmation: vi.fn().mockReturnValue(false),
+      documents: vi.fn().mockReturnValue(new Map()),
+      hvcValidation: vi.fn().mockReturnValue(null),
+      error: vi.fn().mockReturnValue(null),
+      getRequirements: vi.fn((_cat: string, isMinor: boolean) => (isMinor ? [NOTARIAL] : [])),
+    };
+    const enrollmentFacadeSpy: any = {
+      currentStep: vi.fn().mockReturnValue(3),
+      personalData: vi
+        .fn()
+        .mockReturnValue({ courseCategory: 'non-professional', courseType: 'class_b', birthDate }),
+      studentSummary: vi.fn().mockReturnValue(null),
+      courseOptions: vi.fn().mockReturnValue([]),
+      paymentMode: vi.fn().mockReturnValue('total'),
+      setPaymentMode: vi.fn(),
+      enrollmentBasePrice: vi.fn().mockReturnValue(0),
+      selectedInstructorId: vi.fn().mockReturnValue(null),
+      scheduleGrid: vi.fn().mockReturnValue(null),
+      activeDrafts: vi.fn().mockReturnValue([]),
+      docsComplete: vi.fn().mockReturnValue(true),
+      loadCourses: vi.fn().mockResolvedValue(undefined),
+      loadInstructors: vi.fn().mockResolvedValue(undefined),
+      loadScheduleGrid: vi.fn().mockResolvedValue(undefined),
+      loadActiveDrafts: vi.fn().mockResolvedValue([]),
+      reset: vi.fn(),
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: LayoutDrawerFacadeService,
+          useValue: { setActions: vi.fn(), setBadge: vi.fn() },
+        },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
+        {
+          provide: AuthFacade,
+          useValue: {
+            currentUser: vi.fn().mockReturnValue({ role: 'admin', branchId: 1 }),
+            whenReady: Promise.resolve(),
+          },
+        },
+        BranchFacade,
+        { provide: SupabaseService, useValue: { client: {} } },
+        {
+          provide: ErrorSanitizerService,
+          useValue: { sanitize: (e: Error) => ({ message: e.message }) },
+        },
+        { provide: EnrollmentFacade, useValue: enrollmentFacadeSpy },
+        { provide: EnrollmentDocumentsFacade, useValue: docsSpy },
+        { provide: EnrollmentPaymentFacade, useValue: { reset: vi.fn() } },
+        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn(), info: vi.fn() } },
+      ],
+    });
+
+    const component = TestBed.runInInjectionContext(() => new SecretariaMatriculaComponent());
+    TestBed.tick();
+    return { component };
+  }
+
+  it('un menor de 17 en Clase B tiene que subir la autorización notarial', () => {
+    const { component } = setup('2009-06-01');
+    const data = component.step3Data();
+    expect(data.isMinor).toBe(true);
+    expect(data.requiredDocuments).toEqual([NOTARIAL]);
+  });
+
+  it('un adulto en Clase B sigue viendo solo la foto', () => {
+    const { component } = setup('1990-06-01');
+    expect(component.step3Data().requiredDocuments).toEqual([]);
+  });
+});
