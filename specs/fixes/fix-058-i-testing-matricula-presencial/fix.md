@@ -215,3 +215,19 @@ numerados de H08 y H10 están en la §4 de ese checklist.
 - **H16** cambiar de instructor rápido 3 veces con red lenta.
 - **H18** retomar un borrador.
 - **H21** matrícula desde el drawer de la Base de Alumnos.
+
+**Resultado (2026-11-03, Playwright como secretaria sede 1, alumnos de prueba `QA Setenta Menor`
+33.058.010-0 y `QA Setenta Drawer` 33.058.011-K, ambos borradores descartados al terminar):**
+
+| Caso | Resultado | Evidencia |
+|---|---|---|
+| H08 | ✅ | la vista calcula 4 meses y la app corta en el límite (3): la grilla dice "Semana 1 de 14" y la semana 14 (1–3 feb) tiene 39 horarios disponibles. S3 ya no aplica |
+| H10 | ❌ **B5-1** (por código) | la vista no cuenta las clases de un borrador **vencido** (`class_b_slot_occupied`: `e.status <> 'draft' OR e.expires_at > now()`), pero los triggers de choque del instructor (fix-163) y del vehículo (fix-187) sí → el horario se ve libre y al guardar falla "El instructor ya tiene una clase agendada…". Desde `fix-069-i` un borrador vencido **con pago** no lo borra la limpieza: el horario queda así sin fecha de término |
+| H13 | ✅ (por código) | `class_b_slot_occupied` marca ocupado si coincide el instructor **o el vehículo** |
+| H14 | ✅ (no alcanzable) | la base rechaza un choque de horario del alumno (`trg_prevent_student_double_booking`, fix-301-m), y en presencial un alumno con Clase B activa no puede abrir otra matrícula B (bloqueo de duplicado y S20) |
+| H16 | ❌ **B5-2** | con la red frenada (respuesta de Instructor1 a 7 s, Instructor2 a 3,5 s, Instructor3 sin demora) el selector queda en "Instructor3" pero la grilla es la de Instructor1: `loadScheduleGrid()` no descarta respuestas viejas (sin `createRequestGuard`) |
+| H18 | ✅ | "Retomar" vuelve al paso guardado (3) con la autorización notarial "LISTO"; al volver al paso 2: Instructor3 y 12/12 horarios |
+| H21 | ✅ | el drawer "Nueva Matrícula" de la Base de Alumnos hace el mismo flujo (paso 2 con "Semana 1 de 14") |
+
+De paso: la grilla del paso 2 no aparece hasta elegir la modalidad de pago (Total / Parcial), y
+nada lo indica. Anotado como observación de UX, no como bug.

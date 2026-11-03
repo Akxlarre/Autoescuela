@@ -352,10 +352,10 @@
         Volver
       </button>
       <div class="flex items-center gap-3">
-        @if (!allRequiredUploaded()) {
+        @if (!allRequiredUploaded() && missingHint()) {
           <p class="text-xs text-text-muted italic flex items-center gap-1">
             <app-icon name="circle-alert" [size]="12" />
-            Sube la foto carnet para continuar
+            {{ missingHint() }}
           </p>
         }
         <app-async-btn

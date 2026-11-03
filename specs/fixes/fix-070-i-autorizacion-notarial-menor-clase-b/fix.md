@@ -28,6 +28,8 @@ Ninguno de una spec — bug de testing (`fix-058-i` B2-2, caso S11). Criterios d
   (Obligatoria)" con su botón para subirla, y no deja avanzar hasta que esté subida.
 - **AC-F2:** un adulto en Clase B ve el paso 3 igual que antes (solo la foto).
 - **AC-F3:** el aviso de menor de edad indica dónde subirla (esta misma pantalla).
+- **AC-F4** (visto en el navegador): el texto junto a "Continuar" nombra lo que falta; con la foto
+  subida y sin la autorización decía "Sube la foto carnet para continuar".
 
 ## Cambio
 
@@ -42,6 +44,8 @@ Ninguno de una spec — bug de testing (`fix-058-i` B2-2, caso S11). Criterios d
 ## Progreso
 
 - [x] Test (rojo) + cambio (verde).
+- [x] AC-F4: texto de ayuda del paso 3 (`missingDocumentHint` en `core/utils/documents-step.utils`,
+      usado por `missingHint` de `documents.component`; 3 tests).
 - [x] Suite completa, `tsc`, `lint:arch` y cierre. Sin índices que cambiar (no hay piezas nuevas).
 
 ## Verificación
@@ -54,5 +58,8 @@ Ninguno de una spec — bug de testing (`fix-058-i` B2-2, caso S11). Criterios d
   pasa 32/32 corrido solo (inestable en la suite completa). `tsc` limpio, `lint:arch` 0 errores.
 - "No deja avanzar sin la autorización" (AC-F1): lo decide `allRequiredUploaded` del paso 3, que ya
   exige todo `requiredDocuments` con `required: true` (la fila y el botón son los mismos que usa
-  Profesional desde antes). **No se probó en el navegador**: llegar al paso 3 exige crear un
-  borrador real (alumno + horarios reservados). Queda para la pasada de los casos H de `fix-058-i`.
+  Profesional desde antes). **Navegador (2026-11-03, secretaria sede 1, alumno de prueba
+  `QA Setenta Menor`, 17 años):** el paso 3 muestra "Autorización Notarial * (Obligatoria)" y el
+  aviso nuevo; con la foto subida "Continuar" sigue deshabilitado y se habilita al subir la
+  autorización ("LISTO") ✅ (AC-F1, AC-F3). Ahí se vio que el texto de ayuda seguía pidiendo la
+  foto → AC-F4, cubierto por `documents-step.utils.spec`. Borrador descartado al terminar.
