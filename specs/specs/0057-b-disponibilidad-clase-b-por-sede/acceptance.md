@@ -6,9 +6,9 @@
 | AC | Estado | Evidencia |
 |---|---|---|
 | AC1 | ✅ | `supabase/tests/agenda/0057-b-disponibilidad-por-sede.sql` contra la vista real: 0 filas con `branch_ids` nulo, vacío o con una sede sin curso Clase B activo (14 días) |
-| AC2 | ✅ | Test SQL: instructor de la sede 1 marcado "Ambas" (en un sub-bloque revertido), vehículo solo de la sede 1 → 0 bloques con `branch_ids @> {2}`. Unit: `agenda.facade.spec.ts` "disponibilidad por sede — spec 0057-b" (la consulta lleva `contains('branch_ids',[2])` y ya no filtra por los instructores de la sede en el cliente). Navegador: la Agenda de `secretaria2@test.com` pide `branch_ids=cs.{2}` → 200. **El e2e F08 de `agenda-4.spec.ts` sigue anotando en vez de esperar 0**: el archivo vive en el PR #371, sin merge todavía |
+| AC2 | ✅ | Test SQL: instructor de la sede 1 marcado "Ambas" (en un sub-bloque revertido), vehículo solo de la sede 1 → 0 bloques con `branch_ids @> {2}`. Unit: `agenda.facade.spec.ts` "disponibilidad por sede — spec 0057-b" (la consulta lleva `contains('branch_ids',[2])` y ya no filtra por los instructores de la sede en el cliente). Navegador: la Agenda de `secretaria2@test.com` pide `branch_ids=cs.{2}` → 200. e2e: `agenda-4.spec.ts` F08 espera 0 horarios "Disponible" en la sede 2 (verde, 2026-11-06) |
 | AC3 | ✅ | Test SQL: el mismo instructor sigue con bloques en la sede 1 (`branch_ids = {1}`) |
-| AC4 | ✅ | Test SQL AC5: con instructor y vehículo "Ambas", cada bloque trae `{1,2}`, así que aparece al filtrar por cualquiera de las dos sedes. Unit de Agenda con sede 1 y sede 2. El e2e F03 no se volvió a correr |
+| AC4 | ✅ | Test SQL AC5: con instructor y vehículo "Ambas", cada bloque trae `{1,2}`, así que aparece al filtrar por cualquiera de las dos sedes. Unit de Agenda con sede 1 y sede 2. e2e: `agenda-4.spec.ts` F03 con horarios en las dos sedes (verde, 2026-11-06) |
 | AC5 | ✅ | Test SQL: 0 bloques repetidos por (instructor, vehículo, inicio) con instructor y vehículo "Ambas". Unit: el admin en "Todas las sedes" (`branchId` null) no agrega filtro |
 | AC6 | ✅ | `enrollment.facade.spec.ts` (3 tests): la carga inicial y el refresco filtran por la sede de `loadInstructors(branchId)`; sin sede no filtran; `reset()` la olvida |
 | AC7 | ✅ | `admin-alumno-detalle.facade.spec.ts` (2 tests): reagendar filtra por la sede del alumno; sin sede no filtra |
