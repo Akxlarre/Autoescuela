@@ -138,3 +138,16 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `WebsiteConfigFacade` | `SupabaseService`, `ToastService`, `CoursesFacade` | — | `src/app/core/facades/website-config.facade.ts` |
 
 <!-- AUTO-GENERATED:END -->
+
+## Disponibilidad Clase B por sede (spec 0057-b)
+
+Todo consumidor de `v_class_b_schedule_availability` filtra por sede con
+`.contains('branch_ids', [sede])` (columna nueva de la vista). Sin sede conocida, sin filtro.
+
+| Facade | Método | Sede que usa |
+|---|---|---|
+| `AgendaFacade` | `fetchAvailableSlots(rangeStart, rangeEnd, branchId)` | `getActiveBranchId()`; `null` (admin "Todas") sin filtro. Reemplaza el filtro client-side por instructores de la sede |
+| `EnrollmentFacade` | `scheduleAvailabilityQuery()` (privado; lo usan `loadScheduleGrid` y `handleScheduleChange`) | `_scheduleBranchId`, que fija `loadInstructors(branchId)`; `reset()` lo limpia |
+| `AdminAlumnoDetalleFacade` | `loadScheduleGrid()` | `_alumno().branchId` |
+| `PublicEnrollmentFacade` | `loadScheduleGrid()` y su polling | envía `branchId: _selectedBranch().id` a la edge function `public-enrollment` (`load-schedule`), que filtra si llega un número |
+

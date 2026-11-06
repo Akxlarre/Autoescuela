@@ -528,14 +528,17 @@ async function handleLoadInstructors(supabase: any, body: any) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function handleLoadSchedule(supabase: any, body: any) {
-  const { instructorId, sessionToken } = body;
+  const { instructorId, sessionToken, branchId } = body;
   if (!instructorId) return errorResponse('instructorId is required');
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('v_class_b_schedule_availability')
     .select('*')
-    .eq('instructor_id', instructorId)
-    .order('slot_start', { ascending: true });
+    .eq('instructor_id', instructorId);
+  // Spec 0057-b (AC8): solo los bloques que la sede de la matrícula puede atender. Sin branchId
+  // (un cliente con el bundle anterior), como antes.
+  if (typeof branchId === 'number') query = query.contains('branch_ids', [branchId]);
+  const { data, error } = await query.order('slot_start', { ascending: true });
 
   if (error) {
     console.error('load-schedule error:', error);

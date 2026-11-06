@@ -1540,16 +1540,20 @@ export class AdminAlumnoDetalleFacade {
     this._scheduleGrid.set(null);
     this._slotVehicleMap.clear();
     this._isLoadingSchedule.set(true);
+    // Spec 0057-b (AC7): solo los bloques que la sede del alumno puede atender. Sin sede, sin
+    // filtro (como antes).
+    const branchId = this._alumno()?.branchId ?? null;
+    let slotsQuery = this.supabase.client
+      .from('v_class_b_schedule_availability')
+      .select('*')
+      .eq('instructor_id', instructorId)
+      // Misma fuente de verdad que la Agenda (AgendaSettingsService): la vista
+      // devuelve un superset de 4 meses, se recorta aquí al límite configurado.
+      .lt('slot_start', chileDayRange(this.agendaSettings.maxVisibleDateIso()).endExclusive);
+    if (branchId !== null) slotsQuery = slotsQuery.contains('branch_ids', [branchId]);
     try {
       const [{ data }, docsResult] = await Promise.all([
-        this.supabase.client
-          .from('v_class_b_schedule_availability')
-          .select('*')
-          .eq('instructor_id', instructorId)
-          // Misma fuente de verdad que la Agenda (AgendaSettingsService): la vista
-          // devuelve un superset de 4 meses, se recorta aquí al límite configurado.
-          .lt('slot_start', chileDayRange(this.agendaSettings.maxVisibleDateIso()).endExclusive)
-          .order('slot_start', { ascending: true }),
+        slotsQuery.order('slot_start', { ascending: true }),
         this.supabase.client
           .from('vehicle_documents')
           .select('vehicle_id, type, expiry_date, status'),

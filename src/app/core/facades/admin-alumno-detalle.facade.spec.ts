@@ -665,6 +665,7 @@ describe('AdminAlumnoDetalleFacade', () => {
           order: vi.fn(() => b),
           lte: vi.fn(() => b),
           lt: vi.fn(() => b),
+          contains: vi.fn(() => b),
           limit: vi.fn(() => b),
           update: vi.fn(() => b),
           insert: vi.fn(() => b),
@@ -2255,6 +2256,65 @@ describe('AdminAlumnoDetalleFacade', () => {
 
   // fix-071-i: con la red lenta, una respuesta vieja dejaba la grilla y el mapa horario → vehículo
   // de un instructor que ya no estaba elegido.
+  describe('loadScheduleGrid — bloques de la sede del alumno (spec 0057-b, AC7)', () => {
+    function setupSchedule() {
+      const slotBuilder: any = {
+        select: vi.fn(() => slotBuilder),
+        eq: vi.fn(() => slotBuilder),
+        lt: vi.fn(() => slotBuilder),
+        contains: vi.fn(() => slotBuilder),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+      const docsBuilder: any = { select: vi.fn().mockResolvedValue({ data: [], error: null }) };
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          AdminAlumnoDetalleFacade,
+          {
+            provide: SupabaseService,
+            useValue: {
+              client: {
+                from: vi.fn((table: string) =>
+                  table === 'vehicle_documents' ? docsBuilder : slotBuilder,
+                ),
+                functions: { invoke: vi.fn() },
+              },
+            },
+          },
+          { provide: ToastService, useValue: toastSpy },
+          { provide: DmsViewerService, useValue: dmsViewerSpy },
+          { provide: NotificationsFacade, useValue: notificationsSpy },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 7 }) } },
+          {
+            provide: AgendaSettingsService,
+            useValue: { maxVisibleDateIso: vi.fn().mockReturnValue('2026-09-20') },
+          },
+        ],
+      });
+      facade = TestBed.inject(AdminAlumnoDetalleFacade);
+      return slotBuilder;
+    }
+
+    it('filtra la vista por la sede del alumno', async () => {
+      const slotBuilder = setupSchedule();
+      (facade as any)._alumno.set({ userId: 42, nombre: 'Ana Alumna', branchId: 2 });
+
+      await facade.loadScheduleGrid(9);
+
+      expect(slotBuilder.contains).toHaveBeenCalledWith('branch_ids', [2]);
+    });
+
+    it('un alumno sin sede no filtra (como antes)', async () => {
+      const slotBuilder = setupSchedule();
+      (facade as any)._alumno.set({ userId: 42, nombre: 'Ana Alumna', branchId: null });
+
+      await facade.loadScheduleGrid(9);
+
+      expect(slotBuilder.contains).not.toHaveBeenCalled();
+    });
+  });
+
   describe('loadScheduleGrid — respuestas fuera de orden (fix-071-i)', () => {
     const slotOf = (instructorId: number, slotStart: string) => ({
       data: [

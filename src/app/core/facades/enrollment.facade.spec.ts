@@ -33,6 +33,7 @@ function createMockQueryBuilder(responseData: any = null, responseError: any = n
     is: vi.fn().mockReturnThis(),
     lte: vi.fn().mockReturnThis(),
     lt: vi.fn().mockReturnThis(),
+    contains: vi.fn().mockReturnThis(),
     or: vi.fn().mockReturnThis(),
     like: vi.fn().mockReturnThis(),
     not: vi.fn().mockReturnThis(),
@@ -1256,6 +1257,46 @@ describe('EnrollmentFacade', () => {
       mockAgendaSettings.maxVisibleDateIso.mockReturnValue('2026-11-14');
       await facade.loadScheduleGrid(INSTRUCTOR_ID);
       expect(builder.lt).toHaveBeenLastCalledWith('slot_start', '2026-11-15T03:00:00.000Z');
+    });
+
+    // Spec 0057-b (AC6): la grilla del paso 2 solo trae bloques de la sede de la matrícula. La
+    // sede es la que el wizard ya pasó a loadInstructors() al entrar al paso.
+    describe('bloques de la sede de la matrícula (spec 0057-b, AC6)', () => {
+      it('filtra la vista por la sede con que se cargaron los instructores', async () => {
+        await facade.loadInstructors(2);
+        const builder = createMockQueryBuilder();
+        builder.order = vi.fn().mockResolvedValue({ data: mockSlots, error: null });
+        mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+        await facade.loadScheduleGrid(INSTRUCTOR_ID);
+
+        expect(builder.contains).toHaveBeenCalledWith('branch_ids', [2]);
+      });
+
+      it('sin sede conocida no filtra (como antes)', async () => {
+        setupScheduleQuery();
+        const builder = mockSupabase.client.from('v_class_b_schedule_availability');
+
+        await facade.loadScheduleGrid(INSTRUCTOR_ID);
+
+        expect(builder.contains).not.toHaveBeenCalled();
+      });
+
+      it('el refresco por Realtime también filtra por la sede', async () => {
+        vi.useFakeTimers();
+        await facade.loadInstructors(2);
+        setupScheduleQuery();
+        await facade.loadScheduleGrid(INSTRUCTOR_ID);
+
+        const requery = createMockQueryBuilder();
+        requery.order = vi.fn().mockResolvedValue({ data: mockSlots, error: null });
+        mockSupabase.client.from = vi.fn().mockReturnValue(requery);
+        mockSupabase._getChannelCallback()!();
+        await vi.advanceTimersByTimeAsync(350);
+
+        expect(requery.contains).toHaveBeenCalledWith('branch_ids', [2]);
+        vi.useRealTimers();
+      });
     });
 
     it('should create a realtime channel when loadScheduleGrid is called', async () => {

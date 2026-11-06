@@ -316,24 +316,19 @@ export class AgendaFacade {
       addDays(weekStart, 6),
     );
 
+    // Spec 0057-b: la vista dice qué sedes puede atender cada bloque (branch_ids) y la consulta
+    // ya filtra por la sede activa. Antes se filtraba aquí por los instructores de la sede, y un
+    // instructor "Ambas" con vehículo de la otra sede ofrecía bloques que su auto no cubre (F08).
     const [slotsResult, sessionsResult] = await Promise.all([
-      this.fetchAvailableSlots(rangeStart, rangeEnd),
+      this.fetchAvailableSlots(rangeStart, rangeEnd, branchId),
       this.fetchSessions(rangeStart, rangeEnd, branchId),
     ]);
-
-    // La vista v_class_b_schedule_availability no expone branch_id:
-    // filtramos client-side por los instructores de la sede activa.
-    const branchInstructorIds = new Set(this._instructors().map((i) => i.id));
-    const filteredSlots =
-      branchId !== null
-        ? slotsResult.filter((s) => branchInstructorIds.has(s.instructor_id))
-        : slotsResult;
 
     // Descarta esta respuesta si ya se disparó un fetch más reciente (navegación
     // rápida encolada) — evita que datos obsoletos pisen la semana vigente.
     if (!this.weekDataGuard.isCurrent(requestToken)) return;
 
-    this._weekData.set(this.buildWeekData(weekStart, weekEnd, filteredSlots, sessionsResult));
+    this._weekData.set(this.buildWeekData(weekStart, weekEnd, slotsResult, sessionsResult));
     this._error.set(null); // fix-189-b F3: una carga que sale bien borra el error anterior
   }
 
@@ -408,14 +403,20 @@ export class AgendaFacade {
 
   // fix-189-b: todas las consultas lanzan su error en vez de devolver [] — antes un timeout de la
   // vista o un corte de red se veía igual que una semana sin horarios.
-  private async fetchAvailableSlots(rangeStart: string, rangeEnd: string): Promise<RawSlot[]> {
-    const { data, error } = await this.supabase.client
+  /** `branchId` null = admin en "Todas las sedes": sin filtro (la vista ya da una fila por bloque). */
+  private async fetchAvailableSlots(
+    rangeStart: string,
+    rangeEnd: string,
+    branchId: number | null,
+  ): Promise<RawSlot[]> {
+    let query = this.supabase.client
       .from('v_class_b_schedule_availability')
       .select('instructor_id, vehicle_id, slot_start, slot_end, slot_status')
       .eq('slot_status', 'available')
       .gte('slot_start', rangeStart)
-      .lt('slot_start', rangeEnd)
-      .order('slot_start', { ascending: true });
+      .lt('slot_start', rangeEnd);
+    if (branchId !== null) query = query.contains('branch_ids', [branchId]);
+    const { data, error } = await query.order('slot_start', { ascending: true });
     if (error) throw error;
     return (data as RawSlot[]) ?? [];
   }
