@@ -176,6 +176,11 @@ export class EnrollmentFacade {
   private readonly _ownReservedSlotIds = signal<string[]>([]);
   /** fix-071-i: con la red lenta, la respuesta de un instructor anterior no pisa la grilla. */
   private readonly scheduleGridGuard = createRequestGuard();
+  /**
+   * Sede de la matrícula para la grilla del paso 2 (spec 0057-b, AC6): la fija loadInstructors(),
+   * que el wizard llama al entrar al paso. null = sin sede conocida, sin filtro.
+   */
+  private _scheduleBranchId: number | null = null;
   /** vehicle_id → advertencia; rebuilt en cada loadScheduleGrid(), reutilizado en re-fetch de Realtime. */
   private _vehicleDocWarningMap = new Map<number, VehicleDocWarningInfo>();
   private readonly _paymentMode = signal<PaymentMode | null>(null);
@@ -882,6 +887,7 @@ export class EnrollmentFacade {
 
   /** Carga instructores con vehículo asignado activo para la sucursal. */
   async loadInstructors(branchId: number): Promise<void> {
+    this._scheduleBranchId = branchId;
     const { data, error } = await this.supabase.client
       .from('instructors')
       .select(
@@ -913,6 +919,24 @@ export class EnrollmentFacade {
   }
 
   /**
+   * Bloques de un instructor en la vista de disponibilidad, para la grilla del paso 2 (carga y
+   * refresco por Realtime). Misma fuente de verdad que la Agenda (AgendaSettingsService): la vista
+   * devuelve un superset de 4 meses, se recorta aquí al límite configurado. Spec 0057-b (AC6):
+   * solo los bloques que la sede de la matrícula puede atender.
+   */
+  private scheduleAvailabilityQuery(instructorId: number) {
+    let query = this.supabase.client
+      .from('v_class_b_schedule_availability')
+      .select('*')
+      .eq('instructor_id', instructorId)
+      .lt('slot_start', chileDayRange(this.agendaSettings.maxVisibleDateIso()).endExclusive);
+    if (this._scheduleBranchId !== null) {
+      query = query.contains('branch_ids', [this._scheduleBranchId]);
+    }
+    return query.order('slot_start', { ascending: true });
+  }
+
+  /**
    * Carga la grilla de horarios disponibles desde la vista
    * `v_class_b_schedule_availability` para un instructor específico.
    */
@@ -931,14 +955,7 @@ export class EnrollmentFacade {
 
     try {
       const [{ data, error }, docsResult] = await Promise.all([
-        this.supabase.client
-          .from('v_class_b_schedule_availability')
-          .select('*')
-          .eq('instructor_id', instructorId)
-          // Misma fuente de verdad que la Agenda (AgendaSettingsService): la vista
-          // devuelve un superset de 4 meses, se recorta aquí al límite configurado.
-          .lt('slot_start', chileDayRange(this.agendaSettings.maxVisibleDateIso()).endExclusive)
-          .order('slot_start', { ascending: true }),
+        this.scheduleAvailabilityQuery(instructorId),
         this.supabase.client
           .from('vehicle_documents')
           .select('vehicle_id, type, expiry_date, status'),
@@ -2250,12 +2267,7 @@ export class EnrollmentFacade {
       const requestToken = this.scheduleGridGuard.next();
       const currentSelected = this._selectedSlotIds();
 
-      const { data, error } = await this.supabase.client
-        .from('v_class_b_schedule_availability')
-        .select('*')
-        .eq('instructor_id', instructorId)
-        .lt('slot_start', chileDayRange(this.agendaSettings.maxVisibleDateIso()).endExclusive)
-        .order('slot_start', { ascending: true });
+      const { data, error } = await this.scheduleAvailabilityQuery(instructorId);
 
       if (!this.scheduleGridGuard.isCurrent(requestToken)) return;
       if (error || !data || data.length === 0) return;
@@ -2290,6 +2302,7 @@ export class EnrollmentFacade {
   /** Resetea todo el estado del wizard para una nueva matrícula. */
   reset(): void {
     this.unsubscribeFromScheduleChanges();
+    this._scheduleBranchId = null;
     this._draft.set({ enrollmentId: null, studentId: null, userId: null });
     this._currentStep.set(1);
     this._steps.set(structuredClone(ENROLLMENT_STEPS));

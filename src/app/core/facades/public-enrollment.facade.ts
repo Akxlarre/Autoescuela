@@ -643,6 +643,8 @@ export class PublicEnrollmentFacade {
         body: {
           action: 'load-schedule',
           instructorId,
+          // Spec 0057-b (AC8): solo los bloques que la sede elegida puede atender.
+          branchId: this._selectedBranch()?.id ?? null,
           sessionToken: this._sessionToken(),
         },
       });
@@ -1598,6 +1600,8 @@ export class PublicEnrollmentFacade {
         body: {
           action: 'load-schedule',
           instructorId,
+          // Spec 0057-b (AC8): solo los bloques que la sede elegida puede atender.
+          branchId: this._selectedBranch()?.id ?? null,
           sessionToken: this._sessionToken(),
         },
       });

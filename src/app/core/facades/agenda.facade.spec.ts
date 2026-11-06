@@ -5,7 +5,7 @@ import { AuthFacade } from './auth.facade';
 import { BranchFacade } from './branch.facade';
 import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
 import { addDaysToIso } from '@core/utils/agenda-week.utils';
-import { addDaysIso, chileToday } from '@core/utils/chile-time.utils';
+import { addDaysIso, chileToday, mondayOfIso } from '@core/utils/chile-time.utils';
 
 /**
  * Builder de cadena Supabase genérico y "thenable": cualquier método
@@ -28,6 +28,7 @@ function makeFlexibleSupabaseMock() {
       lte: vi.fn(() => b),
       gt: vi.fn(() => b),
       in: vi.fn(() => b),
+      contains: vi.fn(() => b),
       order: vi.fn(() => b),
       then: (resolve: any) => resolve(results.get(table) ?? { data: [], error: null }),
     };
@@ -107,6 +108,7 @@ describe('AgendaFacade', () => {
         lte: () => builder,
         gt: () => builder,
         in: () => builder,
+        contains: () => builder,
         order: () => builder,
         then: (resolve: any) => setTimeout(() => resolve({ data: [], error: null }), delayMs),
       };
@@ -549,6 +551,50 @@ describe('AgendaFacade', () => {
       await (facade as any).refreshSilently();
 
       expect(facade.weekData()).toBe(visible);
+    });
+  });
+
+  describe('disponibilidad por sede — spec 0057-b (F08)', () => {
+    const vista = () => supabaseSpy.client.from('v_class_b_schedule_availability');
+
+    it('AC2/AC3: con una sede elegida, pide solo los bloques que esa sede puede atender', async () => {
+      branchFacadeSpy.selectedBranchId.mockReturnValue(2);
+      await facade.loadWeek();
+      expect(vista().contains).toHaveBeenCalledWith('branch_ids', [2]);
+    });
+
+    it('AC5: el admin en "Todas las sedes" no filtra por sede', async () => {
+      branchFacadeSpy.selectedBranchId.mockReturnValue(null);
+      await facade.loadWeek();
+      expect(vista().contains).not.toHaveBeenCalled();
+    });
+
+    it('la secretaria filtra por su sede aunque no elija ninguna', async () => {
+      authFacadeSpy.currentUser.mockReturnValue({ role: 'secretary', branchId: 1 });
+      await facade.loadWeek();
+      expect(vista().contains).toHaveBeenCalledWith('branch_ids', [1]);
+    });
+
+    it('AC2: muestra el bloque que trae la vista aunque su instructor sea de otra sede', async () => {
+      // El filtro por sede lo hace la vista; la Agenda ya no descarta por la lista de instructores.
+      // Martes de la semana siguiente: siempre un día hábil dentro de la grilla.
+      const martes = addDaysIso(mondayOfIso(chileToday()), 8);
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      supabaseSpy.setResult('instructors', []);
+      supabaseSpy.setResult('v_class_b_schedule_availability', [
+        {
+          instructor_id: 99,
+          vehicle_id: 3,
+          slot_start: `${martes}T12:00:00+00:00`,
+          slot_end: `${martes}T12:45:00+00:00`,
+          slot_status: 'available',
+          branch_ids: [1, 2],
+        },
+      ]);
+      facade.goToDate(martes);
+      await vi.waitFor(() => expect(facade.isLoading()).toBe(false));
+      const slots = JSON.stringify(facade.weekData());
+      expect(slots).toContain('"instructorId":99');
     });
   });
 });

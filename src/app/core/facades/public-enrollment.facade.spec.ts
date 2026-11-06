@@ -1151,6 +1151,33 @@ describe('PublicEnrollmentFacade', () => {
       ],
     };
 
+    // Spec 0057-b (AC8): la edge function filtra por la sede de la matrícula.
+    it('envía la sede elegida al cargar la grilla y en cada refresco', async () => {
+      vi.useFakeTimers();
+      (facade as any)._selectedBranch.set({ id: 2, slug: 'conductores', name: 'Conductores' });
+      mockSupabaseClient.functions.invoke = vi
+        .fn()
+        .mockResolvedValue({ data: { grid: mockGrid }, error: null });
+
+      await facade.loadScheduleGrid(INSTRUCTOR_ID);
+      expect(mockSupabaseClient.functions.invoke).toHaveBeenLastCalledWith(
+        'public-enrollment',
+        expect.objectContaining({
+          body: expect.objectContaining({ action: 'load-schedule', branchId: 2 }),
+        }),
+      );
+
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(mockSupabaseClient.functions.invoke).toHaveBeenLastCalledWith(
+        'public-enrollment',
+        expect.objectContaining({
+          body: expect.objectContaining({ action: 'load-schedule', branchId: 2 }),
+        }),
+      );
+      facade.reset();
+      vi.useRealTimers();
+    });
+
     it('should start polling after loadScheduleGrid succeeds', async () => {
       vi.useFakeTimers();
       mockSupabaseClient.functions.invoke = vi
