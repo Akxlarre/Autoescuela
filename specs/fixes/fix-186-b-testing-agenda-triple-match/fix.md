@@ -215,4 +215,4 @@ prueba.
 | M06 | ✅ una sola falta, encendida → no cancela |
 | M07 | ✅ una falta justificada en el día + otra falta, encendida → no cancela (la justificada no cuenta) y la justificación queda intacta |
 | M08 | cerrado por decisión: es M01 a las 20:00 — el cron marca "No asistió" toda clase no iniciada; desde spec `0048-b` eso ya no cancela la agenda (cancelación apagada en las 2 sedes) |
-| M09 | **anotado, decisión del owner:** una clase agendada en un día que después quedó como feriado, si nadie la inicia, **el cron la marca "No asistió"**. Desde spec `0052-b` los feriados no ofrecen horarios, así que solo pasa con clases agendadas antes de que el feriado entrara a la lista |
+| M09 | **corregido en spec `0056-b`** (decisión del owner, 2026-11-06): una clase en un feriado que nadie inicia se cancela sin falta, y la alerta "clases en día feriado" del dashboard las muestra antes del día para reagendarlas. El test exige M09, M09b (iniciada no se toca), M09c y M10–M10c (la alerta) |

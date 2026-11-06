@@ -560,6 +560,79 @@ describe('DashboardAlertsFacade', () => {
     });
   });
 
+  // ── B-4: clases en día feriado (spec 0056-b) ─────────────────────────────────
+  describe('B-4: checkClassesOnHoliday (spec 0056-b)', () => {
+    const VIEW = 'v_class_b_sessions_on_holiday';
+
+    const mockWithHolidayRows = (chain: any) => {
+      fromSpy.mockImplementation((table: string) => {
+        if (table === VIEW) return chain;
+        if (table === 'alert_config') return buildChain({ data: [] });
+        if (table === 'branches') return buildChain({ data: [{ id: 1, name: 'Sede Uno' }] });
+        if (table === 'cash_closings') return buildChain({ data: [{ branch_id: 1 }] });
+        return buildChain({ data: [], count: 0 });
+      });
+    };
+
+    it('avisa cuántas clases caen en un feriado y cuántos alumnos son (AC5)', async () => {
+      mockWithHolidayRows(
+        buildChain({
+          data: [
+            { session_id: 1, enrollment_id: 10 },
+            { session_id: 2, enrollment_id: 10 },
+            { session_id: 3, enrollment_id: 11 },
+          ],
+        }),
+      );
+
+      await facade.loadAlerts();
+
+      const alert = facade.activeAlerts().find((a) => a.id === 'alert-class-b-holiday');
+      expect(alert?.severity).toBe('warning');
+      expect(alert?.count).toBe(3);
+      expect(alert?.title).toBe('3 clases en día feriado');
+      expect(alert?.description).toContain('2 alumnos');
+    });
+
+    it('singular con una sola clase', async () => {
+      mockWithHolidayRows(buildChain({ data: [{ session_id: 1, enrollment_id: 10 }] }));
+
+      await facade.loadAlerts();
+
+      const alert = facade.activeAlerts().find((a) => a.id === 'alert-class-b-holiday');
+      expect(alert?.title).toBe('1 clase en día feriado');
+      expect(alert?.description).toContain('1 alumno');
+      expect(alert?.description).not.toContain('1 alumnos');
+    });
+
+    it('filtra por la sede activa', async () => {
+      const chain = buildChain({ data: [] });
+      mockWithHolidayRows(chain);
+      (TestBed.inject(BranchFacade).selectedBranchId as any).mockReturnValue(2);
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({ dbId: 1, role: 'admin' });
+
+      await facade.loadAlerts();
+
+      expect(chain.eq).toHaveBeenCalledWith('branch_id', 2);
+    });
+
+    it('sin clases en feriado no hay alerta', async () => {
+      buildCleanMock(fromSpy);
+
+      await facade.loadAlerts();
+
+      expect(facade.activeAlerts().find((a) => a.id === 'alert-class-b-holiday')).toBeUndefined();
+    });
+
+    it('si la consulta falla, la lista queda marcada como incompleta (AC-E1)', async () => {
+      mockWithHolidayRows(buildChain({ data: null, error: { message: 'boom' } }));
+
+      await facade.loadAlerts();
+
+      expect(facade.loadProblem()).toBe('No se pudieron revisar todas las alertas.');
+    });
+  });
+
   // ── B-2: Twelfth class — certificate pending ─────────────────────────────────
   describe('B-2: checkTwelfthClassCompleted', () => {
     it('should generate a success alert when students need their certificate generated', async () => {

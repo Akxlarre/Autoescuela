@@ -139,20 +139,75 @@ BEGIN
     'scheduled / excused', v_s3 || ' / ' || coalesce(v_att, '—'),
     CASE WHEN v_s3 = 'scheduled' AND v_att = 'excused' THEN 'ok' ELSE 'FALLA' END);
 
-  -- ── M09: clase agendada en un día que después quedó como feriado ────────
-  v_s1 := NULL;
+  -- ── M09 (spec 0056-b): clase agendada en un día que después quedó como feriado ──
+  -- AC1: se cancela sin falta. AC3: si el instructor la inició, no se toca. AC4: la cancelada por
+  -- el cron sigue en la vista de la alerta (aunque el cron corra un día tarde).
+  v_s1 := NULL; v_s2 := NULL; v_att := NULL; v_c3 := NULL;
   BEGIN
     INSERT INTO public.holidays (date, name, scope, source)
     VALUES (public.chile_today() - 1, 'E2E feriado de prueba', 'national', 'e2e')
     ON CONFLICT (date) DO NOTHING;
     INSERT INTO public.class_b_sessions (enrollment_id, instructor_id, vehicle_id, class_number, scheduled_at, status)
     VALUES (v_enr, 222, 1, 1, v_ayer, 'scheduled') RETURNING id INTO v_c1;
+    INSERT INTO public.class_b_sessions (enrollment_id, instructor_id, vehicle_id, class_number, scheduled_at, status, km_start, start_time)
+    VALUES (v_enr, 222, 1, 2, v_ayer + interval '2 hours', 'in_progress', 1000, '05:07:00') RETURNING id INTO v_c2;
     PERFORM public.mark_end_of_day_class_b_absences();
     SELECT status INTO v_s1 FROM public.class_b_sessions WHERE id = v_c1;
+    SELECT status INTO v_s2 FROM public.class_b_sessions WHERE id = v_c2;
+    SELECT status INTO v_att FROM public.class_b_practice_attendance
+     WHERE class_b_session_id = v_c1 AND archived_at IS NULL;
+    SELECT count(*) INTO v_c3 FROM public.v_class_b_sessions_on_holiday WHERE session_id = v_c1;
     RAISE SQLSTATE 'ZZ001';
   EXCEPTION WHEN SQLSTATE 'ZZ001' THEN NULL; END;
-  INSERT INTO r026m VALUES ('M09 clase en un feriado, nadie la inicia', 'anotar',
-    'decisión del owner', v_s1, CASE WHEN v_s1 = 'no_show' THEN 'la marca No asistió' ELSE 'no la toca' END);
+  INSERT INTO r026m VALUES
+    ('M09 clase en un feriado, nadie la inicia', 'regla', 'cancelled / sin asistencia',
+      v_s1 || ' / ' || coalesce(v_att, 'sin asistencia'),
+      CASE WHEN v_s1 = 'cancelled' AND v_att IS NULL THEN 'ok' ELSE 'FALLA' END),
+    ('M09b clase iniciada en un feriado', 'regla', 'in_progress', v_s2,
+      CASE WHEN v_s2 = 'in_progress' THEN 'ok' ELSE 'FALLA' END),
+    ('M09c la cancelada por feriado sigue en la alerta', 'regla', '1', v_c3::text,
+      CASE WHEN v_c3 = 1 THEN 'ok' ELSE 'FALLA' END);
+
+  -- ── M10 (spec 0056-b, AC4): alerta antes del día ─────────────────────────
+  -- Agendada en un feriado futuro → en la vista. Cancelada antes del feriado → fuera.
+  -- Fuera de la grilla y a 400 días para no chocar con clases reales.
+  v_c1 := NULL; v_c2 := NULL; v_c3 := NULL; v_c4 := NULL;
+  BEGIN
+    INSERT INTO public.holidays (date, name, scope, source)
+    VALUES (public.chile_today() + 400, 'E2E feriado futuro', 'national', 'e2e')
+    ON CONFLICT (date) DO NOTHING;
+    INSERT INTO public.class_b_sessions (enrollment_id, instructor_id, vehicle_id, class_number, scheduled_at, status)
+    VALUES (v_enr, 222, 1, 1, public.chile_day_start(public.chile_today() + 400) + interval '3 hours 7 minutes', 'scheduled')
+    RETURNING id INTO v_c1;
+    INSERT INTO public.class_b_sessions (enrollment_id, instructor_id, vehicle_id, class_number, scheduled_at, status, cancelled_at)
+    VALUES (v_enr, 222, 1, 2, public.chile_day_start(public.chile_today() + 400) + interval '5 hours 7 minutes', 'cancelled', now())
+    RETURNING id INTO v_c2;
+    SELECT count(*) INTO v_c3 FROM public.v_class_b_sessions_on_holiday WHERE session_id = v_c1;
+    SELECT count(*) INTO v_c4 FROM public.v_class_b_sessions_on_holiday WHERE session_id = v_c2;
+    RAISE SQLSTATE 'ZZ001';
+  EXCEPTION WHEN SQLSTATE 'ZZ001' THEN NULL; END;
+  INSERT INTO r026m VALUES
+    ('M10 agendada en un feriado futuro', 'regla', 'en la alerta', v_c3::text,
+      CASE WHEN v_c3 = 1 THEN 'ok' ELSE 'FALLA' END),
+    ('M10b cancelada antes del feriado', 'regla', 'fuera de la alerta', v_c4::text,
+      CASE WHEN v_c4 = 0 THEN 'ok' ELSE 'FALLA' END);
+
+  -- ── M10c: cancelada en el feriado por la penalización (2 faltas) → fuera de la alerta ──
+  -- Perdió la agenda: no se reagenda por el feriado.
+  v_c1 := NULL; v_c3 := NULL;
+  BEGIN
+    INSERT INTO public.holidays (date, name, scope, source)
+    VALUES (public.chile_today() - 1, 'E2E feriado de prueba', 'national', 'e2e')
+    ON CONFLICT (date) DO NOTHING;
+    INSERT INTO public.class_b_sessions (enrollment_id, instructor_id, vehicle_id, class_number, scheduled_at, status, cancelled_at)
+    VALUES (v_enr, 222, 1, 1, v_ayer, 'cancelled', now()) RETURNING id INTO v_c1;
+    UPDATE public.enrollments SET absence_penalty_applied_at = now() WHERE id = v_enr;
+    SELECT count(*) INTO v_c3 FROM public.v_class_b_sessions_on_holiday WHERE session_id = v_c1;
+    RAISE SQLSTATE 'ZZ001';
+  EXCEPTION WHEN SQLSTATE 'ZZ001' THEN NULL; END;
+  INSERT INTO r026m VALUES
+    ('M10c cancelada en el feriado por penalización', 'regla', 'fuera de la alerta', v_c3::text,
+      CASE WHEN v_c3 = 0 THEN 'ok' ELSE 'FALLA' END);
 END
 $test$;
 

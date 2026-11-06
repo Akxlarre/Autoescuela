@@ -313,6 +313,7 @@ export class DashboardAlertsFacade {
       this.checkSixthClassWithDebt(branchId),
       this.checkTwelfthClassCompleted(branchId),
       this.checkConsecutiveAbsences(branchId),
+      this.checkClassesOnHoliday(branchId),
       this.checkUnclosedCash(branchId),
       this.checkOldDebts(branchId),
       // Fase 3 — Pagos y Finanzas
@@ -580,6 +581,34 @@ export class DashboardAlertsFacade {
               },
             }
           : {}),
+      },
+    ];
+  }
+
+  /**
+   * (B-4, spec 0056-b) Clases prácticas que caen en un feriado y hay que reagendar: las agendadas
+   * de hoy en adelante y las que el cron ya canceló por feriado. El criterio vive en la vista
+   * `v_class_b_sessions_on_holiday`; reagendar cambia la fecha y la clase sale sola.
+   */
+  private async checkClassesOnHoliday(branchId: number | null): Promise<AlertModel[]> {
+    let query: any = this.supabase.client
+      .from('v_class_b_sessions_on_holiday')
+      .select('session_id, enrollment_id');
+    if (branchId !== null) query = query.eq('branch_id', branchId);
+
+    const { data } = await queryOk(query);
+    const rows = (data ?? []) as { session_id: number; enrollment_id: number }[];
+    const count = rows.length;
+    if (count === 0) return [];
+
+    const students = new Set(rows.map((r) => r.enrollment_id)).size;
+    return [
+      {
+        id: 'alert-class-b-holiday',
+        title: `${count} clase${count > 1 ? 's' : ''} en día feriado`,
+        description: `De ${students} alumno${students > 1 ? 's' : ''}. Ese día no hay clases: hay que reagendarlas`,
+        severity: 'warning',
+        count,
       },
     ];
   }
