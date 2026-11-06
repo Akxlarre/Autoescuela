@@ -1,6 +1,6 @@
 # Spec 0057-b — La disponibilidad de Clase B dice de qué sede es cada horario
 
-> **Status:** approved
+> **Status:** done (cerrada el 2026-11-06)
 > **Created:** 2026-11-06
 > **Owner:** Akxlarre
 > **Priority:** P2 (por confirmar)

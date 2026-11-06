@@ -530,11 +530,9 @@ test('F08/F03: un instructor "ambas sedes" aparece en las dos; sin vehículo de 
     await abrirAgenda(admin, '/app/admin/agenda');
     await elegirSede(admin, SEDE_B);
     await expect.poll(() => opcionesInstructor(admin), CARGA).toContain(inst.nombre);
+    // Spec 0057-b: la vista dice de qué sede es cada bloque; el vehículo no cubre la sede 2.
     const libresF08 = await libresDeLaSemanaSiguiente(admin);
-    test.info().annotations.push({
-      type: 'F08 sede 2, vehículo de la sede 1',
-      description: `${libresF08} horarios "Disponible" la semana siguiente`,
-    });
+    expect(libresF08, 'sin horarios en la sede que el vehículo no cubre').toBe(0);
 
     // F03: con el vehículo también "ambas sedes", aparece en las dos con horarios.
     const marcarVeh = await sb
