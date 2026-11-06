@@ -198,8 +198,8 @@ los flujos.
 
 ## Cuarta tanda (2026-10-29) — grupo 4 (cron de fin de jornada)
 
-`supabase/tests/agenda/fix-186-b-cron-fin-de-jornada.sql`: **8/8 reglas en verde** contra la BD de
-desarrollo (`skvekggejikzxhzsjmkz`). Llama a `mark_end_of_day_class_b_absences()` (lo que corre
+`supabase/tests/agenda/fix-186-b-cron-fin-de-jornada.sql`: **8/8 reglas en verde** contra la BD del
+piloto (`skvekggejikzxhzsjmkz`, que es producción: no hay otra BD). Llama a `mark_end_of_day_class_b_absences()` (lo que corre
 pg_cron a las 21:00 Chile) en vez de esperar a la noche, sobre clases creadas a las 03:07 / 05:07
 Chile (fuera de la grilla). Cada caso se deshace solo; verificado después: configuración de
 penalización igual que antes (apagada en las 2 sedes), sin feriados, justificaciones ni clases de
@@ -216,3 +216,40 @@ prueba.
 | M07 | ✅ una falta justificada en el día + otra falta, encendida → no cancela (la justificada no cuenta) y la justificación queda intacta |
 | M08 | cerrado por decisión: es M01 a las 20:00 — el cron marca "No asistió" toda clase no iniciada; desde spec `0048-b` eso ya no cancela la agenda (cancelación apagada en las 2 sedes) |
 | M09 | **corregido en spec `0056-b`** (decisión del owner, 2026-11-06): una clase en un feriado que nadie inicia se cancela sin falta, y la alerta "clases en día feriado" del dashboard las muestra antes del día para reagendarlas. El test exige M09, M09b (iniciada no se toca), M09c y M10–M10c (la alerta) |
+
+## Quinta tanda (2026-11-06) — grupo 1, casos que solo leen
+
+`e2e/agenda-4.spec.ts`: **9 casos, en verde** (F06 tras `hotfix-171-b`). No siembra ni modifica
+datos (`skvekggejikzxhzsjmkz` es producción).
+
+| Caso | Resultado |
+|---|---|
+| B03 | ✅ una semana sin clases (la del 9-nov en la sede 1) muestra la grilla completa: 13 horarios × 5 días, con los libres. No aparece "No hay clases en esta semana" (ese estado queda para cuando no hay horarios) |
+| C09 | ✅ "Ir a fecha" con un día de otra semana (el 18) salta a esa semana ("16 nov – 20 nov") |
+| C10 | ✅ el selector bloquea los días antes de hoy y los posteriores al límite (con 3 meses: elegible hasta el 6-feb-2027, bloqueado desde el 7) |
+| E07 | ✅ con el límite en 2 meses (6-ene, miércoles) el jueves y el viernes quedan bloqueados: sus horarios se ven atenuados y el clic no abre el detalle; un horario del miércoles sí lo abre. Con 3 meses el límite cayó un sábado y la última semana no tenía días bloqueados |
+| P07 | ✅ en la última semana el botón "siguiente" queda deshabilitado (`aria-disabled`) con un tooltip que explica el límite |
+| F02 | ✅ el admin cambia de sede A → B: la Agenda recarga sola (sin recargar la página) y el filtro ofrece solo los instructores de esa sede |
+| F06 | ✅ **corregido en `hotfix-171-b`**. Antes ❌, S16 confirmada en el navegador: la secretaria multisede elige la sede B y la lista sigue con los instructores de las dos sedes (18). `SecretariaAgendaComponent` carga una sola vez en `ngOnInit`; no tiene el `effect` de sede que sí tiene `AdminAgendaComponent`. Al salir y volver sí recarga (el SWR de `initialize()` compara la sede) |
+| F07 | ✅ admin A → B → A rápido con la red a 1,5 s por consulta: termina en A, sin instructores de B |
+| G06 | ✅ al salir de la Agenda, cada `phx_join` de `agenda-sessions` tiene su `phx_leave`. Nota: la primera carga entra, sale y vuelve a entrar (`ensureRealtime()` + `subscribeRealtime()` en `initialize()`); queda un solo canal, sin efecto visible |
+
+### Con datos sembrados (2026-11-06)
+
+Mismo archivo, **14 casos en verde** (`agenda-3` sigue 9/9 tras mover sus helpers de siembra a
+`e2e/support/agenda-seed.ts`). Cada test borra lo que siembra o restaura lo que cambia (en un
+`finally`); verificado por SQL al terminar: 0 usuarios, clases, matrículas ni avisos nuevos, y 0
+instructores/vehículos "ambas sedes", igual que antes.
+
+| Caso | Resultado |
+|---|---|
+| B08 | ✅ con una clase `reserved` de un borrador, el horario deja de ofrecerse "Disponible" (no hay doble reserva), pero la celda queda **vacía**: ni libre ni la clase. S14 sigue igual (pulido, no bloqueante) |
+| B12 / P07-triángulo | ✅ sin sembrar: Instructor9 (sede 2) usa el RTRE29, con el SOAP vencido desde 2025-05-06; sus horarios llevan el aviso "Vehículo RTRE29: SOAP vencido". Si se renueva, el test se salta |
+| D08 | ✅ simulado respondiendo `[]` a instructores, disponibilidad y clases (sin crear una sede): se ve la grilla con las celdas vacías (los horarios salen de los cursos), sin error ni "No hay clases", filtro solo con "Todos los instructores", consola limpia |
+| F03 | ✅ instructor y vehículo "ambas sedes" (marcados y restaurados en el test): aparece en el filtro del admin en las dos sedes y de la secretaria de la sede 2, con horarios en ambas |
+| F08 | ⚠️ **decisión de negocio.** Instructor "ambas sedes" con vehículo solo de la sede 1, mirado desde la sede 2: aparece y ofrece **59 horarios "Disponible"**, los mismos que con el vehículo en ambas. La vista arma los horarios de la sede 1 (el `JOIN vehicles` exige la sede del vehículo) pero no tiene columna de sede, así que la Agenda de la sede 2 los muestra como propios. El checklist esperaba "sin horarios" |
+| G07 | ✅ adaptado: el drawer se cierra al navegar, así que en una pestaña las dos Agendas nunca están abiertas a la vez. Comparten `AgendaFacade` y cerrar el drawer llama a `dispose()`; se comprobó que la Agenda de la página, abierta después, vuelve a suscribirse y recibe una clase nueva sin recargar |
+
+**Grupo 1 que sigue abierto:** G04 (confirmar una matrícula con pago con la Agenda abierta en
+otra sesión) y G05 (crear un instructor y agendarle una clase): escriben pagos, usuarios y avisos
+en producción, pendientes de aprobar paso a paso. P08 (animación): revisión visual.

@@ -1,7 +1,15 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  effect,
+  inject,
+  OnInit,
+} from '@angular/core';
 
 import { AgendaSemanalComponent } from '@shared/components/agenda-semanal/agenda-semanal.component';
 import { AgendaFacade } from '@core/facades/agenda.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
 import { AgendaSlotDetailDrawerComponent } from '@features/agenda/agenda-slot-detail-drawer.component';
@@ -39,10 +47,20 @@ export class SecretariaAgendaComponent implements OnInit {
   protected readonly facade = inject(AgendaFacade);
   protected readonly drawer = inject(LayoutDrawerFacadeService);
   protected readonly agendaSettings = inject(AgendaSettingsService);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly destroyRef = inject(DestroyRef);
 
+  constructor() {
+    // La secretaria con acceso a las dos sedes cambia de sede en el topbar: la Agenda recarga con
+    // la nueva (hotfix-171-b, S16). Sin grant, selectedBranchId no cambia y esto corre una vez.
+    // initialize() distingue misma sede (refresco silencioso) de otra sede (carga completa).
+    effect(() => {
+      this.branchFacade.selectedBranchId();
+      void this.facade.initialize();
+    });
+  }
+
   ngOnInit(): void {
-    this.facade.initialize();
     this.destroyRef.onDestroy(() => this.facade.dispose());
   }
 
