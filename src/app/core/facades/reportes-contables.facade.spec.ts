@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { ReportesContablesFacade } from './reportes-contables.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -294,6 +294,17 @@ describe('ReportesContablesFacade', () => {
   });
 
   describe('evolución mensual — serie fija de últimos meses (fix-242-m)', () => {
+    // Reloj fijo: la serie son los últimos 6 meses desde "hoy". Sin fijarlo, el pago de
+    // mayo-2026 sale de la ventana en cuanto el reloj real pasa de octubre-2026.
+    // 2026-05-20T16:00Z = 12:00 hora Chile del 20 de mayo.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-05-20T16:00:00.000Z'));
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it('expone la serie aunque el filtro sea "Mes actual" (no depende del rango)', async () => {
       const { facade } = setup({
         tables: {
