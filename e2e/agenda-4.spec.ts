@@ -1,10 +1,12 @@
 /**
  * Agenda semanal — cuarta tanda (ASG-i-026, fix-186-b), grupo 1 que seguía abierto: semana sin
  * clases (B03), "Ir a fecha" (C09, C10), días fuera del límite (E07), aviso del botón "siguiente"
- * bloqueado (P07), cambio de sede (F02, F06, F07) y cierre del canal de tiempo real (G06). Los IDs
- * son los del checklist specs/testing-piloto/026-agenda-triple-match.md.
+ * bloqueado (P07), cambio de sede (F02, F06, F07), tiempo real (G04–G07) y los casos con datos
+ * sembrados (B08, B12, D08, F03, F08). Los IDs son los del checklist
+ * specs/testing-piloto/026-agenda-triple-match.md.
  *
- * Solo lectura: no siembra ni modifica datos (la BD del piloto es producción).
+ * La BD del piloto es producción: lo que un test siembra lo borra el `cleanup`, y lo que cambia
+ * (both_branches en F03/F08) lo restaura en un `finally`. G05 y D08 no escriben: simulan respuestas.
  */
 import type { Page, WebSocket } from '@playwright/test';
 import { createE2eAlumno } from './support/alumnos-seed';
@@ -638,4 +640,124 @@ test('G07: cerrar la Agenda del drawer no deja sin tiempo real a la Agenda de la
     cleanup,
   );
   await expect(clasesDe(page, nombre), 'llega sin recargar').toHaveCount(1, CARGA);
+});
+
+const pideLaVista = (url: string) => url.includes('/rest/v1/v_class_b_schedule_availability');
+
+test('G04: 12 clases nuevas de una matrícula con la Agenda abierta en otra sesión (S17)', async ({
+  pageAs,
+  cleanup,
+}) => {
+  // Confirmar una matrícula inserta sus clases en class_b_sessions de una vez. Se siembran 12
+  // clases para un alumno E2E (sin pago, contrato ni avisos) y se cuenta cuántas veces la Agenda
+  // abierta vuelve a pedir la semana. Las 12 se borran al terminar (cleanup).
+  const inst = await instructorSembrable();
+  const alumno = await createE2eAlumno(
+    { label: 'AgendaRafaga', branchId: 1, enrollments: [{}] },
+    cleanup,
+  );
+  const nombre = `${alumno.firstNames} ${alumno.paternalLastName}`;
+  const sb = await getAdminClient();
+  const { data: libres, error } = await sb
+    .from('v_class_b_schedule_availability')
+    .select('slot_start')
+    .eq('instructor_id', inst.id)
+    .eq('slot_status', 'available')
+    .gte('slot_start', new Date(Date.now() + 2 * 86_400_000).toISOString())
+    .order('slot_start')
+    .limit(40);
+  expect(error?.message).toBeUndefined();
+  // Uno de cada tres: deja huecos, como una matrícula real repartida en la semana.
+  const horarios = (libres ?? []).map((r) => r.slot_start as string).filter((_, i) => i % 3 === 0);
+  expect(horarios.length, 'hay 12 horarios libres para sembrar').toBeGreaterThanOrEqual(12);
+
+  const page = await pageAs('secretariaA');
+  await abrirAgenda(page, '/app/secretaria/agenda');
+  await elegirInstructor(page, inst.nombre);
+  await page.waitForTimeout(3_000); // que termine la carga inicial antes de contar
+
+  const pedidos: number[] = [];
+  const t0 = Date.now();
+  page.on('request', (req) => {
+    if (req.method() === 'GET' && pideLaVista(req.url())) pedidos.push(Date.now() - t0);
+  });
+
+  const { data: creadas, error: errInsert } = await sb
+    .from('class_b_sessions')
+    .insert(
+      horarios.slice(0, 12).map((scheduled_at, i) => ({
+        enrollment_id: alumno.enrollmentIds[0],
+        instructor_id: inst.id,
+        vehicle_id: inst.vehicleId,
+        scheduled_at,
+        status: 'scheduled',
+        class_number: i + 1,
+      })),
+    )
+    .select('id');
+  for (const c of creadas ?? []) cleanup.track('class_b_sessions', c.id);
+  expect(errInsert?.message).toBeUndefined();
+  expect(creadas).toHaveLength(12);
+
+  await expect.poll(() => pedidos.length, CARGA).toBeGreaterThan(0);
+  await page.waitForTimeout(10_000); // que se apague la ráfaga
+  test.info().annotations.push({
+    type: 'G04 recargas por 12 clases nuevas',
+    description:
+      `${pedidos.length} consultas a la vista en ${pedidos.at(-1)} ms ` +
+      `(primera a los ${pedidos[0]} ms)`,
+  });
+  // La semana a la vista queda al día (la Agenda abre en la semana actual).
+  const deEstaSemana = await clasesDe(page, nombre).count();
+  test.info().annotations.push({
+    type: 'G04 clases del alumno en la semana a la vista',
+    description: String(deEstaSemana),
+  });
+});
+
+test('G05: un instructor que no existía al abrir la Agenda sale con su nombre (S17)', async ({
+  pageAs,
+}) => {
+  // Sin escribir nada: al abrir la Agenda se le quita un instructor a las dos consultas de
+  // instructores (como si lo hubieran creado después) y luego se le devuelve. Al volver a la
+  // Agenda, ¿su horario sale con su nombre o como "#id"?
+  const inst = await instructorSembrable();
+  const page = await pageAs('secretariaA');
+  const ocultar = async (route: import('@playwright/test').Route) => {
+    const res = await route.fetch();
+    const filas = (await res.json()) as { id: number }[];
+    await route.fulfill({ response: res, json: filas.filter((f) => f.id !== inst.id) });
+  };
+  await page.route('**/rest/v1/instructors?*', ocultar);
+  await abrirAgenda(page, '/app/secretaria/agenda');
+  expect(await opcionesInstructor(page), 'la Agenda no lo conoce').not.toContain(inst.nombre);
+
+  // El instructor "ya existe": se deja de ocultar y se sale y vuelve a la Agenda.
+  await page.unroute('**/rest/v1/instructors?*', ocultar);
+  await page.getByRole('navigation').getByRole('link', { name: 'Inicio', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/secretaria\/dashboard/, CARGA);
+  await page.getByRole('navigation').getByRole('link', { name: 'Agenda', exact: true }).click();
+  await expect(grid(page)).toBeVisible(CARGA);
+
+  const enLista = (await opcionesInstructor(page)).includes(inst.nombre);
+  await page.getByRole('button', { name: /Limpiar filtros/ }).click();
+  await next(page).click();
+  await expect(grid(page)).toBeVisible(CARGA);
+  const instante = inst.libresProxSemana[0];
+  await grid(page)
+    .getByRole('gridcell', {
+      name: new RegExp(`^\\S+ ${diaDelMesChile(instante)} \\S+ ${horaChile(instante)} — `),
+    })
+    .click();
+  const etiquetas = await grid(page)
+    .locator(`[aria-label*="— ${inst.nombre}."], [aria-label*="— #${inst.id}."]`)
+    .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
+  test.info().annotations.push(
+    { type: 'G05 en la lista de instructores al volver', description: String(enLista) },
+    {
+      type: 'G05 cómo sale su horario',
+      description: etiquetas.join(' | ') || '(no se encontró)',
+    },
+  );
+  expect(etiquetas.length, 'su horario está en la celda').toBeGreaterThan(0);
 });
