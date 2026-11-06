@@ -50,4 +50,4 @@ Ninguno de una spec — hallazgo del checklist de testing `specs/testing-piloto/
     (llegan separados más de 300 ms), a 2 consultas cada uno, igual que antes.
   - G05: el horario sale "Slot disponible 08:30 — Instructor4 Apellido4" (antes "#225") y el
     instructor aparece en la lista al volver.
-  - Cuando el PR #375 esté en `main`, G04 y G05 deben pasar a exigir esto en vez de anotarlo.
+  - Desde la rama `test/g04-g05-exigen-s17`, G04 exige 1 consulta y G05 exige el nombre y que esté en la lista.

@@ -644,7 +644,7 @@ test('G07: cerrar la Agenda del drawer no deja sin tiempo real a la Agenda de la
 
 const pideLaVista = (url: string) => url.includes('/rest/v1/v_class_b_schedule_availability');
 
-test('G04: 12 clases nuevas de una matrícula con la Agenda abierta en otra sesión (S17)', async ({
+test('G04: 12 clases nuevas de una matrícula con la Agenda abierta recargan la semana una sola vez (S17)', async ({
   pageAs,
   cleanup,
 }) => {
@@ -707,6 +707,8 @@ test('G04: 12 clases nuevas de una matrícula con la Agenda abierta en otra sesi
       `${pedidos.length} consultas a la vista en ${pedidos.at(-1)} ms ` +
       `(primera a los ${pedidos[0]} ms)`,
   });
+  // fix-239-b: el handler de tiempo real agrupa la ráfaga (debounce de 300 ms) en una recarga.
+  expect(pedidos, 'una sola recarga de la semana por las 12 clases').toHaveLength(1);
   // La semana a la vista queda al día (la Agenda abre en la semana actual).
   const deEstaSemana = await clasesDe(page, nombre).count();
   test.info().annotations.push({
@@ -715,7 +717,7 @@ test('G04: 12 clases nuevas de una matrícula con la Agenda abierta en otra sesi
   });
 });
 
-test('G05: un instructor que no existía al abrir la Agenda sale con su nombre (S17)', async ({
+test('G05: un instructor que no existía al abrir la Agenda sale con su nombre y en la lista al volver (S17)', async ({
   pageAs,
 }) => {
   // Sin escribir nada: al abrir la Agenda se le quita un instructor a las dos consultas de
@@ -739,7 +741,13 @@ test('G05: un instructor que no existía al abrir la Agenda sale con su nombre (
   await page.getByRole('navigation').getByRole('link', { name: 'Agenda', exact: true }).click();
   await expect(grid(page)).toBeVisible(CARGA);
 
-  const enLista = (await opcionesInstructor(page)).includes(inst.nombre);
+  // La grilla cacheada aparece al instante (SWR); la lista se recarga en segundo plano.
+  await expect
+    .poll(() => opcionesInstructor(page), {
+      ...CARGA,
+      message: 'está en la lista de instructores al volver',
+    })
+    .toContain(inst.nombre);
   await page.getByRole('button', { name: /Limpiar filtros/ }).click();
   await next(page).click();
   await expect(grid(page)).toBeVisible(CARGA);
@@ -752,12 +760,14 @@ test('G05: un instructor que no existía al abrir la Agenda sale con su nombre (
   const etiquetas = await grid(page)
     .locator(`[aria-label*="— ${inst.nombre}."], [aria-label*="— #${inst.id}."]`)
     .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
-  test.info().annotations.push(
-    { type: 'G05 en la lista de instructores al volver', description: String(enLista) },
-    {
-      type: 'G05 cómo sale su horario',
-      description: etiquetas.join(' | ') || '(no se encontró)',
-    },
-  );
+  test.info().annotations.push({
+    type: 'G05 cómo sale su horario',
+    description: etiquetas.join(' | ') || '(no se encontró)',
+  });
   expect(etiquetas.length, 'su horario está en la celda').toBeGreaterThan(0);
+  // fix-239-b: volver a la Agenda recarga los nombres.
+  expect(
+    etiquetas.filter((e) => e?.includes(`— #${inst.id}.`)),
+    'su horario sale con su nombre, no como "#id"',
+  ).toEqual([]);
 });
