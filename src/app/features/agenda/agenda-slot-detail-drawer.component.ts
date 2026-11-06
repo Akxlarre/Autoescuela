@@ -123,8 +123,11 @@ type StatusConfig = {
                 </div>
               }
 
-              <!-- ── Kilometraje (solo clases completadas) ──────────── -->
-              @if (s.status === 'completed' && (s.kmStart != null || s.kmEnd != null)) {
+              <!-- ── Kilometraje (completadas, y en curso desde hotfix-170-b: E05) ── -->
+              @if (
+                (s.status === 'completed' && (s.kmStart != null || s.kmEnd != null)) ||
+                (s.status === 'in_progress' && s.kmStart != null)
+              ) {
                 <div class="grid grid-cols-2 gap-3">
                   <app-stat-box
                     label="Km inicio"
@@ -135,7 +138,13 @@ type StatusConfig = {
                   />
                   <app-stat-box
                     label="Km fin"
-                    [value]="s.kmEnd != null ? s.kmEnd + ' km' : '—'"
+                    [value]="
+                      s.status === 'in_progress'
+                        ? 'En curso'
+                        : s.kmEnd != null
+                          ? s.kmEnd + ' km'
+                          : '—'
+                    "
                     variant="surface"
                     [compact]="true"
                     icon="gauge"

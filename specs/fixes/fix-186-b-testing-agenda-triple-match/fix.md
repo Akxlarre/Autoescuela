@@ -160,7 +160,7 @@ corrida: sin datos E2E- sobrantes.
 | B10 | ✅ la clase sale en la fila de su hora Chile |
 | G01 | ✅ con la Agenda abierta (secretaria), una clase agendada desde otra sesión aparece sin recargar |
 | G02 | ✅ al iniciarla y cerrarla desde otra sesión, el slot pasa a "En progreso" y luego a "Completada" sin recargar |
-| E05 | anotado: el detalle de una clase **en curso no muestra el KM inicial** (solo las completadas muestran KM). Pendiente de decisión del owner |
+| E05 | **corregido en hotfix-170-b** (decisión del owner, 2026-11-06): el detalle de una clase en curso muestra el KM inicial y "Km fin: En curso". `agenda-3.spec.ts` ahora lo exige |
 | A07, E10 | ✅ "Agenda" en las acciones rápidas del dashboard de la secretaria abre la Agenda en el drawer; el detalle de un horario se apila y "Volver" regresa a la grilla |
 | C12 | ✅ 8 semanas atrás: "Semana anterior" sigue habilitado (sin tope) y no hay ningún "Disponible" |
 | D05 | ✅ el filtro no ofrece instructores teóricos. Hoy **no hay ninguno en la BD**, así que el test queda como protección; el filtro ya excluye `type = 'theory'` en `AgendaFacade` |
