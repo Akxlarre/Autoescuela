@@ -148,7 +148,7 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
                 </p>
 
                 <!-- Footer: badge de conteo + botón de acción -->
-                @if (alert.count || alert.action) {
+                @if (alert.count || alert.action || alert.details?.length) {
                   <div class="flex items-center gap-2 flex-wrap mt-0.5">
                     @if (alert.count && alert.count > 0) {
                       <span
@@ -157,6 +157,22 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
                       >
                         {{ alert.count }} registro{{ alert.count !== 1 ? 's' : '' }}
                       </span>
+                    }
+                    @if (alert.details?.length) {
+                      <button
+                        type="button"
+                        class="ml-auto btn-ghost btn-sm flex items-center gap-1.5"
+                        [attr.aria-expanded]="isExpanded(alert.id)"
+                        [attr.aria-controls]="'alert-details-' + alert.id"
+                        (click)="toggleDetails(alert.id)"
+                        data-llm-action="toggle-alert-details"
+                      >
+                        <app-icon
+                          [name]="isExpanded(alert.id) ? 'chevron-up' : 'chevron-down'"
+                          [size]="12"
+                        />
+                        <span>{{ alert.detailsLabel ?? 'Ver detalle' }}</span>
+                      </button>
                     }
                     @if (alert.action) {
                       <button
@@ -178,6 +194,34 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
                       </button>
                     }
                   </div>
+                }
+
+                <!-- Casos de la alerta: cada uno lleva a donde se atiende (spec 0056-b) -->
+                @if (alert.details?.length && isExpanded(alert.id)) {
+                  <ul
+                    class="m-0 p-0 list-none flex flex-col gap-1 mt-1"
+                    [id]="'alert-details-' + alert.id"
+                  >
+                    @for (detail of alert.details; track detail.id) {
+                      <li>
+                        <button
+                          type="button"
+                          class="w-full flex items-center gap-2 text-left px-2 py-1.5 rounded
+                                 border-none bg-transparent cursor-pointer hover:bg-subtle transition-colors"
+                          (click)="openDetail(detail.route)"
+                          data-llm-nav="alert-detail"
+                        >
+                          <span class="flex-1 min-w-0 flex flex-col">
+                            <span class="text-xs font-medium text-text-primary truncate">
+                              {{ detail.title }}
+                            </span>
+                            <span class="text-xs text-text-secondary">{{ detail.subtitle }}</span>
+                          </span>
+                          <app-icon name="chevron-right" [size]="12" />
+                        </button>
+                      </li>
+                    }
+                  </ul>
                 }
               </div>
             </div>
@@ -232,6 +276,28 @@ export class AlertsDrawerComponent {
 
   isProcessing(id: string): boolean {
     return this._processing().has(id);
+  }
+
+  /** Alertas con sus casos desplegados (spec 0056-b). */
+  private readonly _expanded = signal(new Set<string>());
+
+  isExpanded(id: string): boolean {
+    return this._expanded().has(id);
+  }
+
+  toggleDetails(id: string): void {
+    this._expanded.update((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  /** Va a la pantalla donde se atiende el caso (la ficha del alumno, para reagendar). */
+  openDetail(route: string): void {
+    this.drawer.close();
+    void this.router.navigateByUrl(route);
   }
 
   retry(): void {

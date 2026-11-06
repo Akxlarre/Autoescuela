@@ -97,11 +97,17 @@ SELECT
   cs.scheduled_at,
   cs.status,
   h.date           AS holiday_date,
-  h.name           AS holiday_name
+  h.name           AS holiday_name,
+  -- AC6: para listar las clases y llevar a la ficha. LEFT JOIN: si la RLS de users oculta el
+  -- nombre, la clase igual cuenta en la alerta.
+  e.student_id,
+  NULLIF(trim(concat_ws(' ', u.first_names, u.paternal_last_name)), '') AS student_name
 FROM public.class_b_sessions cs
 JOIN public.enrollments e ON e.id = cs.enrollment_id
 JOIN public.holidays h
   ON h.date = public.chile_date(cs.scheduled_at)
+LEFT JOIN public.students s ON s.id = e.student_id
+LEFT JOIN public.users u ON u.id = s.user_id
 WHERE e.status = 'active'
   AND (
     (cs.status = 'scheduled' AND h.date >= public.chile_today())

@@ -22,3 +22,15 @@
 4. **Despliegue** a la BD de desarrollo con la migración (`apply_migration`).
 5. **Índices:** `DATABASE.md` (función y vista), `FACADES.md` (alerta nueva), `DOMAIN-GOTCHAS.md`
    si aplica.
+
+## AC6 (agregado 2026-11-06, pedido del owner: "no dice cuáles ni lleva a reagendarlas")
+
+6. **Vista:** `student_id` y `student_name` (LEFT JOIN `students`/`users`, para no perder la fila si
+   la RLS de `users` oculta el nombre). Se edita la misma migración (todavía no está en producción).
+7. **Modelo:** `AlertDetail { id, title, subtitle, route }` y `AlertModel.details?` en
+   `core/models/ui/dashboard.model.ts`.
+8. **Util pura:** `core/utils/holiday-classes.utils.ts` → `buildHolidayClassDetails(rows, role)`
+   (orden por fecha, texto "Clase N · fecha · feriado", ruta de la ficha). Test primero.
+9. **Facade:** `checkClassesOnHoliday` pide las columnas nuevas y adjunta `details`.
+10. **`AlertsDrawerComponent`:** botón "Ver clases" (`aria-expanded`) que despliega la lista; cada
+    fila navega a la ficha y cierra el drawer.

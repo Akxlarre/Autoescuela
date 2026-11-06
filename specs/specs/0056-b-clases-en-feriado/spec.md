@@ -1,6 +1,6 @@
 # Spec 0056-b — Una clase en un feriado no es una inasistencia
 
-> **Status:** done (2026-11-06; ver acceptance.md)
+> **Status:** done (AC6 agregado y cerrado el 2026-11-06)
 > **Created:** 2026-11-06
 > **Owner:** Benjamín
 > **Priority:** P2
@@ -40,6 +40,10 @@ penalización de 2 faltas seguidas. En desarrollo hay 6 clases del 18 y 19 de se
   Una clase reagendada sale de la vista porque cambia su fecha.
 - **AC5** — El dashboard de admin y secretaria muestra la alerta "N clases en día feriado" (warning)
   con el filtro de sede vigente. Sin clases no aparece.
+- **AC6** — En "Todas las alertas", la alerta tiene el botón **"Ver clases"**, que despliega cada clase
+  (alumno, número de clase, fecha y feriado). Cada fila lleva a la ficha del alumno del rol que mira
+  (`/app/<rol>/alumnos/<studentId>`), donde se reagenda ("Reagendar clases" para las canceladas,
+  reprogramar para las agendadas). La vista expone `student_id` y `student_name`.
 - **AC-E1** — Si la consulta de la alerta falla, cuenta como revisión fallida (`queryOk`), como
   las demás alertas (fix-405-m).
 

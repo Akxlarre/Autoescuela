@@ -563,6 +563,15 @@ describe('DashboardAlertsFacade', () => {
   // ── B-4: clases en día feriado (spec 0056-b) ─────────────────────────────────
   describe('B-4: checkClassesOnHoliday (spec 0056-b)', () => {
     const VIEW = 'v_class_b_sessions_on_holiday';
+    /** Columnas que trae la vista, salvo las que cada test fija. */
+    const fila = {
+      student_id: 55,
+      student_name: 'Ana Pérez',
+      class_number: 1,
+      scheduled_at: '2026-12-08T13:10:00+00:00',
+      status: 'scheduled',
+      holiday_name: 'Inmaculada Concepción',
+    };
 
     const mockWithHolidayRows = (chain: any) => {
       fromSpy.mockImplementation((table: string) => {
@@ -578,9 +587,9 @@ describe('DashboardAlertsFacade', () => {
       mockWithHolidayRows(
         buildChain({
           data: [
-            { session_id: 1, enrollment_id: 10 },
-            { session_id: 2, enrollment_id: 10 },
-            { session_id: 3, enrollment_id: 11 },
+            { ...fila, session_id: 1, enrollment_id: 10 },
+            { ...fila, session_id: 2, enrollment_id: 10 },
+            { ...fila, session_id: 3, enrollment_id: 11 },
           ],
         }),
       );
@@ -594,8 +603,44 @@ describe('DashboardAlertsFacade', () => {
       expect(alert?.description).toContain('2 alumnos');
     });
 
+    it('adjunta cada clase con la ruta a la ficha del rol que mira (AC6)', async () => {
+      (TestBed.inject(AuthFacade).currentUser as any).mockReturnValue({
+        dbId: 1,
+        role: 'secretaria',
+        branchId: 1,
+      });
+      mockWithHolidayRows(
+        buildChain({
+          data: [
+            {
+              session_id: 7,
+              enrollment_id: 10,
+              student_id: 55,
+              student_name: 'Ana Pérez',
+              class_number: 2,
+              scheduled_at: '2026-12-08T13:10:00+00:00',
+              status: 'scheduled',
+              holiday_name: 'Inmaculada Concepción',
+            },
+          ],
+        }),
+      );
+
+      await facade.loadAlerts();
+
+      const alert = facade.activeAlerts().find((a) => a.id === 'alert-class-b-holiday');
+      expect(alert?.detailsLabel).toBe('Ver clases');
+      expect(alert?.details).toEqual([
+        expect.objectContaining({
+          id: '7',
+          title: 'Ana Pérez',
+          route: '/app/secretaria/alumnos/55',
+        }),
+      ]);
+    });
+
     it('singular con una sola clase', async () => {
-      mockWithHolidayRows(buildChain({ data: [{ session_id: 1, enrollment_id: 10 }] }));
+      mockWithHolidayRows(buildChain({ data: [{ ...fila, session_id: 1, enrollment_id: 10 }] }));
 
       await facade.loadAlerts();
 

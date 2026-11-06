@@ -9,6 +9,7 @@
 | AC3 | ✅ | **M09b**: clase `in_progress` en el feriado → sigue `in_progress` |
 | AC4 | ✅ | **M09c** (la cancelada por el cron está en la vista), **M10** (agendada en feriado futuro → en la vista), **M10b** (cancelada antes del feriado → fuera), **M10c** (cancelada en el feriado con la matrícula penalizada → fuera). RLS: como `secretaria@test.com` (rol `authenticated`) la vista devuelve la clase de su sede |
 | AC5 | ✅ | `e2e/clases-en-feriado.spec.ts`: la secretaria ve "N clases en día feriado · De M alumnos… hay que reagendarlas" en su dashboard. Unit: `dashboard-alerts.facade.spec.ts` B-4 (conteo, singular, filtro de sede, sin alerta) |
+| AC6 | ✅ | `e2e/clases-en-feriado.spec.ts`: en "Todas las alertas" la secretaria abre "Ver clases" (`aria-expanded` false → true), ve la fila del alumno con "Clase 1" y el nombre del feriado, y la fila la lleva a `/app/secretaria/alumnos/<studentId>`. Unit: `holiday-classes.utils.spec.ts` (texto, orden, ruta por rol, cancelada), facade B-4 (`details`, `detailsLabel`) y `alerts-drawer.component.spec.ts` (desplegar/plegar, cerrar drawer y navegar). Visual en claro y oscuro con una clase sembrada (sesión 20174, borrada) |
 | AC-E1 | ✅ | Unit B-4: consulta con error → `loadProblem()` = "No se pudieron revisar todas las alertas." |
 
 ## Hallazgo durante la verificación

@@ -42,7 +42,10 @@ describe('AlertsDrawerComponent', () => {
     clearSchedules: vi.fn().mockResolvedValue(true),
   };
 
-  const routerMock = { navigate: vi.fn().mockResolvedValue(true) };
+  const routerMock = {
+    navigate: vi.fn().mockResolvedValue(true),
+    navigateByUrl: vi.fn().mockResolvedValue(true),
+  };
   const currentUser$ = signal<{ role: string } | null>({ role: 'admin' });
   const drawerMock = { close: vi.fn() };
 
@@ -249,6 +252,26 @@ describe('AlertsDrawerComponent', () => {
       await component.handleAction(makeAlert({ id: 'no-action' }));
       expect(facadeMock.clearSchedules).not.toHaveBeenCalled();
       expect(routerMock.navigate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('casos de la alerta (spec 0056-b, AC6)', () => {
+    it('"Ver clases" despliega y vuelve a plegar solo esa alerta', () => {
+      expect(component.isExpanded('alert-class-b-holiday')).toBe(false);
+
+      component.toggleDetails('alert-class-b-holiday');
+      expect(component.isExpanded('alert-class-b-holiday')).toBe(true);
+      expect(component.isExpanded('otra')).toBe(false);
+
+      component.toggleDetails('alert-class-b-holiday');
+      expect(component.isExpanded('alert-class-b-holiday')).toBe(false);
+    });
+
+    it('una fila cierra el drawer y va a la ficha del alumno', () => {
+      component.openDetail('/app/secretaria/alumnos/55');
+
+      expect(drawerMock.close).toHaveBeenCalledTimes(1);
+      expect(routerMock.navigateByUrl).toHaveBeenCalledWith('/app/secretaria/alumnos/55');
     });
   });
 

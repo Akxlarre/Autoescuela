@@ -50,6 +50,15 @@ export interface AlertAction {
   enrollmentIds?: number[];
 }
 
+/** Un caso concreto de una alerta, con la ruta donde se atiende (spec 0056-b, AC6). */
+export interface AlertDetail {
+  id: string;
+  title: string;
+  subtitle: string;
+  /** URL absoluta dentro de la app (`/app/<rol>/...`). */
+  route: string;
+}
+
 export interface AlertModel {
   id: string;
   title: string;
@@ -57,6 +66,10 @@ export interface AlertModel {
   severity: 'error' | 'warning' | 'info' | 'success';
   count?: number;
   action?: AlertAction;
+  /** Casos de la alerta, para listarlos en "Todas las alertas" (spec 0056-b). */
+  details?: AlertDetail[];
+  /** Texto del botón que despliega `details` (p. ej. "Ver clases"). */
+  detailsLabel?: string;
 }
 
 export interface QuickActionModel {

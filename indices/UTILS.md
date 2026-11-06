@@ -17,6 +17,7 @@
 | `src/app/core/utils/age.utils.ts` | `isInvalidDate`, `getAgeStatus`, `calcAge`, `isMinor` |
 | `src/app/core/utils/agenda-week.utils.ts` | `addDaysToIso`, `isDateBeyondLimit`, `isNextWeekBeyondLimit`, `initialMobileDayIndex`, `studentFichaUrl` |
 | `src/app/core/utils/alert-snooze.utils.ts` | `ALERT_SNOOZE_MS`, `AlertSnooze`, `AlertSnoozeMap`, `SnoozableAlert`, `snoozeKey`, `snoozeAlert`, `pruneSnoozes`, `filterSnoozedAlerts`, `parseSnoozes` |
+| `src/app/core/utils/holiday-classes.utils.ts` | `HolidayClassRow`, `buildHolidayClassDetails` (filas de `v_class_b_sessions_on_holiday` → `AlertDetail[]` con ruta a la ficha del rol, spec 0056-b) |
 | `src/app/core/utils/alumno-profesional-status.utils.ts` | `SemaforoInfo`, `moduloPct`, `getSemaforo`, `getSemaforoBadgeVariant` |
 | `src/app/core/utils/alumno-status.utils.ts` | `ExpedienteStatus`, `TagSeverity`, `BadgeVariant`, `getExpedienteStatus`, `isAlumnoCursando`, `getAlumnoStatusSeverity`, `tagSeverityToBadgeVariant`, `getAlumnoStatusBadgeVariant` |
 | `src/app/core/utils/alumnos-export.utils.ts` | `buildAlumnosExcelTable`, `alumnosPdfColumnWeights`, `buildAlumnosPdfTable` |
