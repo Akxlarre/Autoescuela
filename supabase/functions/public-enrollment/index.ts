@@ -36,6 +36,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { type EnrollmentData, buildStructuredPdf } from '../_shared/contract-pdf.ts';
 import { loadPngForPdf } from '../_shared/pdf-utils.ts';
+import { checkClaseBSelection } from '../_shared/clase-b-selection.ts';
 
 // Mismo logo que generate-contract-pdf / generate-certificate-b-pdf /
 // generate-certificate-professional-pdf / generate-student-license-pdf — bucket público `assets`
@@ -656,6 +657,62 @@ async function handleReleaseSlots(supabase: any, body: any) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// fix-240-b: valida en el servidor los horarios elegidos (sede, libres, días, holds de otras
+// sesiones) antes de crear nada. Antes se confiaba en la grilla del navegador.
+// Devuelve el vehículo del horario y los `slot_start` de la vista, o la respuesta de rechazo.
+// ══════════════════════════════════════════════════════════════════════════════
+
+const SLOTS_UNAVAILABLE_MESSAGE =
+  'Algunos de los horarios elegidos ya no están disponibles. Vuelve al paso de horario y elige otros.';
+
+async function validateClaseBSelection(
+  supabase: any,
+  params: { branchId: number; instructorId: number; slotIds: string[]; sessionToken?: string },
+): Promise<{ vehicleId: number | null; slotStarts: string[] } | { rejection: Response }> {
+  const { branchId, instructorId, slotIds, sessionToken } = params;
+  const reject = (reason: string, slots: string[] = []) => {
+    console.warn('[clase-b-selection] rechazada:', reason, 'slots:', slots.length);
+    return {
+      rejection: jsonResponse({
+        success: false,
+        error: 'SLOTS_UNAVAILABLE',
+        message: SLOTS_UNAVAILABLE_MESSAGE,
+        slots,
+      }),
+    };
+  };
+  if (!Array.isArray(slotIds) || typeof branchId !== 'number') return reject('invalid_input');
+
+  const [{ data: rows, error }, { data: holds, error: holdsError }] = await Promise.all([
+    supabase
+      .from('v_class_b_schedule_availability')
+      .select('slot_start, slot_status, vehicle_id, branch_ids')
+      .eq('instructor_id', instructorId)
+      .contains('branch_ids', [branchId]),
+    supabase
+      .from('slot_holds')
+      .select('slot_start, session_token')
+      .eq('instructor_id', instructorId)
+      .gt('expires_at', new Date().toISOString()),
+  ]);
+  if (error || holdsError) {
+    console.error('[clase-b-selection] error al leer disponibilidad:', error ?? holdsError);
+    throw new Error('No se pudo validar la disponibilidad');
+  }
+
+  const result = checkClaseBSelection({
+    slotIds,
+    rows: rows ?? [],
+    branchId,
+    heldByOthers: (holds ?? [])
+      .filter((h: any) => h.session_token !== sessionToken)
+      .map((h: any) => h.slot_start),
+  });
+  if (!result.ok) return reject(result.reason, result.slots);
+  return { vehicleId: result.vehicleId, slotStarts: result.slotStarts };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // Action: submit-clase-b
 // Crea user/student/enrollment/class_b_sessions en una transacción lógica.
 // Idempotente: si session_token ya tiene un payment_attempt 'confirmed',
@@ -692,7 +749,19 @@ async function handleSubmitClaseB(supabase: any, body: any, clientIp = 'unknown'
           idempotent: true,
         });
       }
+    }
 
+    // fix-240-b: después de la idempotencia (una matrícula ya creada ocupa sus propios
+    // horarios) y antes de escribir nada.
+    const selection = await validateClaseBSelection(supabase, {
+      branchId,
+      instructorId,
+      slotIds: selectedSlotIds,
+      sessionToken,
+    });
+    if ('rejection' in selection) return selection.rejection;
+
+    if (sessionToken) {
       // Registrar intento pendiente (upsert en caso de retry)
       await supabase.from('payment_attempts').upsert(
         {
@@ -768,21 +837,13 @@ async function handleSubmitClaseB(supabase: any, body: any, clientIp = 'unknown'
       return errorResponse('Error al crear matrícula: ' + enrollError.message, 500);
     }
 
-    // 5. Get vehicle assignment for instructor
-    const { data: va } = await supabase
-      .from('vehicle_assignments')
-      .select('vehicle_id')
-      .eq('instructor_id', instructorId)
-      .is('end_date', null)
-      .limit(1)
-      .single();
-
-    // 6. Create class_b_sessions from selected slots
-    const sortedSlots = [...selectedSlotIds].sort();
+    // 5-6. Create class_b_sessions from the validated slots, con el vehículo del horario
+    // (fix-240-b: antes, el de cualquier asignación activa del instructor).
+    const sortedSlots = [...selection.slotStarts].sort((a, b) => Date.parse(a) - Date.parse(b));
     const sessions = sortedSlots.map((slotId: string, i: number) => ({
       enrollment_id: enrollment.id,
       instructor_id: instructorId,
-      vehicle_id: va?.vehicle_id ?? null,
+      vehicle_id: selection.vehicleId,
       scheduled_at: slotId,
       duration_min: 45,
       status: 'scheduled',
@@ -1141,6 +1202,15 @@ async function handleInitiatePayment(supabase: any, body: any, clientIp = 'unkno
       });
     }
 
+    // fix-240-b: los horarios se validan antes de guardar el snapshot y de ir a Webpay.
+    const selection = await validateClaseBSelection(supabase, {
+      branchId,
+      instructorId,
+      slotIds: selectedSlotIds,
+      sessionToken,
+    });
+    if ('rejection' in selection) return selection.rejection;
+
     // 1. Veredicto de re-matrícula por RUT (lectura pura — no crea nada en BD)
     console.log('[initiate-payment] Step 1 — reenrollment verdict by RUT');
     const verdict = await evaluateReenrollmentByRut(supabase, personalData?.rut, 'B');
@@ -1174,15 +1244,7 @@ async function handleInitiatePayment(supabase: any, body: any, clientIp = 'unkno
     const serverAmount = isPartial ? Math.ceil(courseBasePrice / 2) : courseBasePrice;
     console.log('[initiate-payment] courseId:', course.id, 'amount:', serverAmount);
 
-    // 3. Obtener vehículo del instructor (guardado en snapshot para confirm-payment)
-    const { data: va, error: vaError } = await supabase
-      .from('vehicle_assignments')
-      .select('vehicle_id')
-      .eq('instructor_id', instructorId)
-      .is('end_date', null)
-      .limit(1)
-      .single();
-    if (vaError) console.warn('[initiate-payment] No vehicle assignment found:', vaError.message);
+    // 3. El vehículo del horario (fix-240-b) viaja en el snapshot para confirm-payment.
 
     // 4. Persistir intento con snapshot completo (sin enrollment_id — se asigna en confirm-payment)
     console.log('[initiate-payment] Step 4 — upserting payment_attempt');
@@ -1195,8 +1257,8 @@ async function handleInitiatePayment(supabase: any, body: any, clientIp = 'unkno
           personalData,
           paymentMode,
           instructorId,
-          selectedSlotIds,
-          vehicleId: va?.vehicle_id ?? null,
+          selectedSlotIds: selection.slotStarts,
+          vehicleId: selection.vehicleId,
           carnetStoragePath: body.carnetStoragePath ?? null,
           amount: serverAmount,
           courseId: course.id,
