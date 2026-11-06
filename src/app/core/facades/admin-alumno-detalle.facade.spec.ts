@@ -2253,6 +2253,93 @@ describe('AdminAlumnoDetalleFacade', () => {
     });
   });
 
+  // fix-071-i: con la red lenta, una respuesta vieja dejaba la grilla y el mapa horario → vehículo
+  // de un instructor que ya no estaba elegido.
+  describe('loadScheduleGrid — respuestas fuera de orden (fix-071-i)', () => {
+    const slotOf = (instructorId: number, slotStart: string) => ({
+      data: [
+        {
+          slot_start: slotStart,
+          slot_end: slotStart,
+          slot_status: 'available',
+          instructor_id: instructorId,
+          vehicle_id: instructorId * 10,
+        },
+      ],
+      error: null,
+    });
+
+    /** Cada consulta a la vista queda pendiente hasta que el test la resuelve. */
+    function setupPendingSchedule() {
+      const pending: Array<(result: unknown) => void> = [];
+      const slotBuilder: any = {
+        select: vi.fn(() => slotBuilder),
+        eq: vi.fn(() => slotBuilder),
+        lt: vi.fn(() => slotBuilder),
+        order: vi.fn(() => new Promise((resolve) => pending.push(resolve))),
+      };
+      const docsBuilder: any = { select: vi.fn().mockResolvedValue({ data: [], error: null }) };
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          AdminAlumnoDetalleFacade,
+          {
+            provide: SupabaseService,
+            useValue: {
+              client: {
+                from: vi.fn((table: string) =>
+                  table === 'vehicle_documents' ? docsBuilder : slotBuilder,
+                ),
+                functions: { invoke: vi.fn() },
+              },
+            },
+          },
+          { provide: ToastService, useValue: toastSpy },
+          { provide: DmsViewerService, useValue: dmsViewerSpy },
+          { provide: NotificationsFacade, useValue: notificationsSpy },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 7 }) } },
+          {
+            provide: AgendaSettingsService,
+            useValue: { maxVisibleDateIso: vi.fn().mockReturnValue('2026-09-20') },
+          },
+        ],
+      });
+      facade = TestBed.inject(AdminAlumnoDetalleFacade);
+
+      return pending;
+    }
+
+    it('descarta la respuesta del instructor anterior que llega después de la vigente', async () => {
+      const pending = setupPendingSchedule();
+
+      const first = facade.loadScheduleGrid(9);
+      const second = facade.loadScheduleGrid(10);
+
+      pending[1](slotOf(10, '2026-07-10T10:00:00'));
+      await second;
+      pending[0](slotOf(9, '2026-07-10T09:00:00'));
+      await first;
+
+      expect(facade.scheduleGrid()?.slots.map((s) => s.id)).toEqual(['2026-07-10T10:00:00']);
+    });
+
+    it('una respuesta vieja no apaga la carga de la vigente', async () => {
+      const pending = setupPendingSchedule();
+
+      const first = facade.loadScheduleGrid(9);
+      const second = facade.loadScheduleGrid(10);
+
+      pending[0](slotOf(9, '2026-07-10T09:00:00'));
+      await first;
+      expect(facade.isLoadingSchedule()).toBe(true);
+
+      pending[1](slotOf(10, '2026-07-10T10:00:00'));
+      await second;
+      expect(facade.isLoadingSchedule()).toBe(false);
+    });
+  });
+
   describe('loadScheduleGrid — límite dinámico de reagendamiento', () => {
     /** Fuerza esta suite a que el límite superior venga del AgendaSettingsService mockeado. */
     function setupWithAgendaLimit(maxVisibleDateIso: string) {

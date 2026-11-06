@@ -40,6 +40,7 @@ import { calcAge } from '@core/utils/age.utils';
 import { PAYMENT_STATUS_ANULADO } from '@core/utils/payment-status.utils';
 import { isDraftListed, summarizeDraftPayments } from '@core/utils/draft-payment.utils';
 import { toFriendlyDbMessage } from '@core/utils/db-error.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import {
   buildEnrollmentConsents,
   buildCommunicationsConsents,
@@ -173,6 +174,8 @@ export class EnrollmentFacade {
   // vía saveAssignment(). Sirve para que la vista de disponibilidad no los reporte
   // como ocupados por otro alumno cuando el propio INSERT dispara un refetch.
   private readonly _ownReservedSlotIds = signal<string[]>([]);
+  /** fix-071-i: con la red lenta, la respuesta de un instructor anterior no pisa la grilla. */
+  private readonly scheduleGridGuard = createRequestGuard();
   /** vehicle_id → advertencia; rebuilt en cada loadScheduleGrid(), reutilizado en re-fetch de Realtime. */
   private _vehicleDocWarningMap = new Map<number, VehicleDocWarningInfo>();
   private readonly _paymentMode = signal<PaymentMode | null>(null);
@@ -914,6 +917,9 @@ export class EnrollmentFacade {
    * `v_class_b_schedule_availability` para un instructor específico.
    */
   async loadScheduleGrid(instructorId: number, preserveSlots = false): Promise<void> {
+    const requestToken = this.scheduleGridGuard.next();
+    // Mientras carga no hay refresco Realtime: el canal se abre de nuevo al terminar.
+    this.unsubscribeFromScheduleChanges();
     this._selectedInstructorId.set(instructorId);
     if (!preserveSlots) {
       this._selectedSlotIds.set([]);
@@ -938,6 +944,8 @@ export class EnrollmentFacade {
           .select('vehicle_id, type, expiry_date, status'),
       ]);
 
+      if (!this.scheduleGridGuard.isCurrent(requestToken)) return;
+
       if (error) {
         this._error.set(
           'Error al cargar disponibilidad: ' + this.sanitizer.sanitize(error).message,
@@ -955,7 +963,8 @@ export class EnrollmentFacade {
       this._scheduleGrid.set(this.buildScheduleGrid(data, new Set(this._ownReservedSlotIds())));
       this.subscribeToScheduleChanges(instructorId);
     } finally {
-      this._isLoading.set(false);
+      // La carga la apaga solo la vigente: una vieja no la da por terminada.
+      if (this.scheduleGridGuard.isCurrent(requestToken)) this._isLoading.set(false);
     }
   }
 
@@ -2238,6 +2247,7 @@ export class EnrollmentFacade {
     if (this._realtimeDebounceTimer) clearTimeout(this._realtimeDebounceTimer);
 
     this._realtimeDebounceTimer = setTimeout(async () => {
+      const requestToken = this.scheduleGridGuard.next();
       const currentSelected = this._selectedSlotIds();
 
       const { data, error } = await this.supabase.client
@@ -2247,6 +2257,7 @@ export class EnrollmentFacade {
         .lt('slot_start', chileDayRange(this.agendaSettings.maxVisibleDateIso()).endExclusive)
         .order('slot_start', { ascending: true });
 
+      if (!this.scheduleGridGuard.isCurrent(requestToken)) return;
       if (error || !data || data.length === 0) return;
 
       const newGrid = this.buildScheduleGrid(data, new Set(this._ownReservedSlotIds()));
