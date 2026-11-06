@@ -83,7 +83,7 @@ verificado después que no quedó nada) + regresión `supabase/tests/rls/0047-b-
 | H3 | S11: la Agenda nunca muestra errores de carga | 🟠 | track propio (pendiente) |
 | H4 | S6 + S19: horarios "ambas sedes" (falso libre para secretaria, filas duplicadas) | 🟡 hoy sin datos que lo gatillen | track propio (pendiente) |
 | H5 | S18: "Clic para agendar" + pastilla sin color | 🟡 | hotfix (pendiente) |
-| H6 | S16, S17 | 🟡 | backlog |
+| H6 | S16 (corregido en hotfix-171-b), S17 (confirmada en G04 y G05) | 🟡 | S17: track propio (pendiente) |
 
 ## Casos manuales pendientes
 
@@ -247,9 +247,17 @@ instructores/vehículos "ambas sedes", igual que antes.
 | B12 / P07-triángulo | ✅ sin sembrar: Instructor9 (sede 2) usa el RTRE29, con el SOAP vencido desde 2025-05-06; sus horarios llevan el aviso "Vehículo RTRE29: SOAP vencido". Si se renueva, el test se salta |
 | D08 | ✅ simulado respondiendo `[]` a instructores, disponibilidad y clases (sin crear una sede): se ve la grilla con las celdas vacías (los horarios salen de los cursos), sin error ni "No hay clases", filtro solo con "Todos los instructores", consola limpia |
 | F03 | ✅ instructor y vehículo "ambas sedes" (marcados y restaurados en el test): aparece en el filtro del admin en las dos sedes y de la secretaria de la sede 2, con horarios en ambas |
-| F08 | ⚠️ **decisión de negocio.** Instructor "ambas sedes" con vehículo solo de la sede 1, mirado desde la sede 2: aparece y ofrece **59 horarios "Disponible"**, los mismos que con el vehículo en ambas. La vista arma los horarios de la sede 1 (el `JOIN vehicles` exige la sede del vehículo) pero no tiene columna de sede, así que la Agenda de la sede 2 los muestra como propios. El checklist esperaba "sin horarios" |
+| F08 | ✅ **corregido en spec 0057-b** (PR #373). Antes ⚠️: un instructor "ambas sedes" con vehículo solo de la sede 1, mirado desde la sede 2, ofrecía 59 horarios "Disponible" (la vista no decía de qué sede era cada horario). Ahora la vista expone `branch_ids` y la Agenda filtra por sede: el test exige 0 (PR #374) |
 | G07 | ✅ adaptado: el drawer se cierra al navegar, así que en una pestaña las dos Agendas nunca están abiertas a la vez. Comparten `AgendaFacade` y cerrar el drawer llama a `dispose()`; se comprobó que la Agenda de la página, abierta después, vuelve a suscribirse y recibe una clase nueva sin recargar |
 
-**Grupo 1 que sigue abierto:** G04 (confirmar una matrícula con pago con la Agenda abierta en
-otra sesión) y G05 (crear un instructor y agendarle una clase): escriben pagos, usuarios y avisos
-en producción, pendientes de aprobar paso a paso. P08 (animación): revisión visual.
+### G04, G05 y P08 (2026-11-06)
+
+G04 y G05 en `e2e/agenda-4.spec.ts`, en verde. G04 siembra y borra 12 clases de un alumno E2E (sin pago, contrato ni avisos); G05 no escribe nada. Verificado por SQL al terminar: 0 alumnos y 0 clases sembradas, 0 clases ni matrículas nuevas en la última media hora.
+
+| Caso | Resultado |
+|---|---|
+| G04 | ⚠️ **S17 confirmada.** Adaptado: en vez de una matrícula con pago, se insertan de una vez 12 clases para un alumno E2E (lo mismo que escribe una matrícula en `class_b_sessions`). La Agenda abierta en otra sesión hace **12 consultas a la vista** (más las 12 de clases) en 27 ms, una por fila. El `createRequestGuard` evita que una respuesta vieja pise la nueva, así que la pantalla termina bien; el costo es de red y de BD (12 veces la vista pesada por matrícula y por Agenda abierta). Sin debounce, a diferencia de `enrollment.facade.ts` |
+| G05 | ⚠️ **S17 confirmada.** Simulado: se le quita un instructor a las consultas de instructores al abrir la Agenda (como si lo crearan después) y se le devuelve. Al salir y volver a la Agenda, su horario sale como **"Slot disponible 08:30 — #225"** y no aparece en la lista de instructores: el SWR de `initialize()` solo refresca la semana y no recarga los nombres ni la lista mientras no cambie la sede. Se arregla recargando la página |
+| P08 | ⚠️ medido en el navegador (secretaria sede 2, `ng serve`): al cambiar de semana (1) la grilla se ve completa 1–2 frames al 100 % y recién ahí la animación la baja al ~73 % y la vuelve a subir: un **parpadeo** leve; (2) durante el skeleton desaparece la leyenda y la grilla crece 35 px, y vuelve a achicarse al llegar los datos: un **salto** del borde inferior; (3) el rango del encabezado sigue mostrando la semana anterior mientras carga. Al entrar a la Agenda pasa lo mismo con la leyenda (43 px). Pulido, no bloqueante |
+
+**Grupo 1 cerrado.** Los tres son pulido o costo, no errores de datos. S17 (G04 + G05) pasa de backlog a candidato a track propio: debounce del Realtime de la Agenda y recarga de instructores en el refresco.
