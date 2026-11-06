@@ -7,7 +7,15 @@
  * Solo lectura: no siembra ni modifica datos (la BD del piloto es producción).
  */
 import type { Page, WebSocket } from '@playwright/test';
+import { createE2eAlumno } from './support/alumnos-seed';
+import {
+  diaDelMesChile,
+  horaChile,
+  instructorSembrable,
+  sembrarClase,
+} from './support/agenda-seed';
 import { expect, test } from './support/fixtures';
+import { getAdminClient } from './support/supabase-admin';
 
 test.describe.configure({ mode: 'default', timeout: 150_000 });
 
@@ -145,6 +153,22 @@ async function marcarVentana(page: Page): Promise<void> {
 const sigueLaMismaVentana = (page: Page) =>
   page.evaluate(() => (window as unknown as { __e2eMarca?: boolean }).__e2eMarca === true);
 
+async function elegirInstructor(page: Page, nombre: string): Promise<void> {
+  await page.locator(FILTRO).click();
+  await page.getByRole('option', { name: nombre, exact: true }).click();
+  await expect(page.locator(FILTRO)).toContainText(nombre);
+  await expect(grid(page)).toBeVisible(CARGA);
+}
+
+/** La celda de la grilla (vista filtrada por instructor) del día y la hora de un instante. */
+const celda = (page: Page, instante: string) =>
+  grid(page).locator(
+    `[role="gridcell"][aria-label*=" ${diaDelMesChile(instante)} "][aria-label$=" ${horaChile(instante)}"]`,
+  );
+
+const clasesDe = (page: Page, alumno: string) =>
+  grid(page).locator(`app-agenda-slot[aria-label^="${alumno},"]`);
+
 // ── B. Grilla ─────────────────────────────────────────────────────────────────────────────
 
 test('B03: una semana sin clases muestra la grilla completa, no un estado vacío', async ({
@@ -168,6 +192,115 @@ test('B03: una semana sin clases muestra la grilla completa, no un estado vacío
   expect(filas, 'una fila por bloque horario').toBeGreaterThanOrEqual(9);
   const libres = await page.locator('[data-llm-action="view-available-slot"]').count();
   expect(libres, 'la grilla de una semana sin clases ofrece horarios libres').toBeGreaterThan(0);
+});
+
+test('B08: el horario de una clase de matrícula en curso no se ofrece como libre', async ({
+  pageAs,
+  cleanup,
+}) => {
+  // S14: una clase "reserved" de un borrador de matrícula bloquea el horario, pero la Agenda no
+  // la dibuja. Lo que importa es que no se ofrezca "Disponible"; qué se ve en su lugar se anota.
+  const inst = await instructorSembrable();
+  const alumno = await createE2eAlumno(
+    { label: 'AgendaReserva', branchId: 1, enrollments: [{ status: 'draft' }] },
+    cleanup,
+  );
+  const nombre = `${alumno.firstNames} ${alumno.paternalLastName}`;
+  const horario = inst.libresProxSemana[1];
+
+  const page = await pageAs('secretariaA');
+  await abrirAgenda(page, '/app/secretaria/agenda');
+  await elegirInstructor(page, inst.nombre);
+  await next(page).click();
+  await expect(grid(page)).toBeVisible(CARGA);
+  const libre = celda(page, horario).locator('[data-llm-action="view-available-slot"]');
+  await expect(libre).toHaveCount(1, CARGA);
+
+  await sembrarClase(
+    alumno.enrollmentIds[0],
+    inst,
+    { scheduled_at: horario, status: 'reserved', class_number: 1 },
+    cleanup,
+  );
+  await expect(libre, 'deja de ofrecerse como libre').toHaveCount(0, CARGA);
+
+  const ocupados = await celda(page, horario).locator('app-agenda-slot').count();
+  test.info().annotations.push({
+    type: 'B08 qué se ve',
+    description:
+      ocupados === 0
+        ? 'celda vacía: ni libre ni la clase (S14 sigue igual)'
+        : `${ocupados} slot(s), ${await clasesDe(page, nombre).count()} con el nombre del alumno`,
+  });
+});
+
+test('B12/P07: un vehículo con un documento vencido marca sus horarios con un aviso', async ({
+  pageAs,
+}) => {
+  // Datos reales del piloto (2026-11-06): Instructor9 (sede 2) usa el RTRE29, con el SOAP vencido
+  // desde el 2025-05-06. Si se renueva, el test se salta en vez de fallar.
+  const page = await pageAs('admin');
+  await abrirAgenda(page, '/app/admin/agenda');
+  await elegirSede(page, SEDE_B);
+  await expect.poll(() => opcionesInstructor(page), CARGA).toContain(SEDE2_INSTRUCTOR);
+  await elegirInstructor(page, SEDE2_INSTRUCTOR);
+  await next(page).click();
+  await expect(grid(page)).toBeVisible(CARGA);
+
+  const avisos = grid(page).locator('[data-llm-description*="vencido"]');
+  await page.waitForTimeout(1_500);
+  test.skip(
+    (await avisos.count()) === 0,
+    'El vehículo de Instructor9 ya no tiene documentos vencidos',
+  );
+  const texto = (await avisos.first().getAttribute('data-llm-description')) ?? '';
+  test.info().annotations.push({ type: 'B12 aviso', description: texto });
+  expect(texto).toMatch(/RTRE29/);
+});
+
+// ── D. Datos ──────────────────────────────────────────────────────────────────────────────
+
+test('D08: una sede sin instructores muestra un estado vacío coherente, sin errores', async ({
+  pageAs,
+}) => {
+  // Sin crear una sede en producción: se responde vacío a lo que una sede sin instructores
+  // devolvería (instructores, disponibilidad y clases).
+  const page = await pageAs('secretariaA');
+  const errores: string[] = [];
+  page.on('console', (m) => m.type() === 'error' && errores.push(m.text()));
+  const vacio = (route: Parameters<Parameters<Page['route']>[1]>[0]) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'content-range': '*/0' },
+      body: '[]',
+    });
+  for (const tabla of ['instructors', 'v_class_b_schedule_availability', 'class_b_sessions']) {
+    await page.route(`**/rest/v1/${tabla}?*`, vacio);
+  }
+
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.goto('/app/secretaria/agenda');
+  // Los horarios salen de los cursos, no de los instructores: se ve la grilla, con las celdas
+  // vacías ("No hay clases en esta semana" queda para cuando no hay horarios, ver B03).
+  await expect(grid(page)).toBeVisible(CARGA);
+  await expect(page.getByText('No se pudo cargar la agenda')).toHaveCount(0);
+  await expect(page.locator('app-agenda-slot')).toHaveCount(0);
+
+  await next(page).click();
+  await expect(grid(page)).toBeVisible(CARGA);
+  await expect(page.locator('app-agenda-slot')).toHaveCount(0);
+
+  await page.locator(FILTRO).click();
+  await page.waitForTimeout(500);
+  const opciones = (await page.getByRole('option').allInnerTexts()).map((o) => o.trim());
+  await page.keyboard.press('Escape');
+  test.info().annotations.push({
+    type: 'D08 filtro',
+    description: opciones.length ? opciones.join(' | ') : '(sin opciones)',
+  });
+  expect(opciones.filter((o) => /Instructor\d/.test(o))).toHaveLength(0);
+  expect(errores, 'consola sin errores').toEqual([]);
 });
 
 // ── C. "Ir a fecha" ───────────────────────────────────────────────────────────────────────
@@ -361,6 +494,83 @@ test('F07: cambiar de sede A→B→A rápido con red lenta termina en A sin mezc
   await expect(page.locator(FILTRO)).not.toContainText(SEDE2_INSTRUCTOR);
 });
 
+test('F08/F03: un instructor "ambas sedes" aparece en las dos; sin vehículo de la otra, sin horarios', async ({
+  pageAs,
+}) => {
+  // Marca temporalmente un instructor (y después su vehículo) como "ambas sedes" y los restaura
+  // al terminar, pase lo que pase: la BD del piloto es producción.
+  const inst = await instructorSembrable();
+  const sb = await getAdminClient();
+  const { data: antesInst } = await sb
+    .from('instructors')
+    .select('both_branches')
+    .eq('id', inst.id)
+    .single();
+  const { data: antesVeh } = await sb
+    .from('vehicles')
+    .select('both_branches')
+    .eq('id', inst.vehicleId)
+    .single();
+  expect(antesInst?.both_branches, 'el instructor elegido es de una sola sede').toBe(false);
+
+  const libresDeLaSemanaSiguiente = async (page: Page): Promise<number> => {
+    await elegirInstructor(page, inst.nombre);
+    await next(page).click();
+    await expect(grid(page)).toBeVisible(CARGA);
+    await page.waitForTimeout(1_500);
+    return page.locator('[data-llm-action="view-available-slot"]').count();
+  };
+
+  try {
+    // F08: instructor "ambas sedes", vehículo solo de la sede 1, mirado desde la sede 2.
+    const marcar = await sb.from('instructors').update({ both_branches: true }).eq('id', inst.id);
+    expect(marcar.error?.message).toBeUndefined();
+
+    const admin = await pageAs('admin');
+    await abrirAgenda(admin, '/app/admin/agenda');
+    await elegirSede(admin, SEDE_B);
+    await expect.poll(() => opcionesInstructor(admin), CARGA).toContain(inst.nombre);
+    const libresF08 = await libresDeLaSemanaSiguiente(admin);
+    test.info().annotations.push({
+      type: 'F08 sede 2, vehículo de la sede 1',
+      description: `${libresF08} horarios "Disponible" la semana siguiente`,
+    });
+
+    // F03: con el vehículo también "ambas sedes", aparece en las dos con horarios.
+    const marcarVeh = await sb
+      .from('vehicles')
+      .update({ both_branches: true })
+      .eq('id', inst.vehicleId);
+    expect(marcarVeh.error?.message).toBeUndefined();
+
+    await admin.reload();
+    await expect(grid(admin)).toBeVisible(CARGA);
+    for (const sede of [SEDE_A, SEDE_B]) {
+      await elegirSede(admin, sede);
+      await expect.poll(() => opcionesInstructor(admin), CARGA).toContain(inst.nombre);
+      const libres = await libresDeLaSemanaSiguiente(admin);
+      test.info().annotations.push({
+        type: `F03 admin en ${sede}`,
+        description: `${libres} horarios "Disponible" la semana siguiente`,
+      });
+      expect(libres, `con horarios en ${sede}`).toBeGreaterThan(0);
+    }
+
+    const secB = await pageAs('secretariaB');
+    await abrirAgenda(secB, '/app/secretaria/agenda');
+    await expect.poll(() => opcionesInstructor(secB), CARGA).toContain(inst.nombre);
+  } finally {
+    await sb
+      .from('vehicles')
+      .update({ both_branches: antesVeh?.both_branches ?? false })
+      .eq('id', inst.vehicleId);
+    await sb
+      .from('instructors')
+      .update({ both_branches: antesInst?.both_branches ?? false })
+      .eq('id', inst.id);
+  }
+});
+
 // ── G. Tiempo real ────────────────────────────────────────────────────────────────────────
 
 test('G06: al salir de la Agenda se cierra su canal de tiempo real', async ({ pageAs }) => {
@@ -390,4 +600,44 @@ test('G06: al salir de la Agenda se cierra su canal de tiempo real', async ({ pa
   await expect(page).toHaveURL(/\/app\/admin\/dashboard/, CARGA);
   // Al salir: cada entrada tiene su salida, el canal ya no está abierto.
   await expect.poll(() => joins() - leaves(), CARGA).toBe(0);
+});
+
+test('G07: cerrar la Agenda del drawer no deja sin tiempo real a la Agenda de la página', async ({
+  pageAs,
+  cleanup,
+}) => {
+  // El drawer se cierra al navegar, así que en una pestaña las dos Agendas nunca están abiertas a
+  // la vez. Lo que sí pasa: comparten el AgendaFacade, y cerrar el drawer llama a dispose(). Se
+  // comprueba que la página, abierta después, vuelve a suscribirse.
+  const inst = await instructorSembrable();
+  const alumno = await createE2eAlumno(
+    { label: 'AgendaDrawer', branchId: 1, enrollments: [{}] },
+    cleanup,
+  );
+  const nombre = `${alumno.firstNames} ${alumno.paternalLastName}`;
+
+  const page = await pageAs('secretariaA');
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.goto('/app/secretaria/dashboard');
+  await page.locator('[data-llm-action="qa2"]').first().click();
+  const drawer = page.locator('app-layout-drawer');
+  await expect(drawer.getByRole('grid')).toBeVisible(CARGA);
+  await drawer.getByRole('button', { name: 'Cerrar panel' }).click();
+  await expect(drawer.getByRole('grid')).toHaveCount(0, CARGA);
+
+  await page.getByRole('navigation').getByRole('link', { name: 'Agenda', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/secretaria\/agenda/, CARGA);
+  await expect(grid(page)).toBeVisible(CARGA);
+  await elegirInstructor(page, inst.nombre);
+  await next(page).click();
+  await expect(grid(page)).toBeVisible(CARGA);
+  await expect(clasesDe(page, nombre)).toHaveCount(0);
+
+  await sembrarClase(
+    alumno.enrollmentIds[0],
+    inst,
+    { scheduled_at: inst.libresProxSemana[3], status: 'scheduled', class_number: 1 },
+    cleanup,
+  );
+  await expect(clasesDe(page, nombre), 'llega sin recargar').toHaveCount(1, CARGA);
 });

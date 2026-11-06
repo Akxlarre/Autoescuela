@@ -234,8 +234,22 @@ datos (`skvekggejikzxhzsjmkz` es producción).
 | F07 | ✅ admin A → B → A rápido con la red a 1,5 s por consulta: termina en A, sin instructores de B |
 | G06 | ✅ al salir de la Agenda, cada `phx_join` de `agenda-sessions` tiene su `phx_leave`. Nota: la primera carga entra, sale y vuelve a entrar (`ensureRealtime()` + `subscribeRealtime()` en `initialize()`); queda un solo canal, sin efecto visible |
 
-**Grupo 1 que sigue abierto (necesitan datos sembrados en producción o 2 sesiones):** B08
-(horario `reserved` de un borrador), B12 / L07 / P07-triángulo (vehículo con SOAP vencido), D08
-(sede sin instructores), F03 / F08 (instructor "ambas sedes": hoy
-no hay ninguno), G04 (confirmar una matrícula con la Agenda abierta en otra sesión), G05 (crear un
-instructor), G07 (Agenda en la página y en el drawer a la vez: hace falta un cambio de clase para ver que los dos lo reciben), P08 (animación: revisión visual).
+### Con datos sembrados (2026-11-06)
+
+Mismo archivo, **14 casos en verde** (`agenda-3` sigue 9/9 tras mover sus helpers de siembra a
+`e2e/support/agenda-seed.ts`). Cada test borra lo que siembra o restaura lo que cambia (en un
+`finally`); verificado por SQL al terminar: 0 usuarios, clases, matrículas ni avisos nuevos, y 0
+instructores/vehículos "ambas sedes", igual que antes.
+
+| Caso | Resultado |
+|---|---|
+| B08 | ✅ con una clase `reserved` de un borrador, el horario deja de ofrecerse "Disponible" (no hay doble reserva), pero la celda queda **vacía**: ni libre ni la clase. S14 sigue igual (pulido, no bloqueante) |
+| B12 / P07-triángulo | ✅ sin sembrar: Instructor9 (sede 2) usa el RTRE29, con el SOAP vencido desde 2025-05-06; sus horarios llevan el aviso "Vehículo RTRE29: SOAP vencido". Si se renueva, el test se salta |
+| D08 | ✅ simulado respondiendo `[]` a instructores, disponibilidad y clases (sin crear una sede): se ve la grilla con las celdas vacías (los horarios salen de los cursos), sin error ni "No hay clases", filtro solo con "Todos los instructores", consola limpia |
+| F03 | ✅ instructor y vehículo "ambas sedes" (marcados y restaurados en el test): aparece en el filtro del admin en las dos sedes y de la secretaria de la sede 2, con horarios en ambas |
+| F08 | ⚠️ **decisión de negocio.** Instructor "ambas sedes" con vehículo solo de la sede 1, mirado desde la sede 2: aparece y ofrece **59 horarios "Disponible"**, los mismos que con el vehículo en ambas. La vista arma los horarios de la sede 1 (el `JOIN vehicles` exige la sede del vehículo) pero no tiene columna de sede, así que la Agenda de la sede 2 los muestra como propios. El checklist esperaba "sin horarios" |
+| G07 | ✅ adaptado: el drawer se cierra al navegar, así que en una pestaña las dos Agendas nunca están abiertas a la vez. Comparten `AgendaFacade` y cerrar el drawer llama a `dispose()`; se comprobó que la Agenda de la página, abierta después, vuelve a suscribirse y recibe una clase nueva sin recargar |
+
+**Grupo 1 que sigue abierto:** G04 (confirmar una matrícula con pago con la Agenda abierta en
+otra sesión) y G05 (crear un instructor y agendarle una clase): escriben pagos, usuarios y avisos
+en producción, pendientes de aprobar paso a paso. P08 (animación): revisión visual.
