@@ -68,10 +68,8 @@ export class DashboardFacade {
     ];
     let channel = this.supabase.client.channel('dashboard-realtime');
     for (const table of tablas) {
-      channel = channel.on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table },
-        () => this.onRealtimeChange(),
+      channel = channel.on('postgres_changes', { event: '*', schema: 'public', table }, () =>
+        this.onRealtimeChange(),
       );
     }
     this._realtimeChannel = channel.subscribe();
@@ -106,6 +104,18 @@ export class DashboardFacade {
       this.branchFacade.selectedBranchId(),
       user?.canAccessBothBranches,
     );
+  }
+
+  /**
+   * Restringe una consulta a `audit_log` a las filas del usuario que mira, si no es admin
+   * (hotfix-172-b). La política `select_audit_log` ya lo limita a "admin o fila propia", pero ese
+   * OR impide usar el índice `(user_id, created_at)`: sin este filtro, para una secretaria con
+   * pocas filas propias la consulta recorría toda la tabla hasta el statement timeout.
+   */
+  private scopeAuditLogToViewer(query: any): any {
+    const user = this.auth.currentUser();
+    if (!user || user.role === 'admin' || user.dbId == null) return query;
+    return query.eq('user_id', user.dbId);
   }
 
   async initialize(): Promise<void> {
@@ -279,6 +289,7 @@ export class DashboardFacade {
     if (branchId !== null) {
       auditLogQuery = auditLogQuery.or(`branch_id.eq.${branchId},branch_id.is.null`);
     }
+    auditLogQuery = this.scopeAuditLogToViewer(auditLogQuery);
 
     const [
       activeStudents,
@@ -583,6 +594,7 @@ export class DashboardFacade {
     if (branchId !== null) {
       query = query.or(`branch_id.eq.${branchId},branch_id.is.null`);
     }
+    query = this.scopeAuditLogToViewer(query);
 
     const { data } = await query;
 

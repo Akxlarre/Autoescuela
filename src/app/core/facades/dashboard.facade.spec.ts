@@ -1322,3 +1322,33 @@ describe('DashboardFacade', () => {
     });
   });
 });
+
+/**
+ * hotfix-172-b: la política de audit_log es "admin o fila propia". Sin filtrar por user_id, para
+ * una secretaria con pocas filas propias la consulta recorría toda la tabla (statement timeout).
+ */
+describe('DashboardFacade — actividad reciente filtra por quien mira (hotfix-172-b)', () => {
+  const SECRETARIA = { name: 'Lola', role: 'secretaria', dbId: 3225 };
+  const ADMIN = { name: 'Admin', role: 'admin', dbId: 1 };
+
+  it('el panel del dashboard de una secretaria pide solo sus filas', async () => {
+    const { facade, builders } = crearFacadeConCliente(undefined, SECRETARIA);
+    await (facade as any).fetchRealDashboardData(null);
+    expect(builders['audit_log'][0].eq).toHaveBeenCalledWith('user_id', 3225);
+  });
+
+  it('el historial completo de una secretaria pide solo sus filas', async () => {
+    const { facade, builders } = crearFacadeConCliente(undefined, SECRETARIA);
+    await facade.fetchActivityHistory(50);
+    expect(builders['audit_log'][0].eq).toHaveBeenCalledWith('user_id', 3225);
+  });
+
+  it('el admin ve la actividad de todos', async () => {
+    const { facade, builders } = crearFacadeConCliente(undefined, ADMIN);
+    await (facade as any).fetchRealDashboardData(null);
+    await facade.fetchActivityHistory(50);
+    for (const b of builders['audit_log']) {
+      expect(b.eq).not.toHaveBeenCalledWith('user_id', expect.anything());
+    }
+  });
+});
