@@ -30,6 +30,7 @@ import {
   enrollmentsWithUnpenalizedPair,
 } from '@core/utils/class-b-session.utils';
 import { assertWriteOk, toFriendlyDbMessage } from '@core/utils/db-error.utils';
+import { buildHolidayClassDetails, type HolidayClassRow } from '@core/utils/holiday-classes.utils';
 import type { AlertModel } from '@core/models/ui/dashboard.model';
 
 /**
@@ -313,6 +314,7 @@ export class DashboardAlertsFacade {
       this.checkSixthClassWithDebt(branchId),
       this.checkTwelfthClassCompleted(branchId),
       this.checkConsecutiveAbsences(branchId),
+      this.checkClassesOnHoliday(branchId),
       this.checkUnclosedCash(branchId),
       this.checkOldDebts(branchId),
       // Fase 3 — Pagos y Finanzas
@@ -580,6 +582,40 @@ export class DashboardAlertsFacade {
               },
             }
           : {}),
+      },
+    ];
+  }
+
+  /**
+   * (B-4, spec 0056-b) Clases prácticas que caen en un feriado y hay que reagendar: las agendadas
+   * de hoy en adelante y las que el cron ya canceló por feriado. El criterio vive en la vista
+   * `v_class_b_sessions_on_holiday`; reagendar cambia la fecha y la clase sale sola.
+   */
+  private async checkClassesOnHoliday(branchId: number | null): Promise<AlertModel[]> {
+    let query: any = this.supabase.client
+      .from('v_class_b_sessions_on_holiday')
+      .select(
+        'session_id, enrollment_id, student_id, student_name, class_number, scheduled_at, status, holiday_name',
+      );
+    if (branchId !== null) query = query.eq('branch_id', branchId);
+
+    const { data } = await queryOk(query);
+    const rows = (data ?? []) as (HolidayClassRow & { enrollment_id: number })[];
+    const count = rows.length;
+    if (count === 0) return [];
+
+    const students = new Set(rows.map((r) => r.enrollment_id)).size;
+    // AC6: cada caso lleva a la ficha del alumno, en el portal de quien mira.
+    const role = this.auth.currentUser()?.role === 'secretaria' ? 'secretaria' : 'admin';
+    return [
+      {
+        id: 'alert-class-b-holiday',
+        title: `${count} clase${count > 1 ? 's' : ''} en día feriado`,
+        description: `De ${students} alumno${students > 1 ? 's' : ''}. Ese día no hay clases: hay que reagendarlas`,
+        severity: 'warning',
+        count,
+        details: buildHolidayClassDetails(rows, role),
+        detailsLabel: 'Ver clases',
       },
     ];
   }

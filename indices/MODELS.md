@@ -172,7 +172,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `CuadraturaAdjustmentRow`, `AjusteFormData` | `ui` | `src/app/core/models/ui/cuadratura-adjustment.model.ts` |
 | `IngresoRow`, `EgresoRow`, `EgresoFormData`, `CierrePayload` | `ui` | `src/app/core/models/ui/cuadratura.model.ts` |
 | `TipoCursoSingular`, `EstadoCursoSingular`, `SingularPaymentMethod`, `SingularPaymentStatus`, `CursoSingularRow`, `CursosSingularesKpis`, `InscriptoCursoSingular`, `NuevoCursoSingularFormData`, `SingularStudentSearch`, `SingularPersonalDataForm`, `SingularPaymentForm` | `ui` | `src/app/core/models/ui/cursos-singulares.model.ts` |
-| `DashboardModel`, `HeroModel`, `KpiModel`, `ActivityModel`, `AlertActionType`, `AlertAction`, `AlertModel`, `QuickActionModel`, `SystemStatusModel`, `LiveClassModel` | `ui` | `src/app/core/models/ui/dashboard.model.ts` |
+| `DashboardModel`, `HeroModel`, `KpiModel`, `ActivityModel`, `AlertActionType`, `AlertAction`, `AlertDetail` (caso de una alerta con su ruta, spec 0056-b), `AlertModel` (`details?`, `detailsLabel?`), `QuickActionModel`, `SystemStatusModel`, `LiveClassModel` | `ui` | `src/app/core/models/ui/dashboard.model.ts` |
 | `DiscountType`, `DiscountApplicableTo`, `DiscountStatus`, `DiscountUi`, `DiscountFormValue` | `ui` | `src/app/core/models/ui/discount.model.ts` |
 | `DmsTab`, `StudentWithDocsRow`, `StudentEnrollmentOption`, `DmsStudentDocRow`, `InstructorWithDocsRow`, `DmsInstructorDocRow`, `SchoolDocRow`, `DmsKpis`, `UploadStudentDocPayload`, `UploadSchoolDocPayload`, `UploadInstructorDocPayload`, `DmsViewerDocument` | `ui` | `src/app/core/models/ui/dms.model.ts` |
 | `DocumentTemplateSection`, `DocumentTemplateForm` | `ui` | `src/app/core/models/ui/document-content-template.model.ts` |

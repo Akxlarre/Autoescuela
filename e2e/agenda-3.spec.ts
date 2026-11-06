@@ -288,14 +288,11 @@ test('G01/G02/E05: con la Agenda abierta, una clase nueva aparece y cambia de es
   expect(iniciar.error?.message).toBeUndefined();
   await expect(clase.locator('.slot-block')).toHaveClass(/slot-block--in_progress/, CARGA);
 
-  // E05: el detalle de una clase en curso, ¿muestra el KM inicial? (anotar)
+  // E05 (hotfix-170-b): el detalle de una clase en curso muestra el KM con que partió.
   await clase.click();
   await expect(drawerDetalle(page).locator('.status-pill')).toHaveText(/En (curso|progreso)/);
-  const muestraKm = await drawerDetalle(page).getByText(`${km} km`).isVisible();
-  test.info().annotations.push({
-    type: 'E05 KM inicial en clase en curso',
-    description: muestraKm ? 'se muestra' : 'no se muestra',
-  });
+  await expect(drawerDetalle(page).getByText(`${km} km`)).toBeVisible();
+  await expect(drawerDetalle(page).getByText('En curso', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Cerrar detalle' }).click();
 
   const cerrar = await sb
