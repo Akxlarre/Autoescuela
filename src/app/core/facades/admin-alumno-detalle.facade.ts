@@ -30,6 +30,7 @@ import {
 } from '@core/utils/payment-status.utils';
 import { readEdgeFunctionError } from '@core/utils/edge-function-error.utils';
 import { slotChocaConClases } from '@core/utils/reagendamiento.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import {
   isRealtimeEventForStudent,
   type RealtimeRowChange,
@@ -204,6 +205,8 @@ export class AdminAlumnoDetalleFacade {
   private _slotVehicleMap = new Map<string, number>();
   /** vehicle_id → advertencia; rebuilt on each loadScheduleGrid call. */
   private _vehicleDocWarningMap = new Map<number, VehicleDocWarningInfo>();
+  /** fix-071-i: con la red lenta, la respuesta de un instructor anterior no pisa la grilla. */
+  private readonly scheduleGridGuard = createRequestGuard();
 
   private readonly _enrollmentSummaries = signal<EnrollmentSummary[]>([]);
 
@@ -1533,6 +1536,7 @@ export class AdminAlumnoDetalleFacade {
 
   /** Carga la grilla de disponibilidad para un instructor desde la vista Supabase. */
   async loadScheduleGrid(instructorId: number): Promise<void> {
+    const requestToken = this.scheduleGridGuard.next();
     this._scheduleGrid.set(null);
     this._slotVehicleMap.clear();
     this._isLoadingSchedule.set(true);
@@ -1551,6 +1555,8 @@ export class AdminAlumnoDetalleFacade {
           .select('vehicle_id, type, expiry_date, status'),
       ]);
 
+      if (!this.scheduleGridGuard.isCurrent(requestToken)) return;
+
       this._vehicleDocWarningMap = buildVehicleDocWarningMap(docsResult.data ?? []);
 
       if (data && data.length > 0) {
@@ -1563,7 +1569,8 @@ export class AdminAlumnoDetalleFacade {
         );
       }
     } finally {
-      this._isLoadingSchedule.set(false);
+      // La carga la apaga solo la vigente: una vieja no la da por terminada.
+      if (this.scheduleGridGuard.isCurrent(requestToken)) this._isLoadingSchedule.set(false);
     }
   }
 

@@ -62,6 +62,7 @@
 | `src/app/core/utils/document-download.utils.ts` | `documentDownloadUrl` — URL de Storage con `download=<nombre>` para descargar de verdad (fix-468-m); `null` si no es de Storage |
 | `src/app/core/utils/dms-documents.utils.ts` | `isDeletableStudentDoc` — solo `student_document` y `digital_contract` se borran desde el DMS (fix-470-m) |
 | `src/app/core/utils/document-template-options.utils.ts` | `editableDocumentTypes` |
+| `src/app/core/utils/documents-step.utils.ts` | `missingDocumentHint` — texto junto a "Continuar" en el paso 3 de la matrícula: foto o primer documento obligatorio que falta (fix-070-i). |
 | `src/app/core/utils/draft-payment.utils.ts` | `DraftPaymentRow`, `DraftPaymentSummary`, `summarizeDraftPayments`, `isDraftListed`, `draftPaymentBadgeLabel`, `discardDraftWithPaymentMessage` — borradores con pago (fix-069-i). |
 | `src/app/core/utils/drawer-navigation.utils.ts` | `isRouteChange` |
 | `src/app/core/utils/edge-function-error.utils.ts` | `EdgeFunctionError`, `readEdgeFunctionError`, `edgeFunctionUserMessage` |

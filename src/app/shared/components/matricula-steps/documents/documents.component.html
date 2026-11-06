@@ -320,8 +320,8 @@
           <div>
             <p class="text-sm font-bold text-warning">Alumno menor de edad</p>
             <p class="text-xs text-text-secondary leading-relaxed mt-1">
-              Se requiere Autorización Notarial firmada por el apoderado. Súbela en la sección de
-              documentos del expediente.
+              Se requiere Autorización Notarial firmada por el apoderado. Súbela en "Documentos del
+              Expediente", en esta misma pantalla.
             </p>
           </div>
         </div>
@@ -352,10 +352,10 @@
         Volver
       </button>
       <div class="flex items-center gap-3">
-        @if (!allRequiredUploaded()) {
+        @if (!allRequiredUploaded() && missingHint()) {
           <p class="text-xs text-text-muted italic flex items-center gap-1">
             <app-icon name="circle-alert" [size]="12" />
-            Sube la foto carnet para continuar
+            {{ missingHint() }}
           </p>
         }
         <app-async-btn

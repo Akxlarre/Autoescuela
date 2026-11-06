@@ -132,7 +132,7 @@ no hay ninguno. Arreglo probable: borrar (o desvincular) `consents` del borrador
 | Caso | Resultado | Evidencia |
 |---|---|---|
 | S10 error del pago en el paso 4 | ❌ **B2-1** | RPC simulada con el aviso de caja cerrada (fix-051-i): `payment.error()` = "Error al registrar pago: La caja del 18-10-2026 ya está cerrada…", pero **no se ve en pantalla**; el wizard queda en el paso 4 sin mensaje (el banner solo lee `enrollment.error()`) |
-| S11 menor de 17 en Clase B | ❌ **B2-2** | el paso 3 solo tiene la foto (1 input de archivo); el aviso "Se requiere Autorización Notarial… Súbela en la sección de documentos del expediente" no ofrece dónde subirla ni la exige. Ver si el DMS la permite (ASG-i-033, Matías). **2026-10-24: Ignacio lo revisa con Matías** (pendiente) |
+| S11 menor de 17 en Clase B | ❌ **B2-2** | el paso 3 solo tiene la foto (1 input de archivo); el aviso "Se requiere Autorización Notarial… Súbela en la sección de documentos del expediente" no ofrece dónde subirla ni la exige. Ver si el DMS la permite (ASG-i-033, Matías). → **Resuelto en `fix-070-i`** (2026-11-03): en Clase B el paso 3 pide la autorización notarial del menor como obligatoria |
 | B07–B10, B12, B15 validaciones del paso 1 | ✅ | `canAdvance` de `personal-data`: nombre/apellido < 2 letras o solo espacios, email `juan@` / `juan@x`, teléfono de 7 dígitos, fecha vacía y sin curso → no avanza. Sin apellido materno sí avanza. RUT con DV malo → no avanza |
 | B12 fecha 31/02 | ✅ (no alcanzable) | `canAdvance` la dejaría pasar (edad "none"), pero `app-date-input` es un calendario que solo emite fechas válidas |
 | D06 SENCE | ✅ | sin código no avanza; con código sí (que se guarde es S14, Bloque 3) |
@@ -215,3 +215,19 @@ numerados de H08 y H10 están en la §4 de ese checklist.
 - **H16** cambiar de instructor rápido 3 veces con red lenta.
 - **H18** retomar un borrador.
 - **H21** matrícula desde el drawer de la Base de Alumnos.
+
+**Resultado (2026-11-03, Playwright como secretaria sede 1, alumnos de prueba `QA Setenta Menor`
+33.058.010-0 y `QA Setenta Drawer` 33.058.011-K, ambos borradores descartados al terminar):**
+
+| Caso | Resultado | Evidencia |
+|---|---|---|
+| H08 | ✅ | la vista calcula 4 meses y la app corta en el límite (3): la grilla dice "Semana 1 de 14" y la semana 14 (1–3 feb) tiene 39 horarios disponibles. S3 ya no aplica |
+| H10 | ❌ **B5-1** (por código) → ✅ corregido en `fix-072-i` (2026-11-05) | la vista no cuenta las clases de un borrador **vencido** (`class_b_slot_occupied`: `e.status <> 'draft' OR e.expires_at > now()`), pero los triggers de choque del instructor (fix-163) y del vehículo (fix-187) sí → el horario se ve libre y al guardar falla "El instructor ya tiene una clase agendada…". Desde `fix-069-i` un borrador vencido **con pago** no lo borra la limpieza: el horario queda así sin fecha de término. Tras el fix la vista lo muestra ocupado (test SQL de `fix-072-i` en verde) |
+| H13 | ✅ (por código) | `class_b_slot_occupied` marca ocupado si coincide el instructor **o el vehículo** |
+| H14 | ✅ (no alcanzable) | la base rechaza un choque de horario del alumno (`trg_prevent_student_double_booking`, fix-301-m), y en presencial un alumno con Clase B activa no puede abrir otra matrícula B (bloqueo de duplicado y S20) |
+| H16 | ❌ **B5-2** → ✅ corregido en `fix-071-i` (2026-11-03) | con la red frenada (respuesta de Instructor1 a 7 s, Instructor2 a 3,5 s, Instructor3 sin demora) el selector queda en "Instructor3" pero la grilla es la de Instructor1: `loadScheduleGrid()` no descarta respuestas viejas (sin `createRequestGuard`). Repetido en navegador tras el fix: la grilla queda en la del último instructor |
+| H18 | ✅ | "Retomar" vuelve al paso guardado (3) con la autorización notarial "LISTO"; al volver al paso 2: Instructor3 y 12/12 horarios |
+| H21 | ✅ | el drawer "Nueva Matrícula" de la Base de Alumnos hace el mismo flujo (paso 2 con "Semana 1 de 14") |
+
+De paso: la grilla del paso 2 no aparece hasta elegir la modalidad de pago (Total / Parcial), y
+nada lo indica. Anotado como observación de UX, no como bug.

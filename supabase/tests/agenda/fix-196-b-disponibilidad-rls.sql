@@ -47,10 +47,9 @@ BEGIN
      EXCEPT
      SELECT v.instructor_id, v.vehicle_id, v.slot_start,
             CASE WHEN NOT EXISTS (
-              SELECT 1 FROM public.class_b_sessions cb JOIN public.enrollments e ON e.id = cb.enrollment_id
+              SELECT 1 FROM public.class_b_sessions cb
                WHERE (cb.instructor_id = v.instructor_id OR cb.vehicle_id = v.vehicle_id)
                  AND cb.status NOT IN ('cancelled')
-                 AND (e.status <> 'draft' OR e.expires_at > now())
                  AND cb.scheduled_at < v.slot_end
                  AND (cb.scheduled_at + (cb.duration_min * INTERVAL '1 minute')) > v.slot_start)
               THEN 'available' ELSE 'occupied' END

@@ -1336,6 +1336,126 @@ describe('EnrollmentFacade', () => {
       vi.useRealTimers();
     });
 
+    // fix-071-i: con la red lenta, una respuesta vieja llegaba después de la vigente y dejaba
+    // en la grilla los horarios de un instructor que ya no estaba elegido.
+    describe('respuestas fuera de orden (fix-071-i)', () => {
+      const OTHER_INSTRUCTOR_ID = INSTRUCTOR_ID + 1;
+      const otherSlots = [
+        {
+          instructor_id: OTHER_INSTRUCTOR_ID,
+          vehicle_id: 2,
+          slot_start: '2026-03-17T11:00:00-03:00',
+          slot_end: '2026-03-17T11:45:00-03:00',
+          slot_status: 'available',
+        },
+      ];
+
+      /** Cada consulta a la vista queda pendiente hasta que el test la resuelve. */
+      function setupPendingScheduleQueries() {
+        const pending: Array<(result: { data: any[]; error: any }) => void> = [];
+        const builder = createMockQueryBuilder();
+        builder.order = vi.fn(() => new Promise((resolve) => pending.push(resolve)));
+        mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+        return pending;
+      }
+
+      const gridSlotIds = () => facade.scheduleGrid()?.slots.map((s) => s.id);
+
+      it('descarta la respuesta del instructor anterior que llega después de la vigente', async () => {
+        const pending = setupPendingScheduleQueries();
+
+        const first = facade.loadScheduleGrid(INSTRUCTOR_ID);
+        const second = facade.loadScheduleGrid(OTHER_INSTRUCTOR_ID);
+
+        pending[1]({ data: otherSlots, error: null });
+        await second;
+        pending[0]({ data: mockSlots, error: null });
+        await first;
+
+        expect(facade.selectedInstructorId()).toBe(OTHER_INSTRUCTOR_ID);
+        expect(gridSlotIds()).toEqual(['2026-03-17T11:00:00-03:00']);
+        expect(mockSupabase.client.channel).toHaveBeenCalledTimes(1);
+        expect(mockSupabase.client.channel).toHaveBeenCalledWith(
+          `schedule-instructor-${OTHER_INSTRUCTOR_ID}`,
+        );
+      });
+
+      it('una respuesta vieja no apaga la carga ni muestra su error', async () => {
+        const pending = setupPendingScheduleQueries();
+
+        const first = facade.loadScheduleGrid(INSTRUCTOR_ID);
+        const second = facade.loadScheduleGrid(OTHER_INSTRUCTOR_ID);
+
+        pending[0]({ data: null as unknown as any[], error: { message: 'timeout' } });
+        await first;
+
+        expect(facade.isLoading()).toBe(true);
+        expect(facade.error()).toBeNull();
+
+        pending[1]({ data: otherSlots, error: null });
+        await second;
+
+        expect(facade.isLoading()).toBe(false);
+      });
+
+      it('la respuesta vigente sí muestra su error', async () => {
+        const pending = setupPendingScheduleQueries();
+
+        const load = facade.loadScheduleGrid(INSTRUCTOR_ID);
+        pending[0]({ data: null as unknown as any[], error: { message: 'timeout' } });
+        await load;
+
+        expect(facade.error()).toContain('Error al cargar disponibilidad');
+        expect(facade.isLoading()).toBe(false);
+      });
+
+      it('un evento Realtime pendiente del instructor anterior no consulta al cambiar', async () => {
+        vi.useFakeTimers();
+        setupScheduleQuery();
+        await facade.loadScheduleGrid(INSTRUCTOR_ID);
+        mockSupabase._getChannelCallback()!();
+
+        const pending = setupPendingScheduleQueries();
+        const load = facade.loadScheduleGrid(OTHER_INSTRUCTOR_ID);
+        await vi.advanceTimersByTimeAsync(350);
+
+        expect(pending).toHaveLength(1);
+
+        pending[0]({ data: otherSlots, error: null });
+        await load;
+        vi.useRealTimers();
+      });
+
+      it('un refresco Realtime en vuelo del instructor anterior no pisa la grilla nueva', async () => {
+        vi.useFakeTimers();
+        setupScheduleQuery();
+        await facade.loadScheduleGrid(INSTRUCTOR_ID);
+
+        const pending = setupPendingScheduleQueries();
+        mockSupabase._getChannelCallback()!();
+        await vi.advanceTimersByTimeAsync(350);
+
+        const load = facade.loadScheduleGrid(OTHER_INSTRUCTOR_ID);
+        pending[1]({ data: otherSlots, error: null });
+        await load;
+        pending[0]({ data: mockSlots, error: null });
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(gridSlotIds()).toEqual(['2026-03-17T11:00:00-03:00']);
+        vi.useRealTimers();
+      });
+
+      it('sin horarios del instructor nuevo, no sigue escuchando al anterior', async () => {
+        setupScheduleQuery();
+        await facade.loadScheduleGrid(INSTRUCTOR_ID);
+
+        setupScheduleQuery([]);
+        await facade.loadScheduleGrid(OTHER_INSTRUCTOR_ID);
+
+        expect(mockSupabase.client.removeChannel).toHaveBeenCalledTimes(1);
+      });
+    });
+
     it('puebla vehicleDocWarning por slot desde vehicle_documents (fix-165-m)', async () => {
       const slotsData = [
         {

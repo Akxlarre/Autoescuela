@@ -15,6 +15,7 @@ import { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documents.mo
 import type { DocumentType } from '@core/models/ui/enrollment-documents.model';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { FileDropzoneDirective } from '@core/directives/file-dropzone.directive';
+import { missingDocumentHint } from '@core/utils/documents-step.utils';
 
 @Component({
   selector: 'app-documents-step',
@@ -125,6 +126,16 @@ export class DocumentsComponent {
     return d.requiredDocuments
       .filter((doc: { required: boolean }) => doc.required)
       .every((doc: { type: DocumentType }) => this.isUploaded(doc.type));
+  });
+
+  /** fix-070-i: qué falta para continuar (antes siempre pedía la foto). */
+  readonly missingHint = computed(() => {
+    const d = this.data();
+    const hasCarnet =
+      (!!d.carnetPhoto?.capturedDataUrl || d.uploadedDocuments.has('id_photo' as DocumentType)) &&
+      !d.photoNeedsConfirmation;
+    const pending = d.requiredDocuments.filter((doc) => doc.required && !this.isUploaded(doc.type));
+    return missingDocumentHint(hasCarnet, pending);
   });
 
   onConfirmPhoto(): void {
