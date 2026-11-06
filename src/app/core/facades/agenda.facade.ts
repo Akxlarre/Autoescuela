@@ -166,7 +166,7 @@ export class AgendaFacade {
 
   private readonly _selectedSlot = signal<AgendaSlot | null>(null);
 
-  /** Mapas de lookup para enriquecer slots con nombres (cargados en initialize) */
+  /** Mapas de lookup para enriquecer slots con nombres (initialize y cada refresco silencioso) */
   private instructorMap = new Map<number, string>();
   private vehicleMap = new Map<number, string>();
   private vehicleDocWarningMap = new Map<number, VehicleDocWarningInfo>();
@@ -177,6 +177,12 @@ export class AgendaFacade {
 
   /** Realtime: canal de suscripción a cambios en class_b_sessions */
   private realtimeChannel: RealtimeChannel | null = null;
+  /**
+   * fix-239-b (S17): una matrícula inserta sus clases de una vez y llega un evento por fila. Se
+   * agrupan en un solo refresco, como en `EnrollmentFacade.handleScheduleChange`.
+   */
+  private realtimeRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+  private static readonly REALTIME_DEBOUNCE_MS = 300;
 
   /** Descarta respuestas de fetchWeekData() obsoletas ante navegación rápida encolada. */
   private readonly weekDataGuard = createRequestGuard();
@@ -227,8 +233,9 @@ export class AgendaFacade {
     this.ensureRealtime();
 
     if (this._initialized && branchId === this._lastBranchId) {
-      // SWR: datos cacheados, refrescar silenciosamente
-      this.refreshSilently();
+      // SWR: datos cacheados, refrescar silenciosamente. fix-239-b (S17): al volver se recargan
+      // también los nombres y la lista de instructores (puede haber uno creado mientras tanto).
+      this.refreshSilently({ reloadCatalogs: true });
       return;
     }
 
@@ -295,13 +302,34 @@ export class AgendaFacade {
   /**
    * Refresca datos de la semana SIN skeleton.
    * Usado por: SWR re-entry, Realtime events, post-action refresh.
+   *
+   * fix-239-b (S17): con `reloadCatalogs` (re-entrada SWR) recarga antes los nombres y la lista
+   * de instructores. Un evento de Realtime no lo pide: `fetchWeekData` los recarga solo si la
+   * semana trae un instructor o vehículo desconocido, para no sumar 4 consultas a cada evento.
    */
-  private async refreshSilently(): Promise<void> {
+  private async refreshSilently(options: { reloadCatalogs?: boolean } = {}): Promise<void> {
     try {
+      if (options.reloadCatalogs) await this.reloadCatalogs();
       await this.fetchWeekData();
     } catch {
       // Fail silencioso — datos stale siguen visibles
     }
+  }
+
+  /**
+   * fix-239-b (S17): nombres (instructores y vehículos) y lista de instructores, conservando el
+   * instructor elegido. Sin esto, uno creado con la Agenda abierta salía como "#225" y no aparecía
+   * en el filtro hasta recargar la página.
+   */
+  private async reloadCatalogs(): Promise<void> {
+    await Promise.all([this.loadLookupMaps(), this.loadInstructors({ keepSelection: true })]);
+  }
+
+  /** fix-239-b (S17): ¿la semana trae un instructor o un vehículo que los mapas no conocen? */
+  private hasUnknownLookups(slots: RawSlot[], sessions: RawSession[]): boolean {
+    return [...slots, ...sessions].some(
+      (r) => !this.instructorMap.has(r.instructor_id) || !this.vehicleMap.has(r.vehicle_id),
+    );
   }
 
   /** Fetch compartido: obtiene y setea weekData sin tocar isLoading. */
@@ -327,6 +355,11 @@ export class AgendaFacade {
     // Descarta esta respuesta si ya se disparó un fetch más reciente (navegación
     // rápida encolada) — evita que datos obsoletos pisen la semana vigente.
     if (!this.weekDataGuard.isCurrent(requestToken)) return;
+
+    if (this.hasUnknownLookups(slotsResult, sessionsResult)) {
+      await this.reloadCatalogs();
+      if (!this.weekDataGuard.isCurrent(requestToken)) return;
+    }
 
     this._weekData.set(this.buildWeekData(weekStart, weekEnd, slotsResult, sessionsResult));
     this._error.set(null); // fix-189-b F3: una carga que sale bien borra el error anterior
@@ -380,9 +413,18 @@ export class AgendaFacade {
     this.realtimeChannel = this.supabase.client
       .channel('agenda-sessions')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'class_b_sessions' }, () =>
-        this.refreshSilently(),
+        this.scheduleRealtimeRefresh(),
       )
       .subscribe();
+  }
+
+  /** fix-239-b (S17): espera a que se calme la ráfaga de eventos y refresca una vez. */
+  private scheduleRealtimeRefresh(): void {
+    if (this.realtimeRefreshTimer) clearTimeout(this.realtimeRefreshTimer);
+    this.realtimeRefreshTimer = setTimeout(() => {
+      this.realtimeRefreshTimer = null;
+      this.refreshSilently();
+    }, AgendaFacade.REALTIME_DEBOUNCE_MS);
   }
 
   /** Garantiza que Realtime está activo (para SWR re-entry). */
@@ -393,6 +435,10 @@ export class AgendaFacade {
   }
 
   private disposeRealtime(): void {
+    if (this.realtimeRefreshTimer) {
+      clearTimeout(this.realtimeRefreshTimer);
+      this.realtimeRefreshTimer = null;
+    }
     if (this.realtimeChannel) {
       this.supabase.client.removeChannel(this.realtimeChannel);
       this.realtimeChannel = null;
@@ -490,7 +536,7 @@ export class AgendaFacade {
     );
   }
 
-  private async loadInstructors(): Promise<void> {
+  private async loadInstructors(options: { keepSelection?: boolean } = {}): Promise<void> {
     const branchId = this.getActiveBranchId();
 
     let query: any = this.supabase.client
@@ -531,11 +577,20 @@ export class AgendaFacade {
     const filters = rows.map((i) => toInstructorFilter(i, today));
 
     this._instructors.set(filters);
-    // fix-010-i (H-010): `loadInstructors()` solo corre en un cambio de sede real
-    // (initialize() ya filtra los refrescos SWR), así que siempre hay que re-anclar
-    // la selección a la nueva lista — dejar el id de la sede anterior "pegado" hacía
-    // que el label mostrara "Todos los instructores" mientras un instructor de otra
-    // sede seguía filtrando la grilla por debajo.
+    this.anchorSelection(filters, options.keepSelection ?? false);
+  }
+
+  /**
+   * Qué instructor queda elegido tras cargar la lista.
+   * - fix-239-b (S17): en un refresco silencioso se respeta lo que eligió el usuario, incluido
+   *   "Todos los instructores" (null), mientras ese instructor siga en la lista.
+   * - fix-010-i (H-010): en la primera carga, en un cambio de sede, o si el elegido ya no está,
+   *   se re-ancla al primero. Dejar pegado el id de la sede anterior hacía que el label mostrara
+   *   "Todos los instructores" mientras un instructor de otra sede seguía filtrando la grilla.
+   */
+  private anchorSelection(filters: AgendaInstructorFilter[], keepSelection: boolean): void {
+    const current = this._selectedInstructorId();
+    if (keepSelection && (current === null || filters.some((f) => f.id === current))) return;
     this._selectedInstructorId.set(filters.length > 0 ? filters[0].id : null);
   }
 

@@ -597,4 +597,154 @@ describe('AgendaFacade', () => {
       expect(slots).toContain('"instructorId":99');
     });
   });
+
+  describe('tiempo real y refresco — fix-239-b (S17)', () => {
+    // Martes de la semana actual: siempre dentro de la grilla que abre initialize().
+    const martes = () => addDaysIso(mondayOfIso(chileToday()), 1);
+    const instructor = (id: number, nombre: string) => ({
+      id,
+      license_expiry: null,
+      users: { first_names: nombre, paternal_last_name: 'Test' },
+    });
+    const bloqueDe = (instructorId: number) => ({
+      instructor_id: instructorId,
+      vehicle_id: 3,
+      slot_start: `${martes()}T12:00:00+00:00`,
+      slot_end: `${martes()}T12:45:00+00:00`,
+      slot_status: 'available',
+      branch_ids: [1],
+    });
+    const consultasALaVista = () =>
+      supabaseSpy.client.from.mock.calls.filter(
+        (c: string[]) => c[0] === 'v_class_b_schedule_availability',
+      ).length;
+    /** El callback que AgendaFacade registró para los eventos de class_b_sessions. */
+    const eventoRealtime = (): (() => void) => {
+      const channel = supabaseSpy.client.channel.mock.results.at(-1).value;
+      return channel.on.mock.calls.at(-1)[2];
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+    });
+    afterEach(() => vi.useRealTimers());
+
+    it('G04: 12 eventos seguidos (una matrícula) recargan la semana una sola vez', async () => {
+      await facade.initialize();
+      const antes = consultasALaVista();
+
+      const evento = eventoRealtime();
+      for (let i = 0; i < 12; i++) evento();
+      await vi.advanceTimersByTimeAsync(300);
+
+      expect(consultasALaVista() - antes).toBe(1);
+    });
+
+    it('no recarga antes de que se calmen los eventos', async () => {
+      await facade.initialize();
+      const antes = consultasALaVista();
+
+      eventoRealtime()();
+      await vi.advanceTimersByTimeAsync(299);
+
+      expect(consultasALaVista() - antes).toBe(0);
+    });
+
+    it('al salir de la Agenda (dispose) cancela la recarga pendiente', async () => {
+      await facade.initialize();
+      const antes = consultasALaVista();
+
+      eventoRealtime()();
+      facade.dispose();
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      expect(consultasALaVista() - antes).toBe(0);
+    });
+
+    it('G05: al volver a la Agenda, un instructor creado después sale con su nombre y en la lista', async () => {
+      supabaseSpy.setResult('instructors', [instructor(1, 'Juan')]);
+      supabaseSpy.setResult('v_class_b_schedule_availability', [bloqueDe(225)]);
+      await facade.initialize();
+      expect(JSON.stringify(facade.weekData())).toContain('#225');
+
+      supabaseSpy.setResult('instructors', [instructor(1, 'Juan'), instructor(225, 'Camila')]);
+      await facade.initialize(); // misma sede: re-entrada SWR
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(JSON.stringify(facade.weekData())).toContain('Camila Test');
+      expect(JSON.stringify(facade.weekData())).not.toContain('#225');
+      expect(facade.instructors().map((i) => i.id)).toContain(225);
+    });
+
+    it('G05: un evento de tiempo real también trae el nombre del instructor nuevo', async () => {
+      supabaseSpy.setResult('instructors', [instructor(1, 'Juan')]);
+      supabaseSpy.setResult('v_class_b_schedule_availability', [bloqueDe(225)]);
+      await facade.initialize();
+
+      supabaseSpy.setResult('instructors', [instructor(1, 'Juan'), instructor(225, 'Camila')]);
+      eventoRealtime()();
+      await vi.advanceTimersByTimeAsync(300);
+
+      expect(JSON.stringify(facade.weekData())).toContain('Camila Test');
+    });
+
+    /** Volver a la Agenda con la misma sede: re-entrada SWR, recarga los catálogos. */
+    const volverALaAgenda = async () => {
+      await facade.initialize();
+      await vi.advanceTimersByTimeAsync(0);
+    };
+
+    it('al volver, conserva el instructor elegido aunque cambie el orden de la lista', async () => {
+      supabaseSpy.setResult('instructors', [instructor(1, 'Juan'), instructor(2, 'Ana')]);
+      await facade.initialize();
+      facade.setInstructorFilter(2);
+
+      supabaseSpy.setResult('instructors', [
+        instructor(9, 'Luis'),
+        instructor(1, 'Juan'),
+        instructor(2, 'Ana'),
+      ]);
+      await volverALaAgenda();
+
+      expect(facade.instructors().map((i) => i.id)).toContain(9);
+      expect(facade.selectedInstructorId()).toBe(2);
+    });
+
+    it('si el instructor elegido ya no está en la lista, elige el primero (fix-010-i)', async () => {
+      supabaseSpy.setResult('instructors', [instructor(1, 'Juan'), instructor(2, 'Ana')]);
+      await facade.initialize();
+      facade.setInstructorFilter(2);
+
+      supabaseSpy.setResult('instructors', [instructor(1, 'Juan')]);
+      await volverALaAgenda();
+
+      expect(facade.selectedInstructorId()).toBe(1);
+    });
+
+    it('"Todos los instructores" (null) se mantiene al volver', async () => {
+      supabaseSpy.setResult('instructors', [instructor(1, 'Juan')]);
+      await facade.initialize();
+      facade.setInstructorFilter(null);
+
+      await volverALaAgenda();
+
+      expect(facade.selectedInstructorId()).toBeNull();
+    });
+
+    it('un evento con instructores y vehículos conocidos no vuelve a pedir los catálogos', async () => {
+      supabaseSpy.setResult('instructors', [instructor(1, 'Juan')]);
+      supabaseSpy.setResult('vehicles', [{ id: 3, license_plate: 'AB1234' }]);
+      supabaseSpy.setResult('v_class_b_schedule_availability', [bloqueDe(1)]);
+      await facade.initialize();
+      const consultasA = (tabla: string) =>
+        supabaseSpy.client.from.mock.calls.filter((c: string[]) => c[0] === tabla).length;
+      const antes = consultasA('instructors');
+
+      eventoRealtime()();
+      await vi.advanceTimersByTimeAsync(300);
+
+      expect(consultasA('instructors')).toBe(antes);
+    });
+  });
 });
