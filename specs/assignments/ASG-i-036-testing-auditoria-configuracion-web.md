@@ -1,7 +1,7 @@
 # Asignación ASG-i-036 — Testing: Auditoría y Configuración web
 
 > **status:** pendiente
-> **owner:** i
+> **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-09-29

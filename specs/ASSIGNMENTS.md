@@ -84,7 +84,7 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-i-029 | Testing: Contabilidad | `i` | fix | P0 | i | Integración · Alta · correr después de 028/031 |
-| ASG-i-036 | Testing: Auditoría y Configuración web | `i` | fix | P2 | i | Funcional · Baja |
+| ASG-i-036 | Testing: Auditoría y Configuración web | `m` | fix | P2 | i | Funcional · Baja |
 
 ### Tanda fixes del testing del piloto — 2026-09-30
 
