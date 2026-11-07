@@ -22,6 +22,7 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
   template: `
     <app-agenda-semanal
       [weekData]="facade.weekData()"
+      [weekLabel]="facade.weekLabel()"
       [filteredDays]="facade.filteredDays()"
       [timeRows]="facade.timeRows()"
       [isLoading]="facade.isLoading()"

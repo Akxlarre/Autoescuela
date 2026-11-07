@@ -3,11 +3,13 @@ import {
   AfterViewInit,
   ChangeDetectionStrategy,
   Component,
+  afterNextRender,
   computed,
   effect,
   untracked,
   ElementRef,
   inject,
+  Injector,
   input,
   output,
   signal,
@@ -29,6 +31,7 @@ import { todayIso } from '@core/utils/date.utils';
 import { withAllOption } from '@core/utils/filter-options.utils';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import {
+  agendaShowsLegend,
   initialMobileDayIndex,
   isDateBeyondLimit,
   isNextWeekBeyondLimit,
@@ -157,8 +160,8 @@ interface CellSummary {
             </button>
 
             <span class="agenda-week-label" aria-live="polite">
-              @if (weekData()?.weekLabel) {
-                {{ weekData()!.weekLabel }}
+              @if (headerWeekLabel()) {
+                {{ headerWeekLabel() }}
               } @else {
                 &nbsp;
               }
@@ -449,8 +452,11 @@ interface CellSummary {
               </div>
             }
           </div>
+        }
 
-          <!-- Leyenda -->
+        <!-- Leyenda. fix-241-b (P08): también durante el skeleton, para que el borde inferior de
+             la grilla no salte al llegar los datos. -->
+        @if (showLegend()) {
           <div class="agenda-legend flex items-center gap-4 px-4 py-2 border-t">
             <div class="legend-item legend-item--available">Disponible</div>
             <div class="legend-item legend-item--scheduled">Agendada</div>
@@ -1032,6 +1038,7 @@ interface CellSummary {
 })
 export class AgendaSemanalComponent implements AfterViewInit {
   private readonly gsap = inject(GsapAnimationsService);
+  private readonly injector = inject(Injector);
 
   // ── Inputs ──────────────────────────────────────────────────────────────────
 
@@ -1063,6 +1070,24 @@ export class AgendaSemanalComponent implements AfterViewInit {
   maxVisibleDateLabel = input<string | null>(null);
   /** Mensaje de error de carga (fix-189-b). Con valor, reemplaza la grilla por un aviso con "Reintentar". */
   error = input<string | null>(null);
+  /**
+   * Etiqueta de la semana pedida (fix-241-b, P08). Con valor, el encabezado la usa en vez de
+   * `weekData().weekLabel`, que sigue siendo la semana anterior mientras carga la nueva.
+   */
+  weekLabel = input<string | null>(null);
+
+  /** Etiqueta del encabezado: la semana pedida si el padre la da, si no la de los datos. */
+  readonly headerWeekLabel = computed(() => this.weekLabel() || this.weekData()?.weekLabel || '');
+
+  /** La leyenda acompaña al skeleton y a la grilla con datos (fix-241-b). */
+  readonly showLegend = computed(() =>
+    agendaShowsLegend({
+      isLoading: this.isLoading(),
+      error: this.error(),
+      hasWeekData: !!this.weekData(),
+      timeRowCount: this.timeRows().length,
+    }),
+  );
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
@@ -1245,13 +1270,15 @@ export class AgendaSemanalComponent implements AfterViewInit {
       }
       if (this.weekData() && !this._gridAnimated) {
         this._gridAnimated = true;
-        // Doble rAF para garantizar que @if haya re-renderizado el grid
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
+        // fix-241-b (P08): justo después de renderizar la grilla y antes de que el navegador la
+        // pinte. Con doble rAF se pintaba 1–2 frames al 100 % y la animación la bajaba a 0.
+        afterNextRender(
+          () => {
             const gridEl = this.calendarGridRef()?.nativeElement as HTMLElement | undefined;
             if (gridEl) this.gsap.animateSkeletonToContent(gridEl);
-          });
-        });
+          },
+          { injector: this.injector },
+        );
       }
     });
   }

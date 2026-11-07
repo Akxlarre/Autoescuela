@@ -15,7 +15,7 @@
 | Archivo | Exports |
 |---------|---------|
 | `src/app/core/utils/age.utils.ts` | `isInvalidDate`, `getAgeStatus`, `calcAge`, `isMinor` |
-| `src/app/core/utils/agenda-week.utils.ts` | `addDaysToIso`, `isDateBeyondLimit`, `isNextWeekBeyondLimit`, `initialMobileDayIndex`, `studentFichaUrl` |
+| `src/app/core/utils/agenda-week.utils.ts` | `addDaysToIso`, `isDateBeyondLimit`, `isNextWeekBeyondLimit`, `initialMobileDayIndex`, `formatWeekLabel` (etiqueta "9 nov – 13 nov" desde el lunes, fix-241-b), `agendaShowsLegend` (leyenda también durante la carga, fix-241-b), `studentFichaUrl` |
 | `src/app/core/utils/alert-snooze.utils.ts` | `ALERT_SNOOZE_MS`, `AlertSnooze`, `AlertSnoozeMap`, `SnoozableAlert`, `snoozeKey`, `snoozeAlert`, `pruneSnoozes`, `filterSnoozedAlerts`, `parseSnoozes` |
 | `src/app/core/utils/holiday-classes.utils.ts` | `HolidayClassRow`, `buildHolidayClassDetails` (filas de `v_class_b_sessions_on_holiday` → `AlertDetail[]` con ruta a la ficha del rol, spec 0056-b) |
 | `src/app/core/utils/alumno-profesional-status.utils.ts` | `SemaforoInfo`, `moduloPct`, `getSemaforo`, `getSemaforoBadgeVariant` |

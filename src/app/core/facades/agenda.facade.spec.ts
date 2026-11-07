@@ -4,7 +4,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from './auth.facade';
 import { BranchFacade } from './branch.facade';
 import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
-import { addDaysToIso } from '@core/utils/agenda-week.utils';
+import { addDaysToIso, formatWeekLabel } from '@core/utils/agenda-week.utils';
 import { addDaysIso, chileToday, mondayOfIso } from '@core/utils/chile-time.utils';
 
 /**
@@ -178,6 +178,17 @@ describe('AgendaFacade', () => {
       expect(limitedFacade.weekStart()).toBe(currentWeekStart);
       expect(limitedFacade.isLoading()).toBe(false);
     });
+  });
+
+  it('weekLabel cambia apenas se navega, sin esperar los datos (fix-241-b, P08)', () => {
+    const antes = facade.weekLabel();
+    expect(antes).toBe(formatWeekLabel(facade.weekStart()));
+
+    facade.goToNextWeek();
+
+    // La recarga sigue en curso: weekData es todavía la de la semana anterior (o null).
+    expect(facade.weekLabel()).toBe(formatWeekLabel(facade.weekStart()));
+    expect(facade.weekLabel()).not.toBe(antes);
   });
 
   it('setSelectedSlot should update selectedSlot signal', () => {
