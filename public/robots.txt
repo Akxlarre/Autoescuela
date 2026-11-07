@@ -1,0 +1,3 @@
+# La app es software interno: no se indexa (hotfix-174-b). La entrada pública vive en otro sitio.
+User-agent: *
+Disallow: /
