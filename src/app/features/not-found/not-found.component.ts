@@ -22,7 +22,7 @@ import { RouterLink } from '@angular/router';
         <h1 class="my-4 mb-2 font-display text-2xl font-bold text-text-primary">
           Página no encontrada
         </h1>
-        <p class="m-0 mb-6 text-base text-text-muted">La ruta que buscas no existe o fue movida.</p>
+        <p class="m-0 mb-6 text-text-muted">La ruta que buscas no existe o fue movida.</p>
         <a
           routerLink="/app"
           data-llm-nav="/app"

@@ -22,7 +22,7 @@ const CDN_URL =
   template: `
     <div class="flex flex-col gap-6 animate-fade-in">
       <div [formGroup]="brandGroup()" class="flex flex-col gap-6">
-        <h3 class="text-base font-bold text-text-primary border-b pb-2 mb-2 border-border-subtle">
+        <h3 class="font-bold text-text-primary border-b pb-2 mb-2 border-border-subtle">
           Identidad y Metadatos SEO
         </h3>
         <div class="bento-grid bento-grid--forms bento-grid--forms">
@@ -87,7 +87,7 @@ const CDN_URL =
 
         <!-- Recursos Gráficos del Sitio -->
         <h3
-          class="text-base font-bold text-text-primary border-b pb-2 mt-4 mb-2 border-border-subtle"
+          class="font-bold text-text-primary border-b pb-2 mt-4 mb-2 border-border-subtle"
         >
           Recursos Gráficos del Sitio (Logo y SEO)
         </h3>
@@ -160,7 +160,7 @@ const CDN_URL =
 
       <div [formGroup]="socialGroup()" class="flex flex-col gap-6">
         <h3
-          class="text-base font-bold text-text-primary border-b pb-2 mt-4 mb-2 border-border-subtle"
+          class="font-bold text-text-primary border-b pb-2 mt-4 mb-2 border-border-subtle"
         >
           Redes Sociales
         </h3>

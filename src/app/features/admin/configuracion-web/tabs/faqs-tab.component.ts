@@ -18,7 +18,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
     <div class="flex flex-col gap-6 animate-fade-in">
       <div class="flex items-center justify-between border-b pb-2 mb-2 border-border-subtle">
         <div>
-          <h3 class="text-base font-bold text-text-primary">Preguntas Frecuentes (FAQs)</h3>
+          <h3 class="font-bold text-text-primary">Preguntas Frecuentes (FAQs)</h3>
           <span class="text-xs text-text-muted"
             >Estas preguntas se mostrarán en la sección FAQ de la landing page.</span
           >

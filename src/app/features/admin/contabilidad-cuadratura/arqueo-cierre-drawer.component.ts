@@ -212,7 +212,7 @@ const MONEDAS = [
             <div class="flex items-center justify-between">
               <span class="micro-label">Total Físico Arqueado</span>
               <span
-                class="text-base font-black tabular-nums"
+                class="font-black tabular-nums"
                 [style.color]="
                   facade.totalArqueo() > 0 ? 'var(--text-primary)' : 'var(--text-muted)'
                 "

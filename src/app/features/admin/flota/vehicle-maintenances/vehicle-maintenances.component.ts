@@ -145,7 +145,7 @@ import { RouteSheetDrawerComponent } from '../route-sheet-drawer/route-sheet-dra
         <div
           class="shrink-0 px-6 py-4 border-b border-border-subtle flex flex-wrap items-center justify-between gap-2"
         >
-          <h2 class="text-base font-bold text-text-primary">Historial Cronológico</h2>
+          <h2 class="font-bold text-text-primary">Historial Cronológico</h2>
           @if (!facade.isLoading()) {
             <span class="micro-label"> {{ facade.maintenances().length }} registros </span>
           }

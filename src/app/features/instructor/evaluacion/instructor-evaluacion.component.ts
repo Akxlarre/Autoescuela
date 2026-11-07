@@ -160,7 +160,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                       id="obs"
                       formControlName="observations"
                       rows="4"
-                      class="form-control w-full resize-none rounded-2xl p-5 bg-subtle border-border-default/60 focus:bg-surface focus:border-brand/40 focus:ring-4 focus:ring-brand/10 transition-all text-sm sm:text-base shadow-inner placeholder:text-text-muted/60 hover:border-border-strong cursor-text"
+                      class="form-control w-full resize-none rounded-2xl p-5 bg-subtle border-border-default/60 focus:bg-surface focus:border-brand/40 focus:ring-4 focus:ring-brand/10 transition-all text-sm shadow-inner placeholder:text-text-muted/60 hover:border-border-strong cursor-text"
                       placeholder="Ej: Necesita repasar marcha atrás..."
                       data-llm-description="textarea for evaluation observations and tasks"
                     ></textarea>

@@ -16,7 +16,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   imports: [ReactiveFormsModule, IconComponent],
   template: `
     <div class="flex flex-col gap-6 animate-fade-in">
-      <h3 class="text-base font-bold text-text-primary border-b pb-2 mb-2 border-border-subtle">
+      <h3 class="font-bold text-text-primary border-b pb-2 mb-2 border-border-subtle">
         Datos de Sucursal y Geolocalización SEO
       </h3>
 
@@ -118,7 +118,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       </div>
 
       <div class="flex items-center justify-between border-b pb-2 mt-4 mb-2 border-border-subtle">
-        <h3 class="text-base font-bold text-text-primary">Horarios de Atención</h3>
+        <h3 class="font-bold text-text-primary">Horarios de Atención</h3>
         <button
           type="button"
           class="btn-primary py-1.5 px-3 text-xs cursor-pointer flex items-center gap-1"

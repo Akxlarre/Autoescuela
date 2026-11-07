@@ -239,7 +239,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
                   </div>
 
                   <h5
-                    class="text-base font-black mb-1 truncate"
+                    class="font-black mb-1 truncate"
                     [style.color]="getStatusVisual(block.status).textColor"
                   >
                     {{ block.enrollmentNumber ? '#' + block.enrollmentNumber : '—' }}

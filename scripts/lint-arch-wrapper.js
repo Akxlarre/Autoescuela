@@ -17,6 +17,7 @@ const FAILURE_PATH = path.join(TEMP_DIR, 'arch-last-failure.json');
 const LESSONS_PATH = path.join(TEMP_DIR, 'LESSONS_LEARNED.md');
 const ARCHITECT_PATH = path.join(PROJECT_ROOT, 'scripts', 'architect.js');
 const DATE_DISCIPLINE_PATH = path.join(PROJECT_ROOT, 'scripts', 'check-date-discipline.mjs');
+const THEME_NAME_COLLISIONS_PATH = path.join(PROJECT_ROOT, 'scripts', 'check-theme-name-collisions.mjs');
 
 function ensureTempDir() {
   fs.mkdirSync(TEMP_DIR, { recursive: true });
@@ -82,6 +83,13 @@ async function main() {
   result.stdout = `${result.stdout}${dates.stdout}`;
   result.stderr = `${result.stderr}${dates.stderr}`;
   result.code = result.code === 0 ? dates.code : result.code;
+
+  // ARCH-29 (color del @theme con nombre de tamaño) también corre como paso propio: es un chequeo
+  // contra src/tailwind.css más un barrido de src/app, y architect.js está protegido.
+  const themeNames = await runScript(THEME_NAME_COLLISIONS_PATH);
+  result.stdout = `${result.stdout}${themeNames.stdout}`;
+  result.stderr = `${result.stderr}${themeNames.stderr}`;
+  result.code = result.code === 0 ? themeNames.code : result.code;
 
   // Reimprimir salidas del linter (conserva UX)
   if (result.stdout) process.stdout.write(result.stdout);

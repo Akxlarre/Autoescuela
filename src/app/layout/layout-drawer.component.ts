@@ -109,7 +109,7 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
               <app-icon [name]="icon()!" [size]="18" />
             </div>
           }
-          <h2 class="m-0 text-base font-semibold truncate" style="color: var(--text-primary);">
+          <h2 class="m-0 font-semibold truncate" style="color: var(--text-primary);">
             {{ title() }}
           </h2>
           @if (badge()) {

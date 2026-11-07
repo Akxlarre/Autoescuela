@@ -207,7 +207,7 @@ type FichaTab = 'datos' | 'ficha-tecnica';
                     <div class="card" appCardHover>
                       <div class="flex items-start justify-between mb-4">
                         <div class="min-w-0 flex-1 mr-3">
-                          <h3 class="text-base font-semibold" [style.color]="'var(--text-primary)'">
+                          <h3 class="font-semibold" [style.color]="'var(--text-primary)'">
                             Clases Prácticas
                           </h3>
                           <p class="text-xs mt-0.5" [style.color]="'var(--text-muted)'">
@@ -262,7 +262,7 @@ type FichaTab = 'datos' | 'ficha-tecnica';
                   class="shrink-0 px-4 md:px-6 py-4"
                   style="border-bottom: 1px solid var(--border-subtle)"
                 >
-                  <h3 class="text-base md:text-lg font-bold" [style.color]="'var(--text-primary)'">
+                  <h3 class="md:text-lg font-bold" [style.color]="'var(--text-primary)'">
                     Ficha Técnica — Clases Prácticas
                   </h3>
                   <p class="text-sm mt-0.5" [style.color]="'var(--text-muted)'">
@@ -434,7 +434,7 @@ type FichaTab = 'datos' | 'ficha-tecnica';
                           <div class="flex items-center gap-2 shrink-0">
                             @if (row.grade) {
                               <div
-                                class="flex items-center gap-1 font-bold text-base"
+                                class="flex items-center gap-1 font-bold"
                                 [style.color]="
                                   row.grade >= 4 ? 'var(--state-success)' : 'var(--state-error)'
                                 "

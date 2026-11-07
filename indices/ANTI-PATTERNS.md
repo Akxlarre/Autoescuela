@@ -139,3 +139,24 @@
   `flex` roto porque `.show-on-squeeze{display:block!important}` ganaba sobre `.flex`.
   Mismo síntoma raíz — spacing utility + `display` real distinto del asumido — con
   mecanismos de rotura opuestos.
+
+## AP-018 — Color del `@theme` con el nombre de un tamaño: `text-base` (evitar)
+
+- **NO** uses `text-base` (ni `sm:`/`md:`/`hover:text-base`, `!text-base`, `[class.text-base]`).
+  Acá no fija 16 px: el `@theme` define `--color-base` (fondo de página) y Tailwind, ante dos
+  claves `base` (color y tamaño), genera solo `color: var(--color-base)`. El texto toma el color
+  del fondo y queda casi invisible si ninguna otra clase de color le gana.
+- **NO** agregues al `@theme` un `--color-X` cuyo `X` ya sea un tamaño de letra (`xs`, `sm`, `lg`,
+  `xl`, `2xl`…, o los del proyecto: `2xs`, `compact`) o de sombra (`2xs`…`2xl`, `md`): la clase
+  `text-X` / `shadow-X` queda ambigua y una de las dos cosas desaparece sin aviso.
+- **Sí** sacá la clase: el texto ya hereda su tamaño. Para color, `text-text-primary` /
+  `text-text-secondary` / `text-text-muted`; para tamaño, la escala o `.item-title` / `.micro-label`.
+- **Por qué no se renombró `--color-base`:** `bg-base` tiene ~97 usos, y devolverle los 16 px a
+  `text-base` cambiaba de tamaño a los textos que hoy la llevan sin efecto. La colisión aceptada
+  vive en `ACCEPTED_COLLISIONS` de `scripts/lib/theme-name-collisions.js`, con su motivo.
+- **Por qué se detectó tarde:** la clase no falla ni avisa, y casi siempre otra clase de color la
+  tapa por orden de cascada; solo se ve cuando el elemento no trae color propio. Criterio general:
+  **cuando dos namespaces del tema comparten un nombre, el síntoma es intermitente; se resuelve
+  prohibiendo la clase ambigua, no revisando cada uso a ojo.**
+- Guardrail: **ARCH-29** — error duro, sin ratchet. Corre como paso propio de `npm run lint:arch`
+  (`scripts/check-theme-name-collisions.mjs`).
