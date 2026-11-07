@@ -5,6 +5,7 @@ import { CoursesFacade, type CourseCatalogItem } from '@core/facades/courses.fac
 import type { CourseConfig, SiteData, HeroConfig } from '@core/models/dto/website-config.model';
 import type { ResolvedCourse } from '@core/models/ui/resolved-course.model';
 import { branchIdToTheme } from '@core/utils/sede-theme.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 
 const CLP_FORMATTER = new Intl.NumberFormat('es-CL', {
   style: 'currency',
@@ -64,6 +65,7 @@ export class WebsiteConfigFacade {
   private readonly _error = signal<string | null>(null);
   private readonly _initialized = signal<boolean>(false);
   private _lastBranchId: number | null = null;
+  private readonly configGuard = createRequestGuard();
 
   // Signals expuestos de forma segura (Readonly)
   readonly config = this._config.asReadonly();
@@ -111,6 +113,8 @@ export class WebsiteConfigFacade {
 
     this._error.set(null);
     this._lastBranchId = branchId;
+    // fix-495-m: con un cambio rápido de sede, la respuesta de la anterior se descarta.
+    const requestToken = this.configGuard.next();
 
     try {
       const { data, error } = await this.supabase.client
@@ -119,6 +123,7 @@ export class WebsiteConfigFacade {
         .eq('branch_id', branchId)
         .maybeSingle();
 
+      if (!this.configGuard.isCurrent(requestToken)) return;
       if (error) {
         throw error;
       }
@@ -131,11 +136,12 @@ export class WebsiteConfigFacade {
       }
       this._initialized.set(true);
     } catch (err: any) {
+      if (!this.configGuard.isCurrent(requestToken)) return;
       const errMsg = err?.message || 'Error desconocido';
       this._error.set(errMsg);
       this.toast.error('Error al cargar configuración', errMsg);
     } finally {
-      this._isLoading.set(false);
+      if (this.configGuard.isCurrent(requestToken)) this._isLoading.set(false);
     }
   }
 

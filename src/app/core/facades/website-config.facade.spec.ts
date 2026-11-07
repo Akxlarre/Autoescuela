@@ -160,6 +160,30 @@ describe('WebsiteConfigFacade', () => {
       expect(facade.config()?.brand.theme).toBe(theme);
     });
 
+    it('fix-495-m: una respuesta vieja (sede anterior) no pisa la de la sede vigente', async () => {
+      let resolveA!: (v: unknown) => void;
+      const respA = new Promise((r) => (resolveA = r));
+      const configB = { brand: { branchId: 2, name: 'B' }, courses: [] };
+      const maybeSingle = vi
+        .fn()
+        .mockReturnValueOnce(respA)
+        .mockResolvedValueOnce({ data: { config: configB }, error: null });
+      const eqSpy = vi.fn().mockReturnValue({ maybeSingle });
+      const selectSpy = vi.fn().mockReturnValue({ eq: eqSpy });
+      supabaseSpy.client = { from: vi.fn().mockReturnValue({ select: selectSpy }) };
+
+      const pA = facade.loadConfig(1);
+      await facade.loadConfig(2);
+      resolveA({
+        data: { config: { brand: { branchId: 1, name: 'A' }, courses: [] } },
+        error: null,
+      });
+      await pA;
+
+      expect(facade.config()?.brand.name).toBe('B');
+      expect(facade.isLoading()).toBe(false);
+    });
+
     it('error de Supabase → toast.error y signal error()', async () => {
       const maybeSingleSpy = vi.fn().mockResolvedValue({
         data: null,

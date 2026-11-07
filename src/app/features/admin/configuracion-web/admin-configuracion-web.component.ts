@@ -7,6 +7,7 @@ import {
   signal,
   computed,
   effect,
+  untracked,
   viewChild,
 } from '@angular/core';
 import {
@@ -39,6 +40,9 @@ import { FaqsTabComponent } from './tabs/faqs-tab.component';
 import { TabsComponent } from '@shared/components/tabs/tabs.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { branchIdToTheme } from '@core/utils/sede-theme.utils';
+import { NO_BRANCH_SCOPE, resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import type { HasUnsavedWebConfig } from '@core/guards/configuracion-web-unsaved.guard';
 import {
   configTabsWithErrors,
   courseCardControls,
@@ -92,7 +96,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
         <!-- Header with branch selection for Admin and Tabs Switcher -->
         <div class="flex flex-col border-b border-border-default bg-base z-10">
           <!-- Sede activa (solo secretaria — admin usa el selector global del topbar) -->
-          @if (!isAdmin()) {
+          @if (!isAdmin() && !noBranchSelected()) {
             <div class="flex items-center gap-2 px-4 py-2.5 border-b border-border-default">
               <app-icon name="building-2" [size]="14" class="text-text-muted" />
               <span class="text-xs text-text-muted">Sede:</span>
@@ -280,7 +284,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
     `,
   ],
 })
-export class AdminConfiguracionWebComponent implements AfterViewInit {
+export class AdminConfiguracionWebComponent implements AfterViewInit, HasUnsavedWebConfig {
   protected readonly facade = inject(WebsiteConfigFacade);
   protected readonly coursesFacade = inject(CoursesFacade);
   protected readonly authFacade = inject(AuthFacade);
@@ -288,6 +292,7 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
   private readonly gsap = inject(GsapAnimationsService);
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
@@ -331,14 +336,27 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
   protected readonly effectiveBranchId = computed<number | null>(() => {
     const user = this.authFacade.currentUser();
     if (!user) return null;
-    if (user.role === 'admin') return this.branchFacade.selectedBranchId();
-    return user.branchId ?? null;
+    // fix-495-m: la regla única de sede. La secretaria con acceso a ambas sedes sigue su selector
+    // (decisión D4); antes quedaba fija en su sede propia.
+    const scope = resolveBranchScope(
+      user.role,
+      user.branchId,
+      this.branchFacade.selectedBranchId(),
+      user.canAccessBothBranches,
+    );
+    return scope === NO_BRANCH_SCOPE ? null : scope;
   });
 
-  /** true cuando el admin no ha seleccionado una sede específica en el topbar. */
-  protected readonly noBranchSelected = computed(
-    () => this.isAdmin() && this.effectiveBranchId() === null,
-  );
+  /** true cuando no hay una sede específica elegida (admin o secretaria multi-sede en "Todas"). */
+  protected readonly noBranchSelected = computed(() => this.effectiveBranchId() === null);
+
+  /** Sede cuya configuración está cargada en el formulario (fix-495-m). */
+  private loadedBranchId: number | null = null;
+
+  /** Cambios sin publicar en el formulario (para el guard de salida, fix-495-m). */
+  hasUnsavedChanges(): boolean {
+    return this.form.dirty && !this.facade.isSaving();
+  }
 
   /** Etiqueta dinámica de la sede activa (usa el catálogo de BranchFacade). */
   protected readonly branchLabel = computed(() => {
@@ -540,17 +558,16 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
     // 1. Reacciona al cambio de sede global (topbar) o al usuario autenticado
     effect(() => {
       const branchId = this.effectiveBranchId();
-      if (!branchId) return; // admin sin sede seleccionada → empty state, no cargar
-      void this.facade.loadConfig(branchId);
-      void this.coursesFacade.loadAvailableCourses(branchId);
+      untracked(() => void this.onBranchChange(branchId));
     });
 
     // 2. Reacting to Facade load to hydrate form
     effect(() => {
       const data = this.facade.config();
-      if (data) {
-        this.initForm(data);
-      }
+      // fix-495-m: solo la config dispara el llenado. initForm lee effectiveBranchId(); sin
+      // untracked, cambiar de sede repintaba el formulario y borraba lo escrito aunque el usuario
+      // eligiera "Quedarse".
+      if (data) untracked(() => this.initForm(data));
     });
 
     // 4. GSAP fade-in on tab change (replaces @keyframes fadeIn)
@@ -733,6 +750,35 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
     this.form.markAsPristine();
     // fix-492-m: el patch va con emitEvent: false, así que statusChanges no avisa.
     this.formStatus.set(this.form.status);
+  }
+
+  /**
+   * fix-495-m: cambio de sede. Con cambios sin publicar pide confirmación; si el usuario se queda,
+   * vuelve el selector a la sede anterior sin recargar (lo escrito sigue ahí).
+   */
+  private async onBranchChange(branchId: number | null): Promise<void> {
+    const prev = this.loadedBranchId;
+    if (branchId === prev) return;
+
+    if (prev !== null && this.form.dirty) {
+      const discard = await this.confirmModal.confirm({
+        title: '¿Cambiar de sede sin publicar?',
+        message:
+          'Hay cambios en la configuración web de esta sede que no se han publicado. Si cambias de sede, se pierden.',
+        severity: 'warn',
+        confirmLabel: 'Cambiar sin publicar',
+        cancelLabel: 'Quedarse',
+      });
+      if (!discard) {
+        this.branchFacade.selectBranch(prev);
+        return;
+      }
+    }
+
+    this.loadedBranchId = branchId;
+    if (branchId === null) return; // sin sede elegida → estado vacío, no cargar
+    void this.facade.loadConfig(branchId);
+    void this.coursesFacade.loadAvailableCourses(branchId);
   }
 
   // Handle Form Submission
