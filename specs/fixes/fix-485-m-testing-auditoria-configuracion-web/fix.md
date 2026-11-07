@@ -1,7 +1,8 @@
 # Fix: Testing — Auditoría y Configuración web en el piloto
 > id: fix-485-m-testing-auditoria-configuracion-web
 > refs: ASG-i-036
-> status: open
+> status: done
+> closed: 2026-11-07
 > created: 2026-11-07
 
 > **Track de testing, no de corrección.** Acá se registra el resultado de cada caso (✅ / ❌ +
@@ -62,11 +63,12 @@ Se verifican como regresión, no como bug nuevo:
 - [x] Fixes derivados 486–489, 491–495 y hotfixes 168–170 cerrados y commiteados
 - [x] `fix-490-m`: migración `20261107120000` aplicada y verificada
 - [x] Deploy de `generate-audit-report` v21 (2026-11-07) y exportación verificada: sin columna IP; "Instructores" trae solo Instructores (13); Excel sin filtros 10.000 de 78.503 con aviso en el archivo y toast "Reporte parcial"; PDF sin filtros 2.000 filas en 3 s con aviso; secretarias sede 2 por sede de la acción (249)
-- [ ] Auditoría: cobertura acción → registro (C01–C24), atribución D04–D06, exportar desde la UI (G)
-- [ ] Landing pública (Q): requiere `webs/` corriendo contra la misma BD (S20, Q04)
-- [ ] Política de privacidad (V) y casos de formato de J/K/N
-- [ ] Decisiones pendientes de §5: Q04 (precio promo vs matrícula), V09 (enlace a la política), J03/J04/K10/N03/N04 (formatos), J08, L15, N07/V07, secretaria edita marca o solo precios
-- [ ] `/fix-close`
+- [x] Auditoría: cobertura acción → registro (C01–C24), atribución D04–D06, exportar desde la UI (G)
+- [x] Landing pública (Q), con `webs/` compilada y servida contra la BD de dev
+- [x] Política de privacidad (V) y formatos de J/K/N
+- [x] Decisiones de §5 resueltas (ver Decisiones)
+- [x] Fixes derivados 496–502 y hotfixes 171–175 cerrados y commiteados; migración de fix-496-m aplicada y 4 funciones de fix-497-m desplegadas (verificadas)
+- [x] `/fix-close`
 
 ## Resultados
 
@@ -136,6 +138,40 @@ Se verifican como regresión, no como bug nuevo:
 | R05 / R06 Storage | ✅ | 403 RLS |
 | T01 / T02 / T03 | ✅ | sin scroll de documento ni horizontal a 375 / 768 / 1440 |
 
+
+### Segunda sesión (2026-11-07, tarde)
+
+| Caso | Res. | Nota |
+|---|---|---|
+| C01–C12, C20–C23 cobertura | ✅ | último registro de cada tabla revisado por API; detalles legibles salvo lo de `fix-496-m` |
+| C06 tipo de documento | ❌→✅ | "autorizacion_notarial de …" sin traducir (`fix-496-m`) |
+| C11 emitir certificado | ❌→✅ | quedaba como "Sistema" (`fix-497-m`) |
+| C13–C16 precios, caja, gastos, descuentos | ✅ | acciones reales por API; columnas sin traducir y montos sin miles en el diff (`fix-496-m`) |
+| C22 pre-inscripción web | ❌→✅ | "Clase  - Nombre" sin curso (`fix-496-m`) |
+| C23 guardar sin cambios | ✅ | 0 registros |
+| D02 Profesional por sede | ❌→✅ | 5.700 registros de Profesional sin sede (`fix-496-m`, migración aplicada, 0 sin sede) |
+| D04 multi-sede actúa en la sede 2 | ✅ | caja de la sede 2 por la secretaria multi-sede → sede 2 |
+| D05 admin edita un pago ajeno | ✅ | a nombre del admin |
+| D06 secretaria desactivada | ✅ | sus registros conservan el nombre |
+| G01 / G07 exportar desde la UI | ✅ | `Auditoria_20261107.xlsx`, botón deshabilitado sin cambiar de ancho, aviso de reporte parcial |
+| G09 menú: clic afuera | ❌→✅ | no se cerraba con clic en el encabezado ni el sidebar (`hotfix-171-m`, 6 pantallas) |
+| Q01 / L06 precio en la landing | ✅ | luego se quitó el precio promocional por decisión (`fix-501-m`) |
+| Q02 card nueva sin recompilar | ❌→✅ | `fix-498-m` |
+| Q02 curso de Refuerzo | ❌→✅ | el panel ofrecía cursos que la web no muestra (`fix-499-m`) |
+| Q06 / Q07 tildes y HTML | ✅ | se muestran como texto, sin `alert` |
+| Q estilo de "Qué incluye" | ❌→✅ | listas hidratadas sin estilo (`hotfix-173-m`) |
+| R08 `javascript:` en el mapa | ❌→✅ | **se ejecutaba** en la landing; redes igual al clic (`fix-500-m`) |
+| V01–V03, V05, V07, V10 | ✅ | |
+| V04 slug con mayúsculas | ❌→✅ | `hotfix-172-m` |
+| V08 país de alojamiento | ⚠️ | sigue "fuera de Chile" (bloqueante legal ya reportado por el código, fuera de este track) |
+| V09 enlace desde la landing | ❌→✅ | `hotfix-174-m` |
+| J03/J04/K10/N03/N04 formatos | ❌→✅ | `fix-500-m` |
+| J08 / L15 | ❌→✅ | `hotfix-175-m` |
+
+Datos: la web de la sede 2 no tiene cards de cursos desde agosto (su landing cae al contenido
+estático). La landing de `webs/` en el puerto 4321 corría sin `PUBLIC_SUPABASE_*`; las pruebas se
+hicieron con otra instancia (4322) y con el sitio compilado (`astro build` + `astro preview`).
+
 ### Decisiones
 
 Matías, 2026-11-07:
@@ -152,6 +188,12 @@ Matías, 2026-11-07:
 Resueltas sin consultar (opción obvia): avisar antes de perder cambios sin publicar al cambiar
 de sede (I04); el precio promocional parte vacío y exige un número ≥ 0 (L09); la promo activa
 exige título y descripción (M03).
+
+Matías, segunda sesión: **Q04** el precio de la web sale siempre de la Configuración de precios (se
+quita el precio promocional); **N07/V07** el contacto de la web se edita libre, con aviso si no
+coincide con la política; **secretaria** edita toda la web de su sede, como hoy. Sin consultar:
+V09 (enlazar la política desde la landing), formatos de URL/WhatsApp/coordenadas, confirmar al
+eliminar una card (L15) y aclarar que una subida se ve al publicar (J08).
 
 ### Bugs derivados
 
@@ -170,6 +212,18 @@ exige título y descripción (M03).
 | Cambio de sede pierde lo editado y puede mezclar sedes; secretaria multi-sede fija (S19, I04, P10, D4) | `fix-495-m` | ✅ |
 | Pestañas partidas en dos líneas en vez de abreviarse (N7) | `hotfix-170-m` | ✅ |
 | Detalle de config web ilegible, montos sin miles, caja y precios sin auditar (S9, N6, D1) | `fix-490-m` | ✅ |
+| Profesional sin sede, pre-inscripción sin curso, "id=7", tipos y columnas sin traducir (C06, C13–C16, C22, D02) | `fix-496-m` | ✅ (aplicada, verificada) |
+| Certificados, libro de clases y licencias como "Sistema" (C11) | `fix-497-m` | ✅ (desplegadas, verificada) |
+| Menú Exportar no se cierra con clic en encabezado/sidebar (G09) | `hotfix-171-m` | ✅ |
+| Política de privacidad con mayúsculas en el enlace (V04) | `hotfix-172-m` | ✅ |
+| Landing compilada no muestra cards nuevas (S20, Q02) | `fix-498-m` | ✅ |
+| Listas hidratadas de la landing sin estilo | `hotfix-173-m` | ✅ |
+| Panel ofrece Refuerzo/Convalidación, que la web no muestra | `fix-499-m` | ✅ |
+| `javascript:` en mapa y redes se ejecuta en la landing; formatos sin validar (R08, J03, J04, K10, N03, N04) | `fix-500-m` | ✅ |
+| Precio promocional de la web distinto del que cobra la matrícula (Q04) | `fix-501-m` | ✅ |
+| Landing sin enlace a la política (V09) | `hotfix-174-m` | ✅ |
+| Contacto de la web distinto de la política sin aviso (N07, V07) | `fix-502-m` | ✅ |
+| Eliminar card sin confirmar; aviso de subida parece publicado (L15, J08) | `hotfix-175-m` | ✅ |
 
 ## ACs Afectados
 
