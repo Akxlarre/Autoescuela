@@ -147,6 +147,17 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           }
         }
 
+        // hotfix-173-m: los estilos de cada sección son scoped de Astro y solo aplican a
+        // elementos con su atributo data-astro-cid-*. Lo que la hidratación crea a mano lo
+        // copia del contenedor para no quedar sin estilo.
+        function adoptScope(container, node) {
+          const attrs = Array.from(container.attributes).filter(a => a.name.startsWith('data-astro-cid-'));
+          [node, ...node.querySelectorAll('*')].forEach(el => {
+            attrs.forEach(a => el.setAttribute(a.name, a.value));
+          });
+          return node;
+        }
+
         const formatter = new Intl.NumberFormat('es-CL', {
           style: 'currency',
           currency: 'CLP',
@@ -683,7 +694,7 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
                   const incText = document.createElement('span');
                   incText.textContent = inc;
                   li.appendChild(incText);
-                  featuresList.appendChild(li);
+                  featuresList.appendChild(adoptScope(featuresList, li));
                 });
               }
 
@@ -944,7 +955,7 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
                     
                     li.appendChild(labelSpan);
                     li.appendChild(valueSpan);
-                    hoursContainer.appendChild(li);
+                    hoursContainer.appendChild(adoptScope(hoursContainer, li));
                   }
                 });
               }
@@ -997,19 +1008,19 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
                 const a = document.createElement('a');
                 a.href = config.social.facebook; a.target = '_blank'; a.rel = 'noopener noreferrer';
                 a.className = 'social-item'; a.setAttribute('aria-label', 'Facebook'); a.textContent = 'Facebook';
-                socialContainer.appendChild(a);
+                socialContainer.appendChild(adoptScope(socialContainer, a));
               }
               if (config.social.instagram) {
                 const a = document.createElement('a');
                 a.href = config.social.instagram; a.target = '_blank'; a.rel = 'noopener noreferrer';
                 a.className = 'social-item'; a.setAttribute('aria-label', 'Instagram'); a.textContent = 'Instagram';
-                socialContainer.appendChild(a);
+                socialContainer.appendChild(adoptScope(socialContainer, a));
               }
               if (config.social.tiktok) {
                 const a = document.createElement('a');
                 a.href = config.social.tiktok; a.target = '_blank'; a.rel = 'noopener noreferrer';
                 a.className = 'social-item'; a.setAttribute('aria-label', 'TikTok'); a.textContent = 'TikTok';
-                socialContainer.appendChild(a);
+                socialContainer.appendChild(adoptScope(socialContainer, a));
               }
             }
           } catch(e) { console.error('[Hydration §9 Social] ❌ Error:', e); }
