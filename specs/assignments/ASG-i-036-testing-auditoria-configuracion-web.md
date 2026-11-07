@@ -1,14 +1,14 @@
 # Asignación ASG-i-036 — Testing: Auditoría y Configuración web
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-09-29
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-11-07
+> **resulting_track:** fix-485-m-testing-auditoria-configuracion-web
 
 ---
 
