@@ -144,7 +144,8 @@
 | `src/app/core/utils/sparkline.utils.ts` | `getSparklinePoints` |
 | `src/app/core/utils/student-home.ts` | `computeOverallProgress`, `computeSemaphore`, `computeAverageGrade`, `computeCertificateBlockingReason`, `deriveCertificateState` |
 | `src/app/core/utils/student-name.util.ts` | `StudentNameParts`, `buildStudentDisplayName`, `sortByPaternalLastNameAsc` |
-| `src/app/core/utils/subnav-tier.utils.ts` | `SubnavTier`, `pickSubnavTier`, `canUseIconTier` |
+| `src/app/core/utils/subnav-tier.utils.ts` | `SubnavTier`, `pickSubnavTier`, `canUseIconTier`, `fitsEqualColumns` (hotfix-170-m: con pestañas `flex-1` manda la más ancha × n, no el total) |
+| `src/app/core/utils/website-config.utils.ts` | Configuración web (fix-491/492/493-m): `whyUsToPublish`/`DEFAULT_WHY_US` (publicar conserva "Por qué elegirnos"), `configTabsWithErrors` (pestañas con campos inválidos), `courseCardControls` (controles de una card de curso, con `overrideEnabled`), `courseOverrideValidator`, `promoTextValidator` |
 | `src/app/core/utils/table-sort.utils.ts` | `SortDirection`, `TableSort`, `SortKey`, `textSortKey`, `dateSortKey`, `rutSortKey`, `sortRows`, `nextSort`, `toggleSortDirection`, `ariaSortOf`, `sortIconOf` |
 | `src/app/core/utils/task.utils.ts` | `canSendTo`, `isOverdue`, `dueDateToInstant`, `taskBranchScopeFilter`, `sentNonObservations`, `TaskEditChanges`, `taskEditPayload`, `canEditTask`, `canDeleteTask`, `isTaskOpen`, `canChangeStatus`, `formatTaskAge`, `mapTaskDtoToRow` |
 | `src/app/core/utils/theory-cycle.ts` | `cycleStartMonday`, `cycleEnd`, `cycleClassDates`, `formatCycleLabel` |
