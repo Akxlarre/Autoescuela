@@ -32,6 +32,7 @@ import { FaqsTabComponent } from './tabs/faqs-tab.component';
 import { TabsComponent } from '@shared/components/tabs/tabs.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { branchIdToTheme } from '@core/utils/sede-theme.utils';
+import { whyUsToPublish } from '@core/utils/website-config.utils';
 
 type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
@@ -763,42 +764,8 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
               .filter(Boolean)
           : [],
       })),
-      whyUs: [
-        {
-          icon: 'shield-check',
-          title: 'Seguridad Primero',
-          description: 'Pedaleras de doble comando homologadas para tu total seguridad.',
-        },
-        {
-          icon: 'target',
-          title: 'Alta Aprobación',
-          description:
-            'Métodos prácticos diseñados para aprobar a la primera en la Dirección de Tránsito de Chillán.',
-        },
-        {
-          icon: 'map-pin',
-          title: 'Cerca del Examen',
-          description:
-            'Nuestras clases de conducción cubren los recorridos y calles de examen habituales.',
-        },
-        {
-          icon: 'calendar',
-          title: 'Horarios Flexibles',
-          description:
-            'Programamos tus horas prácticas de lunes a sábado en bloques que se acomodan a ti.',
-        },
-        {
-          icon: 'car',
-          title: 'Flota Moderna',
-          description:
-            'Vehículos nuevos y confortables, garantizando un aprendizaje ameno y seguro.',
-        },
-        {
-          icon: 'credit-card',
-          title: 'Facilidades de Pago',
-          description: 'Paga con tarjeta de crédito, débito o transferencia electrónica.',
-        },
-      ],
+      // fix-491-m: se publica lo que la sede ya tiene; antes se pisaba con textos fijos.
+      whyUs: whyUsToPublish(this.facade.config()?.whyUs),
       faqs: raw.faqs.map((f: any) => ({
         question: f.question!,
         answer: f.answer!,
