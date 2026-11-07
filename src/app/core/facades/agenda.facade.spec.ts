@@ -127,27 +127,49 @@ describe('AgendaFacade', () => {
   });
 
   it('hotfix-077-b: con sede elegida, muestra la patente de un vehículo de la otra sede', async () => {
-    branchFacadeSpy.selectedBranchId.mockReturnValue(1);
-    supabaseSpy.setResult('vehicles', [{ id: 36, license_plate: 'ZZ4103' }]);
-    supabaseSpy.setResult('instructors', [
-      { id: 5, license_expiry: null, users: { first_names: 'Ana', paternal_last_name: 'Soto' } },
-    ]);
-    supabaseSpy.setResult('v_class_b_schedule_availability', [
-      {
-        instructor_id: 5,
-        vehicle_id: 36,
-        slot_start: `${chileToday()}T15:00:00+00:00`,
-        slot_end: `${chileToday()}T15:45:00+00:00`,
-        slot_status: 'available',
-      },
-    ]);
+    // Reloj en un sábado (12:00 hora Chile): la agenda muestra lunes a viernes, así que el
+    // horario va en un día hábil de esa semana. Con chileToday() el test solo pasaba de lunes
+    // a viernes (hotfix-175-b). Solo se finge Date: los await del facade siguen reales.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-07T15:00:00.000Z'));
+    try {
+      // La semana se calcula al crear el facade: hay que crearlo con el reloj ya fijado.
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          AgendaFacade,
+          { provide: SupabaseService, useValue: supabaseSpy },
+          { provide: AuthFacade, useValue: authFacadeSpy },
+          { provide: BranchFacade, useValue: branchFacadeSpy },
+        ],
+      });
+      facade = TestBed.inject(AgendaFacade);
 
-    await facade.initialize();
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      supabaseSpy.setResult('vehicles', [{ id: 36, license_plate: 'ZZ4103' }]);
+      supabaseSpy.setResult('instructors', [
+        { id: 5, license_expiry: null, users: { first_names: 'Ana', paternal_last_name: 'Soto' } },
+      ]);
+      supabaseSpy.setResult('v_class_b_schedule_availability', [
+        {
+          instructor_id: 5,
+          vehicle_id: 36,
+          slot_start: '2026-11-03T15:00:00+00:00', // martes de esa semana
+          slot_end: '2026-11-03T15:45:00+00:00',
+          slot_status: 'available',
+        },
+      ]);
 
-    const vehicles = supabaseSpy.client.from('vehicles');
-    expect(vehicles.eq).not.toHaveBeenCalledWith('branch_id', 1);
-    expect(JSON.stringify(facade.weekData())).toContain('ZZ4103');
-    expect(JSON.stringify(facade.weekData())).not.toContain('V36');
+      await facade.initialize();
+
+      expect(facade.weekStart()).toBe('2026-11-02');
+      const vehicles = supabaseSpy.client.from('vehicles');
+      expect(vehicles.eq).not.toHaveBeenCalledWith('branch_id', 1);
+      expect(JSON.stringify(facade.weekData())).toContain('ZZ4103');
+      expect(JSON.stringify(facade.weekData())).not.toContain('V36');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   describe('goToNextWeek — límite de semanas fantasma', () => {
