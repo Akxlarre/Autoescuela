@@ -44,13 +44,6 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               [compact]="true"
               icon="map-pin"
             />
-            <app-stat-box
-              label="IP"
-              [value]="log.ip"
-              variant="surface"
-              [compact]="true"
-              icon="globe"
-            />
           </div>
         </div>
 

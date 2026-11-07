@@ -23,7 +23,6 @@ describe('AdminAuditoriaComponent', () => {
     accion: 'Crear',
     modulo: 'Alumnos',
     detalle: 'Registrado: María Torres',
-    ip: '—',
   };
 
   beforeEach(() => {

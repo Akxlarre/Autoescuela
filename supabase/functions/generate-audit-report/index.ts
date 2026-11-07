@@ -119,7 +119,6 @@ interface AuditRow {
   accion: string;
   modulo: string;
   detalle: string;
-  ip: string;
 }
 
 interface ReportData {
@@ -225,7 +224,7 @@ Deno.serve(async (req: Request) => {
     const buildQuery = () => {
       let query = adminClient
         .from('audit_log')
-        .select('id, action, entity, detail, ip, created_at, user_id', { count: 'exact' })
+        .select('id, action, entity, detail, created_at, user_id', { count: 'exact' })
         .order('created_at', { ascending: false })
         .order('id', { ascending: false });
 
@@ -298,7 +297,6 @@ Deno.serve(async (req: Request) => {
         accion: ACTION_LABEL_MAP[raw.action] ?? raw.action,
         modulo: ENTITY_MODULE_MAP[raw.entity] ?? raw.entity ?? '-',
         detalle: raw.detail ?? '-',
-        ip: raw.ip ?? '-',
       };
     });
 
@@ -364,7 +362,7 @@ function buildExcelPayload(d: ReportData) {
   if (notice) rows.push([notice]);
   rows.push([]);
 
-  rows.push(['Fecha/Hora', 'Usuario', 'Email', 'Acción', 'Módulo', 'Detalle', 'IP']);
+  rows.push(['Fecha/Hora', 'Usuario', 'Email', 'Acción', 'Módulo', 'Detalle']);
 
   for (const r of d.rows) {
     rows.push([
@@ -374,7 +372,6 @@ function buildExcelPayload(d: ReportData) {
       r.accion,
       r.modulo,
       r.detalle,
-      r.ip,
     ]);
   }
 
@@ -488,8 +485,8 @@ function buildPdf(data: ReportData): Uint8Array {
     email: { x: M + 240, w: 140 },
     accion: { x: M + 384, w: 70 },
     modulo: { x: M + 458, w: 100 },
-    detalle: { x: M + 562, w: 170 },
-    ip: { x: M + 736, w: 73 }, // termina en 36+736+73=845 ≈ PW-M ✓
+    // fix-489-m: sin columna IP; el detalle usa ese ancho (termina en 36+562+247=845 ≈ PW-M).
+    detalle: { x: M + 562, w: 247 },
   };
 
   setColor('#1e6fbf');
@@ -501,7 +498,6 @@ function buildPdf(data: ReportData): Uint8Array {
   T(cols.accion.x, y - 11, 'ACCIÓN', 6, true);
   T(cols.modulo.x, y - 11, 'MÓDULO', 6, true);
   T(cols.detalle.x, y - 11, 'DETALLE', 6, true);
-  T(cols.ip.x, y - 11, 'IP', 6, true);
   resetColor();
   y -= 18;
 
@@ -514,7 +510,7 @@ function buildPdf(data: ReportData): Uint8Array {
 
   let rowAlt = false;
   for (const row of data.rows) {
-    const detalleLines = wrapText(row.detalle, 40);
+    const detalleLines = wrapText(row.detalle, 58);
     const rowH = Math.max(15, detalleLines.length * 11 + 5);
 
     checkY(rowH);
@@ -549,7 +545,6 @@ function buildPdf(data: ReportData): Uint8Array {
       T(cols.detalle.x, textY - li * 11, detalleLines[li], 6.5);
     }
 
-    T(cols.ip.x, textY, row.ip, 6.5);
 
     y -= rowH;
   }

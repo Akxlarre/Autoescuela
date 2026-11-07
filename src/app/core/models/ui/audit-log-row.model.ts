@@ -29,7 +29,7 @@ export interface AuditLogRow {
   accion: AuditAction;
   modulo: string;
   detalle: string;
-  ip: string;
+  // fix-489-m: sin `ip` — log_change() nunca la registró y se quitó de la pantalla (decisión D2).
 }
 
 /** Módulos legibles por entidad de BD.

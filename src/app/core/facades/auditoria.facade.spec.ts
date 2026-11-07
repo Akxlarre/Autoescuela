@@ -158,6 +158,26 @@ describe('AuditoriaFacade', () => {
     });
   });
 
+  // fix-489-m: la columna IP nunca tuvo datos y se quitó (decisión D2 de fix-485-m).
+  it('fix-489-m: la fila de auditoría ya no trae IP', async () => {
+    const q: any = {};
+    for (const m of ['select', 'eq', 'order', 'range', 'gte', 'lt', 'in', 'not', 'is']) {
+      q[m] = vi.fn().mockReturnValue(q);
+    }
+    q.then = (resolve: (v: unknown) => unknown) =>
+      resolve({
+        data: [{ id: 1, action: 'INSERT', entity: 'payments', created_at: 'x', ip: null }],
+        error: null,
+        count: 1,
+      });
+    supabaseSpy.client.from = vi.fn().mockReturnValue(q);
+    await facade.initialize();
+
+    expect(facade.logs()[0]).not.toHaveProperty('ip');
+    const select = q.select.mock.calls.find((c: string[]) => c[0].includes('action'))[0];
+    expect(select).not.toMatch(/\bip\b/);
+  });
+
   // fix-488-m: la exportación quedó en el tope → se avisa.
   describe('fix-488-m', () => {
     beforeEach(() => {

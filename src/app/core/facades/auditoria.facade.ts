@@ -175,7 +175,6 @@ export class AuditoriaFacade {
           entity,
           entity_id,
           detail,
-          ip,
           created_at,
           branch_id,
           ${plan.innerUsers ? 'users!inner' : 'users'} (
@@ -354,7 +353,6 @@ export class AuditoriaFacade {
       accion: ACTION_LABEL_MAP[raw.action] ?? raw.action,
       modulo: ENTITY_MODULE_MAP[raw.entity] ?? raw.entity ?? '—',
       detalle: raw.detail ?? '—',
-      ip: raw.ip ?? '—',
     };
   }
 }

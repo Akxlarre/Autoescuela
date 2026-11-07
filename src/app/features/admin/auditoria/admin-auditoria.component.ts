@@ -228,7 +228,6 @@ const ACTION_OPTIONS = withAllOption(
             <span>Acción</span>
             <span>Módulo</span>
             <span>Detalles</span>
-            <span>IP</span>
           </div>
 
           <!-- Filas -->
@@ -249,7 +248,6 @@ const ACTION_OPTIONS = withAllOption(
                 <app-skeleton-block variant="rect" width="80px" height="24px" />
                 <app-skeleton-block variant="text" width="90px" height="13px" />
                 <app-skeleton-block variant="text" width="200px" height="13px" />
-                <app-skeleton-block variant="text" width="100px" height="13px" />
               </div>
             }
           } @else if (facade.logs().length === 0) {
@@ -310,9 +308,6 @@ const ACTION_OPTIONS = withAllOption(
 
                 <!-- Detalles -->
                 <span class="text-sm text-brand">{{ log.detalle }}</span>
-
-                <!-- IP -->
-                <span class="text-sm tabular-nums text-text-muted">{{ log.ip }}</span>
               </div>
             }
           }
@@ -398,12 +393,12 @@ const ACTION_OPTIONS = withAllOption(
        Detalles, para que el 1fr nunca reciba menos que su mínimo real. */
     .audit-grid {
       display: grid;
-      grid-template-columns: 148px 220px 130px 110px 130px minmax(200px, 1fr) 120px;
+      grid-template-columns: 148px 220px 130px 110px 130px minmax(200px, 1fr);
       gap: 16px;
       min-width: 1160px;
     }
     .audit-grid--no-sede {
-      grid-template-columns: 148px 220px 110px 130px minmax(200px, 1fr) 120px;
+      grid-template-columns: 148px 220px 110px 130px minmax(200px, 1fr);
       min-width: 1010px;
     }
 
