@@ -12,7 +12,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SelectModule } from 'primeng/select';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
-import { courseCardControls, courseOverrideValidator } from '@core/utils/website-config.utils';
+import { courseCardControls } from '@core/utils/website-config.utils';
 
 @Component({
   selector: 'app-cursos-tab',
@@ -146,7 +146,8 @@ import { courseCardControls, courseOverrideValidator } from '@core/utils/website
                   />
                 </div>
                 <div class="flex flex-col gap-1.5" data-col-span-md="2" data-col-span="3">
-                  <label class="field-label">Precio Base (heredado)</label>
+                  <!-- fix-501-m: el precio de la web es siempre el de la Configuración de precios -->
+                  <label class="field-label">Precio (Configuración de precios)</label>
                   <div
                     class="field-input flex items-center text-text-muted text-xs bg-base cursor-default"
                   >
@@ -165,65 +166,7 @@ import { courseCardControls, courseOverrideValidator } from '@core/utils/website
                 </div>
               </div>
 
-              <!-- Fila 2: Override de precio -->
-              <div
-                class="flex flex-col gap-2 p-4 rounded-xl border border-solid border-border-default bg-surface"
-              >
-                <!-- fix-493-m: la casilla es un control propio; al marcarla se precarga el
-                     precio base (antes quedaba en 0 = Gratis por accidente). -->
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    class="accent-(--color-primary) w-4 h-4"
-                    formControlName="overrideEnabled"
-                    (change)="onOverrideToggle(courseCtrl, catalogItem?.base_price ?? null)"
-                    data-llm-description="enable a promotional price for this course card"
-                  />
-                  <span class="text-xs font-semibold text-text-primary"
-                    >Personalizar precio para promo</span
-                  >
-                  @if (courseCtrl.get('overrideEnabled')?.value) {
-                    <app-badge variant="brand">
-                      <app-icon name="tag" [size]="10" />
-                      Override activo
-                    </app-badge>
-                  }
-                </label>
-                @if (courseCtrl.get('overrideEnabled')?.value) {
-                  <div class="flex flex-col gap-1.5 mt-1">
-                    <label class="field-label">Precio Override (CLP) — 0 = "Gratis"</label>
-                    <div class="input-prefix-wrapper">
-                      <span class="input-prefix">$</span>
-                      <input
-                        type="number"
-                        formControlName="priceOverride"
-                        class="field-input pl-8"
-                        placeholder="320000"
-                        min="0"
-                        data-llm-description="override price for promotional purposes; 0 means free"
-                      />
-                    </div>
-                    @if (courseCtrl.get('priceOverride')?.hasError('min')) {
-                      <span class="field-error">El precio no puede ser negativo.</span>
-                    } @else if (courseCtrl.hasError('overrideRequired')) {
-                      <span class="field-error"
-                        >Ingresa el precio promocional o desmarca la casilla.</span
-                      >
-                    } @else if (catalogItem) {
-                      <span class="text-xs text-text-muted">
-                        {{
-                          getOverridePreview(
-                            courseCtrl.get('priceOverride')?.value,
-                            catalogItem.base_price ?? 0
-                          )
-                        }}
-                      </span>
-                    }
-                  </div>
-                }
-              </div>
-
-              <!-- Fila 3: Campos editoriales -->
+              <!-- Fila 2: Campos editoriales -->
               <div class="bento-grid bento-grid--forms bento-grid--forms">
                 <div class="flex flex-col gap-1.5" data-col-span-md="4" data-col-span="6">
                   <label class="field-label">Duración del Curso *</label>
@@ -500,30 +443,10 @@ export class CursosTabComponent {
     }).format(amount);
   }
 
-  /**
-   * fix-493-m: al marcar "Personalizar precio" se precarga el precio base del catálogo (antes
-   * quedaba en 0 = "Gratis"); al desmarcar se limpia el precio para que no viaje escondido.
-   */
-  protected onOverrideToggle(courseCtrl: AbstractControl, basePrice: number | null): void {
-    const enabled = !!courseCtrl.get('overrideEnabled')?.value;
-    const price = courseCtrl.get('priceOverride');
-    if (enabled && price?.value == null) price?.setValue(basePrice);
-    if (!enabled) price?.setValue(null);
-  }
-
-  protected getOverridePreview(overrideVal: number | null, basePrice: number): string {
-    const label = overrideVal === 0 ? 'Gratis' : this.formatCLP(overrideVal);
-    return `La landing mostrará ${label} con tachado de ${this.formatCLP(basePrice)}`;
-  }
-
   protected addCourse(): void {
     const nextOrder = this.coursesArray().length + 1;
-    // fix-493-m: mismos controles y validación que al cargar las cards guardadas.
-    this.coursesArray().push(
-      this.fb.group(courseCardControls({ displayOrder: nextOrder }), {
-        validators: courseOverrideValidator,
-      }),
-    );
+    // fix-493-m: mismos controles que al cargar las cards guardadas.
+    this.coursesArray().push(this.fb.group(courseCardControls({ displayOrder: nextOrder })));
     this.coursesArray().markAsDirty();
   }
 

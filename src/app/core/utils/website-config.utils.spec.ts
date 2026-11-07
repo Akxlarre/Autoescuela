@@ -5,7 +5,6 @@ import { FormBuilder, FormControl } from '@angular/forms';
 import {
   configTabsWithErrors,
   courseCardControls,
-  courseOverrideValidator,
   DEFAULT_WHY_US,
   domainValidator,
   googleMapsEmbedValidator,
@@ -15,49 +14,23 @@ import {
   whyUsToPublish,
 } from './website-config.utils';
 
-// fix-493-m: precio promocional y promo activa con la validación que la pantalla promete.
+// fix-493-m: promo activa con la validación que la pantalla promete.
 describe('fix-493-m', () => {
   const fb = new FormBuilder();
-  const card = (priceOverride: number | null = null) =>
-    fb.group(
+
+  // fix-501-m: la card ya no tiene precio propio (el precio sale del catálogo).
+  it('fix-501-m: una card no tiene controles de precio promocional', () => {
+    const g = fb.group(
       courseCardControls({
         course_id: 1,
         description: 'd',
         duration: '4 semanas',
         includes: ['a'],
-        priceOverride,
+        priceOverride: 150000,
       }),
-      { validators: courseOverrideValidator },
     );
-
-  it('una card sin precio promo arranca con la casilla desmarcada y es válida', () => {
-    const g = card();
-    expect(g.get('overrideEnabled')?.value).toBe(false);
-    expect(g.valid).toBe(true);
-  });
-
-  it('una card con precio promo guardado arranca con la casilla marcada', () => {
-    expect(card(150000).get('overrideEnabled')?.value).toBe(true);
-    expect(card(0).get('overrideEnabled')?.value).toBe(true);
-  });
-
-  it('casilla marcada sin precio es inválida', () => {
-    const g = card();
-    g.get('overrideEnabled')?.setValue(true);
-    expect(g.hasError('overrideRequired')).toBe(true);
-  });
-
-  it('un precio negativo es inválido; 0 ("Gratis") vale', () => {
-    const g = card(-5000);
-    expect(g.get('priceOverride')?.hasError('min')).toBe(true);
-    g.get('priceOverride')?.setValue(0);
-    expect(g.valid).toBe(true);
-  });
-
-  it('casilla desmarcada no exige precio', () => {
-    const g = card(-5000);
-    g.get('overrideEnabled')?.setValue(false);
-    g.get('priceOverride')?.setValue(null);
+    expect(g.get('priceOverride')).toBeNull();
+    expect(g.get('overrideEnabled')).toBeNull();
     expect(g.valid).toBe(true);
   });
 

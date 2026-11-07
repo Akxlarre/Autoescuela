@@ -3,10 +3,10 @@ import type { CourseConfig, WhyUsConfig } from '@core/models/dto/website-config.
 
 /**
  * Controles de una card de curso de la web (fix-493-m). Un solo lugar: antes se repetían en el
- * componente (al cargar) y en la pestaña Cursos (al agregar), y ninguno validaba el precio promo.
+ * componente (al cargar) y en la pestaña Cursos (al agregar).
  *
- * `overrideEnabled` es la casilla "Personalizar precio": antes se deducía de `priceOverride != null`
- * y al borrar el número para reescribirlo la casilla se desmarcaba sola.
+ * fix-501-m: sin precio propio. El precio de la web sale siempre de la Configuración de precios
+ * (`courses.base_price`), el mismo que cobra la matrícula.
  */
 export function courseCardControls(card?: Partial<CourseConfig>) {
   return {
@@ -16,19 +16,10 @@ export function courseCardControls(card?: Partial<CourseConfig>) {
     duration: [card?.duration ?? '', Validators.required],
     highlighted: [card?.highlighted ?? false],
     badge: [card?.badge ?? ''],
-    overrideEnabled: [card?.priceOverride != null],
-    priceOverride: [card?.priceOverride ?? (null as number | null), Validators.min(0)],
     displayOrder: [card?.displayOrder ?? 1],
     includes: [card?.includes ? card.includes.join(', ') : '', Validators.required],
   };
 }
-
-/** Con "Personalizar precio" marcado, el precio es obligatorio (0 = "Gratis" vale). */
-export const courseOverrideValidator: ValidatorFn = (group) => {
-  if (!group.get('overrideEnabled')?.value) return null;
-  const price = group.get('priceOverride')?.value;
-  return price === null || price === undefined || price === '' ? { overrideRequired: true } : null;
-};
 
 /** Con la promo activa, título, etiqueta y detalle son obligatorios (llevan "*" en pantalla). */
 export const promoTextValidator: ValidatorFn = (group) => {

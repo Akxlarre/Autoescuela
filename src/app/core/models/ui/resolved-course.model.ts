@@ -34,12 +34,8 @@ export interface ResolvedCourse {
   displayOrder: number;
 
   // ── Resolución de precio ─────────────────────────────────────────────────
-  /** Override editorial. null = hereda basePrice. 0 = "Gratis". */
-  priceOverride: number | null;
-  /** Precio efectivo a mostrar: priceOverride ?? basePrice. */
+  /** Precio a mostrar: el del catálogo (fix-501-m: la web ya no tiene precio propio). */
   displayPrice: number;
-  /** Precio efectivo ya formateado: "$320.000" o "Gratis" si es 0. */
+  /** Precio ya formateado: "$320.000". */
   displayPriceLabel: string;
-  /** true si priceOverride !== null (sirve para mostrar tachado del basePrice). */
-  isOverrideActive: boolean;
 }

@@ -209,11 +209,12 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             const course = catalogById.get(card.course_id);
             if (!course) continue;
 
-            const priceOverride = card.priceOverride ?? null;
-            const isOverrideActive = priceOverride !== null;
+            // fix-501-m: precio siempre del catálogo; un priceOverride guardado se ignora.
+            const priceOverride = null;
+            const isOverrideActive = false;
             const basePrice = course.base_price != null ? course.base_price : 0;
-            const displayPrice = isOverrideActive ? priceOverride : basePrice;
-            const displayPriceLabel = displayPrice === 0 ? 'Gratis' : formatter.format(displayPrice);
+            const displayPrice = basePrice;
+            const displayPriceLabel = formatter.format(displayPrice);
 
             resolvedCourses.push({
               courseId: course.id,

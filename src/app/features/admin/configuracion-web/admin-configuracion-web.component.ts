@@ -46,7 +46,6 @@ import type { HasUnsavedWebConfig } from '@core/guards/configuracion-web-unsaved
 import {
   configTabsWithErrors,
   courseCardControls,
-  courseOverrideValidator,
   domainValidator,
   googleMapsEmbedValidator,
   httpUrlValidator,
@@ -607,10 +606,8 @@ export class AdminConfiguracionWebComponent implements AfterViewInit, HasUnsaved
     this.coursesArray.clear({ emitEvent: false });
     if (data.courses) {
       data.courses.forEach((c) => {
-        // fix-493-m: mismos controles y validación que al agregar una card nueva.
-        this.coursesArray.push(
-          this.fb.group(courseCardControls(c), { validators: courseOverrideValidator }),
-        );
+        // fix-493-m: mismos controles que al agregar una card nueva.
+        this.coursesArray.push(this.fb.group(courseCardControls(c)));
       });
     }
 
@@ -849,9 +846,8 @@ export class AdminConfiguracionWebComponent implements AfterViewInit, HasUnsaved
         duration: c.duration!,
         highlighted: !!c.highlighted,
         badge: c.badge || null,
-        // fix-493-m: el precio promo solo se publica con la casilla marcada.
-        priceOverride:
-          c.overrideEnabled && c.priceOverride != null ? Number(c.priceOverride) : null,
+        // fix-501-m: la web no tiene precio propio; el precio sale del catálogo.
+        priceOverride: null,
         displayOrder: Number(c.displayOrder) || 1,
         includes: c.includes
           ? c.includes
