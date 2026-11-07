@@ -1,6 +1,7 @@
 ---
 // src/components/SchemaOrg.astro
 import type { SiteData } from '../lib/types';
+import { safeHttpUrl } from '../lib/safe-url';
 
 interface Props {
   data: SiteData;
@@ -76,9 +77,10 @@ const schemaGraph = {
           "closes": parts[1] || "18:00"
         };
       }),
+      // fix-500-m: solo URLs http(s).
       "sameAs": [
-        data.social?.facebook,
-        data.social?.instagram
+        safeHttpUrl(data.social?.facebook),
+        safeHttpUrl(data.social?.instagram)
       ].filter(Boolean),
       "hasOfferCatalog": {
         "@type": "OfferCatalog",

@@ -49,6 +49,9 @@ import { IconComponent } from '@shared/components/icon/icon.component';
                 class="field-input"
                 placeholder="Ej: 56912345678"
               />
+              @if (contactGroup().get('whatsapp')?.hasError('whatsapp')) {
+                <span class="field-error">Solo números (8 a 15), con código de país.</span>
+              }
             </div>
             <div class="flex flex-col gap-1.5 bento-wide">
               <label class="field-label">Teléfono de Llamadas Fijo/Móvil *</label>
@@ -87,6 +90,12 @@ import { IconComponent } from '@shared/components/icon/icon.component';
               class="field-input"
               placeholder="Pegue la URL provista en el iframe src de Google Maps Compartir"
             ></textarea>
+            @if (contactGroup().get('mapEmbedUrl')?.hasError('mapEmbed')) {
+              <span class="field-error"
+                >Debe ser la URL de "Insertar un mapa" de Google Maps
+                (https://www.google.com/maps/embed?...).</span
+              >
+            }
           </div>
 
           <h4 class="text-xs font-bold uppercase tracking-wider text-text-secondary mt-5 mb-3">
@@ -102,6 +111,12 @@ import { IconComponent } from '@shared/components/icon/icon.component';
                 class="field-input"
                 placeholder="-36.606709"
               />
+              @if (
+                contactGroup().get('geo.lat')?.hasError('min') ||
+                contactGroup().get('geo.lat')?.hasError('max')
+              ) {
+                <span class="field-error">Entre -90 y 90.</span>
+              }
             </div>
             <div class="flex flex-col gap-1.5 bento-wide">
               <label class="field-label">Longitud *</label>
@@ -112,6 +127,12 @@ import { IconComponent } from '@shared/components/icon/icon.component';
                 class="field-input"
                 placeholder="-72.105436"
               />
+              @if (
+                contactGroup().get('geo.lng')?.hasError('min') ||
+                contactGroup().get('geo.lng')?.hasError('max')
+              ) {
+                <span class="field-error">Entre -180 y 180.</span>
+              }
             </div>
           </div>
         </div>

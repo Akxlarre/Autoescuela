@@ -47,7 +47,11 @@ import {
   configTabsWithErrors,
   courseCardControls,
   courseOverrideValidator,
+  domainValidator,
+  googleMapsEmbedValidator,
+  httpUrlValidator,
   promoTextValidator,
+  whatsappValidator,
   whyUsToPublish,
 } from '@core/utils/website-config.utils';
 
@@ -445,7 +449,7 @@ export class AdminConfiguracionWebComponent implements AfterViewInit, HasUnsaved
       shortName: ['', Validators.required],
       slogan: ['', Validators.required],
       theme: [{ value: 'azul' as 'azul' | 'roja', disabled: true }, Validators.required],
-      domain: ['', Validators.required],
+      domain: ['', [Validators.required, domainValidator]],
       logo: [''],
       ogImage: [''],
       favicon: [''],
@@ -467,7 +471,7 @@ export class AdminConfiguracionWebComponent implements AfterViewInit, HasUnsaved
       subheadline: ['', Validators.required],
       cta: this.fb.group({
         text: ['', Validators.required],
-        whatsapp: ['', Validators.required],
+        whatsapp: ['', [Validators.required, whatsappValidator]],
       }),
       features: this.fb.array([
         this.fb.group({ icon: ['car'], text: [''] }),
@@ -495,12 +499,12 @@ export class AdminConfiguracionWebComponent implements AfterViewInit, HasUnsaved
       city: ['Chillán', Validators.required],
       region: ['Ñuble', Validators.required],
       phone: ['', Validators.required],
-      whatsapp: ['', Validators.required],
+      whatsapp: ['', [Validators.required, whatsappValidator]],
       email: ['', [Validators.required, Validators.email]],
-      mapEmbedUrl: ['', Validators.required],
+      mapEmbedUrl: ['', [Validators.required, googleMapsEmbedValidator]],
       geo: this.fb.group({
-        lat: [-36.606709, Validators.required],
-        lng: [-72.105436, Validators.required],
+        lat: [-36.606709, [Validators.required, Validators.min(-90), Validators.max(90)]],
+        lng: [-72.105436, [Validators.required, Validators.min(-180), Validators.max(180)]],
       }),
     }),
     hours: this.fb.array([
@@ -514,9 +518,9 @@ export class AdminConfiguracionWebComponent implements AfterViewInit, HasUnsaved
       }),
     ]),
     social: this.fb.group({
-      facebook: [''],
-      instagram: [''],
-      tiktok: [''],
+      facebook: ['', httpUrlValidator],
+      instagram: ['', httpUrlValidator],
+      tiktok: ['', httpUrlValidator],
     }),
     pricingFooter: this.fb.group({
       payment: this.fb.group({

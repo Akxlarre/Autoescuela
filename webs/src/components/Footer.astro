@@ -2,13 +2,20 @@
 // src/components/Footer.astro
 import type { BrandConfig, SocialConfig } from '../lib/types';
 import Icon from './ui/Icon.astro';
+import { safeHttpUrl } from '../lib/safe-url';
 
 interface Props {
   brand: BrandConfig;
   social?: SocialConfig;
 }
 
-const { brand, social } = Astro.props;
+const { brand, social: rawSocial } = Astro.props;
+// fix-500-m: solo enlaces http(s).
+const social = rawSocial && {
+  facebook: safeHttpUrl(rawSocial.facebook),
+  instagram: safeHttpUrl(rawSocial.instagram),
+  tiktok: safeHttpUrl(rawSocial.tiktok),
+};
 const currentYear = new Date().getFullYear();
 ---
 

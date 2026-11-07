@@ -39,6 +39,42 @@ export const promoTextValidator: ValidatorFn = (group) => {
   return vacio ? { promoTextRequired: true } : null;
 };
 
+// ── fix-500-m: formatos de la web ───────────────────────────────────────────────────────────
+// La landing pone estas URLs en un iframe y en enlaces: un "javascript:" se ejecutaba en la página
+// pública. Vacío vale en todos (lo exige "required" donde corresponde).
+
+const textOf = (v: unknown) => String(v ?? '').trim();
+
+/** Dominio sin protocolo, ruta ni espacios ("autoescuelachillan.cl"). */
+export const domainValidator: ValidatorFn = (control) => {
+  const v = textOf(control.value);
+  if (!v) return null;
+  return /^(?!-)[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(v) ? null : { domain: true };
+};
+
+/** URL que empieza con http:// o https://. */
+export const httpUrlValidator: ValidatorFn = (control) => {
+  const v = textOf(control.value);
+  if (!v) return null;
+  return /^https?:\/\/\S+$/i.test(v) ? null : { httpUrl: true };
+};
+
+/** Número de WhatsApp: 8 a 15 dígitos; se aceptan "+" inicial y espacios. */
+export const whatsappValidator: ValidatorFn = (control) => {
+  const v = textOf(control.value);
+  if (!v) return null;
+  return /^\+?\d{8,15}$/.test(v.replace(/\s+/g, '')) ? null : { whatsapp: true };
+};
+
+/** URL de "Insertar un mapa" de Google Maps (https://www.google.com/maps/embed?...). */
+export const googleMapsEmbedValidator: ValidatorFn = (control) => {
+  const v = textOf(control.value);
+  if (!v) return null;
+  return /^https:\/\/(www\.)?google\.[a-z.]+\/maps\/embed\?\S+$/i.test(v)
+    ? null
+    : { mapEmbed: true };
+};
+
 /** Pestañas de Configuración web, en el orden de la pantalla. */
 export type ConfigWebTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 

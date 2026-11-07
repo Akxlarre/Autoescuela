@@ -158,6 +158,13 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           return node;
         }
 
+        // fix-500-m: solo URLs http(s) (misma regla que src/lib/safe-url.ts). Un "javascript:"
+        // en el mapa o en una red se ejecutaba en la página pública.
+        function safeHttpUrl(url) {
+          const v = String(url == null ? '' : url).trim();
+          return /^https?:\/\/\S+$/i.test(v) ? v : null;
+        }
+
         const formatter = new Intl.NumberFormat('es-CL', {
           style: 'currency',
           currency: 'CLP',
@@ -926,7 +933,8 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               if (cityEl && contact.city && contact.region) cityEl.textContent = contact.city + ', ' + contact.region;
 
               const mapIframe = document.querySelector('.map-card iframe');
-              if (mapIframe && contact.mapEmbedUrl) mapIframe.setAttribute('src', contact.mapEmbedUrl);
+              const mapUrl = safeHttpUrl(contact.mapEmbedUrl);
+              if (mapIframe && mapUrl) mapIframe.setAttribute('src', mapUrl);
             }
           } catch(e) { console.error('[Hydration §6 Contacto] ❌ Error:', e); }
 
@@ -1003,6 +1011,12 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           try {
             const socialContainer = document.querySelector('.social-links');
             if (socialContainer && config.social) {
+              // fix-500-m: una red con una URL que no es http(s) no se muestra.
+              config.social = {
+                facebook: safeHttpUrl(config.social.facebook),
+                instagram: safeHttpUrl(config.social.instagram),
+                tiktok: safeHttpUrl(config.social.tiktok),
+              };
               socialContainer.innerHTML = '';
               if (config.social.facebook) {
                 const a = document.createElement('a');

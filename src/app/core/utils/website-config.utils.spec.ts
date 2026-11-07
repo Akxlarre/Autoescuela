@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { FormBuilder } from '@angular/forms';
+import { FormBuilder, FormControl } from '@angular/forms';
 
 import {
   configTabsWithErrors,
   courseCardControls,
   courseOverrideValidator,
   DEFAULT_WHY_US,
+  domainValidator,
+  googleMapsEmbedValidator,
+  httpUrlValidator,
   promoTextValidator,
+  whatsappValidator,
   whyUsToPublish,
 } from './website-config.utils';
 
@@ -129,5 +133,42 @@ describe('whyUsToPublish', () => {
     for (const item of DEFAULT_WHY_US) {
       expect(item.icon).toMatch(/^[a-z0-9-]+$/);
     }
+  });
+});
+
+// fix-500-m: URLs y formatos de la web. La landing pone estas URLs en un iframe y en enlaces:
+// un "javascript:" se ejecutaba en la página pública.
+describe('validadores de formato (fix-500-m)', () => {
+  const ctrl = (value: unknown) => new FormControl(value);
+
+  it('dominio: nombre sin protocolo, sin espacios ni rutas', () => {
+    expect(domainValidator(ctrl('autoescuelachillan.cl'))).toBeNull();
+    expect(domainValidator(ctrl('www.conductores-chillan.cl'))).toBeNull();
+    expect(domainValidator(ctrl('https://autoescuelachillan.cl'))).toEqual({ domain: true });
+    expect(domainValidator(ctrl('autoescuela chillan.cl'))).toEqual({ domain: true });
+    expect(domainValidator(ctrl('autoescuelachillan'))).toEqual({ domain: true });
+    expect(domainValidator(ctrl(''))).toBeNull(); // vacío lo cubre "required"
+  });
+
+  it('URL http(s): rechaza javascript: y texto suelto; vacío vale', () => {
+    expect(httpUrlValidator(ctrl('https://facebook.com/autoescuela'))).toBeNull();
+    expect(httpUrlValidator(ctrl(''))).toBeNull();
+    expect(httpUrlValidator(ctrl("javascript:alert('x')"))).toEqual({ httpUrl: true });
+    expect(httpUrlValidator(ctrl('facebook.com/autoescuela'))).toEqual({ httpUrl: true });
+  });
+
+  it('WhatsApp: 8 a 15 dígitos, con + y espacios opcionales', () => {
+    expect(whatsappValidator(ctrl('+56912345678'))).toBeNull();
+    expect(whatsappValidator(ctrl('56 9 1234 5678'))).toBeNull();
+    expect(whatsappValidator(ctrl('9123abc'))).toEqual({ whatsapp: true });
+    expect(whatsappValidator(ctrl('1234'))).toEqual({ whatsapp: true });
+  });
+
+  it('mapa: solo el embed de Google Maps por https', () => {
+    expect(googleMapsEmbedValidator(ctrl('https://www.google.com/maps/embed?pb=!1m18'))).toBeNull();
+    expect(googleMapsEmbedValidator(ctrl("javascript:alert('x')"))).toEqual({ mapEmbed: true });
+    expect(googleMapsEmbedValidator(ctrl('https://evil.example/maps/embed'))).toEqual({
+      mapEmbed: true,
+    });
   });
 });

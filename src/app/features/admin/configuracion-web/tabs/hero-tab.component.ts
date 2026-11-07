@@ -642,6 +642,9 @@ const INTERFACE_ICONS = [
                   placeholder="Ej: 56912345678"
                   data-llm-description="input for the hero CTA WhatsApp phone number"
                 />
+                @if (heroGroup().get('cta.whatsapp')?.hasError('whatsapp')) {
+                  <span class="field-error">Solo números (8 a 15), con código de país.</span>
+                }
               </div>
             </div>
           </div>
