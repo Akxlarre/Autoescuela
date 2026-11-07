@@ -31,6 +31,7 @@ import { ContactoTabComponent } from './tabs/contacto-tab.component';
 import { FaqsTabComponent } from './tabs/faqs-tab.component';
 import { TabsComponent } from '@shared/components/tabs/tabs.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { branchIdToTheme } from '@core/utils/sede-theme.utils';
 
 type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
@@ -616,7 +617,8 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
           name: data.brand?.name || '',
           shortName: data.brand?.shortName || '',
           slogan: data.brand?.slogan || '',
-          theme: data.brand?.theme || (this.effectiveBranchId()! === 2 ? 'roja' : 'azul'),
+          // hotfix-169-m: fijado por sede, no por lo guardado (sede 1 roja, sede 2 azul).
+          theme: branchIdToTheme(this.effectiveBranchId()),
           domain: data.brand?.domain || '',
           logo: data.brand?.logo || '',
           ogImage: data.brand?.ogImage || '',
@@ -707,9 +709,7 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
         name: raw.brand.name!,
         shortName: raw.brand.shortName!,
         slogan: raw.brand.slogan!,
-        theme:
-          (raw.brand.theme as 'azul' | 'roja') ||
-          (Number(this.effectiveBranchId()!) === 2 ? 'roja' : 'azul'),
+        theme: branchIdToTheme(this.effectiveBranchId()),
         domain: raw.brand.domain!,
         logo: raw.brand.logo || '',
         ogImage: raw.brand.ogImage || '',

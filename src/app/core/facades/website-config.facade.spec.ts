@@ -146,6 +146,20 @@ describe('WebsiteConfigFacade', () => {
       expect(loaded?.courses).toEqual([]);
     });
 
+    it.each([
+      [1, 'roja'],
+      [2, 'azul'],
+    ])('hotfix-169-m: la sede %i sin fila arranca con el tema %s', async (branchId, theme) => {
+      const maybeSingleSpy = vi.fn().mockResolvedValue({ data: null, error: null });
+      const eqSpy = vi.fn().mockReturnValue({ maybeSingle: maybeSingleSpy });
+      const selectSpy = vi.fn().mockReturnValue({ eq: eqSpy });
+      supabaseSpy.client = { from: vi.fn().mockReturnValue({ select: selectSpy }) };
+
+      await facade.loadConfig(branchId);
+
+      expect(facade.config()?.brand.theme).toBe(theme);
+    });
+
     it('error de Supabase → toast.error y signal error()', async () => {
       const maybeSingleSpy = vi.fn().mockResolvedValue({
         data: null,
