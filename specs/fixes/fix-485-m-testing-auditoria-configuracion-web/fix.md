@@ -61,7 +61,7 @@ Se verifican como regresión, no como bug nuevo:
 - [x] Decisiones de negocio D1–D4 registradas
 - [x] Fixes derivados 486–489, 491–495 y hotfixes 168–170 cerrados y commiteados
 - [x] `fix-490-m`: migración `20261107120000` aplicada y verificada
-- [ ] Deploy de `generate-audit-report` (fix-487/488/489) y verificar exportación
+- [x] Deploy de `generate-audit-report` v21 (2026-11-07) y exportación verificada: sin columna IP; "Instructores" trae solo Instructores (13); Excel sin filtros 10.000 de 78.503 con aviso en el archivo y toast "Reporte parcial"; PDF sin filtros 2.000 filas en 3 s con aviso; secretarias sede 2 por sede de la acción (249)
 - [ ] Auditoría: cobertura acción → registro (C01–C24), atribución D04–D06, exportar desde la UI (G)
 - [ ] Landing pública (Q): requiere `webs/` corriendo contra la misma BD (S20, Q04)
 - [ ] Política de privacidad (V) y casos de formato de J/K/N
@@ -158,9 +158,9 @@ exige título y descripción (M03).
 | Hallazgo | Track | Estado |
 |---|---|---|
 | Auditoría: filtros fantasma, respuestas fuera de orden, skeleton al volver (S8, S13, B09) | `fix-486-m` | ✅ |
-| Auditoría: módulos sin filtro, mapa de la exportación divergido, sede de la secretaria (S7, S11) | `fix-487-m` | ✅ (deploy de `generate-audit-report` pendiente) |
-| Exportar auditoría: 1.000 filas sin avisar (G06, S13) | `fix-488-m` | ✅ (deploy de `generate-audit-report` pendiente) |
-| Columna IP siempre vacía (S12, B05, D2) | `fix-489-m` | ✅ (deploy de `generate-audit-report` pendiente) |
+| Auditoría: módulos sin filtro, mapa de la exportación divergido, sede de la secretaria (S7, S11) | `fix-487-m` | ✅ (desplegado v21, verificado) |
+| Exportar auditoría: 1.000 filas sin avisar (G06, S13) | `fix-488-m` | ✅ (desplegado v21, verificado) |
+| Columna IP siempre vacía (S12, B05, D2) | `fix-489-m` | ✅ (desplegado v21, verificado) |
 | Filtros de Auditoría por ancho de ventana, etiquetas mezcladas, fecha distinta en detalle (N2–N5) | `hotfix-168-m` | ✅ |
 | Tema por defecto de la web con el mapeo viejo de sedes (N1) | `hotfix-169-m` | ✅ |
 | Publicar pisa "Por qué elegirnos" (S16, D3) | `fix-491-m` | ✅ |
