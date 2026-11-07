@@ -18,6 +18,7 @@ import {
   inject,
 } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { ClickOutsideDirective } from '@core/directives/click-outside.directive';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import type { HistorialCierre } from '@core/models/ui/historial-cuadraturas.model';
@@ -69,6 +70,7 @@ function formatCLP(value: number): string {
   selector: 'app-historial-cuadraturas-content',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ClickOutsideDirective,
     IconComponent,
     SkeletonBlockComponent,
     SectionHeroComponent,
@@ -226,8 +228,12 @@ function formatCLP(value: number): string {
           {{ isExporting() ? 'Exportando...' : 'Exportar' }}
         </button>
         @if (exportMenuOpen()) {
-          <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
-          <div class="export-menu absolute top-12 right-0 z-20">
+          <div
+            class="export-menu absolute top-12 right-0 z-20"
+            appClickOutside
+            clickOutsideExclude="[data-llm-action=toggle-export-menu]"
+            (clickOutside)="exportMenuOpen.set(false)"
+          >
             <button
               type="button"
               class="export-menu-item"

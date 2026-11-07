@@ -26,6 +26,7 @@ import type { AuditActor, AuditLogRow } from '@core/models/ui/audit-log-row.mode
 import { auditUserLabel, usuariosForActor } from '@core/utils/audit-actor.utils';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { ClickOutsideDirective } from '@core/directives/click-outside.directive';
 import { withAllOption } from '@core/utils/filter-options.utils';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 
@@ -55,6 +56,7 @@ const ACTION_OPTIONS = withAllOption(
     DateInputComponent,
     StableWidthDirective,
     ClearFiltersButtonComponent,
+    ClickOutsideDirective,
   ],
   template: `
     <div class="bento-grid bento-grid--fill-screen" appBentoReveal appBentoGridLayout>
@@ -186,8 +188,12 @@ const ACTION_OPTIONS = withAllOption(
                   <app-icon name="chevron-down" [size]="14" />
                 </button>
                 @if (exportMenuOpen()) {
-                  <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
-                  <div class="export-menu">
+                  <div
+                    class="export-menu"
+                    appClickOutside
+                    clickOutsideExclude="[data-llm-action=open-export-menu-auditoria]"
+                    (clickOutside)="exportMenuOpen.set(false)"
+                  >
                     <button
                       type="button"
                       class="export-menu-item"
