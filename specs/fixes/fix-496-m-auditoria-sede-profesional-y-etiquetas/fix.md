@@ -1,7 +1,8 @@
 # Fix: Auditoría — registros de Profesional sin sede y detalles con datos crudos
 > id: fix-496-m-auditoria-sede-profesional-y-etiquetas
 > refs: fix-485-m-testing-auditoria-configuracion-web
-> status: open
+> status: done
+> closed: 2026-11-07
 > created: 2026-11-07
 
 ## Root Cause
@@ -53,4 +54,5 @@ en la BD de dev. `log_change()` (versión de `20261107120000`, fix-490-m) tiene 
 ## Test de Regresión
 
 - `supabase/tests/audit/fix-496-m-auditoria-sede-profesional.sql` (bloque que aborta, sin efectos).
-- Después de aplicar: acciones reales por API y lectura de `audit_log`.
+- Ensayo contra la BD de dev en BEGIN/ROLLBACK: 9/9.
+- Aplicada por Matías (2026-11-07). Por API: 0 registros de Profesional sin sede (antes 5.700); nota en una sesión teórica Profesional → `b=2`, "[Curso 284.5 - 06-01-2027] Notas: Sin asignar -> QA fix-496-m"; descuento → "Valor: 20% -> 21%". Los detalles históricos ("id=7") no se reescriben: solo cambia su sede.
