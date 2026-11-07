@@ -109,6 +109,12 @@ describe('getPrivacyPolicy()', () => {
     expect(getPrivacyPolicy('conductores-chillan')?.rut).toBe('77.940.120-0');
   });
 
+  // hotfix-172-m: un enlace escrito a mano con mayúsculas o espacios igual encuentra la política.
+  it('no distingue mayúsculas ni espacios en los bordes', () => {
+    expect(getPrivacyPolicy('Autoescuela-Chillan')?.rut).toBe('76.007.217-6');
+    expect(getPrivacyPolicy(' CONDUCTORES-CHILLAN ')?.rut).toBe('77.940.120-0');
+  });
+
   it('devuelve null ante un slug inexistente, nulo o vacío', () => {
     expect(getPrivacyPolicy('no-existe')).toBeNull();
     expect(getPrivacyPolicy(null)).toBeNull();
