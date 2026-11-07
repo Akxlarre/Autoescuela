@@ -6,7 +6,12 @@
 //   npx deno test supabase/functions/_shared/staff-auth.test.ts
 
 import { assertEquals } from 'jsr:@std/assert';
-import { canAccessBranch, decideStaffAccess, resolveBranchScope } from './staff-auth.ts';
+import {
+  auditClientOptions,
+  canAccessBranch,
+  decideStaffAccess,
+  resolveBranchScope,
+} from './staff-auth.ts';
 
 const STAFF = ['admin', 'secretary'] as const;
 const ADMIN_ONLY = ['admin'] as const;
@@ -64,17 +69,35 @@ Deno.test('secretary en una función solo-admin → 403', () => {
 
 Deno.test('admin permitido → ok con su id y rol', () => {
   const r = decideStaffAccess({ authUserId: 'uid-1', dbUserId: 1, roleName: 'admin' }, STAFF);
-  assertEquals(r, { ok: true, userId: 1, role: 'admin', branchId: null, canAccessBothBranches: false });
+  assertEquals(r, {
+    ok: true,
+    userId: 1,
+    role: 'admin',
+    branchId: null,
+    canAccessBothBranches: false,
+  });
 });
 
 Deno.test('secretary permitida → ok con su id y rol', () => {
   const r = decideStaffAccess({ authUserId: 'uid-2', dbUserId: 2, roleName: 'secretary' }, STAFF);
-  assertEquals(r, { ok: true, userId: 2, role: 'secretary', branchId: null, canAccessBothBranches: false });
+  assertEquals(r, {
+    ok: true,
+    userId: 2,
+    role: 'secretary',
+    branchId: null,
+    canAccessBothBranches: false,
+  });
 });
 
 Deno.test('admin en una función solo-admin → ok', () => {
   const r = decideStaffAccess({ authUserId: 'uid-1', dbUserId: 1, roleName: 'admin' }, ADMIN_ONLY);
-  assertEquals(r, { ok: true, userId: 1, role: 'admin', branchId: null, canAccessBothBranches: false });
+  assertEquals(r, {
+    ok: true,
+    userId: 1,
+    role: 'admin',
+    branchId: null,
+    canAccessBothBranches: false,
+  });
 });
 
 Deno.test('los rechazos traen un mensaje legible en `error`', () => {
@@ -90,10 +113,22 @@ Deno.test('los rechazos traen un mensaje legible en `error`', () => {
 
 Deno.test('el ok trae la sede y el grant multi-sede del usuario', () => {
   const r = decideStaffAccess(
-    { authUserId: 'uid-2', dbUserId: 2, roleName: 'secretary', branchId: 1, canAccessBothBranches: true },
+    {
+      authUserId: 'uid-2',
+      dbUserId: 2,
+      roleName: 'secretary',
+      branchId: 1,
+      canAccessBothBranches: true,
+    },
     STAFF,
   );
-  assertEquals(r, { ok: true, userId: 2, role: 'secretary', branchId: 1, canAccessBothBranches: true });
+  assertEquals(r, {
+    ok: true,
+    userId: 2,
+    role: 'secretary',
+    branchId: 1,
+    canAccessBothBranches: true,
+  });
 });
 
 const ADMIN = { role: 'admin', branchId: null, canAccessBothBranches: false } as const;
@@ -153,4 +188,9 @@ Deno.test('canAccessBranch: secretaria sin grant ve su sede y las filas sin sede
 
 Deno.test('canAccessBranch: secretaria sin grant no ve la otra sede', () => {
   assertEquals(canAccessBranch(SEC_A, 2), false);
+});
+
+// fix-497-m: lo que escribe la función con la clave de servicio queda a nombre de quien la llamó.
+Deno.test('auditClientOptions: manda el usuario en x-audit-user-id', () => {
+  assertEquals(auditClientOptions(42), { global: { headers: { 'x-audit-user-id': '42' } } });
 });

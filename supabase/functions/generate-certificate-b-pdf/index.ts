@@ -32,6 +32,7 @@ import {
 import { substituteTokens } from '../_shared/template-tokens.ts';
 import { checkCertificateDebt, overrideCounterFrom } from '../_shared/certificate-debt.ts';
 import {
+  auditClientOptions,
   authErrorResponse,
   denyIfEnrollmentOutOfScope,
   requireStaff,
@@ -83,9 +84,11 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const mode: 'real' | 'preview' | 'sample' = body.mode ?? 'real';
 
+    // fix-497-m: el certificado queda en Auditoría a nombre de quien lo emitió.
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      auditClientOptions(access.userId),
     );
 
     if (mode === 'preview' || mode === 'sample') {

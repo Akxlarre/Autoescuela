@@ -4,6 +4,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
+  auditClientOptions,
   authErrorResponse,
   denyIfEnrollmentOutOfScope,
   requireStaff,
@@ -56,9 +57,11 @@ Deno.serve(async (req: Request) => {
     // 'initial' → carnet de 6 clases; 'full' → carnet de 12 clases.
     const variant: 'initial' | 'full' = rawVariant === 'full' ? 'full' : 'initial';
 
+    // fix-497-m: lo que escribe en la matrícula queda en Auditoría a nombre de quien la generó.
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      auditClientOptions(access.userId),
     );
 
     const { data: enrollment, error: enrollErr } = await supabase

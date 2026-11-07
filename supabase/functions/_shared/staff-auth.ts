@@ -75,7 +75,8 @@ export function resolveBranchScope(
   requested: unknown,
 ): BranchScope {
   const pedida = typeof requested === 'number' && Number.isInteger(requested) ? requested : null;
-  if (access.role === 'admin' || access.canAccessBothBranches) return { ok: true, branchId: pedida };
+  if (access.role === 'admin' || access.canAccessBothBranches)
+    return { ok: true, branchId: pedida };
 
   if (access.branchId === null || (pedida !== null && pedida !== access.branchId)) {
     return { ok: false, status: 403, error: FORBIDDEN };
@@ -93,7 +94,8 @@ export async function requireStaff(
   allowed: readonly StaffRole[],
 ): Promise<StaffAccess> {
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader) return decideStaffAccess({ authUserId: null, dbUserId: null, roleName: null }, allowed);
+  if (!authHeader)
+    return decideStaffAccess({ authUserId: null, dbUserId: null, roleName: null }, allowed);
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
@@ -115,8 +117,9 @@ export async function requireStaff(
   // `roles` llega como objeto o como arreglo según cómo infiera la relación PostgREST.
   const roles = (row as { roles?: unknown } | null)?.roles;
   const roleName =
-    (Array.isArray(roles) ? (roles[0] as { name?: string } | undefined)?.name : (roles as { name?: string } | null)?.name) ??
-    null;
+    (Array.isArray(roles)
+      ? (roles[0] as { name?: string } | undefined)?.name
+      : (roles as { name?: string } | null)?.name) ?? null;
 
   const user = row as {
     id?: number;
@@ -174,6 +177,17 @@ export async function denyIfEnrollmentOutOfScope(
   return canAccessBranch(access, (data as { branch_id: number | null }).branch_id)
     ? null
     : { status: 403, error: FORBIDDEN };
+}
+
+/**
+ * Opciones de `createClient` para el cliente de servicio de una función que escribe en tablas
+ * auditadas (fix-497-m). Con la clave de servicio no hay sesión: `log_change()` atribuye la
+ * escritura al usuario de este header; sin él queda como "Sistema".
+ */
+export function auditClientOptions(userId: number): {
+  global: { headers: Record<string, string> };
+} {
+  return { global: { headers: { 'x-audit-user-id': String(userId) } } };
 }
 
 /** Respuesta de rechazo con el formato `{ "error": "..." }` que lee el cliente (DG-085). */
