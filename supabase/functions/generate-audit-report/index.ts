@@ -22,6 +22,8 @@ import { chileDayRange, chileToday, formatChilePattern } from '../_shared/chile-
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
+// fix-487-m: mismo mapa que la pantalla (antes había una copia propia que divergió).
+import { ENTITY_MODULE_MAP, KNOWN_ENTITIES } from '../_shared/audit-modules.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -42,27 +44,6 @@ const ACTION_LABEL_MAP: Record<string, string> = {
   UPDATE: 'Actualizar',
   DELETE: 'Eliminar',
 };
-
-const ENTITY_MODULE_MAP: Record<string, string> = {
-  users: 'Usuarios',
-  enrollments: 'Matrículas',
-  class_b_sessions: 'Agenda',
-  class_b_theory_sessions: 'Agenda',
-  payments: 'Pagos',
-  students: 'Alumnos',
-  student_documents: 'Alumnos',
-  promotion_courses: 'Clase Profesional',
-  professional_theory_sessions: 'Clase Profesional',
-  professional_practice_sessions: 'Clase Profesional',
-  professional_module_grades: 'Clase Profesional',
-  class_book: 'Libro de Clases',
-  vehicles: 'Flota',
-  vehicle_documents: 'Flota',
-  maintenance_records: 'Flota',
-  certificates: 'Certificación',
-};
-
-const KNOWN_ENTITIES = Object.keys(ENTITY_MODULE_MAP);
 
 // Espejo de auditUserLabel() (core/utils/audit-actor.utils.ts).
 const ROLE_LABEL: Record<string, string> = {
@@ -205,19 +186,15 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Paso 1: usuarios del rol elegido (evita filtros en joins anidados) ─────
-    // Secretarias filtra la sede por la de la secretaria (como antes); Administradores, Sistema
-    // y Todos, por la sede de la acción (audit_log.branch_id), la única que tiene una fila del
-    // Sistema (limpieza automática, sin usuario).
+    // La sede se filtra siempre por la de la acción (audit_log.branch_id): una secretaria con
+    // acceso a ambas sedes que actúa en la otra queda en esa (fix-487-m, decisión D4).
     const roleName = quien === 'secretarias' ? 'secretary' : quien === 'admin' ? 'admin' : null;
     let roleUserIds: number[] | null = null;
     if (roleName) {
-      let usersQuery = adminClient
+      const usersQuery = adminClient
         .from('users')
         .select('id, roles!inner(name)')
         .eq('roles.name', roleName);
-      if (branchId !== null && roleName === 'secretary') {
-        usersQuery = usersQuery.eq('branch_id', branchId);
-      }
       const { data: roleUsers, error: usersError } = await usersQuery;
       if (usersError) throw usersError;
       roleUserIds = (roleUsers ?? []).map((u: any) => u.id);
@@ -236,7 +213,7 @@ Deno.serve(async (req: Request) => {
     }
     if (quien === 'sistema') query = query.is('user_id', null);
     if (usuarioId !== null && quien !== 'sistema') query = query.eq('user_id', usuarioId);
-    if (branchId !== null && quien !== 'secretarias') query = query.eq('branch_id', branchId);
+    if (branchId !== null) query = query.eq('branch_id', branchId);
 
     // Días de Chile como rango semiabierto de instantes.
     if (fechaDesde) query = query.gte('created_at', chileDayRange(fechaDesde).start);
@@ -262,7 +239,9 @@ Deno.serve(async (req: Request) => {
     if (error) throw error;
 
     // ── Paso 3: nombre y rol de quienes aparecen ─────────────────────────────
-    const userIds = [...new Set((data ?? []).map((r: any) => r.user_id).filter((id: any) => id != null))];
+    const userIds = [
+      ...new Set((data ?? []).map((r: any) => r.user_id).filter((id: any) => id != null)),
+    ];
     const usersMap = new Map<number, { nombre: string; email: string }>();
     if (userIds.length > 0) {
       const { data: users, error: namesError } = await adminClient

@@ -33,6 +33,8 @@ export interface AuditLogRow {
 }
 
 /** Módulos legibles por entidad de BD.
+ *  ⚠️ Copia espejo en `supabase/functions/_shared/audit-modules.ts` (la exportación). Cambiar
+ *  las dos; `audit-modules.parity.spec.ts` falla si divergen (fix-487-m).
  *  Solo incluir entidades que tienen trigger log_change() activo.
  *  Entidades sin trigger nunca generan registros en audit_log. */
 export const ENTITY_MODULE_MAP: Record<string, string> = {
@@ -66,6 +68,11 @@ export const ENTITY_MODULE_MAP: Record<string, string> = {
   instructors: 'Instructores',
   vehicle_assignments: 'Instructores',
   branch_payroll_config: 'Liquidaciones',
+  // fix-487-m: tablas con trigger que caían sin módulo (salían con el nombre de la tabla)
+  website_config: 'Sitio Web',
+  special_service_sales: 'Servicios Especiales',
+  standalone_course_enrollments: 'Cursos Singulares',
+  professional_pre_registrations: 'Clase Profesional',
 };
 
 export const ACTION_LABEL_MAP: Record<string, AuditAction> = {
@@ -83,6 +90,7 @@ export const MODULE_OPTIONS = [
   'Matrículas',
   'Pagos',
   'Agenda',
+  'Ciclos Teóricos',
   'Alumnos',
   'Clase Profesional',
   'Flota',
@@ -90,5 +98,8 @@ export const MODULE_OPTIONS = [
   'Libro de Clases',
   'Instructores',
   'Liquidaciones',
+  'Servicios Especiales',
+  'Cursos Singulares',
+  'Sitio Web',
   'Otros',
 ];

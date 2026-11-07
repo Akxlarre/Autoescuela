@@ -3,6 +3,7 @@ import { AuditoriaFacade } from './auditoria.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { AuthFacade } from './auth.facade';
+import { BranchFacade } from './branch.facade';
 
 describe('AuditoriaFacade', () => {
   let facade: AuditoriaFacade;
@@ -154,6 +155,56 @@ describe('AuditoriaFacade', () => {
 
       expect(facade.logs()[0].usuarioNombre).toBe('Sistema');
       expect(facade.logs()[0].usuarioRol).toBe('Sistema');
+    });
+  });
+
+  // fix-487-m: el registro es de la sede de la acción (S7, decisión D4 de fix-485-m).
+  describe('fix-487-m', () => {
+    function chainableQuery(rows: unknown[] = []): any {
+      const q: any = {};
+      for (const m of ['select', 'eq', 'order', 'range', 'gte', 'lt', 'in', 'not', 'is']) {
+        q[m] = vi.fn().mockReturnValue(q);
+      }
+      q.then = (resolve: (v: unknown) => unknown) =>
+        resolve({ data: rows, error: null, count: rows.length });
+      return q;
+    }
+
+    it('Secretarias filtra la sede por la de la acción, no por la de la secretaria', async () => {
+      const q = chainableQuery();
+      supabaseSpy.client.from = vi.fn().mockReturnValue(q);
+      facade.setFilters({ quien: 'secretarias' });
+      await facade.initialize();
+
+      expect(q.eq).toHaveBeenCalledWith('branch_id', expect.anything());
+      expect(q.eq).not.toHaveBeenCalledWith('users.branch_id', expect.anything());
+    });
+
+    it('la columna Sede muestra la sede de la acción aunque la secretaria sea de otra', async () => {
+      (TestBed.inject(BranchFacade) as any)._branches.set([
+        { id: 1, name: 'Autoescuela Chillán' },
+        { id: 2, name: 'Conductores Chillán' },
+      ]);
+      const q = chainableQuery([
+        {
+          id: 1,
+          action: 'INSERT',
+          entity: 'payments',
+          detail: 'x',
+          created_at: '2026-11-07T12:00:00Z',
+          branch_id: 2,
+          users: {
+            first_names: 'Lola',
+            paternal_last_name: 'Pérez',
+            roles: { name: 'secretary' },
+            branches: { name: 'Autoescuela Chillán' },
+          },
+        },
+      ]);
+      supabaseSpy.client.from = vi.fn().mockReturnValue(q);
+      await facade.initialize();
+
+      expect(facade.logs()[0].sedeNombre).toBe('Conductores Chillán');
     });
   });
 

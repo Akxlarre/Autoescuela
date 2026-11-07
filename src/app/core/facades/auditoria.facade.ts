@@ -195,7 +195,8 @@ export class AuditoriaFacade {
 
       if (plan.roleName) query = query.eq('users.roles.name', plan.roleName);
       if (plan.onlySystem) query = query.is('user_id', null);
-      if (branchId !== null) query = query.eq(plan.branchColumn, branchId);
+      // fix-487-m: siempre la sede de la acción, también con "Secretarias" (decisión D4).
+      if (branchId !== null) query = query.eq('branch_id', branchId);
 
       // Filtros opcionales
       if (f.fechaDesde) {
@@ -334,11 +335,11 @@ export class AuditoriaFacade {
       usuarioNombre: user ? `${user.first_names} ${user.paternal_last_name}` : 'Sistema',
       usuarioRol: user ? (user.roles?.name ? auditUserLabel(user.roles.name) : '—') : 'Sistema',
       usuarioEmail: user?.email ?? '—',
-      // fix-069-i: el admin no tiene sede propia y el Sistema no tiene usuario: se muestra la sede
-      // de la acción.
+      // fix-487-m: la sede de la acción manda; la del usuario queda solo de respaldo para filas
+      // antiguas sin audit_log.branch_id.
       sedeNombre:
-        user?.branches?.name ??
         this.branchFacade.branches().find((b) => b.id === raw.branch_id)?.name ??
+        user?.branches?.name ??
         '—',
       accion: ACTION_LABEL_MAP[raw.action] ?? raw.action,
       modulo: ENTITY_MODULE_MAP[raw.entity] ?? raw.entity ?? '—',

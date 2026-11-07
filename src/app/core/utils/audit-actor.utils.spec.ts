@@ -3,12 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { auditActorPlan, auditUserLabel, usuariosForActor } from './audit-actor.utils';
 
 describe('auditActorPlan (fix-069-i)', () => {
-  it('Secretarias: solo filas de secretarias, sede de la secretaria (como antes)', () => {
+  it('Secretarias: solo filas de secretarias (la sede es la de la acción, fix-487-m)', () => {
     expect(auditActorPlan('secretarias')).toEqual({
       innerUsers: true,
       roleName: 'secretary',
       onlySystem: false,
-      branchColumn: 'users.branch_id',
     });
   });
 
@@ -17,7 +16,6 @@ describe('auditActorPlan (fix-069-i)', () => {
       innerUsers: true,
       roleName: 'admin',
       onlySystem: false,
-      branchColumn: 'branch_id',
     });
   });
 
@@ -26,7 +24,6 @@ describe('auditActorPlan (fix-069-i)', () => {
       innerUsers: false,
       roleName: null,
       onlySystem: true,
-      branchColumn: 'branch_id',
     });
   });
 
@@ -35,7 +32,6 @@ describe('auditActorPlan (fix-069-i)', () => {
       innerUsers: false,
       roleName: null,
       onlySystem: false,
-      branchColumn: 'branch_id',
     });
   });
 });
