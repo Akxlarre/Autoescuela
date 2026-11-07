@@ -60,7 +60,7 @@ Se verifican como regresión, no como bug nuevo:
 - [x] Visual, app-like (T01–T03, T07)
 - [x] Decisiones de negocio D1–D4 registradas
 - [x] Fixes derivados 486–489, 491–495 y hotfixes 168–170 cerrados y commiteados
-- [ ] `fix-490-m`: aplicar la migración `20261107120000` (Matías) y verificar en la app
+- [x] `fix-490-m`: migración `20261107120000` aplicada y verificada
 - [ ] Deploy de `generate-audit-report` (fix-487/488/489) y verificar exportación
 - [ ] Auditoría: cobertura acción → registro (C01–C24), atribución D04–D06, exportar desde la UI (G)
 - [ ] Landing pública (Q): requiere `webs/` corriendo contra la misma BD (S20, Q04)
@@ -169,6 +169,7 @@ exige título y descripción (M03).
 | Curso inactivo se ve como "Curso no existe" (S17, L10) | `fix-494-m` | ✅ |
 | Cambio de sede pierde lo editado y puede mezclar sedes; secretaria multi-sede fija (S19, I04, P10, D4) | `fix-495-m` | ✅ |
 | Pestañas partidas en dos líneas en vez de abreviarse (N7) | `hotfix-170-m` | ✅ |
+| Detalle de config web ilegible, montos sin miles, caja y precios sin auditar (S9, N6, D1) | `fix-490-m` | ✅ |
 
 ## ACs Afectados
 

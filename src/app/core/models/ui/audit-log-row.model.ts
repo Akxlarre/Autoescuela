@@ -73,6 +73,14 @@ export const ENTITY_MODULE_MAP: Record<string, string> = {
   special_service_sales: 'Servicios Especiales',
   standalone_course_enrollments: 'Cursos Singulares',
   professional_pre_registrations: 'Clase Profesional',
+  // fix-490-m: triggers agregados en 20261107120000 (decisión D1 de fix-485-m)
+  courses: 'Precios y Descuentos',
+  discounts: 'Precios y Descuentos',
+  discount_applications: 'Precios y Descuentos',
+  cash_closings: 'Caja y Gastos',
+  cuadratura_adjustments: 'Caja y Gastos',
+  expenses: 'Caja y Gastos',
+  fixed_expenses: 'Caja y Gastos',
 };
 
 export const ACTION_LABEL_MAP: Record<string, AuditAction> = {
@@ -98,6 +106,8 @@ export const MODULE_OPTIONS = [
   'Libro de Clases',
   'Instructores',
   'Liquidaciones',
+  'Precios y Descuentos',
+  'Caja y Gastos',
   'Servicios Especiales',
   'Cursos Singulares',
   'Sitio Web',
