@@ -156,4 +156,71 @@ describe('AuditoriaFacade', () => {
       expect(facade.logs()[0].usuarioRol).toBe('Sistema');
     });
   });
+
+  // fix-486-m: filtros fantasma al volver (S8) y respuestas fuera de orden (S13).
+  describe('fix-486-m', () => {
+    function deferredQuery() {
+      const q: any = {};
+      for (const m of ['select', 'eq', 'order', 'range', 'gte', 'lt', 'in', 'not', 'is']) {
+        q[m] = vi.fn().mockReturnValue(q);
+      }
+      let resolve!: (v: unknown) => void;
+      const p = new Promise((r) => (resolve = r));
+      q.then = (onOk: (v: unknown) => unknown) => p.then(onOk);
+      return { q, resolve };
+    }
+    const row = (id: number) => ({
+      id,
+      action: 'INSERT',
+      entity: 'payments',
+      detail: `d${id}`,
+      created_at: '2026-11-07T12:00:00Z',
+      users: null,
+    });
+
+    it('resetFilters limpia filtros y página sin consultar', () => {
+      const from = vi.fn();
+      supabaseSpy.client.from = from;
+      (facade as any)._filters.set({ ...facade.filters(), accion: 'Eliminar', usuarioId: 4 });
+      (facade as any)._currentPage.set(3);
+
+      facade.resetFilters();
+
+      expect(facade.filters().accion).toBeNull();
+      expect(facade.filters().usuarioId).toBeNull();
+      expect(facade.currentPage()).toBe(1);
+      expect(from).not.toHaveBeenCalled();
+    });
+
+    it('una respuesta vieja que llega después de una nueva no pisa la tabla', async () => {
+      const vieja = deferredQuery();
+      const nueva = deferredQuery();
+      supabaseSpy.client.from = vi.fn().mockReturnValueOnce(vieja.q).mockReturnValueOnce(nueva.q);
+
+      facade.setPage(2);
+      facade.setPage(3);
+      nueva.resolve({ data: [row(3)], error: null, count: 1 });
+      await new Promise((r) => setTimeout(r));
+      vieja.resolve({ data: [row(2)], error: null, count: 1 });
+      await new Promise((r) => setTimeout(r));
+
+      expect(facade.logs().map((l) => l.id)).toEqual([3]);
+      expect(facade.isLoading()).toBe(false);
+    });
+
+    it('volver a entrar a la misma sede refresca sin skeleton', async () => {
+      const q1 = deferredQuery();
+      supabaseSpy.client.from = vi.fn().mockReturnValue(q1.q);
+      q1.resolve({ data: [row(1)], error: null, count: 1 });
+      await facade.initialize();
+
+      const q2 = deferredQuery();
+      supabaseSpy.client.from = vi.fn().mockReturnValue(q2.q);
+      const p = facade.initialize();
+      expect(facade.isLoading()).toBe(false);
+      q2.resolve({ data: [row(2)], error: null, count: 1 });
+      await p;
+      expect(facade.logs().map((l) => l.id)).toEqual([2]);
+    });
+  });
 });

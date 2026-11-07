@@ -5,6 +5,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { FormsModule } from '@angular/forms';
@@ -492,10 +493,18 @@ export class AdminAuditoriaComponent {
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   constructor() {
+    // fix-486-m: al entrar y al cambiar de sede la pantalla parte sin filtros. Los del facade
+    // (singleton) sobrevivían a la pantalla y la tabla volvía filtrada con los controles vacíos.
     effect(() => {
       this.branchFacade.selectedBranchId();
-      void this.facade.initialize();
+      untracked(() => this.enterBranchContext());
     });
+  }
+
+  private enterBranchContext(): void {
+    this.resetLocalFilters();
+    this.facade.resetFilters();
+    void this.facade.initialize();
   }
 
   // ── Filtros locales (UI state) ──────────────────────────────────────────────
@@ -587,13 +596,17 @@ export class AdminAuditoriaComponent {
   }
 
   protected clearFilters(): void {
+    this.resetLocalFilters();
+    this.facade.clearFilters();
+  }
+
+  private resetLocalFilters(): void {
     this.fechaDesde.set(null);
     this.fechaHasta.set(null);
     this.filtroQuien.set('todos');
     this.filtroUsuario.set(null);
     this.filtroAccion.set(null);
     this.filtroModulo.set(null);
-    this.facade.clearFilters();
   }
 
   /** Debe coincidir con PAGE_SIZE de AuditoriaFacade (paginación server-side). */

@@ -7,6 +7,7 @@ import { BranchFacade } from './branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import type {
   AuditActor,
   AuditLogRow,
@@ -66,6 +67,7 @@ export class AuditoriaFacade {
 
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
+  private readonly logsGuard = createRequestGuard();
 
   // ── Estado público ──────────────────────────────────────────────────────────
   readonly logs = this._logs.asReadonly();
@@ -90,7 +92,8 @@ export class AuditoriaFacade {
     const branchId = this.getActiveBranchId();
 
     if (this._initialized && branchId === this._lastBranchId) {
-      await this.fetchLogs();
+      // SWR: ya hay datos en pantalla, se refresca sin skeleton (fix-486-m).
+      await this.fetchLogs({ silent: true });
       return;
     }
 
@@ -124,9 +127,18 @@ export class AuditoriaFacade {
   }
 
   clearFilters(): void {
+    this.resetFilters();
+    void this.fetchLogs();
+  }
+
+  /**
+   * Vuelve los filtros y la página a su estado inicial sin consultar (fix-486-m). Lo llama la
+   * pantalla al entrar y al cambiar de sede, antes de `initialize()`: el facade es singleton y
+   * sus filtros sobrevivían a la pantalla, que al volver mostraba los controles vacíos.
+   */
+  resetFilters(): void {
     this._filters.set({ ...EMPTY_FILTERS });
     this._currentPage.set(1);
-    void this.fetchLogs();
   }
 
   setPage(page: number): void {
@@ -140,8 +152,9 @@ export class AuditoriaFacade {
 
   // ── Fetch privado ───────────────────────────────────────────────────────────
 
-  private async fetchLogs(): Promise<void> {
-    this._isLoading.set(true);
+  private async fetchLogs({ silent = false }: { silent?: boolean } = {}): Promise<void> {
+    const requestToken = this.logsGuard.next();
+    if (!silent) this._isLoading.set(true);
     this._error.set(null);
 
     try {
@@ -213,11 +226,14 @@ export class AuditoriaFacade {
 
       const { data, error, count } = await query;
 
+      // fix-486-m: una consulta más nueva ya salió (otra página u otro filtro): esta se descarta.
+      if (!this.logsGuard.isCurrent(requestToken)) return;
       if (error) throw error;
 
       this._totalCount.set(count ?? 0);
       this._logs.set((data ?? []).map((row: any) => this.mapToRow(row)));
     } catch (err) {
+      if (!this.logsGuard.isCurrent(requestToken)) return;
       const msg =
         err instanceof Error
           ? this.sanitizer.sanitize(err).message
@@ -225,7 +241,7 @@ export class AuditoriaFacade {
       this._error.set(msg);
       this.toast.error(msg);
     } finally {
-      this._isLoading.set(false);
+      if (this.logsGuard.isCurrent(requestToken)) this._isLoading.set(false);
     }
   }
 

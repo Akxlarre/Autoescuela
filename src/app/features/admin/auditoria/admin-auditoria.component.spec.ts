@@ -11,6 +11,7 @@ describe('AdminAuditoriaComponent', () => {
   let component: AdminAuditoriaComponent;
   let facadeSpy: any;
   let layoutDrawerSpy: any;
+  let branchId: ReturnType<typeof signal<number | null>>;
 
   const mockLog: AuditLogRow = {
     id: 97,
@@ -26,6 +27,7 @@ describe('AdminAuditoriaComponent', () => {
   };
 
   beforeEach(() => {
+    branchId = signal<number | null>(null);
     facadeSpy = {
       isLoading: signal(false),
       logs: signal([mockLog]),
@@ -40,6 +42,7 @@ describe('AdminAuditoriaComponent', () => {
       initialize: vi.fn(),
       setFilters: vi.fn(),
       clearFilters: vi.fn(),
+      resetFilters: vi.fn(),
       setPage: vi.fn(),
       selectLog: vi.fn(),
       exportar: vi.fn().mockResolvedValue(undefined),
@@ -50,7 +53,7 @@ describe('AdminAuditoriaComponent', () => {
       imports: [AdminAuditoriaComponent],
       providers: [
         { provide: AuditoriaFacade, useValue: facadeSpy },
-        { provide: BranchFacade, useValue: { selectedBranchId: signal(null) } },
+        { provide: BranchFacade, useValue: { selectedBranchId: branchId } },
         { provide: LayoutDrawerFacadeService, useValue: layoutDrawerSpy },
       ],
     });
@@ -106,6 +109,25 @@ describe('AdminAuditoriaComponent', () => {
       expect(c.filtroUsuario()).toBeNull();
       expect(facadeSpy.setFilters).toHaveBeenLastCalledWith(
         expect.objectContaining({ quien: 'admin', usuarioId: null }),
+      );
+    });
+
+    it('fix-486-m: al entrar o cambiar de sede limpia controles y filtros antes de cargar', () => {
+      const c = component as any;
+      c.filtroAccion.set('Eliminar');
+      c.fechaDesde.set('2026-11-01');
+      facadeSpy.resetFilters.mockClear();
+      facadeSpy.initialize.mockClear();
+
+      // Lo que corre el effect de entrada / cambio de sede.
+      c.enterBranchContext();
+
+      expect(c.filtroAccion()).toBeNull();
+      expect(c.fechaDesde()).toBeNull();
+      expect(facadeSpy.resetFilters).toHaveBeenCalled();
+      expect(facadeSpy.initialize).toHaveBeenCalled();
+      expect(facadeSpy.resetFilters.mock.invocationCallOrder[0]).toBeLessThan(
+        facadeSpy.initialize.mock.invocationCallOrder[0],
       );
     });
 
