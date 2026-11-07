@@ -237,9 +237,10 @@ export class EjemploFacade {
 
 ### Inicialización
 
-`BranchFacade.loadBranches()` debe llamarse una sola vez en `AppShellComponent.ngOnInit()`,
-después de que `AuthFacade` confirme que el usuario es admin. Las secretarias nunca necesitan
-la lista de sedes porque están ancladas a la suya via `currentUser().branchId`.
+`BranchFacade.loadBranches()` se llama una sola vez en `AppShellComponent`, cuando `AuthFacade`
+confirma un usuario con rol conocido. El admin usa la lista para filtrar; secretaria, instructor
+y alumno solo para mostrar el **nombre** de su escuela en el sidebar. Para filtrar datos, esos
+roles siguen anclados a su sede via `currentUser().branchId`, nunca a `selectedBranchId()`.
 
 ### Modelo de datos
 

@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { ProductBrandComponent } from '@shared/components/product-brand/product-brand.component';
 import gsap from 'gsap';
 
 export interface LoginFormData {
@@ -35,18 +36,13 @@ export interface LoginFormData {
 @Component({
   selector: 'app-login-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, IconComponent],
+  imports: [FormsModule, IconComponent, ProductBrandComponent],
   template: `
     <div class="surface-glass w-full max-w-110 rounded-2xl p-10">
       <!-- Logo / Brand -->
       <div class="mb-8 text-center">
-        <div
-          class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-primary"
-          style="box-shadow:  0 8px 40px color-mix(in srgb, var(--ds-brand) 35%, transparent)"
-        >
-          <app-icon name="car" [size]="32" color="white" />
-        </div>
-        <p class="micro-label m-0 mb-2 font-display tracking-[0.18em]">Autoescuela</p>
+        <!-- Marca del producto en la puerta; adentro, el sidebar muestra la escuela (fix-242-b). -->
+        <app-product-brand class="mb-8" />
         <h1 class="m-0 mb-1 font-display text-2xl font-bold text-text-primary">
           @switch (mode()) {
             @case ('reset') {

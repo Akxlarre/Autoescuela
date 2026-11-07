@@ -348,10 +348,12 @@ export class AppShellComponent {
       }
     });
 
-    // Cargar sedes una sola vez cuando el usuario admin o secretaria se autentica
+    // Cargar sedes una sola vez cuando el usuario se autentica. Admin y secretaria las usan para
+    // filtrar; instructores y alumnos, para ver el nombre de SU escuela en el sidebar (fix-242-b,
+    // RLS select_branches deja leerlas a cualquier autenticado).
     effect(() => {
       const role = this.auth.currentUser()?.role;
-      if (role === 'admin' || role === 'secretaria') {
+      if (role && role !== 'unknown') {
         this.branchFacade.loadBranches();
       }
     });
