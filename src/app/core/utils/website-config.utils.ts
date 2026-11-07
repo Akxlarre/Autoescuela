@@ -66,6 +66,32 @@ export const googleMapsEmbedValidator: ValidatorFn = (control) => {
     : { mapEmbed: true };
 };
 
+// ── fix-502-m: contacto de la web vs política de privacidad ─────────────────────────────────
+const normalize = (v: unknown) =>
+  String(v ?? '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/**
+ * Campos de contacto de la web que no coinciden con la política de privacidad de la sede. Se
+ * editan libres; esto solo alimenta un aviso. La dirección de la web suele ser la versión corta
+ * ("Maipón 418, Chillán") de la de la política, por eso basta con que esté contenida en ella.
+ */
+export function contactPolicyMismatch(
+  contact: { address?: string | null; email?: string | null },
+  policy: { address: string; rightsEmail: string } | null,
+): ('dirección' | 'correo')[] {
+  if (!policy) return [];
+  const out: ('dirección' | 'correo')[] = [];
+  const address = normalize(contact.address);
+  if (!address || !normalize(policy.address).includes(address)) out.push('dirección');
+  if (normalize(contact.email) !== normalize(policy.rightsEmail)) out.push('correo');
+  return out;
+}
+
 /** Pestañas de Configuración web, en el orden de la pantalla. */
 export type ConfigWebTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 

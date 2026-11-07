@@ -8,17 +8,43 @@ import {
   Validators,
 } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
+import { contactPolicyMismatch } from '@core/utils/website-config.utils';
 
 @Component({
   selector: 'app-contacto-tab',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent],
+  imports: [ReactiveFormsModule, IconComponent, AlertCardComponent],
   template: `
     <div class="flex flex-col gap-6 animate-fade-in">
       <h3 class="font-bold text-text-primary border-b pb-2 mb-2 border-border-subtle">
         Datos de Sucursal y Geolocalización SEO
       </h3>
+
+      @if (policyMismatch(); as campos) {
+        @if (campos.length > 0) {
+          <!-- fix-502-m: el contacto se edita libre, pero se avisa si difiere de la política -->
+          <app-alert-card title="No coincide con la política de privacidad" severity="warning">
+            <p class="text-sm">
+              @switch (campos.join(',')) {
+                @case ('dirección') {
+                  La dirección de la web no coincide con la de la política de privacidad de la sede
+                }
+                @case ('correo') {
+                  El correo de la web no coincide con el de la política de privacidad de la sede
+                }
+                @default {
+                  La dirección y el correo de la web no coinciden con los de la política de
+                  privacidad de la sede
+                }
+              }
+              ({{ policy()?.address }} · {{ policy()?.rightsEmail }}). Si el cambio es correcto,
+              avisa para actualizar también la política.
+            </p>
+          </app-alert-card>
+        }
+      }
 
       <div [formGroup]="contactGroup()" class="flex flex-col gap-6">
         <div class="p-5 rounded-xl border border-solid border-border-default bg-elevated">
@@ -249,6 +275,14 @@ export class ContactoTabComponent {
 
   contactGroup = input.required<FormGroup>();
   hoursArray = input.required<FormArray>();
+  /** fix-502-m: dirección y correo de la política de privacidad de la sede (null = sin política). */
+  policy = input<{ address: string; rightsEmail: string } | null>(null);
+
+  /** Campos del contacto de la web que no coinciden con la política (se lee en cada cambio). */
+  protected policyMismatch(): string[] {
+    const c = this.contactGroup().value as { address?: string; email?: string };
+    return contactPolicyMismatch(c, this.policy());
+  }
 
   protected asFormGroup(ctrl: AbstractControl): FormGroup {
     return ctrl as FormGroup;

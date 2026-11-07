@@ -23,6 +23,7 @@ import { WebsiteConfigFacade } from '@core/facades/website-config.facade';
 import { CoursesFacade } from '@core/facades/courses.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { getPrivacyPolicy } from '@core/models/ui/privacy-policy.model';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -177,7 +178,11 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
               <app-promo-tab [promoGroup]="form.controls.promo" />
             }
             @if (activeTab() === 'contacto') {
-              <app-contacto-tab [contactGroup]="form.controls.contact" [hoursArray]="hoursArray" />
+              <app-contacto-tab
+                [contactGroup]="form.controls.contact"
+                [hoursArray]="hoursArray"
+                [policy]="policyContact()"
+              />
             }
             @if (activeTab() === 'faqs') {
               <app-faqs-tab [faqsArray]="faqsArray" />
@@ -360,6 +365,17 @@ export class AdminConfiguracionWebComponent implements AfterViewInit, HasUnsaved
   hasUnsavedChanges(): boolean {
     return this.form.dirty && !this.facade.isSaving();
   }
+
+  /**
+   * fix-502-m: dirección y correo de la política de privacidad de la sede vigente, para avisar
+   * en la pestaña Contacto si la web dice otra cosa.
+   */
+  protected readonly policyContact = computed(() => {
+    const id = this.effectiveBranchId();
+    const slug = this.branchFacade.branches().find((b) => b.id === id)?.slug;
+    const policy = getPrivacyPolicy(slug);
+    return policy ? { address: policy.address, rightsEmail: policy.rightsEmail } : null;
+  });
 
   /** Etiqueta dinámica de la sede activa (usa el catálogo de BranchFacade). */
   protected readonly branchLabel = computed(() => {

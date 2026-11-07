@@ -4,6 +4,7 @@ import { FormBuilder, FormControl } from '@angular/forms';
 
 import {
   configTabsWithErrors,
+  contactPolicyMismatch,
   courseCardControls,
   DEFAULT_WHY_US,
   domainValidator,
@@ -143,5 +144,32 @@ describe('validadores de formato (fix-500-m)', () => {
     expect(googleMapsEmbedValidator(ctrl('https://evil.example/maps/embed'))).toEqual({
       mapEmbed: true,
     });
+  });
+});
+
+// fix-502-m: el contacto de la web se edita libre, pero se avisa si no coincide con la política.
+describe('contactPolicyMismatch (fix-502-m)', () => {
+  const politica = {
+    address: 'Maipón 418, Chillán, Región de Ñuble',
+    rightsEmail: 'otecchillan@gmail.com',
+  };
+
+  it('sin diferencias: la dirección de la web está contenida en la de la política', () => {
+    expect(
+      contactPolicyMismatch(
+        { address: 'Maipon 418, chillan', email: 'OtecChillan@gmail.com' },
+        politica,
+      ),
+    ).toEqual([]);
+  });
+
+  it('marca la dirección y el correo distintos', () => {
+    expect(
+      contactPolicyMismatch({ address: 'Arauco 600, Chillán', email: 'otro@gmail.com' }, politica),
+    ).toEqual(['dirección', 'correo']);
+  });
+
+  it('sin política (sede sin política) no avisa', () => {
+    expect(contactPolicyMismatch({ address: 'x', email: 'y' }, null)).toEqual([]);
   });
 });
