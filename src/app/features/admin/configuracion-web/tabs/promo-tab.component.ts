@@ -10,7 +10,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   template: `
     <div [formGroup]="promoGroup()" class="flex flex-col gap-6 animate-fade-in">
       <div class="flex items-center justify-between border-b pb-2 mb-2 border-border-subtle">
-        <h3 class="text-base font-bold text-text-primary">Campaña y Banner Promocional Global</h3>
+        <h3 class="font-bold text-text-primary">Campaña y Banner Promocional Global</h3>
         <label
           class="flex items-center gap-2.5 cursor-pointer bg-surface py-2 px-4 rounded-xl border border-solid border-border-default shadow-sm hover:border-brand/50 transition-colors"
         >

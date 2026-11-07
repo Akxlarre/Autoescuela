@@ -12,6 +12,12 @@
 - Fondos: `bg-base` (página), `bg-surface` (cards), `bg-surface-elevated`
 - Marca: `var(--ds-brand)`, `var(--color-primary)`
 - **NUNCA**: `text-red-500`, `bg-[#ff0000]`, u otras utilities de colores arbitrarios de Tailwind. Usa siempre variables abstractas.
+- **NUNCA `text-base`** (ni `md:text-base`, `!text-base`…): acá no es 16 px sino **color**. El `@theme`
+  define `--color-base` (fondo de la página) con el mismo nombre que el tamaño `--text-base`, y
+  Tailwind genera solo `color: var(--color-base)`: el texto queda con el color del fondo. Sacá la
+  clase (el tamaño ya se hereda). Por lo mismo, un `--color-X` nuevo en el `@theme` no puede llamarse
+  como un tamaño de letra o de sombra (`xs`, `sm`, `lg`, `2xl`, `md`…). Guardrail: **ARCH-29**
+  (`npm run lint:arch`), detalle en `indices/ANTI-PATTERNS.md` AP-018.
 
 ## Iconos — Sistema Lucide (OBLIGATORIO)
 

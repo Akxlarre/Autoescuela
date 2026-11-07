@@ -250,7 +250,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                     id="obs"
                     [(ngModel)]="observations"
                     rows="3"
-                    class="form-control w-full resize-none rounded-2xl p-5 bg-subtle border-border-default/60 focus:bg-surface focus:border-brand/40 focus:ring-4 focus:ring-brand/10 transition-all text-sm sm:text-base shadow-inner placeholder:text-text-muted/60 hover:border-border-strong cursor-text"
+                    class="form-control w-full resize-none rounded-2xl p-5 bg-subtle border-border-default/60 focus:bg-surface focus:border-brand/40 focus:ring-4 focus:ring-brand/10 transition-all text-sm shadow-inner placeholder:text-text-muted/60 hover:border-border-strong cursor-text"
                     placeholder="Notas rápidas sobre el retorno (opcional)..."
                     data-llm-description="input for class observations on return"
                   ></textarea>

@@ -35,7 +35,7 @@ import {
         @if (policy(); as p) {
           <header class="mb-8">
             <h1 class="text-2xl font-bold text-text-primary mb-2">Política de Privacidad</h1>
-            <p class="text-base text-text-secondary">{{ p.legalName }}</p>
+            <p class="text-text-secondary">{{ p.legalName }}</p>
             <p class="micro-label mt-4">Última actualización: {{ p.lastUpdated }}</p>
             <p class="micro-label">Entrada en vigencia: {{ p.effectiveFrom }}</p>
             <p class="micro-label">Versión: {{ version }}</p>

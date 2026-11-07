@@ -55,7 +55,7 @@ import type { EvaluationChecklistItem } from '@core/models/ui/instructor-portal.
             data-llm-action="alternar-item-checklist-evaluacion"
           >
             <span
-              class="checklist-item-text text-sm transition-colors sm:text-base pr-2 leading-tight flex-1"
+              class="checklist-item-text text-sm transition-colors pr-2 leading-tight flex-1"
               [class.text-checked]="item.checked"
             >
               {{ item.label }}

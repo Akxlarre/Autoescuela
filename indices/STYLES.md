@@ -66,7 +66,7 @@ Overrides de tokens que aplican SOLO bajo un selector de scope (nunca en `:root`
 | `--color-primary-muted` | `bg-brand-muted` | `border-brand-muted` | — |
 | `--color-primary-tint` | `bg-brand-tint` | — | — |
 | `--color-primary-dark` | `bg-brand-dark` / `bg-brand-dark/N` | — | — |
-| `--bg-base` | `bg-base` | — | — |
+| `--bg-base` | `bg-base` | — | **prohibida**: `text-base` pinta con el fondo (ver nota abajo) |
 | `--bg-surface` | `bg-surface` / `bg-surface/N` | — | — |
 | `--bg-elevated` | `bg-elevated` | — | — |
 | `--bg-subtle` | `bg-subtle` | — | — |
@@ -89,6 +89,12 @@ Overrides de tokens que aplican SOLO bajo un selector de scope (nunca en `:root`
 | `--state-info` | `bg-info` / `bg-info/N` | `border-info` | `text-info` |
 | `--state-info-bg` | `bg-info-subtle` | — | — |
 | `--state-info-border` | — | `border-info-border` | — |
+
+> **`text-base` no es un tamaño en este proyecto (ARCH-29, AP-018).** `--color-base` (fondo de
+> página) y el `--text-base` (16 px) del tema por defecto comparten nombre, y Tailwind genera
+> `text-base` como **color** (`color: var(--color-base)`, sin `font-size`). `npm run lint:arch` la
+> prohíbe con cualquier variante y falla si un color nuevo del `@theme` toma el nombre de un tamaño
+> de letra o de sombra. Detector: `scripts/lib/theme-name-collisions.js`.
 
 > **Patrón `/N` (opacity modifier):** En Tailwind v4, todos los colores en `@theme` soportan `bg-TOKEN/N` y `border-TOKEN/N` donde N es el porcentaje de opacidad (1–100). Equivale a `color-mix(in oklch, var(--color-TOKEN) N%, transparent)`. Reemplaza los `style="background: color-mix(...)"` inline.
 

@@ -13,7 +13,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       appCardHover
     >
       <div class="flex flex-col mb-6">
-        <h3 class="text-base font-bold text-text-primary m-0">Tasas de Aprobación</h3>
+        <h3 class="font-bold text-text-primary m-0">Tasas de Aprobación</h3>
         <span class="text-2xs text-text-muted font-bold uppercase tracking-widest mt-0.5"
           >Métricas de Éxito</span
         >
