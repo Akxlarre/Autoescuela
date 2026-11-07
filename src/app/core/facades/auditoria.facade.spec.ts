@@ -158,6 +158,39 @@ describe('AuditoriaFacade', () => {
     });
   });
 
+  // fix-488-m: la exportación quedó en el tope → se avisa.
+  describe('fix-488-m', () => {
+    beforeEach(() => {
+      vi.mock('@core/utils/excel.utils', () => ({ downloadExcel: vi.fn() }));
+    });
+
+    it('si el Excel quedó corto, avisa con un toast de advertencia', async () => {
+      (toastSpy as any).warning = vi.fn();
+      supabaseSpy.client.functions = {
+        invoke: vi.fn().mockResolvedValue({
+          data: { sheetName: 'x', rows: [], filename: 'f', truncated: true, total: 78000 },
+          error: null,
+        }),
+      };
+      await facade.exportar('excel');
+      expect(toastSpy.warning).toHaveBeenCalled();
+      expect(toastSpy.success).not.toHaveBeenCalled();
+    });
+
+    it('si trajo todo, confirma como siempre', async () => {
+      (toastSpy as any).warning = vi.fn();
+      supabaseSpy.client.functions = {
+        invoke: vi.fn().mockResolvedValue({
+          data: { sheetName: 'x', rows: [], filename: 'f', truncated: false, total: 10 },
+          error: null,
+        }),
+      };
+      await facade.exportar('excel');
+      expect(toastSpy.success).toHaveBeenCalled();
+      expect(toastSpy.warning).not.toHaveBeenCalled();
+    });
+  });
+
   // fix-487-m: el registro es de la sede de la acción (S7, decisión D4 de fix-485-m).
   describe('fix-487-m', () => {
     function chainableQuery(rows: unknown[] = []): any {

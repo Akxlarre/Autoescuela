@@ -298,12 +298,22 @@ export class AuditoriaFacade {
 
       const today = todayIso().replace(/-/g, '');
       if (format === 'excel') {
-        const { sheetName, rows, filename } = data as {
+        const { sheetName, rows, filename, truncated, total } = data as {
           sheetName: string;
           rows: (string | number)[][];
           filename: string;
+          truncated?: boolean;
+          total?: number;
         };
         downloadExcel(sheetName, [], rows, filename ?? `Auditoria_${today}`);
+        // fix-488-m: la exportación tiene tope; si el período tiene más registros, se dice.
+        if (truncated) {
+          this.toast.warning(
+            'Reporte parcial',
+            `El período tiene ${(total ?? 0).toLocaleString('es-CL')} registros: se exportaron los más recientes. Acota las fechas para exportar el resto.`,
+          );
+          return;
+        }
       } else {
         const rawBuffer = data instanceof Blob ? await data.arrayBuffer() : data;
         const blob = new Blob([rawBuffer], { type: 'application/pdf' });

@@ -24,6 +24,12 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
 // fix-487-m: mismo mapa que la pantalla (antes había una copia propia que divergió).
 import { ENTITY_MODULE_MAP, KNOWN_ENTITIES } from '../_shared/audit-modules.ts';
+import { fetchPagesCapped } from '../_shared/paged-fetch.ts';
+
+/** Máximo de filas por exportación (fix-488-m). Más que esto se pide acotar el período. */
+const EXPORT_CAP = 10000;
+/** El PDF se dibuja fila a fila en la función: tope menor para no pasarse del límite de CPU. */
+const PDF_CAP = 2000;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -123,6 +129,19 @@ interface ReportData {
   fechaDesde: string | null;
   fechaHasta: string | null;
   totalRows: number;
+  /** Filas que cumplen el filtro; mayor que totalRows si la exportación quedó en el tope. */
+  totalMatching: number;
+  truncated: boolean;
+}
+
+/** Aviso para el archivo cuando la exportación quedó en el tope (fix-488-m). */
+function truncationNotice(d: ReportData): string | null {
+  if (!d.truncated) return null;
+  const fmt = (n: number) => n.toLocaleString('es-CL');
+  return (
+    `Se exportaron los ${fmt(d.totalRows)} registros más recientes de ${fmt(d.totalMatching)}. ` +
+    'Acota el período con los filtros para exportar el resto.'
+  );
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -201,42 +220,52 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Paso 2: query audit_log ──────────────────────────────────────────────
-    let query = adminClient
-      .from('audit_log')
-      .select('id, action, entity, detail, ip, created_at, user_id')
-      .order('created_at', { ascending: false })
-      .limit(5000);
+    // fix-488-m: paginada. Un .limit(5000) en una sola consulta devolvía 1.000 filas (max_rows de
+    // PostgREST, DG-008) y el archivo decía "Total: 1000" como si fuera todo.
+    const buildQuery = () => {
+      let query = adminClient
+        .from('audit_log')
+        .select('id, action, entity, detail, ip, created_at, user_id', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false });
 
-    if (roleUserIds !== null) {
-      // Sin usuarios del rol → resultado vacío
-      query = roleUserIds.length > 0 ? query.in('user_id', roleUserIds) : query.eq('user_id', -1);
-    }
-    if (quien === 'sistema') query = query.is('user_id', null);
-    if (usuarioId !== null && quien !== 'sistema') query = query.eq('user_id', usuarioId);
-    if (branchId !== null) query = query.eq('branch_id', branchId);
-
-    // Días de Chile como rango semiabierto de instantes.
-    if (fechaDesde) query = query.gte('created_at', chileDayRange(fechaDesde).start);
-    if (fechaHasta) query = query.lt('created_at', chileDayRange(fechaHasta).endExclusive);
-
-    if (accionLabel) {
-      const pgOp = Object.entries(ACTION_LABEL_MAP).find(([, v]) => v === accionLabel)?.[0];
-      if (pgOp) query = query.eq('action', pgOp);
-    }
-
-    if (moduloLabel) {
-      if (moduloLabel === 'Otros') {
-        query = query.not('entity', 'in', `(${KNOWN_ENTITIES.join(',')})`);
-      } else {
-        const entities = Object.entries(ENTITY_MODULE_MAP)
-          .filter(([, mod]) => mod === moduloLabel)
-          .map(([entity]) => entity);
-        if (entities.length > 0) query = query.in('entity', entities);
+      if (roleUserIds !== null) {
+        // Sin usuarios del rol → resultado vacío
+        query = roleUserIds.length > 0 ? query.in('user_id', roleUserIds) : query.eq('user_id', -1);
       }
-    }
+      if (quien === 'sistema') query = query.is('user_id', null);
+      if (usuarioId !== null && quien !== 'sistema') query = query.eq('user_id', usuarioId);
+      if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { data, error } = await query;
-    if (error) throw error;
+      // Días de Chile como rango semiabierto de instantes.
+      if (fechaDesde) query = query.gte('created_at', chileDayRange(fechaDesde).start);
+      if (fechaHasta) query = query.lt('created_at', chileDayRange(fechaHasta).endExclusive);
+
+      if (accionLabel) {
+        const pgOp = Object.entries(ACTION_LABEL_MAP).find(([, v]) => v === accionLabel)?.[0];
+        if (pgOp) query = query.eq('action', pgOp);
+      }
+
+      if (moduloLabel) {
+        if (moduloLabel === 'Otros') {
+          query = query.not('entity', 'in', `(${KNOWN_ENTITIES.join(',')})`);
+        } else {
+          const entities = Object.entries(ENTITY_MODULE_MAP)
+            .filter(([, mod]) => mod === moduloLabel)
+            .map(([entity]) => entity);
+          if (entities.length > 0) query = query.in('entity', entities);
+        }
+      }
+      return query;
+    };
+
+    const {
+      rows: data,
+      total: totalMatching,
+      truncated,
+    } = await fetchPagesCapped<any>((from, to) => buildQuery().range(from, to), {
+      cap: format === 'pdf' ? PDF_CAP : EXPORT_CAP,
+    });
 
     // ── Paso 3: nombre y rol de quienes aparecen ─────────────────────────────
     const userIds = [
@@ -280,10 +309,16 @@ Deno.serve(async (req: Request) => {
       fechaDesde,
       fechaHasta,
       totalRows: rows.length,
+      totalMatching,
+      truncated,
     };
 
     if (format === 'excel') {
-      const payload = buildExcelPayload(reportData);
+      const payload = {
+        ...buildExcelPayload(reportData),
+        truncated,
+        total: totalMatching,
+      };
       return new Response(JSON.stringify(payload), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -325,6 +360,8 @@ function buildExcelPayload(d: ReportData) {
   rows.push([`Generado por: ${d.generatedBy}`]);
   rows.push([`Fecha de generación: ${today}`]);
   rows.push([`Total registros: ${d.totalRows}`]);
+  const notice = truncationNotice(d);
+  if (notice) rows.push([notice]);
   rows.push([]);
 
   rows.push(['Fecha/Hora', 'Usuario', 'Email', 'Acción', 'Módulo', 'Detalle', 'IP']);
@@ -434,6 +471,11 @@ function buildPdf(data: ReportData): Uint8Array {
   T(M, y, `Generado por: ${data.generatedBy}`, 9);
   T(M + 260, y, `Fecha: ${formatChilePattern(new Date(), 'dd-MM-yyyy')}`, 9);
   T(M + 500, y, `Total: ${data.totalRows} registros`, 9, true);
+  const notice = truncationNotice(data);
+  if (notice) {
+    y -= 14;
+    T(M, y, notice, 9, true);
+  }
   y -= 16;
 
   L(M, y, M + CW, y);
