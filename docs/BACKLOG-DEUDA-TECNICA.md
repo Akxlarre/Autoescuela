@@ -186,6 +186,13 @@ archivo; alertas del dashboard; enlace de la notificación de pre-inscripción (
 **Hay que revisarlo a mano:**
 - [ ] `inscripcion-publica`: además del config, setear el secret `PUBLIC_ENROLLMENT_ENABLED=true`
       de la Edge Function `public-enrollment` (fix-193-b).
+- [ ] `inscripcion-publica`, **después** de abrirla y antes de anunciarla: comprobar que el servidor
+      rechaza horarios inválidos (fix-240-b; desplegado el 2026-11-06 con la inscripción cerrada, así
+      que nunca se vio funcionando en producción). Llamar a `public-enrollment` con un horario de
+      otra sede, uno ocupado y uno inventado (en `submit-clase-b` e `initiate-payment`): cada una debe
+      responder `{ success: false, error: 'SLOTS_UNAVAILABLE' }` y no crear usuario, matrícula ni
+      intento de pago (verificar por SQL). Detalle de las llamadas en
+      `specs/fixes/fix-240-b-matricula-online-valida-sede-y-horarios/fix.md`.
 - [ ] Baja de promociones: hoy el correo promocional dice que la pidan en la escuela o por el
       correo de la sede (fix-232-b, S5). Con el portal alumno abierto, evaluar un enlace de baja
       directo (Ajustes → consentimientos ya lo permite).

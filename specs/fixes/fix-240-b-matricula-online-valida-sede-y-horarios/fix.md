@@ -49,3 +49,20 @@ Ninguno de una spec — hallazgo de seguridad e integridad de datos:
   a toda acción, así que el rechazo `SLOTS_UNAVAILABLE` no se pudo ver allí. Verificado por SQL
   tras 3 llamadas inválidas: 0 intentos de pago, 0 usuarios y 0 matrículas creadas. Al abrir la
   inscripción, repetir esas 3 llamadas (otra sede, ocupado, horario inventado) antes de anunciarla.
+
+### Verificación pendiente al abrir la inscripción online
+Anotada también en `docs/BACKLOG-DEUDA-TECNICA.md` (checklist de salida del piloto). Desde una
+página de un origen permitido (por ejemplo `ng serve` en `localhost:4200`), `POST` a
+`https://<proyecto>.supabase.co/functions/v1/public-enrollment` con la clave anónima en `apikey` y
+`Authorization`, un `sessionToken` nuevo (`crypto.randomUUID()`) por llamada y datos personales de
+prueba que no existan:
+
+1. **Otra sede:** `action: 'submit-clase-b'`, `branchId` = una sede que el instructor no atiende,
+   y un horario `available` de ese instructor en su propia sede.
+2. **Ocupado:** `action: 'submit-clase-b'`, sede del instructor, un horario `occupied` de la vista.
+3. **Inventado:** `action: 'initiate-payment'`, un horario libre más uno que no existe.
+
+Los horarios se sacan de `v_class_b_schedule_availability` (`instructor_id`, `slot_status`,
+`branch_ids`, `slot_start` > hoy en Chile). Cada llamada debe responder 200 con
+`{ success: false, error: 'SLOTS_UNAVAILABLE' }`. Después, por SQL: 0 filas en `payment_attempts`
+con esos `session_token`, y ningún usuario ni matrícula con los datos de prueba.
