@@ -3,7 +3,6 @@ import {
   addDaysIso,
   chileRange,
   chileToday,
-  formatChileDate,
   mondayOfIso,
   toChileDate,
 } from '@core/utils/chile-time.utils';
@@ -13,7 +12,7 @@ import { AuthFacade } from './auth.facade';
 import { BranchFacade } from './branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
-import { isNextWeekBeyondLimit } from '@core/utils/agenda-week.utils';
+import { formatWeekLabel, isNextWeekBeyondLimit } from '@core/utils/agenda-week.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import {
   buildVehicleDocWarningMap,
@@ -199,7 +198,8 @@ export class AgendaFacade {
 
   readonly kpis = computed(() => this._weekData()?.kpis ?? null);
   readonly timeRows = computed(() => this._weekData()?.timeRows ?? []);
-  readonly weekLabel = computed(() => this._weekData()?.weekLabel ?? '');
+  /** fix-241-b (P08): de la semana pedida, así cambia apenas se navega y no al llegar los datos. */
+  readonly weekLabel = computed(() => formatWeekLabel(this._weekStart()));
 
   readonly isCurrentWeek = computed(() => this._weekStart() === getMondayOfCurrentWeek());
 
@@ -690,9 +690,7 @@ export class AgendaFacade {
     const kpis = this.computeKpis(allSlots, availableSlots);
 
     // Week label
-    const startDay = formatChileDate(weekStart, { day: 'numeric', month: 'short' });
-    const endDay = formatChileDate(weekEnd, { day: 'numeric', month: 'short' });
-    const weekLabel = `${startDay} – ${endDay}`;
+    const weekLabel = formatWeekLabel(weekStart);
 
     return { weekStart, weekEnd, weekLabel, days, timeRows, kpis };
   }
