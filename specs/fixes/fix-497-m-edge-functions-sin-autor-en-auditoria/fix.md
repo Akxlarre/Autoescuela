@@ -1,7 +1,8 @@
 # Fix: Certificados, libro de clases y licencias quedan "sin usuario" en Auditoría
 > id: fix-497-m-edge-functions-sin-autor-en-auditoria
 > refs: fix-485-m-testing-auditoria-configuracion-web
-> status: open
+> status: done
+> closed: 2026-11-07
 > created: 2026-11-07
 
 ## Root Cause
@@ -33,5 +34,4 @@ con clave de servicio si la petición trae el header `x-audit-user-id` (fix-069-
 ## Test de Regresión
 
 - `supabase/functions/_shared/staff-auth.test.ts > auditClientOptions`.
-- Después del deploy: emitir un certificado y leer su registro en `audit_log` (`user_id` = quien
-  lo emitió).
+- Desplegadas por Matías (2026-11-07). `generate-class-book-pdf` llamada como admin: el registro de `class_book` queda con `user_id = 2` (admin) y sede 2, ya no "Sistema". Las otras 3 usan el mismo helper.
