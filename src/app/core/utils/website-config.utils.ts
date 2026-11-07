@@ -1,5 +1,30 @@
 import type { WhyUsConfig } from '@core/models/dto/website-config.model';
 
+/** Pestañas de Configuración web, en el orden de la pantalla. */
+export type ConfigWebTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
+
+/** Secciones del formulario que muestra cada pestaña. */
+const TAB_SECTIONS: readonly [ConfigWebTab, readonly string[]][] = [
+  ['general', ['brand', 'social']],
+  ['hero', ['hero']],
+  ['cursos', ['courses', 'pricingFooter']],
+  ['promo', ['promo']],
+  ['contacto', ['contact', 'hours']],
+  ['faqs', ['faqs']],
+];
+
+/**
+ * Pestañas con algún campo inválido (fix-492-m). Antes el pie solo decía "existen errores" y no
+ * había cómo saber en qué pestaña buscar.
+ */
+export function configTabsWithErrors(form: {
+  controls: Record<string, { invalid: boolean } | undefined>;
+}): ConfigWebTab[] {
+  return TAB_SECTIONS.filter(([, sections]) => sections.some((s) => form.controls[s]?.invalid)).map(
+    ([tab]) => tab,
+  );
+}
+
 /**
  * Textos de "Por qué elegirnos" para una sede que todavía no tiene ninguno guardado.
  * Son los mismos que Configuración web publicaba fijos antes de fix-491-m.

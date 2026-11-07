@@ -9,7 +9,14 @@ import {
   effect,
   viewChild,
 } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators, FormArray } from '@angular/forms';
+import {
+  FormBuilder,
+  ReactiveFormsModule,
+  Validators,
+  FormArray,
+  type FormControlStatus,
+} from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { WebsiteConfigFacade } from '@core/facades/website-config.facade';
 import { CoursesFacade } from '@core/facades/courses.facade';
@@ -32,7 +39,7 @@ import { FaqsTabComponent } from './tabs/faqs-tab.component';
 import { TabsComponent } from '@shared/components/tabs/tabs.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { branchIdToTheme } from '@core/utils/sede-theme.utils';
-import { whyUsToPublish } from '@core/utils/website-config.utils';
+import { configTabsWithErrors, whyUsToPublish } from '@core/utils/website-config.utils';
 
 type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
@@ -90,7 +97,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
           <!-- Custom Tabs Switching (oculto si el admin no eligió sede aún) -->
           @if (!noBranchSelected()) {
             <app-tabs
-              [tabs]="tabs"
+              [tabs]="tabsView()"
               [activeId]="activeTab()"
               variant="line"
               [uppercase]="true"
@@ -167,21 +174,24 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
             <div
               class="flex items-center justify-between mt-10 pt-6 pb-2 border-t border-border-subtle"
             >
-              <span class="text-xs">
-                @if (form.invalid) {
+              <!-- fix-492-m: dice en qué pestaña está el error, con ícono Lucide (antes emoji) -->
+              <span class="text-xs flex items-center gap-1.5" aria-live="polite">
+                @if (tabsWithErrors().length > 0) {
+                  <app-icon name="circle-alert" [size]="14" class="text-error" />
                   <span class="font-medium text-error"
-                    >⚠️ Existen errores de validación en el formulario.</span
+                    >Hay campos por corregir en: {{ tabsWithErrorsLabel() }}.</span
                   >
                 } @else {
+                  <app-icon name="circle-check" [size]="14" class="text-text-muted" />
                   <span class="text-text-muted"
-                    >✓ El formulario de configuración está listo para guardarse.</span
+                    >El formulario de configuración está listo para guardarse.</span
                   >
                 }
               </span>
               <button
                 type="submit"
                 class="btn-primary py-2.5 px-6 flex items-center justify-center gap-2 shadow-md cursor-pointer hover:-translate-y-0.5 transition-transform"
-                [disabled]="facade.isSaving() || facade.isLoading() || form.invalid"
+                [disabled]="facade.isSaving() || facade.isLoading() || formStatus() === 'INVALID'"
                 [appStableWidth]="facade.isSaving()"
                 data-llm-action="save-changes-footer"
               >
@@ -374,9 +384,35 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
       icon: 'save',
       primary: true,
       loading: this.facade.isSaving(),
-      disabled: this.facade.isSaving() || this.facade.isLoading() || this.form.invalid,
+      // fix-492-m: el signal del estado; form.invalid no es reactivo y el botón no se enteraba.
+      disabled:
+        this.facade.isSaving() || this.facade.isLoading() || this.formStatus() === 'INVALID',
     },
   ]);
+
+  /** Estado de validación del formulario como signal (fix-492-m). */
+  protected readonly formStatus = signal<FormControlStatus>('VALID');
+
+  /** Pestañas con algún campo por corregir. */
+  protected readonly tabsWithErrors = computed(() => {
+    this.formStatus();
+    return configTabsWithErrors(this.form);
+  });
+
+  /** Las pestañas con error cambian su ícono por una alerta. */
+  protected readonly tabsView = computed(() => {
+    const withErrors = new Set<string>(this.tabsWithErrors());
+    return this.tabs.map((t) => (withErrors.has(t.id) ? { ...t, icon: 'circle-alert' } : t));
+  });
+
+  /** Nombres de las pestañas con error, para el aviso del pie. */
+  protected readonly tabsWithErrorsLabel = computed(() => {
+    const withErrors = new Set<string>(this.tabsWithErrors());
+    return this.tabs
+      .filter((t) => withErrors.has(t.id))
+      .map((t) => t.label)
+      .join(', ');
+  });
 
   // Reactive Form
   protected readonly form = this.fb.group({
@@ -486,6 +522,11 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
   }
 
   constructor() {
+    // fix-492-m: el estado de validación como signal para el hero, las pestañas y el pie.
+    this.form.statusChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe((status) => this.formStatus.set(status));
+
     // 1. Reacciona al cambio de sede global (topbar) o al usuario autenticado
     effect(() => {
       const branchId = this.effectiveBranchId();
@@ -689,6 +730,8 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
     );
 
     this.form.markAsPristine();
+    // fix-492-m: el patch va con emitEvent: false, así que statusChanges no avisa.
+    this.formStatus.set(this.form.status);
   }
 
   // Handle Form Submission
