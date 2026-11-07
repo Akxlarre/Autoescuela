@@ -22,6 +22,14 @@ import { chileDayRange, chileToday, formatChilePattern } from '../_shared/chile-
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
+// fix-487-m: mismo mapa que la pantalla (antes había una copia propia que divergió).
+import { ENTITY_MODULE_MAP, KNOWN_ENTITIES } from '../_shared/audit-modules.ts';
+import { fetchPagesCapped } from '../_shared/paged-fetch.ts';
+
+/** Máximo de filas por exportación (fix-488-m). Más que esto se pide acotar el período. */
+const EXPORT_CAP = 10000;
+/** El PDF se dibuja fila a fila en la función: tope menor para no pasarse del límite de CPU. */
+const PDF_CAP = 2000;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -42,27 +50,6 @@ const ACTION_LABEL_MAP: Record<string, string> = {
   UPDATE: 'Actualizar',
   DELETE: 'Eliminar',
 };
-
-const ENTITY_MODULE_MAP: Record<string, string> = {
-  users: 'Usuarios',
-  enrollments: 'Matrículas',
-  class_b_sessions: 'Agenda',
-  class_b_theory_sessions: 'Agenda',
-  payments: 'Pagos',
-  students: 'Alumnos',
-  student_documents: 'Alumnos',
-  promotion_courses: 'Clase Profesional',
-  professional_theory_sessions: 'Clase Profesional',
-  professional_practice_sessions: 'Clase Profesional',
-  professional_module_grades: 'Clase Profesional',
-  class_book: 'Libro de Clases',
-  vehicles: 'Flota',
-  vehicle_documents: 'Flota',
-  maintenance_records: 'Flota',
-  certificates: 'Certificación',
-};
-
-const KNOWN_ENTITIES = Object.keys(ENTITY_MODULE_MAP);
 
 // Espejo de auditUserLabel() (core/utils/audit-actor.utils.ts).
 const ROLE_LABEL: Record<string, string> = {
@@ -132,7 +119,6 @@ interface AuditRow {
   accion: string;
   modulo: string;
   detalle: string;
-  ip: string;
 }
 
 interface ReportData {
@@ -142,6 +128,19 @@ interface ReportData {
   fechaDesde: string | null;
   fechaHasta: string | null;
   totalRows: number;
+  /** Filas que cumplen el filtro; mayor que totalRows si la exportación quedó en el tope. */
+  totalMatching: number;
+  truncated: boolean;
+}
+
+/** Aviso para el archivo cuando la exportación quedó en el tope (fix-488-m). */
+function truncationNotice(d: ReportData): string | null {
+  if (!d.truncated) return null;
+  const fmt = (n: number) => n.toLocaleString('es-CL');
+  return (
+    `Se exportaron los ${fmt(d.totalRows)} registros más recientes de ${fmt(d.totalMatching)}. ` +
+    'Acota el período con los filtros para exportar el resto.'
+  );
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -205,64 +204,72 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Paso 1: usuarios del rol elegido (evita filtros en joins anidados) ─────
-    // Secretarias filtra la sede por la de la secretaria (como antes); Administradores, Sistema
-    // y Todos, por la sede de la acción (audit_log.branch_id), la única que tiene una fila del
-    // Sistema (limpieza automática, sin usuario).
+    // La sede se filtra siempre por la de la acción (audit_log.branch_id): una secretaria con
+    // acceso a ambas sedes que actúa en la otra queda en esa (fix-487-m, decisión D4).
     const roleName = quien === 'secretarias' ? 'secretary' : quien === 'admin' ? 'admin' : null;
     let roleUserIds: number[] | null = null;
     if (roleName) {
-      let usersQuery = adminClient
+      const usersQuery = adminClient
         .from('users')
         .select('id, roles!inner(name)')
         .eq('roles.name', roleName);
-      if (branchId !== null && roleName === 'secretary') {
-        usersQuery = usersQuery.eq('branch_id', branchId);
-      }
       const { data: roleUsers, error: usersError } = await usersQuery;
       if (usersError) throw usersError;
       roleUserIds = (roleUsers ?? []).map((u: any) => u.id);
     }
 
     // ── Paso 2: query audit_log ──────────────────────────────────────────────
-    let query = adminClient
-      .from('audit_log')
-      .select('id, action, entity, detail, ip, created_at, user_id')
-      .order('created_at', { ascending: false })
-      .limit(5000);
+    // fix-488-m: paginada. Un .limit(5000) en una sola consulta devolvía 1.000 filas (max_rows de
+    // PostgREST, DG-008) y el archivo decía "Total: 1000" como si fuera todo.
+    const buildQuery = () => {
+      let query = adminClient
+        .from('audit_log')
+        .select('id, action, entity, detail, created_at, user_id', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false });
 
-    if (roleUserIds !== null) {
-      // Sin usuarios del rol → resultado vacío
-      query = roleUserIds.length > 0 ? query.in('user_id', roleUserIds) : query.eq('user_id', -1);
-    }
-    if (quien === 'sistema') query = query.is('user_id', null);
-    if (usuarioId !== null && quien !== 'sistema') query = query.eq('user_id', usuarioId);
-    if (branchId !== null && quien !== 'secretarias') query = query.eq('branch_id', branchId);
-
-    // Días de Chile como rango semiabierto de instantes.
-    if (fechaDesde) query = query.gte('created_at', chileDayRange(fechaDesde).start);
-    if (fechaHasta) query = query.lt('created_at', chileDayRange(fechaHasta).endExclusive);
-
-    if (accionLabel) {
-      const pgOp = Object.entries(ACTION_LABEL_MAP).find(([, v]) => v === accionLabel)?.[0];
-      if (pgOp) query = query.eq('action', pgOp);
-    }
-
-    if (moduloLabel) {
-      if (moduloLabel === 'Otros') {
-        query = query.not('entity', 'in', `(${KNOWN_ENTITIES.join(',')})`);
-      } else {
-        const entities = Object.entries(ENTITY_MODULE_MAP)
-          .filter(([, mod]) => mod === moduloLabel)
-          .map(([entity]) => entity);
-        if (entities.length > 0) query = query.in('entity', entities);
+      if (roleUserIds !== null) {
+        // Sin usuarios del rol → resultado vacío
+        query = roleUserIds.length > 0 ? query.in('user_id', roleUserIds) : query.eq('user_id', -1);
       }
-    }
+      if (quien === 'sistema') query = query.is('user_id', null);
+      if (usuarioId !== null && quien !== 'sistema') query = query.eq('user_id', usuarioId);
+      if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { data, error } = await query;
-    if (error) throw error;
+      // Días de Chile como rango semiabierto de instantes.
+      if (fechaDesde) query = query.gte('created_at', chileDayRange(fechaDesde).start);
+      if (fechaHasta) query = query.lt('created_at', chileDayRange(fechaHasta).endExclusive);
+
+      if (accionLabel) {
+        const pgOp = Object.entries(ACTION_LABEL_MAP).find(([, v]) => v === accionLabel)?.[0];
+        if (pgOp) query = query.eq('action', pgOp);
+      }
+
+      if (moduloLabel) {
+        if (moduloLabel === 'Otros') {
+          query = query.not('entity', 'in', `(${KNOWN_ENTITIES.join(',')})`);
+        } else {
+          const entities = Object.entries(ENTITY_MODULE_MAP)
+            .filter(([, mod]) => mod === moduloLabel)
+            .map(([entity]) => entity);
+          if (entities.length > 0) query = query.in('entity', entities);
+        }
+      }
+      return query;
+    };
+
+    const {
+      rows: data,
+      total: totalMatching,
+      truncated,
+    } = await fetchPagesCapped<any>((from, to) => buildQuery().range(from, to), {
+      cap: format === 'pdf' ? PDF_CAP : EXPORT_CAP,
+    });
 
     // ── Paso 3: nombre y rol de quienes aparecen ─────────────────────────────
-    const userIds = [...new Set((data ?? []).map((r: any) => r.user_id).filter((id: any) => id != null))];
+    const userIds = [
+      ...new Set((data ?? []).map((r: any) => r.user_id).filter((id: any) => id != null)),
+    ];
     const usersMap = new Map<number, { nombre: string; email: string }>();
     if (userIds.length > 0) {
       const { data: users, error: namesError } = await adminClient
@@ -290,7 +297,6 @@ Deno.serve(async (req: Request) => {
         accion: ACTION_LABEL_MAP[raw.action] ?? raw.action,
         modulo: ENTITY_MODULE_MAP[raw.entity] ?? raw.entity ?? '-',
         detalle: raw.detail ?? '-',
-        ip: raw.ip ?? '-',
       };
     });
 
@@ -301,10 +307,16 @@ Deno.serve(async (req: Request) => {
       fechaDesde,
       fechaHasta,
       totalRows: rows.length,
+      totalMatching,
+      truncated,
     };
 
     if (format === 'excel') {
-      const payload = buildExcelPayload(reportData);
+      const payload = {
+        ...buildExcelPayload(reportData),
+        truncated,
+        total: totalMatching,
+      };
       return new Response(JSON.stringify(payload), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -346,9 +358,11 @@ function buildExcelPayload(d: ReportData) {
   rows.push([`Generado por: ${d.generatedBy}`]);
   rows.push([`Fecha de generación: ${today}`]);
   rows.push([`Total registros: ${d.totalRows}`]);
+  const notice = truncationNotice(d);
+  if (notice) rows.push([notice]);
   rows.push([]);
 
-  rows.push(['Fecha/Hora', 'Usuario', 'Email', 'Acción', 'Módulo', 'Detalle', 'IP']);
+  rows.push(['Fecha/Hora', 'Usuario', 'Email', 'Acción', 'Módulo', 'Detalle']);
 
   for (const r of d.rows) {
     rows.push([
@@ -358,7 +372,6 @@ function buildExcelPayload(d: ReportData) {
       r.accion,
       r.modulo,
       r.detalle,
-      r.ip,
     ]);
   }
 
@@ -455,6 +468,11 @@ function buildPdf(data: ReportData): Uint8Array {
   T(M, y, `Generado por: ${data.generatedBy}`, 9);
   T(M + 260, y, `Fecha: ${formatChilePattern(new Date(), 'dd-MM-yyyy')}`, 9);
   T(M + 500, y, `Total: ${data.totalRows} registros`, 9, true);
+  const notice = truncationNotice(data);
+  if (notice) {
+    y -= 14;
+    T(M, y, notice, 9, true);
+  }
   y -= 16;
 
   L(M, y, M + CW, y);
@@ -467,8 +485,8 @@ function buildPdf(data: ReportData): Uint8Array {
     email: { x: M + 240, w: 140 },
     accion: { x: M + 384, w: 70 },
     modulo: { x: M + 458, w: 100 },
-    detalle: { x: M + 562, w: 170 },
-    ip: { x: M + 736, w: 73 }, // termina en 36+736+73=845 ≈ PW-M ✓
+    // fix-489-m: sin columna IP; el detalle usa ese ancho (termina en 36+562+247=845 ≈ PW-M).
+    detalle: { x: M + 562, w: 247 },
   };
 
   setColor('#1e6fbf');
@@ -480,7 +498,6 @@ function buildPdf(data: ReportData): Uint8Array {
   T(cols.accion.x, y - 11, 'ACCIÓN', 6, true);
   T(cols.modulo.x, y - 11, 'MÓDULO', 6, true);
   T(cols.detalle.x, y - 11, 'DETALLE', 6, true);
-  T(cols.ip.x, y - 11, 'IP', 6, true);
   resetColor();
   y -= 18;
 
@@ -493,7 +510,7 @@ function buildPdf(data: ReportData): Uint8Array {
 
   let rowAlt = false;
   for (const row of data.rows) {
-    const detalleLines = wrapText(row.detalle, 40);
+    const detalleLines = wrapText(row.detalle, 58);
     const rowH = Math.max(15, detalleLines.length * 11 + 5);
 
     checkY(rowH);
@@ -528,7 +545,6 @@ function buildPdf(data: ReportData): Uint8Array {
       T(cols.detalle.x, textY - li * 11, detalleLines[li], 6.5);
     }
 
-    T(cols.ip.x, textY, row.ip, 6.5);
 
     y -= rowH;
   }

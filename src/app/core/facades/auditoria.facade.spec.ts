@@ -3,6 +3,7 @@ import { AuditoriaFacade } from './auditoria.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { AuthFacade } from './auth.facade';
+import { BranchFacade } from './branch.facade';
 
 describe('AuditoriaFacade', () => {
   let facade: AuditoriaFacade;
@@ -154,6 +155,176 @@ describe('AuditoriaFacade', () => {
 
       expect(facade.logs()[0].usuarioNombre).toBe('Sistema');
       expect(facade.logs()[0].usuarioRol).toBe('Sistema');
+    });
+  });
+
+  // fix-489-m: la columna IP nunca tuvo datos y se quitó (decisión D2 de fix-485-m).
+  it('fix-489-m: la fila de auditoría ya no trae IP', async () => {
+    const q: any = {};
+    for (const m of ['select', 'eq', 'order', 'range', 'gte', 'lt', 'in', 'not', 'is']) {
+      q[m] = vi.fn().mockReturnValue(q);
+    }
+    q.then = (resolve: (v: unknown) => unknown) =>
+      resolve({
+        data: [{ id: 1, action: 'INSERT', entity: 'payments', created_at: 'x', ip: null }],
+        error: null,
+        count: 1,
+      });
+    supabaseSpy.client.from = vi.fn().mockReturnValue(q);
+    await facade.initialize();
+
+    expect(facade.logs()[0]).not.toHaveProperty('ip');
+    const select = q.select.mock.calls.find((c: string[]) => c[0].includes('action'))[0];
+    expect(select).not.toMatch(/\bip\b/);
+  });
+
+  // fix-488-m: la exportación quedó en el tope → se avisa.
+  describe('fix-488-m', () => {
+    beforeEach(() => {
+      vi.mock('@core/utils/excel.utils', () => ({ downloadExcel: vi.fn() }));
+    });
+
+    it('si el Excel quedó corto, avisa con un toast de advertencia', async () => {
+      (toastSpy as any).warning = vi.fn();
+      supabaseSpy.client.functions = {
+        invoke: vi.fn().mockResolvedValue({
+          data: { sheetName: 'x', rows: [], filename: 'f', truncated: true, total: 78000 },
+          error: null,
+        }),
+      };
+      await facade.exportar('excel');
+      expect(toastSpy.warning).toHaveBeenCalled();
+      expect(toastSpy.success).not.toHaveBeenCalled();
+    });
+
+    it('si trajo todo, confirma como siempre', async () => {
+      (toastSpy as any).warning = vi.fn();
+      supabaseSpy.client.functions = {
+        invoke: vi.fn().mockResolvedValue({
+          data: { sheetName: 'x', rows: [], filename: 'f', truncated: false, total: 10 },
+          error: null,
+        }),
+      };
+      await facade.exportar('excel');
+      expect(toastSpy.success).toHaveBeenCalled();
+      expect(toastSpy.warning).not.toHaveBeenCalled();
+    });
+  });
+
+  // fix-487-m: el registro es de la sede de la acción (S7, decisión D4 de fix-485-m).
+  describe('fix-487-m', () => {
+    function chainableQuery(rows: unknown[] = []): any {
+      const q: any = {};
+      for (const m of ['select', 'eq', 'order', 'range', 'gte', 'lt', 'in', 'not', 'is']) {
+        q[m] = vi.fn().mockReturnValue(q);
+      }
+      q.then = (resolve: (v: unknown) => unknown) =>
+        resolve({ data: rows, error: null, count: rows.length });
+      return q;
+    }
+
+    it('Secretarias filtra la sede por la de la acción, no por la de la secretaria', async () => {
+      const q = chainableQuery();
+      supabaseSpy.client.from = vi.fn().mockReturnValue(q);
+      facade.setFilters({ quien: 'secretarias' });
+      await facade.initialize();
+
+      expect(q.eq).toHaveBeenCalledWith('branch_id', expect.anything());
+      expect(q.eq).not.toHaveBeenCalledWith('users.branch_id', expect.anything());
+    });
+
+    it('la columna Sede muestra la sede de la acción aunque la secretaria sea de otra', async () => {
+      (TestBed.inject(BranchFacade) as any)._branches.set([
+        { id: 1, name: 'Autoescuela Chillán' },
+        { id: 2, name: 'Conductores Chillán' },
+      ]);
+      const q = chainableQuery([
+        {
+          id: 1,
+          action: 'INSERT',
+          entity: 'payments',
+          detail: 'x',
+          created_at: '2026-11-07T12:00:00Z',
+          branch_id: 2,
+          users: {
+            first_names: 'Lola',
+            paternal_last_name: 'Pérez',
+            roles: { name: 'secretary' },
+            branches: { name: 'Autoescuela Chillán' },
+          },
+        },
+      ]);
+      supabaseSpy.client.from = vi.fn().mockReturnValue(q);
+      await facade.initialize();
+
+      expect(facade.logs()[0].sedeNombre).toBe('Conductores Chillán');
+    });
+  });
+
+  // fix-486-m: filtros fantasma al volver (S8) y respuestas fuera de orden (S13).
+  describe('fix-486-m', () => {
+    function deferredQuery() {
+      const q: any = {};
+      for (const m of ['select', 'eq', 'order', 'range', 'gte', 'lt', 'in', 'not', 'is']) {
+        q[m] = vi.fn().mockReturnValue(q);
+      }
+      let resolve!: (v: unknown) => void;
+      const p = new Promise((r) => (resolve = r));
+      q.then = (onOk: (v: unknown) => unknown) => p.then(onOk);
+      return { q, resolve };
+    }
+    const row = (id: number) => ({
+      id,
+      action: 'INSERT',
+      entity: 'payments',
+      detail: `d${id}`,
+      created_at: '2026-11-07T12:00:00Z',
+      users: null,
+    });
+
+    it('resetFilters limpia filtros y página sin consultar', () => {
+      const from = vi.fn();
+      supabaseSpy.client.from = from;
+      (facade as any)._filters.set({ ...facade.filters(), accion: 'Eliminar', usuarioId: 4 });
+      (facade as any)._currentPage.set(3);
+
+      facade.resetFilters();
+
+      expect(facade.filters().accion).toBeNull();
+      expect(facade.filters().usuarioId).toBeNull();
+      expect(facade.currentPage()).toBe(1);
+      expect(from).not.toHaveBeenCalled();
+    });
+
+    it('una respuesta vieja que llega después de una nueva no pisa la tabla', async () => {
+      const vieja = deferredQuery();
+      const nueva = deferredQuery();
+      supabaseSpy.client.from = vi.fn().mockReturnValueOnce(vieja.q).mockReturnValueOnce(nueva.q);
+
+      facade.setPage(2);
+      facade.setPage(3);
+      nueva.resolve({ data: [row(3)], error: null, count: 1 });
+      await new Promise((r) => setTimeout(r));
+      vieja.resolve({ data: [row(2)], error: null, count: 1 });
+      await new Promise((r) => setTimeout(r));
+
+      expect(facade.logs().map((l) => l.id)).toEqual([3]);
+      expect(facade.isLoading()).toBe(false);
+    });
+
+    it('volver a entrar a la misma sede refresca sin skeleton', async () => {
+      const q1 = deferredQuery();
+      supabaseSpy.client.from = vi.fn().mockReturnValue(q1.q);
+      q1.resolve({ data: [row(1)], error: null, count: 1 });
+      await facade.initialize();
+
+      const q2 = deferredQuery();
+      supabaseSpy.client.from = vi.fn().mockReturnValue(q2.q);
+      const p = facade.initialize();
+      expect(facade.isLoading()).toBe(false);
+      q2.resolve({ data: [row(2)], error: null, count: 1 });
+      await p;
+      expect(facade.logs().map((l) => l.id)).toEqual([2]);
     });
   });
 });

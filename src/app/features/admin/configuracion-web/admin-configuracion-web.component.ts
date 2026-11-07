@@ -7,9 +7,17 @@ import {
   signal,
   computed,
   effect,
+  untracked,
   viewChild,
 } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators, FormArray } from '@angular/forms';
+import {
+  FormBuilder,
+  ReactiveFormsModule,
+  Validators,
+  FormArray,
+  type FormControlStatus,
+} from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { WebsiteConfigFacade } from '@core/facades/website-config.facade';
 import { CoursesFacade } from '@core/facades/courses.facade';
@@ -31,6 +39,17 @@ import { ContactoTabComponent } from './tabs/contacto-tab.component';
 import { FaqsTabComponent } from './tabs/faqs-tab.component';
 import { TabsComponent } from '@shared/components/tabs/tabs.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { branchIdToTheme } from '@core/utils/sede-theme.utils';
+import { NO_BRANCH_SCOPE, resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import type { HasUnsavedWebConfig } from '@core/guards/configuracion-web-unsaved.guard';
+import {
+  configTabsWithErrors,
+  courseCardControls,
+  courseOverrideValidator,
+  promoTextValidator,
+  whyUsToPublish,
+} from '@core/utils/website-config.utils';
 
 type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
@@ -77,7 +96,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
         <!-- Header with branch selection for Admin and Tabs Switcher -->
         <div class="flex flex-col border-b border-border-default bg-base z-10">
           <!-- Sede activa (solo secretaria — admin usa el selector global del topbar) -->
-          @if (!isAdmin()) {
+          @if (!isAdmin() && !noBranchSelected()) {
             <div class="flex items-center gap-2 px-4 py-2.5 border-b border-border-default">
               <app-icon name="building-2" [size]="14" class="text-text-muted" />
               <span class="text-xs text-text-muted">Sede:</span>
@@ -88,7 +107,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
           <!-- Custom Tabs Switching (oculto si el admin no eligió sede aún) -->
           @if (!noBranchSelected()) {
             <app-tabs
-              [tabs]="tabs"
+              [tabs]="tabsView()"
               [activeId]="activeTab()"
               variant="line"
               [uppercase]="true"
@@ -165,21 +184,24 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
             <div
               class="flex items-center justify-between mt-10 pt-6 pb-2 border-t border-border-subtle"
             >
-              <span class="text-xs">
-                @if (form.invalid) {
+              <!-- fix-492-m: dice en qué pestaña está el error, con ícono Lucide (antes emoji) -->
+              <span class="text-xs flex items-center gap-1.5" aria-live="polite">
+                @if (tabsWithErrors().length > 0) {
+                  <app-icon name="circle-alert" [size]="14" class="text-error" />
                   <span class="font-medium text-error"
-                    >⚠️ Existen errores de validación en el formulario.</span
+                    >Hay campos por corregir en: {{ tabsWithErrorsLabel() }}.</span
                   >
                 } @else {
+                  <app-icon name="circle-check" [size]="14" class="text-text-muted" />
                   <span class="text-text-muted"
-                    >✓ El formulario de configuración está listo para guardarse.</span
+                    >El formulario de configuración está listo para guardarse.</span
                   >
                 }
               </span>
               <button
                 type="submit"
                 class="btn-primary py-2.5 px-6 flex items-center justify-center gap-2 shadow-md cursor-pointer hover:-translate-y-0.5 transition-transform"
-                [disabled]="facade.isSaving() || facade.isLoading() || form.invalid"
+                [disabled]="facade.isSaving() || facade.isLoading() || formStatus() === 'INVALID'"
                 [appStableWidth]="facade.isSaving()"
                 data-llm-action="save-changes-footer"
               >
@@ -262,7 +284,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
     `,
   ],
 })
-export class AdminConfiguracionWebComponent implements AfterViewInit {
+export class AdminConfiguracionWebComponent implements AfterViewInit, HasUnsavedWebConfig {
   protected readonly facade = inject(WebsiteConfigFacade);
   protected readonly coursesFacade = inject(CoursesFacade);
   protected readonly authFacade = inject(AuthFacade);
@@ -270,6 +292,7 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
   private readonly gsap = inject(GsapAnimationsService);
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
@@ -313,14 +336,27 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
   protected readonly effectiveBranchId = computed<number | null>(() => {
     const user = this.authFacade.currentUser();
     if (!user) return null;
-    if (user.role === 'admin') return this.branchFacade.selectedBranchId();
-    return user.branchId ?? null;
+    // fix-495-m: la regla única de sede. La secretaria con acceso a ambas sedes sigue su selector
+    // (decisión D4); antes quedaba fija en su sede propia.
+    const scope = resolveBranchScope(
+      user.role,
+      user.branchId,
+      this.branchFacade.selectedBranchId(),
+      user.canAccessBothBranches,
+    );
+    return scope === NO_BRANCH_SCOPE ? null : scope;
   });
 
-  /** true cuando el admin no ha seleccionado una sede específica en el topbar. */
-  protected readonly noBranchSelected = computed(
-    () => this.isAdmin() && this.effectiveBranchId() === null,
-  );
+  /** true cuando no hay una sede específica elegida (admin o secretaria multi-sede en "Todas"). */
+  protected readonly noBranchSelected = computed(() => this.effectiveBranchId() === null);
+
+  /** Sede cuya configuración está cargada en el formulario (fix-495-m). */
+  private loadedBranchId: number | null = null;
+
+  /** Cambios sin publicar en el formulario (para el guard de salida, fix-495-m). */
+  hasUnsavedChanges(): boolean {
+    return this.form.dirty && !this.facade.isSaving();
+  }
 
   /** Etiqueta dinámica de la sede activa (usa el catálogo de BranchFacade). */
   protected readonly branchLabel = computed(() => {
@@ -372,9 +408,35 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
       icon: 'save',
       primary: true,
       loading: this.facade.isSaving(),
-      disabled: this.facade.isSaving() || this.facade.isLoading() || this.form.invalid,
+      // fix-492-m: el signal del estado; form.invalid no es reactivo y el botón no se enteraba.
+      disabled:
+        this.facade.isSaving() || this.facade.isLoading() || this.formStatus() === 'INVALID',
     },
   ]);
+
+  /** Estado de validación del formulario como signal (fix-492-m). */
+  protected readonly formStatus = signal<FormControlStatus>('VALID');
+
+  /** Pestañas con algún campo por corregir. */
+  protected readonly tabsWithErrors = computed(() => {
+    this.formStatus();
+    return configTabsWithErrors(this.form);
+  });
+
+  /** Las pestañas con error cambian su ícono por una alerta. */
+  protected readonly tabsView = computed(() => {
+    const withErrors = new Set<string>(this.tabsWithErrors());
+    return this.tabs.map((t) => (withErrors.has(t.id) ? { ...t, icon: 'circle-alert' } : t));
+  });
+
+  /** Nombres de las pestañas con error, para el aviso del pie. */
+  protected readonly tabsWithErrorsLabel = computed(() => {
+    const withErrors = new Set<string>(this.tabsWithErrors());
+    return this.tabs
+      .filter((t) => withErrors.has(t.id))
+      .map((t) => t.label)
+      .join(', ');
+  });
 
   // Reactive Form
   protected readonly form = this.fb.group({
@@ -418,12 +480,16 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
         enabled: [false],
       }),
     }),
-    promo: this.fb.group({
-      active: [false],
-      title: [''],
-      description: [''],
-      badge: [''],
-    }),
+    // fix-493-m: con la promo activa, título, etiqueta y detalle son obligatorios.
+    promo: this.fb.group(
+      {
+        active: [false],
+        title: [''],
+        description: [''],
+        badge: [''],
+      },
+      { validators: promoTextValidator },
+    ),
     contact: this.fb.group({
       address: ['', Validators.required],
       city: ['Chillán', Validators.required],
@@ -484,20 +550,24 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
   }
 
   constructor() {
+    // fix-492-m: el estado de validación como signal para el hero, las pestañas y el pie.
+    this.form.statusChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe((status) => this.formStatus.set(status));
+
     // 1. Reacciona al cambio de sede global (topbar) o al usuario autenticado
     effect(() => {
       const branchId = this.effectiveBranchId();
-      if (!branchId) return; // admin sin sede seleccionada → empty state, no cargar
-      void this.facade.loadConfig(branchId);
-      void this.coursesFacade.loadAvailableCourses(branchId);
+      untracked(() => void this.onBranchChange(branchId));
     });
 
     // 2. Reacting to Facade load to hydrate form
     effect(() => {
       const data = this.facade.config();
-      if (data) {
-        this.initForm(data);
-      }
+      // fix-495-m: solo la config dispara el llenado. initForm lee effectiveBranchId(); sin
+      // untracked, cambiar de sede repintaba el formulario y borraba lo escrito aunque el usuario
+      // eligiera "Quedarse".
+      if (data) untracked(() => this.initForm(data));
     });
 
     // 4. GSAP fade-in on tab change (replaces @keyframes fadeIn)
@@ -533,18 +603,9 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
     this.coursesArray.clear({ emitEvent: false });
     if (data.courses) {
       data.courses.forEach((c) => {
+        // fix-493-m: mismos controles y validación que al agregar una card nueva.
         this.coursesArray.push(
-          this.fb.group({
-            course_id: [c.course_id, Validators.required],
-            description: [c.description, Validators.required],
-            priceNote: [c.priceNote ?? ''],
-            duration: [c.duration, Validators.required],
-            highlighted: [c.highlighted],
-            badge: [c.badge ?? ''],
-            priceOverride: [c.priceOverride],
-            displayOrder: [c.displayOrder],
-            includes: [c.includes ? c.includes.join(', ') : '', Validators.required],
-          }),
+          this.fb.group(courseCardControls(c), { validators: courseOverrideValidator }),
         );
       });
     }
@@ -616,7 +677,8 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
           name: data.brand?.name || '',
           shortName: data.brand?.shortName || '',
           slogan: data.brand?.slogan || '',
-          theme: data.brand?.theme || (this.effectiveBranchId()! === 2 ? 'roja' : 'azul'),
+          // hotfix-169-m: fijado por sede, no por lo guardado (sede 1 roja, sede 2 azul).
+          theme: branchIdToTheme(this.effectiveBranchId()),
           domain: data.brand?.domain || '',
           logo: data.brand?.logo || '',
           ogImage: data.brand?.ogImage || '',
@@ -686,6 +748,37 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
     );
 
     this.form.markAsPristine();
+    // fix-492-m: el patch va con emitEvent: false, así que statusChanges no avisa.
+    this.formStatus.set(this.form.status);
+  }
+
+  /**
+   * fix-495-m: cambio de sede. Con cambios sin publicar pide confirmación; si el usuario se queda,
+   * vuelve el selector a la sede anterior sin recargar (lo escrito sigue ahí).
+   */
+  private async onBranchChange(branchId: number | null): Promise<void> {
+    const prev = this.loadedBranchId;
+    if (branchId === prev) return;
+
+    if (prev !== null && this.form.dirty) {
+      const discard = await this.confirmModal.confirm({
+        title: '¿Cambiar de sede sin publicar?',
+        message:
+          'Hay cambios en la configuración web de esta sede que no se han publicado. Si cambias de sede, se pierden.',
+        severity: 'warn',
+        confirmLabel: 'Cambiar sin publicar',
+        cancelLabel: 'Quedarse',
+      });
+      if (!discard) {
+        this.branchFacade.selectBranch(prev);
+        return;
+      }
+    }
+
+    this.loadedBranchId = branchId;
+    if (branchId === null) return; // sin sede elegida → estado vacío, no cargar
+    void this.facade.loadConfig(branchId);
+    void this.coursesFacade.loadAvailableCourses(branchId);
   }
 
   // Handle Form Submission
@@ -707,9 +800,7 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
         name: raw.brand.name!,
         shortName: raw.brand.shortName!,
         slogan: raw.brand.slogan!,
-        theme:
-          (raw.brand.theme as 'azul' | 'roja') ||
-          (Number(this.effectiveBranchId()!) === 2 ? 'roja' : 'azul'),
+        theme: branchIdToTheme(this.effectiveBranchId()),
         domain: raw.brand.domain!,
         logo: raw.brand.logo || '',
         ogImage: raw.brand.ogImage || '',
@@ -754,7 +845,9 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
         duration: c.duration!,
         highlighted: !!c.highlighted,
         badge: c.badge || null,
-        priceOverride: c.priceOverride != null ? Number(c.priceOverride) : null,
+        // fix-493-m: el precio promo solo se publica con la casilla marcada.
+        priceOverride:
+          c.overrideEnabled && c.priceOverride != null ? Number(c.priceOverride) : null,
         displayOrder: Number(c.displayOrder) || 1,
         includes: c.includes
           ? c.includes
@@ -763,42 +856,8 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
               .filter(Boolean)
           : [],
       })),
-      whyUs: [
-        {
-          icon: 'shield-check',
-          title: 'Seguridad Primero',
-          description: 'Pedaleras de doble comando homologadas para tu total seguridad.',
-        },
-        {
-          icon: 'target',
-          title: 'Alta Aprobación',
-          description:
-            'Métodos prácticos diseñados para aprobar a la primera en la Dirección de Tránsito de Chillán.',
-        },
-        {
-          icon: 'map-pin',
-          title: 'Cerca del Examen',
-          description:
-            'Nuestras clases de conducción cubren los recorridos y calles de examen habituales.',
-        },
-        {
-          icon: 'calendar',
-          title: 'Horarios Flexibles',
-          description:
-            'Programamos tus horas prácticas de lunes a sábado en bloques que se acomodan a ti.',
-        },
-        {
-          icon: 'car',
-          title: 'Flota Moderna',
-          description:
-            'Vehículos nuevos y confortables, garantizando un aprendizaje ameno y seguro.',
-        },
-        {
-          icon: 'credit-card',
-          title: 'Facilidades de Pago',
-          description: 'Paga con tarjeta de crédito, débito o transferencia electrónica.',
-        },
-      ],
+      // fix-491-m: se publica lo que la sede ya tiene; antes se pisaba con textos fijos.
+      whyUs: whyUsToPublish(this.facade.config()?.whyUs),
       faqs: raw.faqs.map((f: any) => ({
         question: f.question!,
         answer: f.answer!,

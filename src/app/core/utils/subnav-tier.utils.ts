@@ -5,6 +5,16 @@ export type SubnavTier = 'full' | 'short' | 'icon' | 'select';
  * solo ícono) y devuelve el primero que entra sin overflow. Si ninguno cabe,
  * cae a 'select' (dropdown) en vez de permitir scroll horizontal.
  */
+/**
+ * hotfix-170-m: ¿caben las pestañas si se dibujan en columnas iguales (`flex-1`)? Cada una recibe
+ * `disponible / n`, así que manda la más ancha. Comparar solo el total dejaba que una etiqueta
+ * larga se partiera en dos líneas aunque la suma entrara.
+ */
+export function fitsEqualColumns(itemWidths: readonly number[], available: number): boolean {
+  if (itemWidths.length === 0) return true;
+  return Math.max(...itemWidths) * itemWidths.length <= available;
+}
+
 export function pickSubnavTier(fitsTier: (tier: 'full' | 'short' | 'icon') => boolean): SubnavTier {
   const order: Array<'full' | 'short' | 'icon'> = ['full', 'short', 'icon'];
   for (const tier of order) {

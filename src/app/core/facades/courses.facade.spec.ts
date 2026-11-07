@@ -82,7 +82,7 @@ describe('CoursesFacade', () => {
   });
 
   describe('loadAvailableCourses(branchId)', () => {
-    it('AC1: filtra por branch_id Y active=true, retorna courses del catálogo', async () => {
+    it('AC1: filtra por branch_id, retorna courses del catálogo', async () => {
       const chain = buildSupabaseChain(mockCourses);
       supabaseSpy.client = chain;
 
@@ -90,13 +90,22 @@ describe('CoursesFacade', () => {
 
       expect(supabaseSpy.client.from).toHaveBeenCalledWith('courses');
       expect(chain._selectSpy).toHaveBeenCalledWith('id, name, license_class, base_price, active');
-      // Dos .eq encadenados: branch_id + active
       expect(chain._eqChain.eq).toHaveBeenCalledWith('branch_id', 1);
-      expect(chain._eqChain.eq).toHaveBeenCalledWith('active', true);
 
       expect(facade.availableCourses()).toEqual(mockCourses);
       expect(facade.isLoading()).toBe(false);
       expect(facade.error()).toBeNull();
+    });
+
+    it('fix-494-m: un curso inactivo no se ofrece, pero se reconoce en catalogById', async () => {
+      const inactivo = { ...mockCourses[1], id: 3, name: 'Clase B antigua', active: false };
+      supabaseSpy.client = buildSupabaseChain([...mockCourses, inactivo]);
+
+      await facade.loadAvailableCourses(1);
+
+      expect(facade.availableCourses().map((c) => c.id)).toEqual([1, 2]);
+      expect(facade.availableById().has(3)).toBe(false);
+      expect(facade.catalogById().get(3)?.active).toBe(false);
     });
 
     it('AC-E4: branch sin cursos activos retorna []', async () => {

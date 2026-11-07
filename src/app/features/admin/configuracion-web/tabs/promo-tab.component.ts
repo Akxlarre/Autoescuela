@@ -60,6 +60,12 @@ import { IconComponent } from '@shared/components/icon/icon.component';
               ></textarea>
             </div>
           </div>
+          <!-- fix-493-m: con la promo activa los tres textos son obligatorios -->
+          @if (promoGroup().hasError('promoTextRequired')) {
+            <p class="field-error mt-3">
+              Con la promoción activa, completa el título, la etiqueta y el detalle.
+            </p>
+          }
         </div>
       } @else {
         <div

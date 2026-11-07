@@ -6,15 +6,12 @@ import type { AuditActor, AuditUsuarioOption } from '@core/models/ui/audit-log-r
  * - `innerUsers`: el embed de `users` es `!inner` (excluye filas sin usuario).
  * - `roleName`: rol de `users.roles.name` al que se limita, o null para todos.
  * - `onlySystem`: solo filas sin usuario (`user_id IS NULL`): lo que hace la limpieza automática.
- * - `branchColumn`: columna del filtro de sede. Secretarias sigue usando la sede de la secretaria
- *   (como antes de este fix); el resto usa la sede de la acción, que es la única que tiene una
- *   fila del Sistema.
+ * La sede se filtra siempre por la de la acción (`audit_log.branch_id`, fix-487-m).
  */
 export interface AuditActorPlan {
   innerUsers: boolean;
   roleName: 'secretary' | 'admin' | null;
   onlySystem: boolean;
-  branchColumn: 'users.branch_id' | 'branch_id';
 }
 
 export function auditActorPlan(actor: AuditActor): AuditActorPlan {
@@ -24,14 +21,13 @@ export function auditActorPlan(actor: AuditActor): AuditActorPlan {
         innerUsers: true,
         roleName: 'secretary',
         onlySystem: false,
-        branchColumn: 'users.branch_id',
       };
     case 'admin':
-      return { innerUsers: true, roleName: 'admin', onlySystem: false, branchColumn: 'branch_id' };
+      return { innerUsers: true, roleName: 'admin', onlySystem: false };
     case 'sistema':
-      return { innerUsers: false, roleName: null, onlySystem: true, branchColumn: 'branch_id' };
+      return { innerUsers: false, roleName: null, onlySystem: true };
     case 'todos':
-      return { innerUsers: false, roleName: null, onlySystem: false, branchColumn: 'branch_id' };
+      return { innerUsers: false, roleName: null, onlySystem: false };
   }
 }
 

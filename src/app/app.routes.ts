@@ -4,6 +4,7 @@ import { firstLoginGuard } from '@core/guards/first-login.guard';
 import { guestGuard } from '@core/guards/guest.guard';
 import { passwordRecoveryGuard } from '@core/guards/password-recovery.guard';
 import { hasRoleGuard } from '@core/guards/role.guard';
+import { configuracionWebUnsavedGuard } from '@core/guards/configuracion-web-unsaved.guard';
 import { roleRedirectGuard } from '@core/guards/role-redirect.guard';
 import { enrollmentDraftGuard } from '@core/guards/enrollment-draft.guard';
 import { documentTemplateDraftGuard } from '@core/guards/document-template-draft.guard';
@@ -378,6 +379,8 @@ export const routes: Routes = [
               import('./features/admin/configuracion-web/admin-configuracion-web.component').then(
                 (m) => m.AdminConfiguracionWebComponent,
               ),
+            // fix-495-m: confirmar antes de salir con cambios sin publicar.
+            canDeactivate: [configuracionWebUnsavedGuard],
           },
         ],
       },
@@ -636,6 +639,8 @@ export const routes: Routes = [
               import('./features/admin/configuracion-web/admin-configuracion-web.component').then(
                 (m) => m.AdminConfiguracionWebComponent,
               ),
+            // fix-495-m: confirmar antes de salir con cambios sin publicar.
+            canDeactivate: [configuracionWebUnsavedGuard],
           },
         ],
       },

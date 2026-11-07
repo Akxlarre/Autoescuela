@@ -16,7 +16,9 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
         <div class="flex flex-col gap-4 mb-6">
           <h3 class="micro-label">Información</h3>
           <div class="grid grid-cols-2 gap-3">
+            <!-- hotfix-168-m: fecha y sede a ancho completo; en media columna se cortaban -->
             <app-stat-box
+              class="col-span-2"
               label="Fecha/Hora"
               [value]="(log.fechaHora | chileDate: 'dd/MM/yyyy HH:mm:ss') ?? '—'"
               variant="surface"
@@ -38,18 +40,12 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               icon="layout-grid"
             />
             <app-stat-box
+              class="col-span-2"
               label="Sede"
               [value]="log.sedeNombre"
               variant="surface"
               [compact]="true"
               icon="map-pin"
-            />
-            <app-stat-box
-              label="IP"
-              [value]="log.ip"
-              variant="surface"
-              [compact]="true"
-              icon="globe"
             />
           </div>
         </div>

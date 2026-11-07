@@ -4,6 +4,8 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { CoursesFacade, type CourseCatalogItem } from '@core/facades/courses.facade';
 import type { CourseConfig, SiteData, HeroConfig } from '@core/models/dto/website-config.model';
 import type { ResolvedCourse } from '@core/models/ui/resolved-course.model';
+import { branchIdToTheme } from '@core/utils/sede-theme.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 
 const CLP_FORMATTER = new Intl.NumberFormat('es-CL', {
   style: 'currency',
@@ -63,6 +65,7 @@ export class WebsiteConfigFacade {
   private readonly _error = signal<string | null>(null);
   private readonly _initialized = signal<boolean>(false);
   private _lastBranchId: number | null = null;
+  private readonly configGuard = createRequestGuard();
 
   // Signals expuestos de forma segura (Readonly)
   readonly config = this._config.asReadonly();
@@ -110,6 +113,8 @@ export class WebsiteConfigFacade {
 
     this._error.set(null);
     this._lastBranchId = branchId;
+    // fix-495-m: con un cambio rápido de sede, la respuesta de la anterior se descarta.
+    const requestToken = this.configGuard.next();
 
     try {
       const { data, error } = await this.supabase.client
@@ -118,6 +123,7 @@ export class WebsiteConfigFacade {
         .eq('branch_id', branchId)
         .maybeSingle();
 
+      if (!this.configGuard.isCurrent(requestToken)) return;
       if (error) {
         throw error;
       }
@@ -130,11 +136,12 @@ export class WebsiteConfigFacade {
       }
       this._initialized.set(true);
     } catch (err: any) {
+      if (!this.configGuard.isCurrent(requestToken)) return;
       const errMsg = err?.message || 'Error desconocido';
       this._error.set(errMsg);
       this.toast.error('Error al cargar configuración', errMsg);
     } finally {
-      this._isLoading.set(false);
+      if (this.configGuard.isCurrent(requestToken)) this._isLoading.set(false);
     }
   }
 
@@ -200,7 +207,11 @@ export class WebsiteConfigFacade {
    * Sube un asset (logo o imagen OG) al bucket público 'website-public' de Supabase
    * y retorna la URL pública del archivo.
    */
-  async uploadAsset(branchId: number, file: File, type: 'logo' | 'ogImage' | 'hero' | 'favicon'): Promise<string> {
+  async uploadAsset(
+    branchId: number,
+    file: File,
+    type: 'logo' | 'ogImage' | 'hero' | 'favicon',
+  ): Promise<string> {
     const fileExt = file.name.split('.').pop() || '';
     const cleanFileName = file.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
     const filePath = `website-assets/branch-${branchId}/${type}-${Date.now()}-${cleanFileName}.${fileExt}`;
@@ -278,7 +289,9 @@ export class WebsiteConfigFacade {
       slogan: isRoja
         ? 'Tu licencia profesional y particular en Chillán'
         : 'Tu licencia en Chillán, más cerca y fácil',
-      theme: (isRoja ? 'roja' : 'azul') as 'roja' | 'azul',
+      // hotfix-169-m: el tema está fijado por sede (sede 1 roja, sede 2 azul). `isRoja` acá
+      // significa "es Conductores" (sede 2) por herencia de nombres; no sirve para el tema.
+      theme: branchIdToTheme(branchId),
       domain: isRoja ? 'conductoreschillan.cl' : 'autoescuelachillan.cl',
       logo: isRoja ? `${cdnUrl}/roja-logo.svg` : `${cdnUrl}/azul-logo.svg`,
       ogImage: isRoja ? `${cdnUrl}/roja-og-image.jpg` : `${cdnUrl}/azul-og-image.jpg`,
