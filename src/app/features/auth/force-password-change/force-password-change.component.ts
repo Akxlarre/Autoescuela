@@ -18,11 +18,17 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
 import { toSignal } from '@angular/core/rxjs-interop';
 import { evaluatePassword, PASSWORD_MIN_LENGTH } from '@core/utils/password-policy.utils';
 import { PasswordRequirementsComponent } from '@shared/components/password-requirements/password-requirements.component';
+import { ProductBrandComponent } from '@shared/components/product-brand/product-brand.component';
 
 @Component({
   selector: 'app-force-password-change',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent, PasswordRequirementsComponent],
+  imports: [
+    ReactiveFormsModule,
+    IconComponent,
+    PasswordRequirementsComponent,
+    ProductBrandComponent,
+  ],
   template: `
     <div
       class="relative flex min-h-dvh flex-col items-center justify-center gap-8 overflow-hidden bg-base p-4"
@@ -46,7 +52,8 @@ import { PasswordRequirementsComponent } from '@shared/components/password-requi
             >
               <app-icon [name]="copy.icon" [size]="32" color="white" />
             </div>
-            <p class="micro-label m-0 mb-2 font-display tracking-[0.18em]">Autoescuela</p>
+            <!-- Marca del producto, la misma del login (fix-242-b). -->
+            <app-product-brand size="sm" class="mb-3" />
             <h1 class="m-0 mb-1 font-display text-2xl font-bold text-text-primary">
               {{ copy.title }}
             </h1>

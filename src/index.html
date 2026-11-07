@@ -2,11 +2,16 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <title>Autoescuela</title>
+    <title>Gestor de Autoescuelas</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <!-- Software interno: no se indexa (hotfix-174-b; también robots.txt y X-Robots-Tag). -->
+    <meta name="robots" content="noindex, nofollow" />
+    <!-- Marca: la G sobre placa oscura, la misma de la entrada pública. -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <!--
     Fuentes del flujo público de inscripción (spec 0009): Outfit + Inter.
     Solo se aplican donde el scope [data-public-theme] sobreescribe --font-*;
