@@ -19,8 +19,9 @@ interface PersistedBranch {
  * - Mantener `selectedBranchId` (null = "Todas las escuelas").
  *
  * Ciclo de vida:
- * - `loadBranches()` se llama en `AppShellComponent.ngOnInit()` solo para rol admin.
- * - Las secretarias NO usan este Facade; su branchId viene de `AuthFacade.currentUser().branchId`.
+ * - `loadBranches()` se llama en `AppShellComponent` para todo rol autenticado: admin filtra con
+ *   ella; secretaria, instructor y alumno solo la usan para el nombre de su escuela en el sidebar
+ *   (fix-242-b). Su sede viene de `AuthFacade.currentUser().branchId`, nunca de `selectedBranchId`.
  *
  * Consumidores:
  * - `TopbarComponent` → muestra el selector de sede.
