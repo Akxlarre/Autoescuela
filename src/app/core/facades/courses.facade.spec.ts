@@ -89,7 +89,9 @@ describe('CoursesFacade', () => {
       await facade.loadAvailableCourses(1);
 
       expect(supabaseSpy.client.from).toHaveBeenCalledWith('courses');
-      expect(chain._selectSpy).toHaveBeenCalledWith('id, name, license_class, base_price, active');
+      expect(chain._selectSpy).toHaveBeenCalledWith(
+        'id, name, license_class, base_price, active, is_convalidation, is_reinforcement',
+      );
       expect(chain._eqChain.eq).toHaveBeenCalledWith('branch_id', 1);
 
       expect(facade.availableCourses()).toEqual(mockCourses);
@@ -106,6 +108,23 @@ describe('CoursesFacade', () => {
       expect(facade.availableCourses().map((c) => c.id)).toEqual([1, 2]);
       expect(facade.availableById().has(3)).toBe(false);
       expect(facade.catalogById().get(3)?.active).toBe(false);
+    });
+
+    it('fix-499-m: webCourses deja fuera refuerzo y convalidación (la web pública no los muestra)', async () => {
+      const refuerzo = {
+        ...mockCourses[0],
+        id: 14,
+        name: 'Refuerzo Clase B',
+        is_reinforcement: true,
+      };
+      const conv = { ...mockCourses[0], id: 9, name: 'Convalidación A4', is_convalidation: true };
+      supabaseSpy.client = buildSupabaseChain([...mockCourses, refuerzo, conv]);
+
+      await facade.loadAvailableCourses(1);
+
+      expect(facade.webCourses().map((c) => c.id)).toEqual([1, 2]);
+      // El drawer de precios del admin sigue viéndolos.
+      expect(facade.availableCourses().map((c) => c.id)).toEqual([1, 2, 14, 9]);
     });
 
     it('AC-E4: branch sin cursos activos retorna []', async () => {

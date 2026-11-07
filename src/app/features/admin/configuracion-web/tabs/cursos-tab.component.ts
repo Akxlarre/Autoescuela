@@ -29,7 +29,7 @@ import { courseCardControls, courseOverrideValidator } from '@core/utils/website
     <div class="flex flex-col gap-6 animate-fade-in">
       <div class="flex items-center justify-between border-b pb-2 mb-2 border-border-subtle">
         <h3 class="font-bold text-text-primary">Gestión de Cursos y Licencias</h3>
-        @if (coursesFacade.availableCourses().length > 0) {
+        @if (coursesFacade.webCourses().length > 0) {
           <button
             type="button"
             class="btn-primary py-1.5 px-3 text-xs cursor-pointer flex items-center gap-1"
@@ -47,7 +47,7 @@ import { courseCardControls, courseOverrideValidator } from '@core/utils/website
           <app-skeleton-block variant="rect" width="100%" height="80px" />
           <app-skeleton-block variant="rect" width="100%" height="80px" />
         </div>
-      } @else if (coursesFacade.availableCourses().length === 0) {
+      } @else if (coursesFacade.webCourses().length === 0) {
         <div
           class="p-8 text-center border rounded-xl border-dashed flex flex-col items-center gap-3 border-warning bg-warning/5"
         >
@@ -75,13 +75,16 @@ import { courseCardControls, courseOverrideValidator } from '@core/utils/website
             @let catalogItem = getCatalogItem(courseId);
             @let isOrphan = courseId != null && catalogItem == null;
             @let isInactive = catalogItem != null && !catalogItem.active;
+            @let isHiddenFromWeb =
+              catalogItem != null &&
+              (!!catalogItem.is_reinforcement || !!catalogItem.is_convalidation);
             <div
               [formGroup]="asFormGroup(courseCtrl)"
               class="p-4 md:p-5 rounded-xl border flex flex-col gap-4 transition-all bg-elevated"
               [style.border-color]="
                 isOrphan
                   ? 'var(--state-danger)'
-                  : isInactive
+                  : isInactive || isHiddenFromWeb
                     ? 'var(--state-warning)'
                     : 'var(--border-default)'
               "
@@ -107,6 +110,12 @@ import { courseCardControls, courseOverrideValidator } from '@core/utils/website
                     <app-badge variant="warning">
                       <app-icon name="alert-triangle" [size]="11" />
                       Curso inactivo — no visible en web
+                    </app-badge>
+                  } @else if (isHiddenFromWeb) {
+                    <!-- fix-499-m: refuerzo y convalidación no se muestran al visitante -->
+                    <app-badge variant="warning">
+                      <app-icon name="alert-triangle" [size]="11" />
+                      No se publica en la web
                     </app-badge>
                   }
                   <button
@@ -465,7 +474,8 @@ export class CursosTabComponent {
   pricingFooterGroup = input.required<FormGroup>();
 
   protected readonly courseOptions = computed(() =>
-    this.coursesFacade.availableCourses().map((c) => ({
+    // fix-499-m: solo los que la web pública puede mostrar (sin refuerzo ni convalidación).
+    this.coursesFacade.webCourses().map((c) => ({
       id: c.id,
       label: `${c.name} (${c.license_class})`,
     })),

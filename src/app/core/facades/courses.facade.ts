@@ -16,7 +16,13 @@ import type { Course } from '@core/models/dto/course.model';
  */
 export type CourseCatalogItem = Pick<
   Course,
-  'id' | 'name' | 'license_class' | 'base_price' | 'active'
+  | 'id'
+  | 'name'
+  | 'license_class'
+  | 'base_price'
+  | 'active'
+  | 'is_convalidation'
+  | 'is_reinforcement'
 > & { branch_id?: number | null };
 
 /**
@@ -51,6 +57,15 @@ export class CoursesFacade {
   // ── Estado expuesto (readonly) ────────────────────────────────────────────
   /** Cursos activos: los que se pueden elegir y publicar. */
   readonly availableCourses = computed(() => this._catalog().filter((c) => c.active !== false));
+
+  /**
+   * Cursos que la web pública puede mostrar (fix-499-m): activos que no son refuerzo ni
+   * convalidación. La policy `select_courses_anon` oculta esos dos al visitante, así que una card
+   * con ellos nunca aparece en la landing.
+   */
+  readonly webCourses = computed(() =>
+    this.availableCourses().filter((c) => !c.is_reinforcement && !c.is_convalidation),
+  );
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
   readonly isSaving = this._isSaving.asReadonly();
@@ -92,7 +107,7 @@ export class CoursesFacade {
     try {
       const { data, error } = await this.supabase.client
         .from('courses')
-        .select('id, name, license_class, base_price, active')
+        .select('id, name, license_class, base_price, active, is_convalidation, is_reinforcement')
         .eq('branch_id', branchId);
 
       if (error) throw error;
