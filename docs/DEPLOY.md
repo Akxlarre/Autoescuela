@@ -92,18 +92,28 @@ La lógica vive en `scripts/lib/deploy-manifest.js`, con su test en
 | Secret `FTP_SERVER` | hostname **del servidor** que figura en el certificado TLS (hoy `rs7-va.serverhostgroup.com`), no `ftp.<dominio>` — ver Problemas conocidos |
 | Secret `FTP_USERNAME` | cuenta FTP dedicada, **enjaulada en el docroot del subdominio** |
 | Secret `FTP_PASSWORD` | contraseña de esa cuenta |
-| Variable `APP_DOMAIN` | dominio sin `https://` (hoy `app.conductorchillan.cl`) |
+| Variable `APP_DOMAIN` | dominio sin `https://` (hoy `app.gestordeautoescuelas.cl`) |
 
 Los secrets van **en el environment**, no como *Repository secrets*: así solo los lee el job que
 pasó la aprobación.
 
 ## Cambiar de dominio
 
-Desde 2026-10-28 el dominio es `app.conductorchillan.cl` (reemplazó al provisorio
-`app.autoescuelachillan.cl`). Ni el workflow ni el `.htaccess` lo nombran, así que no hace falta
-tocar código. Al cambiarlo:
+Desde 2026-11-06 el dominio es `app.gestordeautoescuelas.cl` (hotfix-173-b): subdominio con docroot
+`/app.gestordeautoescuelas.cl` y cuenta FTP `deploy@app.gestordeautoescuelas.cl`. Historial:
+`app.autoescuelachillan.cl` (provisorio) → `app.conductorchillan.cl` (2026-10-28) → actual.
+`app.conductorchillan.cl` se abandonó porque los nameservers de `conductorchillan.cl` en NIC Chile
+quedaron en Vercel: el deploy subía bien al cPanel, pero el dominio servía un 404 de Vercel.
 
+Ni el workflow ni el `.htaccess` nombran el dominio. El único lugar del código que lo nombra es
+`APP_BASE_URL` en `supabase/functions/_shared/contract-pdf.ts` (enlace a la Política de Privacidad
+impreso en los contratos). Al cambiarlo:
+
+- [ ] **DNS**: en NIC Chile (Configuración Técnica), los nameservers del dominio deben ser **solo** los
+      del hosting (`ns1.haciendopaginas.cl`, `ns3/ns4/ns5.haciendopaginas.com`). Si queda uno de Vercel,
+      el dominio no sirve el cPanel. Verificar con el whois de nic.cl.
 - [ ] **cPanel**: crear el subdominio (con SSL activo) y una cuenta FTP enjaulada en su docroot.
+      El plan tiene tope de dominios adicionales (addon), no de subdominios.
 - [ ] **GitHub**: actualizar `APP_DOMAIN` y los secrets FTP del environment `Production`.
 - [ ] **Supabase Auth → URL Configuration**: *Site URL* = `https://<dominio>` y en *Redirect URLs*
       agregar `https://<dominio>/recuperar-contrasena`. El link de "Recuperar contraseña" pide volver
@@ -120,6 +130,8 @@ tocar código. Al cambiarlo:
       `public-enrollment`: un origen que no está en la lista recibe `Access-Control-Allow-Origin: null`
       y la inscripción pública (`/inscripcion`) falla en el navegador. No requiere redeploy.
       Verificar con un preflight `OPTIONS` con header `Origin: https://<dominio>`.
+- [ ] **Código**: `APP_BASE_URL` en `supabase/functions/_shared/contract-pdf.ts`, y redesplegar las
+      Edge Functions que generan contratos.
 - [ ] Publicar un tag y verificar `https://<dominio>/version.json`.
 
 ## Problemas conocidos
