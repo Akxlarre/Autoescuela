@@ -25,7 +25,7 @@ import { addDaysIso, formatChilePattern, mondayOfIso } from '../_shared/chile-ti
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
+import { auditClientOptions, authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
 import { buildCalendarRows, type CurriculumRow } from '../_shared/class-book-calendar.ts';
 import {
   escapePdfWinAnsi as esc,
@@ -77,9 +77,11 @@ Deno.serve(async (req: Request) => {
       ).maybeSingle();
     };
 
+    // fix-497-m: el libro de clases queda en Auditoría a nombre de quien lo generó.
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      auditClientOptions(access.userId),
     );
 
     // ── Fetch all data in parallel ──

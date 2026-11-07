@@ -18,8 +18,9 @@ function resolveSingleCourse(
   catalogItem: CourseCatalogItem | undefined,
 ): ResolvedCourse {
   const basePrice = catalogItem?.base_price ?? 0;
-  const displayPrice = card.priceOverride !== null ? card.priceOverride : basePrice;
-  const displayPriceLabel = displayPrice === 0 ? 'Gratis' : CLP_FORMATTER.format(displayPrice);
+  // fix-501-m: el precio sale siempre del catálogo; un priceOverride guardado se ignora.
+  const displayPrice = basePrice;
+  const displayPriceLabel = CLP_FORMATTER.format(displayPrice);
 
   return {
     courseId: card.course_id,
@@ -34,10 +35,8 @@ function resolveSingleCourse(
     highlighted: card.highlighted,
     badge: card.badge ?? null,
     displayOrder: card.displayOrder,
-    priceOverride: card.priceOverride,
     displayPrice,
     displayPriceLabel,
-    isOverrideActive: card.priceOverride !== null,
   };
 }
 
@@ -78,7 +77,7 @@ export class WebsiteConfigFacade {
    * operacional de `CoursesFacade` para producir `ResolvedCourse[]`.
    *
    * Reglas:
-   *  - displayPrice = priceOverride ?? basePrice.
+   *  - displayPrice = basePrice del catálogo (fix-501-m: la web ya no tiene precio propio).
    *  - displayPriceLabel = "Gratis" si displayPrice === 0, sino CLP formato.
    *  - Cards con course_id no presente en el catálogo se marcan isCourseActive=false
    *    (NO se filtran — la UI decide si renderizarlas o mostrar warning).

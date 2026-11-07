@@ -3,10 +3,10 @@ import type { CourseConfig, WhyUsConfig } from '@core/models/dto/website-config.
 
 /**
  * Controles de una card de curso de la web (fix-493-m). Un solo lugar: antes se repetían en el
- * componente (al cargar) y en la pestaña Cursos (al agregar), y ninguno validaba el precio promo.
+ * componente (al cargar) y en la pestaña Cursos (al agregar).
  *
- * `overrideEnabled` es la casilla "Personalizar precio": antes se deducía de `priceOverride != null`
- * y al borrar el número para reescribirlo la casilla se desmarcaba sola.
+ * fix-501-m: sin precio propio. El precio de la web sale siempre de la Configuración de precios
+ * (`courses.base_price`), el mismo que cobra la matrícula.
  */
 export function courseCardControls(card?: Partial<CourseConfig>) {
   return {
@@ -16,19 +16,10 @@ export function courseCardControls(card?: Partial<CourseConfig>) {
     duration: [card?.duration ?? '', Validators.required],
     highlighted: [card?.highlighted ?? false],
     badge: [card?.badge ?? ''],
-    overrideEnabled: [card?.priceOverride != null],
-    priceOverride: [card?.priceOverride ?? (null as number | null), Validators.min(0)],
     displayOrder: [card?.displayOrder ?? 1],
     includes: [card?.includes ? card.includes.join(', ') : '', Validators.required],
   };
 }
-
-/** Con "Personalizar precio" marcado, el precio es obligatorio (0 = "Gratis" vale). */
-export const courseOverrideValidator: ValidatorFn = (group) => {
-  if (!group.get('overrideEnabled')?.value) return null;
-  const price = group.get('priceOverride')?.value;
-  return price === null || price === undefined || price === '' ? { overrideRequired: true } : null;
-};
 
 /** Con la promo activa, título, etiqueta y detalle son obligatorios (llevan "*" en pantalla). */
 export const promoTextValidator: ValidatorFn = (group) => {
@@ -38,6 +29,68 @@ export const promoTextValidator: ValidatorFn = (group) => {
   );
   return vacio ? { promoTextRequired: true } : null;
 };
+
+// ── fix-500-m: formatos de la web ───────────────────────────────────────────────────────────
+// La landing pone estas URLs en un iframe y en enlaces: un "javascript:" se ejecutaba en la página
+// pública. Vacío vale en todos (lo exige "required" donde corresponde).
+
+const textOf = (v: unknown) => String(v ?? '').trim();
+
+/** Dominio sin protocolo, ruta ni espacios ("autoescuelachillan.cl"). */
+export const domainValidator: ValidatorFn = (control) => {
+  const v = textOf(control.value);
+  if (!v) return null;
+  return /^(?!-)[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(v) ? null : { domain: true };
+};
+
+/** URL que empieza con http:// o https://. */
+export const httpUrlValidator: ValidatorFn = (control) => {
+  const v = textOf(control.value);
+  if (!v) return null;
+  return /^https?:\/\/\S+$/i.test(v) ? null : { httpUrl: true };
+};
+
+/** Número de WhatsApp: 8 a 15 dígitos; se aceptan "+" inicial y espacios. */
+export const whatsappValidator: ValidatorFn = (control) => {
+  const v = textOf(control.value);
+  if (!v) return null;
+  return /^\+?\d{8,15}$/.test(v.replace(/\s+/g, '')) ? null : { whatsapp: true };
+};
+
+/** URL de "Insertar un mapa" de Google Maps (https://www.google.com/maps/embed?...). */
+export const googleMapsEmbedValidator: ValidatorFn = (control) => {
+  const v = textOf(control.value);
+  if (!v) return null;
+  return /^https:\/\/(www\.)?google\.[a-z.]+\/maps\/embed\?\S+$/i.test(v)
+    ? null
+    : { mapEmbed: true };
+};
+
+// ── fix-502-m: contacto de la web vs política de privacidad ─────────────────────────────────
+const normalize = (v: unknown) =>
+  String(v ?? '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/**
+ * Campos de contacto de la web que no coinciden con la política de privacidad de la sede. Se
+ * editan libres; esto solo alimenta un aviso. La dirección de la web suele ser la versión corta
+ * ("Maipón 418, Chillán") de la de la política, por eso basta con que esté contenida en ella.
+ */
+export function contactPolicyMismatch(
+  contact: { address?: string | null; email?: string | null },
+  policy: { address: string; rightsEmail: string } | null,
+): ('dirección' | 'correo')[] {
+  if (!policy) return [];
+  const out: ('dirección' | 'correo')[] = [];
+  const address = normalize(contact.address);
+  if (!address || !normalize(policy.address).includes(address)) out.push('dirección');
+  if (normalize(contact.email) !== normalize(policy.rightsEmail)) out.push('correo');
+  return out;
+}
 
 /** Pestañas de Configuración web, en el orden de la pantalla. */
 export type ConfigWebTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';

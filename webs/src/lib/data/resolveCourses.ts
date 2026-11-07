@@ -25,8 +25,8 @@ const CLP_FORMATTER = new Intl.NumberFormat('es-CL', {
  * Reglas (spec 0004):
  *  - Cards cuyo `course_id` no esté en el catálogo activo se descartan
  *    (curso eliminado, desactivado, o de otra sede).
- *  - `displayPrice = priceOverride ?? basePrice`.
- *  - `displayPriceLabel = "Gratis"` si `displayPrice === 0`, sino CLP formato es-CL.
+ *  - `displayPrice = basePrice` del catálogo (fix-501-m: `priceOverride` se ignora).
+ *  - `displayPriceLabel` en CLP formato es-CL.
  *  - Orden: `displayOrder` ASC; desempate `courseId` ASC.
  *
  * Función pura — testeable sin tocar Astro (extraída de getSiteData.ts para
@@ -42,11 +42,13 @@ export function resolveCourses(rawCourses: CourseConfig[], catalog: CourseRow[])
     // Filtramos huérfanos (sin match en catálogo activo) → no se renderizan
     if (!course) continue;
 
-    const priceOverride = card.priceOverride ?? null;
-    const isOverrideActive = priceOverride !== null;
+    // fix-501-m: el precio sale siempre del catálogo (el que cobra la matrícula). Un
+    // priceOverride que haya quedado guardado en la card se ignora.
+    const priceOverride = null;
+    const isOverrideActive = false;
     const basePrice = course.base_price != null ? course.base_price : 0;
-    const displayPrice = isOverrideActive ? (priceOverride as number) : basePrice;
-    const displayPriceLabel = displayPrice === 0 ? 'Gratis' : CLP_FORMATTER.format(displayPrice);
+    const displayPrice = basePrice;
+    const displayPriceLabel = CLP_FORMATTER.format(displayPrice);
 
     resolved.push({
       courseId: course.id,

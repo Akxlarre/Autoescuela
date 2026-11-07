@@ -23,6 +23,7 @@ import { chileParts, chileToday, formatChilePattern } from '../_shared/chile-tim
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
+  auditClientOptions,
   authErrorResponse,
   denyIfEnrollmentOutOfScope,
   requireStaff,
@@ -90,9 +91,11 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const mode: 'real' | 'preview' | 'sample' = body.mode ?? 'real';
 
+    // fix-497-m: el certificado queda en Auditoría a nombre de quien lo emitió.
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      auditClientOptions(access.userId),
     );
 
     if (mode === 'preview' || mode === 'sample') {

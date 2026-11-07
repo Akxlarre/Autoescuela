@@ -22,6 +22,7 @@ import {
 } from '@core/utils/anulacion-pago.utils';
 import { TooltipModule } from 'primeng/tooltip';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { ClickOutsideDirective } from '@core/directives/click-outside.directive';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -38,6 +39,7 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ClickOutsideDirective,
     IconComponent,
     BadgeComponent,
     SkeletonBlockComponent,
@@ -76,8 +78,12 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
           (actionClick)="onHeroAction($event)"
         />
         @if (exportMenuOpen()) {
-          <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
-          <div class="export-menu absolute top-14 right-4 z-20">
+          <div
+            class="export-menu absolute top-14 right-4 z-20"
+            appClickOutside
+            clickOutsideExclude="[data-llm-action=exportar]"
+            (clickOutside)="exportMenuOpen.set(false)"
+          >
             <button
               type="button"
               class="export-menu-item"
@@ -443,9 +449,7 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                 </span>
                 <div class="min-w-52 bg-brand/5 px-4 py-2 rounded-xl border border-brand/10">
                   <div class="flex items-center justify-between gap-4">
-                    <span
-                      class="text-2xs font-black uppercase tracking-widest text-brand"
-                    >
+                    <span class="text-2xs font-black uppercase tracking-widest text-brand">
                       Total Ingresos
                     </span>
                     <span class="text-xl font-black tabular-nums tracking-tight text-brand">
@@ -686,9 +690,7 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                 </span>
                 <div class="min-w-52 bg-warning/5 px-4 py-2 rounded-xl border border-warning/10">
                   <div class="flex items-center justify-between gap-4">
-                    <span
-                      class="text-2xs font-black uppercase tracking-widest text-warning"
-                    >
+                    <span class="text-2xs font-black uppercase tracking-widest text-warning">
                       Total Egresos
                     </span>
                     <span class="text-xl font-black tabular-nums tracking-tight text-warning">

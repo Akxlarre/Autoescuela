@@ -3,6 +3,7 @@
 import type { ContactConfig, HourItem, BrandConfig } from '../lib/types';
 import SectionHeader from './ui/SectionHeader.astro';
 import Icon from './ui/Icon.astro';
+import { safeHttpUrl } from '../lib/safe-url';
 
 interface Props {
   data: ContactConfig;
@@ -62,7 +63,7 @@ const { data, hours, brand } = Astro.props;
       <!-- Map Card -->
       <div class="map-card card">
         <iframe
-          src={data.mapEmbedUrl}
+          src={safeHttpUrl(data.mapEmbedUrl)}
           width="100%"
           height="100%"
           style="border:0;"

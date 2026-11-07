@@ -268,7 +268,6 @@
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | `b` | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-10-06 |
 | ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `i` | [0010-i-clase-7-bloqueada-sin-segundo-pago](specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | 2026-10-13 |
 | ASG-i-023 | Testing: Matrícula presencial (Clase B, refuerzo y Clase Profesional) | `i` | [fix-058-i-testing-matricula-presencial](fixes/fix-058-i-testing-matricula-presencial/fix.md) | 2026-10-18 |
-| ASG-i-036 | Testing: Auditoría y Configuración web | `m` | [fix-485-m-testing-auditoria-configuracion-web](fixes/fix-485-m-testing-auditoria-configuracion-web/fix.md) | 2026-11-07 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -445,6 +444,7 @@
 | ASG-m-011 | Testing: Certificación Profesional en el piloto | [fix-480-m-testing-certificacion-profesional](fixes/fix-480-m-testing-certificacion-profesional/fix.md) | 2026-10-22 |
 | ASG-i-066 | Prueba real del correo del Zoom (cierra fix-062-i) | [fix-062-i-correo-zoom-sede-y-envio-fallido](fixes/fix-062-i-correo-zoom-sede-y-envio-fallido/fix.md) | 2026-10-23 |
 | ASG-i-034 | Testing: Gestión de instructores, secretarias y usuarios | [fix-197-b-testing-instructores-secretarias-usuarios](fixes/fix-197-b-testing-instructores-secretarias-usuarios/fix.md) | 2026-10-29 |
+| ASG-i-036 | Testing: Auditoría y Configuración web | [fix-485-m-testing-auditoria-configuracion-web](fixes/fix-485-m-testing-auditoria-configuracion-web/fix.md) | 2026-11-07 |
 <!-- AUTO-GENERATED:END -->
 
 ---

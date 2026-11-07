@@ -5,6 +5,7 @@ import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-va
 import { HistorialCuadraturasFacade } from '@core/facades/historial-cuadraturas.facade';
 import { formatCLP } from '@core/utils/date.utils';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { ClickOutsideDirective } from '@core/directives/click-outside.directive';
 
 // ─── Tipos internos ───────────────────────────────────────────────────────────
 
@@ -21,7 +22,13 @@ interface DenominacionRow {
   selector: 'app-detalle-cuadratura-modal',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, BadgeComponent, KpiCardVariantComponent, StableWidthDirective],
+  imports: [
+    IconComponent,
+    BadgeComponent,
+    KpiCardVariantComponent,
+    StableWidthDirective,
+    ClickOutsideDirective,
+  ],
   template: `
     <div class="flex flex-col gap-6 p-1">
       @if (facade.cierreSeleccionado(); as d) {
@@ -354,11 +361,13 @@ interface DenominacionRow {
             </button>
 
             @if (exportMenuOpen()) {
-              <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
               <!-- fix-226-m: abre hacia ARRIBA (bottom-full) — el botón vive al fondo de un
                    drawer scrolleable, un menú top-full quedaba recortado bajo el borde. -->
               <div
                 class="absolute bottom-full mb-2 right-0 z-20 min-w-50 bg-surface border border-border-muted rounded-lg shadow-[0_8px_24px_rgb(0_0_0/12%)] overflow-hidden"
+                appClickOutside
+                clickOutsideExclude="[data-llm-action=exportar-detalle-cuadratura]"
+                (clickOutside)="exportMenuOpen.set(false)"
               >
                 <button
                   type="button"

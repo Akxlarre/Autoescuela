@@ -217,30 +217,21 @@ describe('WebsiteConfigFacade', () => {
       expect(r1.description).toBe('Curso B');
     });
 
-    it('AC2: displayPrice hereda basePrice cuando priceOverride es null', () => {
+    it('AC2: displayPrice es el precio del catálogo', () => {
       seedConfig([mockCourseCards[0]]);
       const r = facade.resolvedCourses()[0];
-      expect(r.priceOverride).toBeNull();
       expect(r.displayPrice).toBe(350000);
-      expect(r.isOverrideActive).toBe(false);
       expect(r.displayPriceLabel).toMatch(/350\.000/); // formato CLP es-CL
     });
 
-    it('AC3: displayPrice = priceOverride cuando override está activo', () => {
-      seedConfig([mockCourseCards[1]]);
-      const r = facade.resolvedCourses()[0];
-      expect(r.priceOverride).toBe(320000);
-      expect(r.displayPrice).toBe(320000);
-      expect(r.isOverrideActive).toBe(true);
-      expect(r.displayPriceLabel).toMatch(/320\.000/);
-    });
-
-    it('AC-E3: displayPriceLabel === "Gratis" cuando priceOverride === 0', () => {
-      seedConfig([{ ...mockCourseCards[0], priceOverride: 0 }]);
-      const r = facade.resolvedCourses()[0];
-      expect(r.displayPrice).toBe(0);
-      expect(r.displayPriceLabel).toBe('Gratis');
-      expect(r.isOverrideActive).toBe(true);
+    // fix-501-m: el precio siempre sale de la Configuración de precios. Un precio promocional que
+    // haya quedado guardado en una card se ignora.
+    it('fix-501-m: un priceOverride guardado no cambia el precio mostrado', () => {
+      seedConfig([mockCourseCards[1], { ...mockCourseCards[0], priceOverride: 0 }]);
+      for (const r of facade.resolvedCourses()) {
+        expect(r.displayPrice).toBe(r.basePrice);
+        expect(r.displayPriceLabel).not.toBe('Gratis');
+      }
     });
 
     it('ordena por displayOrder ASC, desempate por courseId ASC', () => {

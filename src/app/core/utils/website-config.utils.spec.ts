@@ -1,59 +1,37 @@
 import { describe, expect, it } from 'vitest';
 
-import { FormBuilder } from '@angular/forms';
+import { FormBuilder, FormControl } from '@angular/forms';
 
 import {
   configTabsWithErrors,
+  contactPolicyMismatch,
   courseCardControls,
-  courseOverrideValidator,
   DEFAULT_WHY_US,
+  domainValidator,
+  googleMapsEmbedValidator,
+  httpUrlValidator,
   promoTextValidator,
+  whatsappValidator,
   whyUsToPublish,
 } from './website-config.utils';
 
-// fix-493-m: precio promocional y promo activa con la validación que la pantalla promete.
+// fix-493-m: promo activa con la validación que la pantalla promete.
 describe('fix-493-m', () => {
   const fb = new FormBuilder();
-  const card = (priceOverride: number | null = null) =>
-    fb.group(
+
+  // fix-501-m: la card ya no tiene precio propio (el precio sale del catálogo).
+  it('fix-501-m: una card no tiene controles de precio promocional', () => {
+    const g = fb.group(
       courseCardControls({
         course_id: 1,
         description: 'd',
         duration: '4 semanas',
         includes: ['a'],
-        priceOverride,
+        priceOverride: 150000,
       }),
-      { validators: courseOverrideValidator },
     );
-
-  it('una card sin precio promo arranca con la casilla desmarcada y es válida', () => {
-    const g = card();
-    expect(g.get('overrideEnabled')?.value).toBe(false);
-    expect(g.valid).toBe(true);
-  });
-
-  it('una card con precio promo guardado arranca con la casilla marcada', () => {
-    expect(card(150000).get('overrideEnabled')?.value).toBe(true);
-    expect(card(0).get('overrideEnabled')?.value).toBe(true);
-  });
-
-  it('casilla marcada sin precio es inválida', () => {
-    const g = card();
-    g.get('overrideEnabled')?.setValue(true);
-    expect(g.hasError('overrideRequired')).toBe(true);
-  });
-
-  it('un precio negativo es inválido; 0 ("Gratis") vale', () => {
-    const g = card(-5000);
-    expect(g.get('priceOverride')?.hasError('min')).toBe(true);
-    g.get('priceOverride')?.setValue(0);
-    expect(g.valid).toBe(true);
-  });
-
-  it('casilla desmarcada no exige precio', () => {
-    const g = card(-5000);
-    g.get('overrideEnabled')?.setValue(false);
-    g.get('priceOverride')?.setValue(null);
+    expect(g.get('priceOverride')).toBeNull();
+    expect(g.get('overrideEnabled')).toBeNull();
     expect(g.valid).toBe(true);
   });
 
@@ -129,5 +107,69 @@ describe('whyUsToPublish', () => {
     for (const item of DEFAULT_WHY_US) {
       expect(item.icon).toMatch(/^[a-z0-9-]+$/);
     }
+  });
+});
+
+// fix-500-m: URLs y formatos de la web. La landing pone estas URLs en un iframe y en enlaces:
+// un "javascript:" se ejecutaba en la página pública.
+describe('validadores de formato (fix-500-m)', () => {
+  const ctrl = (value: unknown) => new FormControl(value);
+
+  it('dominio: nombre sin protocolo, sin espacios ni rutas', () => {
+    expect(domainValidator(ctrl('autoescuelachillan.cl'))).toBeNull();
+    expect(domainValidator(ctrl('www.conductores-chillan.cl'))).toBeNull();
+    expect(domainValidator(ctrl('https://autoescuelachillan.cl'))).toEqual({ domain: true });
+    expect(domainValidator(ctrl('autoescuela chillan.cl'))).toEqual({ domain: true });
+    expect(domainValidator(ctrl('autoescuelachillan'))).toEqual({ domain: true });
+    expect(domainValidator(ctrl(''))).toBeNull(); // vacío lo cubre "required"
+  });
+
+  it('URL http(s): rechaza javascript: y texto suelto; vacío vale', () => {
+    expect(httpUrlValidator(ctrl('https://facebook.com/autoescuela'))).toBeNull();
+    expect(httpUrlValidator(ctrl(''))).toBeNull();
+    expect(httpUrlValidator(ctrl("javascript:alert('x')"))).toEqual({ httpUrl: true });
+    expect(httpUrlValidator(ctrl('facebook.com/autoescuela'))).toEqual({ httpUrl: true });
+  });
+
+  it('WhatsApp: 8 a 15 dígitos, con + y espacios opcionales', () => {
+    expect(whatsappValidator(ctrl('+56912345678'))).toBeNull();
+    expect(whatsappValidator(ctrl('56 9 1234 5678'))).toBeNull();
+    expect(whatsappValidator(ctrl('9123abc'))).toEqual({ whatsapp: true });
+    expect(whatsappValidator(ctrl('1234'))).toEqual({ whatsapp: true });
+  });
+
+  it('mapa: solo el embed de Google Maps por https', () => {
+    expect(googleMapsEmbedValidator(ctrl('https://www.google.com/maps/embed?pb=!1m18'))).toBeNull();
+    expect(googleMapsEmbedValidator(ctrl("javascript:alert('x')"))).toEqual({ mapEmbed: true });
+    expect(googleMapsEmbedValidator(ctrl('https://evil.example/maps/embed'))).toEqual({
+      mapEmbed: true,
+    });
+  });
+});
+
+// fix-502-m: el contacto de la web se edita libre, pero se avisa si no coincide con la política.
+describe('contactPolicyMismatch (fix-502-m)', () => {
+  const politica = {
+    address: 'Maipón 418, Chillán, Región de Ñuble',
+    rightsEmail: 'otecchillan@gmail.com',
+  };
+
+  it('sin diferencias: la dirección de la web está contenida en la de la política', () => {
+    expect(
+      contactPolicyMismatch(
+        { address: 'Maipon 418, chillan', email: 'OtecChillan@gmail.com' },
+        politica,
+      ),
+    ).toEqual([]);
+  });
+
+  it('marca la dirección y el correo distintos', () => {
+    expect(
+      contactPolicyMismatch({ address: 'Arauco 600, Chillán', email: 'otro@gmail.com' }, politica),
+    ).toEqual(['dirección', 'correo']);
+  });
+
+  it('sin política (sede sin política) no avisa', () => {
+    expect(contactPolicyMismatch({ address: 'x', email: 'y' }, null)).toEqual([]);
   });
 });

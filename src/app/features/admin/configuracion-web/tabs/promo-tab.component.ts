@@ -17,7 +17,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           <input
             type="checkbox"
             formControlName="active"
-            class="accent-[var(--color-primary)] w-4 h-4"
+            class="accent-(--color-primary) w-4 h-4"
             data-llm-action="alternar-banner-promocional-activo"
           />
           <span class="text-xs font-bold uppercase tracking-wider text-text-primary"

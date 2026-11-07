@@ -1,6 +1,6 @@
 # Asignación ASG-i-036 — Testing: Auditoría y Configuración web
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2

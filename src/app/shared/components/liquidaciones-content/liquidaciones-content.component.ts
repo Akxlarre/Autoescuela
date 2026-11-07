@@ -13,6 +13,7 @@ import {
   inject,
 } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { ClickOutsideDirective } from '@core/directives/click-outside.directive';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
@@ -55,6 +56,7 @@ function formatCLP(value: number): string {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ClickOutsideDirective,
     TooltipModule,
     IconComponent,
     SkeletonBlockComponent,
@@ -278,8 +280,12 @@ function formatCLP(value: number): string {
           (actionClick)="onHeroAction($event)"
         />
         @if (exportMenuOpen()) {
-          <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
-          <div class="export-menu absolute top-14 right-4 z-20">
+          <div
+            class="export-menu absolute top-14 right-4 z-20"
+            appClickOutside
+            clickOutsideExclude="[data-llm-action=export]"
+            (clickOutside)="exportMenuOpen.set(false)"
+          >
             <button
               type="button"
               class="export-menu-item"

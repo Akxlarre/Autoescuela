@@ -2,14 +2,24 @@
 // src/components/Footer.astro
 import type { BrandConfig, SocialConfig } from '../lib/types';
 import Icon from './ui/Icon.astro';
+import { safeHttpUrl } from '../lib/safe-url';
+import { privacyPolicyUrl } from '../lib/app-links';
 
 interface Props {
   brand: BrandConfig;
   social?: SocialConfig;
 }
 
-const { brand, social } = Astro.props;
+const { brand, social: rawSocial } = Astro.props;
+// fix-500-m: solo enlaces http(s).
+const social = rawSocial && {
+  facebook: safeHttpUrl(rawSocial.facebook),
+  instagram: safeHttpUrl(rawSocial.instagram),
+  tiktok: safeHttpUrl(rawSocial.tiktok),
+};
 const currentYear = new Date().getFullYear();
+// hotfix-174-m: la política de privacidad de la sede vive en la app.
+const policyUrl = privacyPolicyUrl(brand.branchId);
 ---
 
 <footer class="footer-container">
@@ -57,6 +67,11 @@ const currentYear = new Date().getFullYear();
         <li><a href="#ventajas" class="footer-link">Diferenciales</a></li>
         <li><a href="#preguntas" class="footer-link">Preguntas</a></li>
         <li><a href="#ubicacion" class="footer-link">Ubicación</a></li>
+        {policyUrl && (
+          <li>
+            <a href={policyUrl} target="_blank" rel="noopener" class="footer-link">Política de privacidad</a>
+          </li>
+        )}
       </ul>
     </div>
 

@@ -15,6 +15,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { ClickOutsideDirective } from '@core/directives/click-outside.directive';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
@@ -57,6 +58,7 @@ type ReporteTab = 'categorias' | 'evolucion' | 'rentabilidad' | 'gastos-fijos';
   selector: 'app-reportes-contables-content',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ClickOutsideDirective,
     BadgeComponent,
     IconComponent,
     SectionHeroComponent,
@@ -202,8 +204,12 @@ type ReporteTab = 'categorias' | 'evolucion' | 'rentabilidad' | 'gastos-fijos';
           (actionClick)="onHeroAction($event)"
         />
         @if (exportMenuOpen()) {
-          <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
-          <div class="export-menu absolute top-14 right-4 z-20">
+          <div
+            class="export-menu absolute top-14 right-4 z-20"
+            appClickOutside
+            clickOutsideExclude="[data-llm-action=exportar]"
+            (clickOutside)="exportMenuOpen.set(false)"
+          >
             <button
               type="button"
               class="export-menu-item"

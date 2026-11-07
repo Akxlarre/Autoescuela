@@ -61,7 +61,11 @@ export interface CourseConfig {
   includes: string[]; // editorial libre
   highlighted: boolean;
   badge?: string | null;
-  priceOverride: number | null; // null = hereda courses.base_price; 0 = "Gratis"
+  /**
+   * Heredado: precio promocional de la web (fix-501-m lo quitó). Se guarda siempre `null` y se
+   * ignora al leer: el precio sale de `courses.base_price`. Se conserva para no romper configs.
+   */
+  priceOverride: number | null;
   displayOrder: number; // orden numérico explícito (habilita drag-and-drop futuro)
 }
 

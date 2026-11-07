@@ -12,7 +12,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SelectModule } from 'primeng/select';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
-import { courseCardControls, courseOverrideValidator } from '@core/utils/website-config.utils';
+import { courseCardControls } from '@core/utils/website-config.utils';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 
 @Component({
   selector: 'app-cursos-tab',
@@ -29,7 +30,7 @@ import { courseCardControls, courseOverrideValidator } from '@core/utils/website
     <div class="flex flex-col gap-6 animate-fade-in">
       <div class="flex items-center justify-between border-b pb-2 mb-2 border-border-subtle">
         <h3 class="font-bold text-text-primary">Gestión de Cursos y Licencias</h3>
-        @if (coursesFacade.availableCourses().length > 0) {
+        @if (coursesFacade.webCourses().length > 0) {
           <button
             type="button"
             class="btn-primary py-1.5 px-3 text-xs cursor-pointer flex items-center gap-1"
@@ -47,7 +48,7 @@ import { courseCardControls, courseOverrideValidator } from '@core/utils/website
           <app-skeleton-block variant="rect" width="100%" height="80px" />
           <app-skeleton-block variant="rect" width="100%" height="80px" />
         </div>
-      } @else if (coursesFacade.availableCourses().length === 0) {
+      } @else if (coursesFacade.webCourses().length === 0) {
         <div
           class="p-8 text-center border rounded-xl border-dashed flex flex-col items-center gap-3 border-warning bg-warning/5"
         >
@@ -75,13 +76,16 @@ import { courseCardControls, courseOverrideValidator } from '@core/utils/website
             @let catalogItem = getCatalogItem(courseId);
             @let isOrphan = courseId != null && catalogItem == null;
             @let isInactive = catalogItem != null && !catalogItem.active;
+            @let isHiddenFromWeb =
+              catalogItem != null &&
+              (!!catalogItem.is_reinforcement || !!catalogItem.is_convalidation);
             <div
               [formGroup]="asFormGroup(courseCtrl)"
               class="p-4 md:p-5 rounded-xl border flex flex-col gap-4 transition-all bg-elevated"
               [style.border-color]="
                 isOrphan
                   ? 'var(--state-danger)'
-                  : isInactive
+                  : isInactive || isHiddenFromWeb
                     ? 'var(--state-warning)'
                     : 'var(--border-default)'
               "
@@ -107,6 +111,12 @@ import { courseCardControls, courseOverrideValidator } from '@core/utils/website
                     <app-badge variant="warning">
                       <app-icon name="alert-triangle" [size]="11" />
                       Curso inactivo — no visible en web
+                    </app-badge>
+                  } @else if (isHiddenFromWeb) {
+                    <!-- fix-499-m: refuerzo y convalidación no se muestran al visitante -->
+                    <app-badge variant="warning">
+                      <app-icon name="alert-triangle" [size]="11" />
+                      No se publica en la web
                     </app-badge>
                   }
                   <button
@@ -137,7 +147,8 @@ import { courseCardControls, courseOverrideValidator } from '@core/utils/website
                   />
                 </div>
                 <div class="flex flex-col gap-1.5" data-col-span-md="2" data-col-span="3">
-                  <label class="field-label">Precio Base (heredado)</label>
+                  <!-- fix-501-m: el precio de la web es siempre el de la Configuración de precios -->
+                  <label class="field-label">Precio (Configuración de precios)</label>
                   <div
                     class="field-input flex items-center text-text-muted text-xs bg-base cursor-default"
                   >
@@ -156,65 +167,7 @@ import { courseCardControls, courseOverrideValidator } from '@core/utils/website
                 </div>
               </div>
 
-              <!-- Fila 2: Override de precio -->
-              <div
-                class="flex flex-col gap-2 p-4 rounded-xl border border-solid border-border-default bg-surface"
-              >
-                <!-- fix-493-m: la casilla es un control propio; al marcarla se precarga el
-                     precio base (antes quedaba en 0 = Gratis por accidente). -->
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    class="accent-(--color-primary) w-4 h-4"
-                    formControlName="overrideEnabled"
-                    (change)="onOverrideToggle(courseCtrl, catalogItem?.base_price ?? null)"
-                    data-llm-description="enable a promotional price for this course card"
-                  />
-                  <span class="text-xs font-semibold text-text-primary"
-                    >Personalizar precio para promo</span
-                  >
-                  @if (courseCtrl.get('overrideEnabled')?.value) {
-                    <app-badge variant="brand">
-                      <app-icon name="tag" [size]="10" />
-                      Override activo
-                    </app-badge>
-                  }
-                </label>
-                @if (courseCtrl.get('overrideEnabled')?.value) {
-                  <div class="flex flex-col gap-1.5 mt-1">
-                    <label class="field-label">Precio Override (CLP) — 0 = "Gratis"</label>
-                    <div class="input-prefix-wrapper">
-                      <span class="input-prefix">$</span>
-                      <input
-                        type="number"
-                        formControlName="priceOverride"
-                        class="field-input pl-8"
-                        placeholder="320000"
-                        min="0"
-                        data-llm-description="override price for promotional purposes; 0 means free"
-                      />
-                    </div>
-                    @if (courseCtrl.get('priceOverride')?.hasError('min')) {
-                      <span class="field-error">El precio no puede ser negativo.</span>
-                    } @else if (courseCtrl.hasError('overrideRequired')) {
-                      <span class="field-error"
-                        >Ingresa el precio promocional o desmarca la casilla.</span
-                      >
-                    } @else if (catalogItem) {
-                      <span class="text-xs text-text-muted">
-                        {{
-                          getOverridePreview(
-                            courseCtrl.get('priceOverride')?.value,
-                            catalogItem.base_price ?? 0
-                          )
-                        }}
-                      </span>
-                    }
-                  </div>
-                }
-              </div>
-
-              <!-- Fila 3: Campos editoriales -->
+              <!-- Fila 2: Campos editoriales -->
               <div class="bento-grid bento-grid--forms bento-grid--forms">
                 <div class="flex flex-col gap-1.5" data-col-span-md="4" data-col-span="6">
                   <label class="field-label">Duración del Curso *</label>
@@ -460,12 +413,14 @@ import { courseCardControls, courseOverrideValidator } from '@core/utils/website
 export class CursosTabComponent {
   protected readonly coursesFacade = inject(CoursesFacade);
   private readonly fb = inject(FormBuilder);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   coursesArray = input.required<FormArray>();
   pricingFooterGroup = input.required<FormGroup>();
 
   protected readonly courseOptions = computed(() =>
-    this.coursesFacade.availableCourses().map((c) => ({
+    // fix-499-m: solo los que la web pública puede mostrar (sin refuerzo ni convalidación).
+    this.coursesFacade.webCourses().map((c) => ({
       id: c.id,
       label: `${c.name} (${c.license_class})`,
     })),
@@ -490,34 +445,23 @@ export class CursosTabComponent {
     }).format(amount);
   }
 
-  /**
-   * fix-493-m: al marcar "Personalizar precio" se precarga el precio base del catálogo (antes
-   * quedaba en 0 = "Gratis"); al desmarcar se limpia el precio para que no viaje escondido.
-   */
-  protected onOverrideToggle(courseCtrl: AbstractControl, basePrice: number | null): void {
-    const enabled = !!courseCtrl.get('overrideEnabled')?.value;
-    const price = courseCtrl.get('priceOverride');
-    if (enabled && price?.value == null) price?.setValue(basePrice);
-    if (!enabled) price?.setValue(null);
-  }
-
-  protected getOverridePreview(overrideVal: number | null, basePrice: number): string {
-    const label = overrideVal === 0 ? 'Gratis' : this.formatCLP(overrideVal);
-    return `La landing mostrará ${label} con tachado de ${this.formatCLP(basePrice)}`;
-  }
-
   protected addCourse(): void {
     const nextOrder = this.coursesArray().length + 1;
-    // fix-493-m: mismos controles y validación que al cargar las cards guardadas.
-    this.coursesArray().push(
-      this.fb.group(courseCardControls({ displayOrder: nextOrder }), {
-        validators: courseOverrideValidator,
-      }),
-    );
+    // fix-493-m: mismos controles que al cargar las cards guardadas.
+    this.coursesArray().push(this.fb.group(courseCardControls({ displayOrder: nextOrder })));
     this.coursesArray().markAsDirty();
   }
 
-  protected removeCourse(index: number): void {
+  // hotfix-175-m: un clic de más borraba la card con todo su texto, sin preguntar.
+  protected async removeCourse(index: number): Promise<void> {
+    const ok = await this.confirmModal.confirm({
+      title: 'Eliminar card',
+      message: `Se quitará la card #${index + 1} de la web al publicar. ¿Continuar?`,
+      severity: 'danger',
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!ok) return;
     this.coursesArray().removeAt(index);
     this.coursesArray().markAsDirty();
   }

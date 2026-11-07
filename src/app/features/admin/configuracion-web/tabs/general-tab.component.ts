@@ -69,6 +69,9 @@ const CDN_URL =
               placeholder="Ej: autoescuelachillan.cl"
               data-llm-description="input for the public website domain"
             />
+            @if (brandGroup().get('domain')?.hasError('domain')) {
+              <span class="field-error">Solo el dominio, sin https:// ni espacios.</span>
+            }
           </div>
           <div class="flex flex-col gap-1.5 bento-wide">
             <label class="field-label">Tema Visual</label>
@@ -86,9 +89,7 @@ const CDN_URL =
         </div>
 
         <!-- Recursos Gráficos del Sitio -->
-        <h3
-          class="font-bold text-text-primary border-b pb-2 mt-4 mb-2 border-border-subtle"
-        >
+        <h3 class="font-bold text-text-primary border-b pb-2 mt-4 mb-2 border-border-subtle">
           Recursos Gráficos del Sitio (Logo y SEO)
         </h3>
         <div class="bento-grid bento-grid--forms bento-grid--forms">
@@ -159,9 +160,7 @@ const CDN_URL =
       </div>
 
       <div [formGroup]="socialGroup()" class="flex flex-col gap-6">
-        <h3
-          class="font-bold text-text-primary border-b pb-2 mt-4 mb-2 border-border-subtle"
-        >
+        <h3 class="font-bold text-text-primary border-b pb-2 mt-4 mb-2 border-border-subtle">
           Redes Sociales
         </h3>
         <div class="bento-grid bento-grid--forms bento-grid--forms">
@@ -174,6 +173,9 @@ const CDN_URL =
               placeholder="https://facebook.com/..."
               data-llm-description="input for the Facebook page URL"
             />
+            @if (socialGroup().get('facebook')?.hasError('httpUrl')) {
+              <span class="field-error">Debe empezar con https://</span>
+            }
           </div>
           <div class="flex flex-col gap-1.5" data-col-span-md="4" data-col-span="4">
             <label class="field-label">Enlace Instagram</label>
@@ -184,6 +186,9 @@ const CDN_URL =
               placeholder="https://instagram.com/..."
               data-llm-description="input for the Instagram profile URL"
             />
+            @if (socialGroup().get('instagram')?.hasError('httpUrl')) {
+              <span class="field-error">Debe empezar con https://</span>
+            }
           </div>
           <div class="flex flex-col gap-1.5" data-col-span-md="4" data-col-span="4">
             <label class="field-label">Enlace TikTok</label>
@@ -194,6 +199,9 @@ const CDN_URL =
               placeholder="https://tiktok.com/@..."
               data-llm-description="input for the TikTok profile URL"
             />
+            @if (socialGroup().get('tiktok')?.hasError('httpUrl')) {
+              <span class="field-error">Debe empezar con https://</span>
+            }
           </div>
         </div>
       </div>
@@ -247,7 +255,7 @@ export class GeneralTabComponent {
       this.brandGroup().markAsDirty();
       this.toast.success(
         'Logo subido',
-        'El logo se ha optimizado y subido correctamente al storage.',
+        'Se verá en la web al presionar Publicar Cambios.', // hotfix-175-m
       );
     } catch {
       // Toast ya lo muestra el facade
@@ -263,10 +271,7 @@ export class GeneralTabComponent {
       const url = await this.facade.uploadAsset(this.branchId(), optimizedFile, 'favicon');
       this.brandGroup().get('favicon')?.setValue(url);
       this.brandGroup().markAsDirty();
-      this.toast.success(
-        'Favicon subido',
-        'El favicon se ha optimizado y subido correctamente al storage.',
-      );
+      this.toast.success('Favicon subido', 'Se verá en la web al presionar Publicar Cambios.');
     } catch {
       // Toast ya lo muestra el facade
     } finally {
@@ -282,8 +287,8 @@ export class GeneralTabComponent {
       this.brandGroup().get('ogImage')?.setValue(url);
       this.brandGroup().markAsDirty();
       this.toast.success(
-        'Imagen OG subida',
-        'La imagen OG se ha optimizado y subido correctamente al storage.',
+        'Imagen para redes subida',
+        'Se verá en la web al presionar Publicar Cambios.',
       );
     } catch {
       // Toast ya lo muestra el facade

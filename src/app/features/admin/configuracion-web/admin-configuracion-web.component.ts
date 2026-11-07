@@ -23,6 +23,7 @@ import { WebsiteConfigFacade } from '@core/facades/website-config.facade';
 import { CoursesFacade } from '@core/facades/courses.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { getPrivacyPolicy } from '@core/models/ui/privacy-policy.model';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -46,8 +47,11 @@ import type { HasUnsavedWebConfig } from '@core/guards/configuracion-web-unsaved
 import {
   configTabsWithErrors,
   courseCardControls,
-  courseOverrideValidator,
+  domainValidator,
+  googleMapsEmbedValidator,
+  httpUrlValidator,
   promoTextValidator,
+  whatsappValidator,
   whyUsToPublish,
 } from '@core/utils/website-config.utils';
 
@@ -174,7 +178,11 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
               <app-promo-tab [promoGroup]="form.controls.promo" />
             }
             @if (activeTab() === 'contacto') {
-              <app-contacto-tab [contactGroup]="form.controls.contact" [hoursArray]="hoursArray" />
+              <app-contacto-tab
+                [contactGroup]="form.controls.contact"
+                [hoursArray]="hoursArray"
+                [policy]="policyContact()"
+              />
             }
             @if (activeTab() === 'faqs') {
               <app-faqs-tab [faqsArray]="faqsArray" />
@@ -358,6 +366,17 @@ export class AdminConfiguracionWebComponent implements AfterViewInit, HasUnsaved
     return this.form.dirty && !this.facade.isSaving();
   }
 
+  /**
+   * fix-502-m: dirección y correo de la política de privacidad de la sede vigente, para avisar
+   * en la pestaña Contacto si la web dice otra cosa.
+   */
+  protected readonly policyContact = computed(() => {
+    const id = this.effectiveBranchId();
+    const slug = this.branchFacade.branches().find((b) => b.id === id)?.slug;
+    const policy = getPrivacyPolicy(slug);
+    return policy ? { address: policy.address, rightsEmail: policy.rightsEmail } : null;
+  });
+
   /** Etiqueta dinámica de la sede activa (usa el catálogo de BranchFacade). */
   protected readonly branchLabel = computed(() => {
     const id = this.effectiveBranchId();
@@ -445,7 +464,7 @@ export class AdminConfiguracionWebComponent implements AfterViewInit, HasUnsaved
       shortName: ['', Validators.required],
       slogan: ['', Validators.required],
       theme: [{ value: 'azul' as 'azul' | 'roja', disabled: true }, Validators.required],
-      domain: ['', Validators.required],
+      domain: ['', [Validators.required, domainValidator]],
       logo: [''],
       ogImage: [''],
       favicon: [''],
@@ -467,7 +486,7 @@ export class AdminConfiguracionWebComponent implements AfterViewInit, HasUnsaved
       subheadline: ['', Validators.required],
       cta: this.fb.group({
         text: ['', Validators.required],
-        whatsapp: ['', Validators.required],
+        whatsapp: ['', [Validators.required, whatsappValidator]],
       }),
       features: this.fb.array([
         this.fb.group({ icon: ['car'], text: [''] }),
@@ -495,12 +514,12 @@ export class AdminConfiguracionWebComponent implements AfterViewInit, HasUnsaved
       city: ['Chillán', Validators.required],
       region: ['Ñuble', Validators.required],
       phone: ['', Validators.required],
-      whatsapp: ['', Validators.required],
+      whatsapp: ['', [Validators.required, whatsappValidator]],
       email: ['', [Validators.required, Validators.email]],
-      mapEmbedUrl: ['', Validators.required],
+      mapEmbedUrl: ['', [Validators.required, googleMapsEmbedValidator]],
       geo: this.fb.group({
-        lat: [-36.606709, Validators.required],
-        lng: [-72.105436, Validators.required],
+        lat: [-36.606709, [Validators.required, Validators.min(-90), Validators.max(90)]],
+        lng: [-72.105436, [Validators.required, Validators.min(-180), Validators.max(180)]],
       }),
     }),
     hours: this.fb.array([
@@ -514,9 +533,9 @@ export class AdminConfiguracionWebComponent implements AfterViewInit, HasUnsaved
       }),
     ]),
     social: this.fb.group({
-      facebook: [''],
-      instagram: [''],
-      tiktok: [''],
+      facebook: ['', httpUrlValidator],
+      instagram: ['', httpUrlValidator],
+      tiktok: ['', httpUrlValidator],
     }),
     pricingFooter: this.fb.group({
       payment: this.fb.group({
@@ -603,10 +622,8 @@ export class AdminConfiguracionWebComponent implements AfterViewInit, HasUnsaved
     this.coursesArray.clear({ emitEvent: false });
     if (data.courses) {
       data.courses.forEach((c) => {
-        // fix-493-m: mismos controles y validación que al agregar una card nueva.
-        this.coursesArray.push(
-          this.fb.group(courseCardControls(c), { validators: courseOverrideValidator }),
-        );
+        // fix-493-m: mismos controles que al agregar una card nueva.
+        this.coursesArray.push(this.fb.group(courseCardControls(c)));
       });
     }
 
@@ -845,9 +862,8 @@ export class AdminConfiguracionWebComponent implements AfterViewInit, HasUnsaved
         duration: c.duration!,
         highlighted: !!c.highlighted,
         badge: c.badge || null,
-        // fix-493-m: el precio promo solo se publica con la casilla marcada.
-        priceOverride:
-          c.overrideEnabled && c.priceOverride != null ? Number(c.priceOverride) : null,
+        // fix-501-m: la web no tiene precio propio; el precio sale del catálogo.
+        priceOverride: null,
         displayOrder: Number(c.displayOrder) || 1,
         includes: c.includes
           ? c.includes

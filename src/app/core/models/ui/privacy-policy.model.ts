@@ -699,6 +699,8 @@ export const PRIVACY_POLICIES: Record<string, PrivacyPolicyContent> = {
 export function getPrivacyPolicy(
   branchSlug: string | null | undefined,
 ): PrivacyPolicyContent | null {
-  if (!branchSlug) return null;
-  return PRIVACY_POLICIES[branchSlug] ?? null;
+  // hotfix-172-m: un enlace escrito a mano puede traer mayúsculas o espacios.
+  const slug = branchSlug?.trim().toLowerCase();
+  if (!slug) return null;
+  return PRIVACY_POLICIES[slug] ?? null;
 }

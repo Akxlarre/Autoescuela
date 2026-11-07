@@ -1993,6 +1993,33 @@
 - **Fuente:** `specs/fixes/fix-069-i-borrador-con-pago-y-auditoria`, migración `20261024120000`,
   test `supabase/tests/rls/fix-069-i-borrador-con-pago.sql`.
 
+### DG-120 — Lo que escribe una edge function con la service key queda como "Sistema" si no manda el autor
+
+- **Trampa:** crear el cliente de servicio con `createClient(url, serviceKey)` en una edge function
+  que inserta o actualiza una tabla auditada, y suponer que la auditoría sabe quién la llamó.
+- **Realidad:** con la service key no hay sesión: `log_change()` solo atribuye la fila si la
+  petición trae el header `x-audit-user-id` (y si no, `registered_by` de la fila). Sin eso,
+  `audit_log.user_id` queda NULL = "Sistema". Certificados, libro de clases y PDFs de licencia
+  quedaban así.
+- **Regla de aplicabilidad:** toda edge function que escribe (directo o por RPC) en una tabla con
+  trigger `trg_audit_*` crea su cliente de servicio con `auditClientOptions(access.userId)` de
+  `_shared/staff-auth.ts`. Las que corren sin usuario (cron, inscripción pública) quedan como
+  "Sistema" a propósito.
+- **Fuente:** `specs/fixes/fix-497-m-edge-functions-sin-autor-en-auditoria`.
+
+### DG-121 — Una URL editable en Configuración web termina en un `href` o un `iframe` de la landing pública
+
+- **Trampa:** aceptar cualquier texto en un campo de URL de `website_config` (mapa, redes, medios)
+  porque "solo lo edita la secretaria".
+- **Realidad:** la landing pone esas URLs tal cual en el `src` del iframe del mapa y en los
+  enlaces de redes; un `javascript:...` se ejecutó en la página pública al cargarla. La landing es
+  estática más una hidratación en `<script is:inline>` que no puede importar módulos.
+- **Regla de aplicabilidad:** todo campo nuevo de `website_config` que la landing use como URL se
+  valida en el panel (`httpUrlValidator` o uno más estricto de `website-config.utils.ts`) **y** se
+  filtra en la landing con `safeHttpUrl()` (`webs/src/lib/safe-url.ts`, y su copia en la
+  hidratación de `LandingLayout.astro`).
+- **Fuente:** `specs/fixes/fix-500-m-configuracion-web-urls-y-formatos`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

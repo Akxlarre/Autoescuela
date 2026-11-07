@@ -147,6 +147,24 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           }
         }
 
+        // hotfix-173-m: los estilos de cada sección son scoped de Astro y solo aplican a
+        // elementos con su atributo data-astro-cid-*. Lo que la hidratación crea a mano lo
+        // copia del contenedor para no quedar sin estilo.
+        function adoptScope(container, node) {
+          const attrs = Array.from(container.attributes).filter(a => a.name.startsWith('data-astro-cid-'));
+          [node, ...node.querySelectorAll('*')].forEach(el => {
+            attrs.forEach(a => el.setAttribute(a.name, a.value));
+          });
+          return node;
+        }
+
+        // fix-500-m: solo URLs http(s) (misma regla que src/lib/safe-url.ts). Un "javascript:"
+        // en el mapa o en una red se ejecutaba en la página pública.
+        function safeHttpUrl(url) {
+          const v = String(url == null ? '' : url).trim();
+          return /^https?:\/\/\S+$/i.test(v) ? v : null;
+        }
+
         const formatter = new Intl.NumberFormat('es-CL', {
           style: 'currency',
           currency: 'CLP',
@@ -191,11 +209,12 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
             const course = catalogById.get(card.course_id);
             if (!course) continue;
 
-            const priceOverride = card.priceOverride ?? null;
-            const isOverrideActive = priceOverride !== null;
+            // fix-501-m: precio siempre del catálogo; un priceOverride guardado se ignora.
+            const priceOverride = null;
+            const isOverrideActive = false;
             const basePrice = course.base_price != null ? course.base_price : 0;
-            const displayPrice = isOverrideActive ? priceOverride : basePrice;
-            const displayPriceLabel = displayPrice === 0 ? 'Gratis' : formatter.format(displayPrice);
+            const displayPrice = basePrice;
+            const displayPriceLabel = formatter.format(displayPrice);
 
             resolvedCourses.push({
               courseId: course.id,
@@ -225,6 +244,32 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
           // Inject resolved courses into config
           config.courses = resolvedCourses;
+
+          // fix-498-m: el HTML trae solo las cards que había al compilar. Si después se
+          // publicaron más, se clona la última de cada sección para que también se vean.
+          function ensureCourseNodes(selector, count) {
+            const nodes = document.querySelectorAll(selector);
+            if (nodes.length === 0 || nodes.length >= count) return;
+            let prev = nodes[nodes.length - 1];
+            for (let i = nodes.length; i < count; i++) {
+              const clone = prev.cloneNode(true);
+              clone.setAttribute('data-course-index', String(i));
+              prev.after(clone);
+              prev = clone;
+            }
+          }
+          ensureCourseNodes('.course-card[data-course-index]', resolvedCourses.length);
+          ensureCourseNodes('tbody tr[data-course-index]', resolvedCourses.length);
+          ensureCourseNodes('.mobile-price-card[data-course-index]', resolvedCourses.length);
+
+          // La grilla de cursos depende de cuántos hay (mismas reglas que Services.astro).
+          const coursesGrid = document.querySelector('.courses-grid');
+          if (coursesGrid) {
+            const n = resolvedCourses.length;
+            coursesGrid.classList.toggle('bento-grid', n > 2);
+            coursesGrid.classList.toggle('courses-single', n === 1);
+            coursesGrid.classList.toggle('courses-duo', n === 2);
+          }
 
           // ─────────────────────────────────────────
           // BLOQUE 1: IDENTIDAD / MARCA
@@ -617,6 +662,7 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               const course = config.courses && config.courses[index];
               if (!course) { el.style.display = 'none'; return; }
               el.style.display = '';
+              el.classList.toggle('card-accent', !!course.highlighted); // fix-498-m
 
               const nameEl = el.querySelector('.course-name');
               if (nameEl) nameEl.textContent = course.name;
@@ -656,7 +702,7 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
                   const incText = document.createElement('span');
                   incText.textContent = inc;
                   li.appendChild(incText);
-                  featuresList.appendChild(li);
+                  featuresList.appendChild(adoptScope(featuresList, li));
                 });
               }
 
@@ -688,6 +734,7 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               const course = config.courses && config.courses[index];
               if (!course) { el.style.display = 'none'; return; }
               el.style.display = '';
+              el.classList.toggle('row-highlighted', !!course.highlighted); // fix-498-m
 
               const nameEl = el.querySelector('.course-cell-name strong');
               if (nameEl) nameEl.textContent = course.name;
@@ -738,6 +785,7 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               const course = config.courses && config.courses[index];
               if (!course) { el.style.display = 'none'; return; }
               el.style.display = '';
+              el.classList.toggle('mobile-price-card--featured', !!course.highlighted); // fix-498-m
 
               const nameEl = el.querySelector('.mpc-name');
               if (nameEl) nameEl.textContent = course.name;
@@ -886,7 +934,8 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               if (cityEl && contact.city && contact.region) cityEl.textContent = contact.city + ', ' + contact.region;
 
               const mapIframe = document.querySelector('.map-card iframe');
-              if (mapIframe && contact.mapEmbedUrl) mapIframe.setAttribute('src', contact.mapEmbedUrl);
+              const mapUrl = safeHttpUrl(contact.mapEmbedUrl);
+              if (mapIframe && mapUrl) mapIframe.setAttribute('src', mapUrl);
             }
           } catch(e) { console.error('[Hydration §6 Contacto] ❌ Error:', e); }
 
@@ -915,7 +964,7 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
                     
                     li.appendChild(labelSpan);
                     li.appendChild(valueSpan);
-                    hoursContainer.appendChild(li);
+                    hoursContainer.appendChild(adoptScope(hoursContainer, li));
                   }
                 });
               }
@@ -963,24 +1012,30 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           try {
             const socialContainer = document.querySelector('.social-links');
             if (socialContainer && config.social) {
+              // fix-500-m: una red con una URL que no es http(s) no se muestra.
+              config.social = {
+                facebook: safeHttpUrl(config.social.facebook),
+                instagram: safeHttpUrl(config.social.instagram),
+                tiktok: safeHttpUrl(config.social.tiktok),
+              };
               socialContainer.innerHTML = '';
               if (config.social.facebook) {
                 const a = document.createElement('a');
                 a.href = config.social.facebook; a.target = '_blank'; a.rel = 'noopener noreferrer';
                 a.className = 'social-item'; a.setAttribute('aria-label', 'Facebook'); a.textContent = 'Facebook';
-                socialContainer.appendChild(a);
+                socialContainer.appendChild(adoptScope(socialContainer, a));
               }
               if (config.social.instagram) {
                 const a = document.createElement('a');
                 a.href = config.social.instagram; a.target = '_blank'; a.rel = 'noopener noreferrer';
                 a.className = 'social-item'; a.setAttribute('aria-label', 'Instagram'); a.textContent = 'Instagram';
-                socialContainer.appendChild(a);
+                socialContainer.appendChild(adoptScope(socialContainer, a));
               }
               if (config.social.tiktok) {
                 const a = document.createElement('a');
                 a.href = config.social.tiktok; a.target = '_blank'; a.rel = 'noopener noreferrer';
                 a.className = 'social-item'; a.setAttribute('aria-label', 'TikTok'); a.textContent = 'TikTok';
-                socialContainer.appendChild(a);
+                socialContainer.appendChild(adoptScope(socialContainer, a));
               }
             }
           } catch(e) { console.error('[Hydration §9 Social] ❌ Error:', e); }
