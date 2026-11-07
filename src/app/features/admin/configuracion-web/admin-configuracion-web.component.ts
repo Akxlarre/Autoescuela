@@ -39,7 +39,13 @@ import { FaqsTabComponent } from './tabs/faqs-tab.component';
 import { TabsComponent } from '@shared/components/tabs/tabs.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { branchIdToTheme } from '@core/utils/sede-theme.utils';
-import { configTabsWithErrors, whyUsToPublish } from '@core/utils/website-config.utils';
+import {
+  configTabsWithErrors,
+  courseCardControls,
+  courseOverrideValidator,
+  promoTextValidator,
+  whyUsToPublish,
+} from '@core/utils/website-config.utils';
 
 type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
@@ -456,12 +462,16 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
         enabled: [false],
       }),
     }),
-    promo: this.fb.group({
-      active: [false],
-      title: [''],
-      description: [''],
-      badge: [''],
-    }),
+    // fix-493-m: con la promo activa, título, etiqueta y detalle son obligatorios.
+    promo: this.fb.group(
+      {
+        active: [false],
+        title: [''],
+        description: [''],
+        badge: [''],
+      },
+      { validators: promoTextValidator },
+    ),
     contact: this.fb.group({
       address: ['', Validators.required],
       city: ['Chillán', Validators.required],
@@ -576,18 +586,9 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
     this.coursesArray.clear({ emitEvent: false });
     if (data.courses) {
       data.courses.forEach((c) => {
+        // fix-493-m: mismos controles y validación que al agregar una card nueva.
         this.coursesArray.push(
-          this.fb.group({
-            course_id: [c.course_id, Validators.required],
-            description: [c.description, Validators.required],
-            priceNote: [c.priceNote ?? ''],
-            duration: [c.duration, Validators.required],
-            highlighted: [c.highlighted],
-            badge: [c.badge ?? ''],
-            priceOverride: [c.priceOverride],
-            displayOrder: [c.displayOrder],
-            includes: [c.includes ? c.includes.join(', ') : '', Validators.required],
-          }),
+          this.fb.group(courseCardControls(c), { validators: courseOverrideValidator }),
         );
       });
     }
@@ -798,7 +799,9 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
         duration: c.duration!,
         highlighted: !!c.highlighted,
         badge: c.badge || null,
-        priceOverride: c.priceOverride != null ? Number(c.priceOverride) : null,
+        // fix-493-m: el precio promo solo se publica con la casilla marcada.
+        priceOverride:
+          c.overrideEnabled && c.priceOverride != null ? Number(c.priceOverride) : null,
         displayOrder: Number(c.displayOrder) || 1,
         includes: c.includes
           ? c.includes

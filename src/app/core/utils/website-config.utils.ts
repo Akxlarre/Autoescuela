@@ -1,4 +1,43 @@
-import type { WhyUsConfig } from '@core/models/dto/website-config.model';
+import { Validators, type ValidatorFn } from '@angular/forms';
+import type { CourseConfig, WhyUsConfig } from '@core/models/dto/website-config.model';
+
+/**
+ * Controles de una card de curso de la web (fix-493-m). Un solo lugar: antes se repetían en el
+ * componente (al cargar) y en la pestaña Cursos (al agregar), y ninguno validaba el precio promo.
+ *
+ * `overrideEnabled` es la casilla "Personalizar precio": antes se deducía de `priceOverride != null`
+ * y al borrar el número para reescribirlo la casilla se desmarcaba sola.
+ */
+export function courseCardControls(card?: Partial<CourseConfig>) {
+  return {
+    course_id: [card?.course_id ?? (null as number | null), Validators.required],
+    description: [card?.description ?? '', Validators.required],
+    priceNote: [card?.priceNote ?? ''],
+    duration: [card?.duration ?? '', Validators.required],
+    highlighted: [card?.highlighted ?? false],
+    badge: [card?.badge ?? ''],
+    overrideEnabled: [card?.priceOverride != null],
+    priceOverride: [card?.priceOverride ?? (null as number | null), Validators.min(0)],
+    displayOrder: [card?.displayOrder ?? 1],
+    includes: [card?.includes ? card.includes.join(', ') : '', Validators.required],
+  };
+}
+
+/** Con "Personalizar precio" marcado, el precio es obligatorio (0 = "Gratis" vale). */
+export const courseOverrideValidator: ValidatorFn = (group) => {
+  if (!group.get('overrideEnabled')?.value) return null;
+  const price = group.get('priceOverride')?.value;
+  return price === null || price === undefined || price === '' ? { overrideRequired: true } : null;
+};
+
+/** Con la promo activa, título, etiqueta y detalle son obligatorios (llevan "*" en pantalla). */
+export const promoTextValidator: ValidatorFn = (group) => {
+  if (!group.get('active')?.value) return null;
+  const vacio = ['title', 'badge', 'description'].some(
+    (k) => !String(group.get(k)?.value ?? '').trim(),
+  );
+  return vacio ? { promoTextRequired: true } : null;
+};
 
 /** Pestañas de Configuración web, en el orden de la pantalla. */
 export type ConfigWebTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
