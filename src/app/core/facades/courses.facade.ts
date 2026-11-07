@@ -40,7 +40,8 @@ export class CoursesFacade {
   private readonly toast = inject(ToastService);
 
   // ── Estado privado ────────────────────────────────────────────────────────
-  private readonly _availableCourses = signal<CourseCatalogItem[]>([]);
+  /** Catálogo completo de la sede, activos e inactivos (fix-494-m). */
+  private readonly _catalog = signal<CourseCatalogItem[]>([]);
   private readonly _isLoading = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
   private readonly _initialized = signal<boolean>(false);
@@ -48,7 +49,8 @@ export class CoursesFacade {
   private _lastBranchId: number | null = null;
 
   // ── Estado expuesto (readonly) ────────────────────────────────────────────
-  readonly availableCourses = this._availableCourses.asReadonly();
+  /** Cursos activos: los que se pueden elegir y publicar. */
+  readonly availableCourses = computed(() => this._catalog().filter((c) => c.active !== false));
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
   readonly isSaving = this._isSaving.asReadonly();
@@ -56,12 +58,23 @@ export class CoursesFacade {
   /** Map id → catalog item, derivado del array. Útil para JOINs en memoria. */
   readonly availableById = computed(() => {
     const map = new Map<number, CourseCatalogItem>();
-    for (const c of this._availableCourses()) map.set(c.id, c);
+    for (const c of this.availableCourses()) map.set(c.id, c);
     return map;
   });
 
   /**
-   * Carga el catálogo operacional activo del branch indicado.
+   * Map id → curso, incluidos los inactivos (fix-494-m). Para reconocer una card de la web cuyo
+   * curso se desactivó: sin esto caía como "Curso no existe".
+   */
+  readonly catalogById = computed(() => {
+    const map = new Map<number, CourseCatalogItem>();
+    for (const c of this._catalog()) map.set(c.id, c);
+    return map;
+  });
+
+  /**
+   * Carga el catálogo operacional del branch indicado (activos e inactivos; `availableCourses`
+   * expone solo los activos).
    *
    * SWR: si ya cargamos para este branch antes, refresca en silencio
    * (sin prender el skeleton). Si cambia el branchId, invalida cache.
@@ -80,17 +93,16 @@ export class CoursesFacade {
       const { data, error } = await this.supabase.client
         .from('courses')
         .select('id, name, license_class, base_price, active')
-        .eq('branch_id', branchId)
-        .eq('active', true);
+        .eq('branch_id', branchId);
 
       if (error) throw error;
 
-      this._availableCourses.set((data ?? []) as CourseCatalogItem[]);
+      this._catalog.set((data ?? []) as CourseCatalogItem[]);
       this._initialized.set(true);
     } catch (err: any) {
       const errMsg = err?.message || 'Error desconocido';
       this._error.set(errMsg);
-      this._availableCourses.set([]);
+      this._catalog.set([]);
       this.toast.error('Error al cargar cursos del catálogo', errMsg);
     } finally {
       this._isLoading.set(false);
@@ -108,7 +120,7 @@ export class CoursesFacade {
 
       if (error) throw error;
 
-      this._availableCourses.update((courses) =>
+      this._catalog.update((courses) =>
         courses.map((c) => (c.id === courseId ? { ...c, base_price: basePrice } : c)),
       );
       this.toast.success('Precio actualizado correctamente');

@@ -477,7 +477,8 @@ export class CursosTabComponent {
 
   protected getCatalogItem(courseId: number | null) {
     if (courseId == null) return undefined;
-    return this.coursesFacade.availableById().get(courseId);
+    // fix-494-m: incluye los inactivos, para marcarlos "inactivo" y no "no existe".
+    return this.coursesFacade.catalogById().get(courseId);
   }
 
   protected formatCLP(amount: number | null | undefined): string {
