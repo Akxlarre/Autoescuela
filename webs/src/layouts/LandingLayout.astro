@@ -226,6 +226,32 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
           // Inject resolved courses into config
           config.courses = resolvedCourses;
 
+          // fix-498-m: el HTML trae solo las cards que había al compilar. Si después se
+          // publicaron más, se clona la última de cada sección para que también se vean.
+          function ensureCourseNodes(selector, count) {
+            const nodes = document.querySelectorAll(selector);
+            if (nodes.length === 0 || nodes.length >= count) return;
+            let prev = nodes[nodes.length - 1];
+            for (let i = nodes.length; i < count; i++) {
+              const clone = prev.cloneNode(true);
+              clone.setAttribute('data-course-index', String(i));
+              prev.after(clone);
+              prev = clone;
+            }
+          }
+          ensureCourseNodes('.course-card[data-course-index]', resolvedCourses.length);
+          ensureCourseNodes('tbody tr[data-course-index]', resolvedCourses.length);
+          ensureCourseNodes('.mobile-price-card[data-course-index]', resolvedCourses.length);
+
+          // La grilla de cursos depende de cuántos hay (mismas reglas que Services.astro).
+          const coursesGrid = document.querySelector('.courses-grid');
+          if (coursesGrid) {
+            const n = resolvedCourses.length;
+            coursesGrid.classList.toggle('bento-grid', n > 2);
+            coursesGrid.classList.toggle('courses-single', n === 1);
+            coursesGrid.classList.toggle('courses-duo', n === 2);
+          }
+
           // ─────────────────────────────────────────
           // BLOQUE 1: IDENTIDAD / MARCA
           // ─────────────────────────────────────────
@@ -617,6 +643,7 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               const course = config.courses && config.courses[index];
               if (!course) { el.style.display = 'none'; return; }
               el.style.display = '';
+              el.classList.toggle('card-accent', !!course.highlighted); // fix-498-m
 
               const nameEl = el.querySelector('.course-name');
               if (nameEl) nameEl.textContent = course.name;
@@ -688,6 +715,7 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               const course = config.courses && config.courses[index];
               if (!course) { el.style.display = 'none'; return; }
               el.style.display = '';
+              el.classList.toggle('row-highlighted', !!course.highlighted); // fix-498-m
 
               const nameEl = el.querySelector('.course-cell-name strong');
               if (nameEl) nameEl.textContent = course.name;
@@ -738,6 +766,7 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
               const course = config.courses && config.courses[index];
               if (!course) { el.style.display = 'none'; return; }
               el.style.display = '';
+              el.classList.toggle('mobile-price-card--featured', !!course.highlighted); // fix-498-m
 
               const nameEl = el.querySelector('.mpc-name');
               if (nameEl) nameEl.textContent = course.name;
