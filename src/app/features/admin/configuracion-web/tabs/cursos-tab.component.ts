@@ -13,6 +13,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { SelectModule } from 'primeng/select';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { courseCardControls } from '@core/utils/website-config.utils';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 
 @Component({
   selector: 'app-cursos-tab',
@@ -412,6 +413,7 @@ import { courseCardControls } from '@core/utils/website-config.utils';
 export class CursosTabComponent {
   protected readonly coursesFacade = inject(CoursesFacade);
   private readonly fb = inject(FormBuilder);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   coursesArray = input.required<FormArray>();
   pricingFooterGroup = input.required<FormGroup>();
@@ -450,7 +452,16 @@ export class CursosTabComponent {
     this.coursesArray().markAsDirty();
   }
 
-  protected removeCourse(index: number): void {
+  // hotfix-175-m: un clic de más borraba la card con todo su texto, sin preguntar.
+  protected async removeCourse(index: number): Promise<void> {
+    const ok = await this.confirmModal.confirm({
+      title: 'Eliminar card',
+      message: `Se quitará la card #${index + 1} de la web al publicar. ¿Continuar?`,
+      severity: 'danger',
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!ok) return;
     this.coursesArray().removeAt(index);
     this.coursesArray().markAsDirty();
   }

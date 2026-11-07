@@ -1248,8 +1248,8 @@ export class HeroTabComponent {
         ?.setValue(isVideo ? 'video' : 'image');
       this.heroGroup().markAsDirty();
       this.toast.success(
-        'Media subido',
-        `El recurso lateral (${isVideo ? 'Video' : 'Imagen'}) se ha subido correctamente.`,
+        isVideo ? 'Video subido' : 'Imagen subida',
+        'Se verá en la web al presionar Publicar Cambios.', // hotfix-175-m
       );
     } catch {
       // El error ya es gestionado por la fachada
@@ -1275,10 +1275,7 @@ export class HeroTabComponent {
         .get('background.type')
         ?.setValue(isVideo ? 'video' : 'image');
       this.heroGroup().markAsDirty();
-      this.toast.success(
-        'Fondo subido',
-        `El fondo (${isVideo ? 'Video' : 'Imagen'}) se ha subido correctamente.`,
-      );
+      this.toast.success('Fondo subido', 'Se verá en la web al presionar Publicar Cambios.');
     } catch {
       // El error ya es gestionado por la fachada
     } finally {

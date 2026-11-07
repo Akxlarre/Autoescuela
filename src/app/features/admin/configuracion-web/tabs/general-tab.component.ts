@@ -255,7 +255,7 @@ export class GeneralTabComponent {
       this.brandGroup().markAsDirty();
       this.toast.success(
         'Logo subido',
-        'El logo se ha optimizado y subido correctamente al storage.',
+        'Se verá en la web al presionar Publicar Cambios.', // hotfix-175-m
       );
     } catch {
       // Toast ya lo muestra el facade
@@ -271,10 +271,7 @@ export class GeneralTabComponent {
       const url = await this.facade.uploadAsset(this.branchId(), optimizedFile, 'favicon');
       this.brandGroup().get('favicon')?.setValue(url);
       this.brandGroup().markAsDirty();
-      this.toast.success(
-        'Favicon subido',
-        'El favicon se ha optimizado y subido correctamente al storage.',
-      );
+      this.toast.success('Favicon subido', 'Se verá en la web al presionar Publicar Cambios.');
     } catch {
       // Toast ya lo muestra el facade
     } finally {
@@ -290,8 +287,8 @@ export class GeneralTabComponent {
       this.brandGroup().get('ogImage')?.setValue(url);
       this.brandGroup().markAsDirty();
       this.toast.success(
-        'Imagen OG subida',
-        'La imagen OG se ha optimizado y subido correctamente al storage.',
+        'Imagen para redes subida',
+        'Se verá en la web al presionar Publicar Cambios.',
       );
     } catch {
       // Toast ya lo muestra el facade
