@@ -84,10 +84,10 @@ const BRANCH_LEGAL: Record<string, { legalName: string; rut: string; website: st
  * Dominio donde vive la app (Angular SPA), distinto de los sitios comerciales estáticos de
  * `BRANCH_LEGAL.website`. Se imprime como enlace a la Política de Privacidad.
  *
- * ⚠️ **PENDIENTE DE CONFIRMAR (18-08-2026).** Valor deducido, no confirmado por el negocio. Fijar
- * antes de emitir el primer contrato real — después no arregla los ya emitidos.
+ * Confirmado el 2026-11-06 (hotfix-173-b), al mudar la app a su dominio propio. Si el dominio de la
+ * app cambia, cambiar también este valor: los contratos ya emitidos conservan el enlace anterior.
  */
-const APP_BASE_URL = 'https://autoescuelachillan.cl';
+const APP_BASE_URL = 'https://app.gestordeautoescuelas.cl';
 
 /**
  * Representante legal de ambas sociedades (mismo Sr. en los dos contratos físicos reales de
