@@ -76,7 +76,8 @@ const ACTION_OPTIONS = withAllOption(
       >
         <!-- Toolbar de filtros -->
         <div class="p-5 border-b border-border-default">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-4">
+          <!-- hotfix-168-m: columnas por el ancho de la caja, no de la ventana -->
+          <div class="audit-filters">
             <!-- Fecha desde -->
             <div class="flex flex-col gap-1">
               <app-date-input
@@ -101,7 +102,7 @@ const ACTION_OPTIONS = withAllOption(
 
             <!-- Quién (fix-069-i) -->
             <div class="flex flex-col gap-1">
-              <label class="text-xs font-medium text-text-secondary">Quién</label>
+              <label class="micro-label block mb-1">Quién</label>
               <p-select
                 [options]="actorOptions"
                 [(ngModel)]="quienModel"
@@ -115,7 +116,7 @@ const ACTION_OPTIONS = withAllOption(
 
             <!-- Usuario -->
             <div class="flex flex-col gap-1">
-              <label class="text-xs font-medium text-text-secondary">Usuario</label>
+              <label class="micro-label block mb-1">Usuario</label>
               <p-select
                 [options]="usuarioOptions()"
                 [(ngModel)]="usuarioModel"
@@ -131,7 +132,7 @@ const ACTION_OPTIONS = withAllOption(
 
             <!-- Acción -->
             <div class="flex flex-col gap-1">
-              <label class="text-xs font-medium text-text-secondary">Acción</label>
+              <label class="micro-label block mb-1">Acción</label>
               <p-select
                 [options]="actionOptions"
                 [(ngModel)]="accionModel"
@@ -146,7 +147,7 @@ const ACTION_OPTIONS = withAllOption(
 
             <!-- Módulo -->
             <div class="flex flex-col gap-1">
-              <label class="text-xs font-medium text-text-secondary">Módulo</label>
+              <label class="micro-label block mb-1">Módulo</label>
               <p-select
                 [options]="moduloOptions"
                 [(ngModel)]="moduloModel"
@@ -158,56 +159,56 @@ const ACTION_OPTIONS = withAllOption(
                 data-llm-description="Filtrar logs por módulo del sistema"
               />
             </div>
-          </div>
 
-          <!-- Acciones de filtro -->
-          <div class="flex items-center justify-between flex-wrap gap-3">
-            <app-clear-filters-button
-              llmSubject="audit-log"
-              [active]="hasActiveFilters()"
-              (clear)="clearFilters()"
-            />
+            <!-- Acciones de filtro: última celda de la grilla, abajo a la derecha (hotfix-168-m) -->
+            <div class="audit-filters__actions flex items-center justify-end flex-wrap gap-3">
+              <app-clear-filters-button
+                llmSubject="audit-log"
+                [active]="hasActiveFilters()"
+                (clear)="clearFilters()"
+              />
 
-            <div class="relative ml-auto">
-              <button
-                type="button"
-                class="btn-secondary flex items-center justify-center gap-2 text-sm disabled:opacity-60"
-                [disabled]="facade.isExporting()"
-                [appStableWidth]="facade.isExporting()"
-                (click)="exportMenuOpen.set(!exportMenuOpen())"
-                data-llm-action="open-export-menu-auditoria"
-              >
-                @if (facade.isExporting()) {
-                  <app-icon name="loader-circle" [size]="16" class="animate-spin" />
-                } @else {
-                  <app-icon name="download" [size]="16" />
+              <div class="relative">
+                <button
+                  type="button"
+                  class="btn-secondary flex items-center justify-center gap-2 text-sm disabled:opacity-60"
+                  [disabled]="facade.isExporting()"
+                  [appStableWidth]="facade.isExporting()"
+                  (click)="exportMenuOpen.set(!exportMenuOpen())"
+                  data-llm-action="open-export-menu-auditoria"
+                >
+                  @if (facade.isExporting()) {
+                    <app-icon name="loader-circle" [size]="16" class="animate-spin" />
+                  } @else {
+                    <app-icon name="download" [size]="16" />
+                  }
+                  Exportar
+                  <app-icon name="chevron-down" [size]="14" />
+                </button>
+                @if (exportMenuOpen()) {
+                  <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
+                  <div class="export-menu">
+                    <button
+                      type="button"
+                      class="export-menu-item"
+                      (click)="requestExport('excel')"
+                      data-llm-action="exportar-excel-auditoria"
+                    >
+                      <app-icon name="table-2" [size]="15" />
+                      Exportar como Excel
+                    </button>
+                    <button
+                      type="button"
+                      class="export-menu-item"
+                      (click)="requestExport('pdf')"
+                      data-llm-action="exportar-pdf-auditoria"
+                    >
+                      <app-icon name="file-text" [size]="15" />
+                      Exportar como PDF
+                    </button>
+                  </div>
                 }
-                Exportar
-                <app-icon name="chevron-down" [size]="14" />
-              </button>
-              @if (exportMenuOpen()) {
-                <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
-                <div class="export-menu">
-                  <button
-                    type="button"
-                    class="export-menu-item"
-                    (click)="requestExport('excel')"
-                    data-llm-action="exportar-excel-auditoria"
-                  >
-                    <app-icon name="table-2" [size]="15" />
-                    Exportar como Excel
-                  </button>
-                  <button
-                    type="button"
-                    class="export-menu-item"
-                    (click)="requestExport('pdf')"
-                    data-llm-action="exportar-pdf-auditoria"
-                  >
-                    <app-icon name="file-text" [size]="15" />
-                    Exportar como PDF
-                  </button>
-                </div>
-              }
+              </div>
             </div>
           </div>
         </div>
@@ -270,7 +271,7 @@ const ACTION_OPTIONS = withAllOption(
               >
                 <!-- Fecha/Hora -->
                 <span class="text-sm tabular-nums text-text-secondary">
-                  {{ log.fechaHora | chileDate: 'yyyy-MM-dd HH:mm:ss' }}
+                  {{ log.fechaHora | chileDate: 'dd/MM/yyyy HH:mm:ss' }}
                 </span>
 
                 <!-- Usuario -->
@@ -391,6 +392,17 @@ const ACTION_OPTIONS = withAllOption(
        angosta (ej. drawer abierto), partiendo el texto en columnas
        ilegibles. min-width = suma de columnas fijas + gaps + el piso de
        Detalles, para que el 1fr nunca reciba menos que su mínimo real. */
+    .audit-filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+      gap: 1rem;
+    }
+
+    .audit-filters__actions {
+      grid-column-end: -1;
+      align-self: end;
+    }
+
     .audit-grid {
       display: grid;
       grid-template-columns: 148px 220px 130px 110px 130px minmax(200px, 1fr);
