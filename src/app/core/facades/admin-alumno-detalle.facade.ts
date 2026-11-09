@@ -121,6 +121,26 @@ const PRACTICAS_REQUERIDAS_B = 12;
 const TEORIA_MIN_PROF = 75;
 const NOTA_MIN_PROF = 75;
 
+/** Estado previo de una sesión antes de reciclarla (reprogramación individual). */
+interface PreviousSessionRow {
+  instructor_id: number;
+  scheduled_at: string | null;
+  status?: string;
+}
+
+/**
+ * fix-246-b (I08): una clase iniciada tiene hora y KM de inicio de ESE momento y vehículo;
+ * reciclarla los dejaría pegados a una clase futura (el odómetro solo avanza). Primero se
+ * cancela el inicio en Asistencia.
+ */
+function assertNoEnCurso(prev: PreviousSessionRow | null): void {
+  if (prev?.status === 'in_progress') {
+    throw new Error(
+      'Esta clase ya se inició. Para moverla, primero usa "Cancelar inicio" en Asistencia y luego reprográmala.',
+    );
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminAlumnoDetalleFacade {
   private readonly sanitizer = inject(ErrorSanitizerService);
@@ -820,6 +840,7 @@ export class AdminAlumnoDetalleFacade {
             kmFin: null,
             observaciones: null,
             completada: false,
+            enCurso: false,
             ausente: false,
             cancelada: false,
             justificada: false,
@@ -850,6 +871,7 @@ export class AdminAlumnoDetalleFacade {
           kmFin: ses.km_end,
           observaciones: ses.performance_notes ?? ses.notes ?? null,
           completada: ses.status === 'completed',
+          enCurso: ses.status === 'in_progress',
           ausente: ses.status === 'no_show',
           cancelada: ses.status === 'cancelled',
           justificada: attendance?.status === 'excused',
@@ -1647,10 +1669,11 @@ export class AdminAlumnoDetalleFacade {
     // se le notifica el bloque liberado (AC5) y ambos van al historial.
     const { data: previous } = await this.supabase.client
       .from('class_b_sessions')
-      .select('instructor_id, scheduled_at')
+      .select('instructor_id, scheduled_at, status')
       .eq('id', sessionId)
       .single();
-    const prev = previous as { instructor_id: number; scheduled_at: string | null } | null;
+    const prev = previous as PreviousSessionRow | null;
+    assertNoEnCurso(prev);
     const previousInstructorId = prev?.instructor_id ?? null;
 
     const { error } = await this.supabase.client

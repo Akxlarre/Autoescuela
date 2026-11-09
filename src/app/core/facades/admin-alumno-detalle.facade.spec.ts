@@ -401,6 +401,24 @@ describe('AdminAlumnoDetalleFacade', () => {
         expect(history.insert).not.toHaveBeenCalled();
       });
 
+      it('fix-246-b (I08): una clase en curso no se reprograma — pide "Cancelar inicio" y no toca nada', async () => {
+        const sessions = chainMock({
+          data: { instructor_id: 999, scheduled_at: '2026-07-01T13:00:00Z', status: 'in_progress' },
+          error: null,
+        });
+        const history = chainMock({ data: [], error: null });
+        supabaseSpy.client.from = mockFromByTable({
+          class_b_sessions: sessions,
+          class_b_reschedule_history: history,
+        });
+
+        await expect(facade.reprogramarClase(basePayload)).rejects.toThrow('Cancelar inicio');
+
+        expect(sessions.update).not.toHaveBeenCalled();
+        expect(history.insert).not.toHaveBeenCalled();
+        expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+      });
+
       it('agendar una clase que no tenía sesión no archiva nada ni escribe historial', async () => {
         const { attendance, history } = mockSesionExistente();
 
@@ -810,6 +828,17 @@ describe('AdminAlumnoDetalleFacade', () => {
           km_end: null,
           instructors: null,
         },
+        {
+          id: 504,
+          class_number: 4,
+          scheduled_at: '2026-06-04T09:00:00',
+          status: 'in_progress',
+          student_signature: false,
+          instructor_signature: false,
+          km_start: 15230,
+          km_end: null,
+          instructors: null,
+        },
       ]);
 
       TestBed.resetTestingModule();
@@ -835,6 +864,13 @@ describe('AdminAlumnoDetalleFacade', () => {
       expect(clase2?.ausente).toBe(true);
       expect(clase2?.completada).toBe(false);
       expect(clase3?.ausente).toBe(true);
+
+      // fix-246-b (I08): in_progress → enCurso (la ficha no ofrece reprogramarla).
+      const clase4 = facade.clasesPracticas().find((c) => c.numero === 4);
+      expect(clase4?.enCurso).toBe(true);
+      expect(clase4?.completada).toBe(false);
+      expect(clase1?.enCurso).toBe(false);
+      expect(clase2?.enCurso).toBe(false);
 
       // La grilla debe reflejar la justificación sin perder el color rojo (ausente=true
       // se mantiene): clase 2 sigue sin justificar, clase 3 ya fue perdonada.

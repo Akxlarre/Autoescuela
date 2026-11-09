@@ -196,6 +196,11 @@ export interface ClasePracticaUI {
   observaciones: string | null;
   /** true si ambas firmas están presentes */
   completada: boolean;
+  /**
+   * true si class_b_sessions.status = 'in_progress' (iniciada: tiene hora y KM de inicio).
+   * fix-246-b: no se reprograma desde la ficha; primero "Cancelar inicio" en Asistencia.
+   */
+  enCurso: boolean;
   /** true si class_b_sessions.status = 'no_show' (inasistencia, con o sin justificar) */
   ausente: boolean;
   /** true si class_b_sessions.status = 'cancelled' (RF-053: liberada por penalización, pendiente de reagendar) */
