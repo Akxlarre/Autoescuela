@@ -22,6 +22,15 @@ import {
 import type { EstadoPagoClase } from '@core/models/ui/estado-pago-clase.model';
 import { isVehicleOperational } from '@core/utils/vehicle-status.utils';
 import {
+  type ChoqueReactivacion,
+  type SesionAgendable,
+  type SesionAgendableRow,
+  SESION_AGENDABLE_SELECT,
+  findReactivationConflicts,
+  reactivationConflictMessage,
+  toSesionAgendable,
+} from '@core/utils/reactivation-conflicts.utils';
+import {
   type ClassBAbsence,
   type ClassBSessionAction,
   StaleSessionError,
@@ -656,19 +665,28 @@ export class AsistenciaClaseBFacade {
     try {
       const { data: futuras, error: lookupError } = await this.supabase.client
         .from('class_b_sessions')
-        .select('id')
+        .select(SESION_AGENDABLE_SELECT)
         .eq('enrollment_id', enrollmentId)
         .eq('status', 'cancelled')
         .gt('scheduled_at', new Date().toISOString());
 
       if (lookupError) throw lookupError;
 
-      const ids = (futuras ?? []).map((s: { id: number }) => s.id);
+      const candidatas = ((futuras ?? []) as SesionAgendableRow[]).map(toSesionAgendable);
+      const ids = candidatas.map((s) => s.id);
       if (ids.length === 0) {
         this.toast.info(
           'No hay clases futuras para reactivar',
           'Para darle nuevas horas usa "Reagendar Clases" en la ficha del alumno.',
         );
+        return;
+      }
+
+      // fix-245-b (N03): el choque se avisa ANTES de confirmar y nombrando la clase. El trigger
+      // sigue siendo la red de seguridad si otro toma el horario entre este chequeo y el UPDATE.
+      const choques = await this.findChoquesDeReactivacion(enrollmentId, candidatas);
+      if (choques.length > 0) {
+        this.toast.error('No se pudo reactivar el horario', reactivationConflictMessage(choques));
         return;
       }
 
@@ -706,6 +724,48 @@ export class AsistenciaClaseBFacade {
       this._isSaving.set(false);
       this._savingAlertaId.set(null);
     }
+  }
+
+  /**
+   * fix-245-b (N03): clases activas del mismo instructor, vehículo o matrícula que se solapan con
+   * las que se quieren reactivar. Misma regla que los triggers de doble agendamiento.
+   */
+  private async findChoquesDeReactivacion(
+    enrollmentId: number,
+    candidatas: SesionAgendable[],
+  ): Promise<ChoqueReactivacion[]> {
+    const instantes = candidatas
+      .map((c) => (c.scheduledAt ? new Date(c.scheduledAt).getTime() : NaN))
+      .filter((t) => !Number.isNaN(t));
+    if (instantes.length === 0) return [];
+
+    // Margen holgado alrededor de las candidatas: cubre cualquier duración de una práctica.
+    const MARGEN_MS = 12 * 60 * 60_000;
+    const desde = new Date(Math.min(...instantes) - MARGEN_MS).toISOString();
+    const hasta = new Date(Math.max(...instantes) + MARGEN_MS).toISOString();
+    const lista = (xs: Array<number | null>) =>
+      [...new Set(xs.filter((x) => x !== null))].join(',');
+    const filtros = [
+      lista(candidatas.map((c) => c.instructorId)) &&
+        `instructor_id.in.(${lista(candidatas.map((c) => c.instructorId))})`,
+      lista(candidatas.map((c) => c.vehicleId)) &&
+        `vehicle_id.in.(${lista(candidatas.map((c) => c.vehicleId))})`,
+      `enrollment_id.eq.${enrollmentId}`,
+    ].filter(Boolean);
+
+    const { data, error } = await this.supabase.client
+      .from('class_b_sessions')
+      .select(SESION_AGENDABLE_SELECT)
+      .in('status', ['scheduled', 'in_progress', 'completed'])
+      .gte('scheduled_at', desde)
+      .lte('scheduled_at', hasta)
+      .or(filtros.join(','));
+    if (error) throw error;
+
+    return findReactivationConflicts(
+      candidatas,
+      ((data ?? []) as SesionAgendableRow[]).map(toSesionAgendable),
+    );
   }
 
   /**

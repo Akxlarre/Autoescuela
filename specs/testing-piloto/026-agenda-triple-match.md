@@ -332,7 +332,7 @@ concurrencia (2 pestañas del mismo navegador comparten sesión).
 | I05 | Día donde el alumno ya tiene 2 clases | Todos los horarios de ese día aparecen ocupados (sin explicar por qué) — anotar | — | ✅ agenda-5 — tope 2 fijo, no `max_classes_per_day` (=1): **decisión** |
 | I06 | Horarios de hoy que ya pasaron | No se pueden elegir (S2) | ✓ | ✅ fix-228-b (la vista no ofrece bloques empezados) |
 | I07 | Reprogramar un `no_show` (D10) **(§4)** | Deja de verse "Ausente" y no cuenta para penalización (S9) | — | ✅ alumnos-b-ficha F04 (fix-279-m) |
-| I08 | Reprogramar una clase `in_progress` | ¿Debería permitirse? Hoy vuelve a "Agendada" conservando el KM inicial (S9) — **decisión** | — | decisión: hoy se ofrece; vuelve a "Agendada", borra la hora de inicio y conserva el KM inicial |
+| I08 | Reprogramar una clase `in_progress` | ¿Debería permitirse? Hoy vuelve a "Agendada" conservando el KM inicial (S9) — **decisión** | — | ✅ Decidido (bloquear) e implementado en fix-246-b: muestra "En curso" sin lápiz y orienta a "Cancelar inicio" en Asistencia; el facade rechaza si igual llega |
 | I09 | Reprogramar una clase completada | No hay botón | ✓ | ✅ agenda-5 |
 | I10 | Clase sin sesión (número sin agendar) | Crea la clase nueva | — | ✅ agenda-5 |
 | I11 | Historial de reagendamientos después de I03 | ¿Aparece? Hoy la reprogramación individual no lo registra (S9) | — | ✅ agenda-5 + alumnos-b-ficha F13 |
@@ -422,7 +422,7 @@ Marcar ✅/❌ en cada celda. "—" = no aplica.
 |---|---|---|---|---|
 | N01 | "Eliminar horario" | Pide confirmación; cancela solo las clases agendadas; los horarios quedan libres en la Agenda | ✓ | ✅ acciones-masivas H06/H09 |
 | N02 | "Reactivar horario" en un alumno penalizado (D11) **(§4)** | No debe revivir clases canceladas por penalización ni fechas pasadas (S13) | — | ✅ fechas pasadas no reviven (fix-364-m); canceladas por la penalización sí — **decisión** |
-| N03 | Reactivar cuando otro alumno ya tomó uno de esos horarios | Mensaje claro de cuál choca; hoy falla todo con "Error al reactivar el horario" | — | ⚠️ agenda-5: todo o nada ✅; el aviso es el genérico del trigger, sin decir cuál choca |
+| N03 | Reactivar cuando otro alumno ya tomó uno de esos horarios | Mensaje claro de cuál choca; hoy falla todo con "Error al reactivar el horario" | — | ✅ Corregido en fix-245-b: todo o nada; el aviso nombra la clase que choca (número, día, hora y con qué) antes de pedir confirmación |
 | N04 | Eliminar y reactivar enseguida | Las clases vuelven a sus horarios originales | ✓ | ✅ acciones-masivas H06/H09 |
 
 ### O. Seguridad (RLS y BD)

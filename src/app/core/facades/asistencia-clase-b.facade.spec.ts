@@ -839,6 +839,53 @@ describe('AsistenciaClaseBFacade', () => {
       expect(facade.alertas()[0].horarioActivo).toBe(false);
     });
 
+    // ── fix-245-b (N03): el choque se detecta ANTES de confirmar y dice cuál clase ──
+    const futura = {
+      id: 7,
+      class_number: 3,
+      scheduled_at: '2026-10-08T13:30:00.000Z',
+      duration_min: 45,
+      instructor_id: 9,
+      vehicle_id: 4,
+      enrollment_id: 10,
+    };
+
+    it('fix-245-b: si otro alumno tomó el horario, avisa qué clase choca sin confirmar ni escribir', async () => {
+      mockSessionResponses(
+        { data: [futura], error: null },
+        { data: [{ ...futura, id: 50, enrollment_id: 20, vehicle_id: 8 }], error: null },
+      );
+
+      await facade.reactivateSchedule(10);
+
+      expect(confirmModal.confirm).not.toHaveBeenCalled();
+      expect(mock.builderFor('class_b_sessions').update).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith(
+        'No se pudo reactivar el horario',
+        expect.stringContaining('Clase 3'),
+      );
+      expect(toast.error.mock.calls[0][1]).toContain('el instructor ya tiene otra clase');
+      expect(facade.alertas()[0].horarioActivo).toBe(false);
+    });
+
+    it('fix-245-b: busca choques entre las clases activas del instructor, vehículo o matrícula', async () => {
+      mockSessionResponses(
+        { data: [futura], error: null },
+        { data: [], error: null },
+        { data: [{ id: 7 }], error: null },
+      );
+
+      await facade.reactivateSchedule(10);
+
+      const b = mock.builderFor('class_b_sessions');
+      expect(b.in).toHaveBeenCalledWith('status', ['scheduled', 'in_progress', 'completed']);
+      expect(b.or).toHaveBeenCalledWith(
+        'instructor_id.in.(9),vehicle_id.in.(4),enrollment_id.eq.10',
+      );
+      expect(confirmModal.confirm).toHaveBeenCalled();
+      expect(toast.success).toHaveBeenCalledWith('Horario reactivado');
+    });
+
     it('fix-391-m: removeSchedule registra la penalización en la matrícula', async () => {
       (facade as any)._alertas.set([makeAlerta({ nivel: 'danger', horarioActivo: true })]);
       mock.setResult('class_b_sessions', [{ id: 7 }]);

@@ -397,6 +397,41 @@ test('I04 · I05: la grilla no ofrece la hora de otra clase del alumno ni un dí
   });
 });
 
+test('I08: una clase en curso no se reprograma desde la ficha y orienta a "Cancelar inicio"', async ({
+  pageAs,
+  cleanup,
+}) => {
+  // fix-246-b: decisión del owner — una clase iniciada (hora y KM de inicio) no se mueve desde la
+  // ficha; primero se cancela su inicio en Asistencia.
+  const inst = await instructorSembrable();
+  const alumno = await alumnoE2e('EnCurso', SEDE_A, cleanup);
+  await clase(
+    alumno,
+    inst,
+    {
+      class_number: 1,
+      scheduled_at: madrugada(0),
+      status: 'in_progress',
+      start_time: '03:30:00',
+      km_start: 15230,
+    },
+    cleanup,
+  );
+  await clase(alumno, inst, { class_number: 2, scheduled_at: madrugada(3) }, cleanup);
+
+  const page = await pageAs('secretariaA');
+  await abrirFicha(page, alumno.studentId);
+  await accion(page, 'ver-ficha-tecnica').click();
+
+  const enCurso = tarjetaClase(page, 1).locator('[data-llm-info="clase-en-curso"]');
+  await expect(enCurso).toBeVisible(CARGA);
+  await expect(enCurso).toContainText('En curso');
+  await expect(enCurso).toHaveAttribute('title', /Cancelar inicio/);
+  await expect(accion(tarjetaClase(page, 1), 'reprogramar-clase')).toHaveCount(0);
+  // La clase agendada sigue ofreciendo el lápiz.
+  await expect(accion(tarjetaClase(page, 2), 'reprogramar-clase')).toBeVisible();
+});
+
 test('I09 · I10: una clase completada no se reprograma; un número sin sesión crea la clase', async ({
   pageAs,
   cleanup,
@@ -828,7 +863,7 @@ test('N03: reactivar cuando otro alumno ya tomó uno de esos horarios', async ({
   );
 
   await accion(alerta, 'reactivate-schedule').click();
-  await accion(page, 'confirm-modal-accept').click();
+  // fix-245-b: el choque se detecta antes de confirmar, así que no se abre el modal.
   const aviso = toast(page, 'No se pudo reactivar el horario');
   await expect(aviso).toBeVisible(CARGA);
   const texto = await aviso.innerText();
@@ -841,7 +876,11 @@ test('N03: reactivar cuando otro alumno ya tomó uno de esos horarios', async ({
     .select('id, status')
     .in('id', [futura3.sessionId, futura4.sessionId]);
   expect(data!.map((s) => s.status)).toEqual(['cancelled', 'cancelled']);
-  // El checklist esperaba que el aviso dijera cuál choca: hoy es el mensaje genérico del trigger
-  // ("El instructor ya tiene una clase agendada que se solapa…"), sin fecha ni número de clase.
-  expect(texto).toContain('se solapa');
+  // fix-245-b: el aviso dice cuál choca (la clase 3, a su hora) y con qué, y qué hacer.
+  expect(texto).toContain('Clase 3');
+  expect(texto).toContain(futura3.hora);
+  expect(texto).toContain('el instructor ya tiene otra clase');
+  expect(texto).not.toContain('Clase 4');
+  expect(texto).toContain('Reagendar Clases');
+  await expect(page.locator('[data-llm-action="confirm-modal-accept"]')).toHaveCount(0);
 });

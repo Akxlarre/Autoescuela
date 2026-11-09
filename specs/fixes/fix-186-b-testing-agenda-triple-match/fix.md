@@ -299,6 +299,28 @@ F13 (fix-279-m). J02, J09 → `asistencia-clase-b.spec.ts` J04 · J12 (fix-382-m
 | N02 | ¿"Reactivar" debe revivir las canceladas por la penalización automática? | Revive todas las futuras canceladas, venga de "Eliminar" (deshacerlo es lo esperado) o del cron (hoy apagado en las 2 sedes, spec `0048-b`) |
 | I17 | ¿Avisos a alumnos e instructores con el portal bloqueado? | Se crean |
 
-**Grupo 2 cerrado** salvo las 4 decisiones de arriba. Los 4 ❌ (I15, I16, I18, J07) se
+**Grupo 2 cerrado** salvo las decisiones de arriba. Los 4 ❌ (I15, I16, I18, J07) se
 corrigieron en **fix-244-b** (2026-11-09): `agenda-5.spec.ts` 15/15 en verde, sin `knownBug`. El
-aviso débil de N03 sigue pendiente.
+aviso débil de N03 se corrigió en **fix-245-b** (2026-11-09): el choque se detecta antes de
+confirmar y el aviso nombra la clase, su día y hora, y con qué choca.
+
+### Respuestas del owner (2026-11-09)
+
+- **I05 / J07 / L06 — tope por día: 2.** La app ya usa 2 en matrícula presencial, masivo y
+  reprogramar. Queda una inconsistencia: `courses.max_classes_per_day` sigue en 1 en los 6 cursos
+  B y la **matrícula pública** lo lee, así que ahí el tope efectivo es 1. Pendiente decidir si se
+  sube la columna a 2 (cambio de datos en producción) o si la web pública queda en 1 a propósito.
+- **I08 — reprogramar una clase en curso:** el owner preguntó de dónde sale el caso. Análisis:
+  - **Cómo se llega:** el instructor (o asistencia) presiona "Iniciar clase", que pone
+    `in_progress`, `start_time` y `km_start` (`AsistenciaClaseBFacade.startClass`). El lápiz de la
+    ficha técnica no filtra por estado, así que la secretaria puede abrir "Reprogramar" sobre esa
+    clase. Pasa en la práctica cuando se inició por error, el alumno no llegó después de iniciar o
+    la clase se cortó (auto en pana, lluvia).
+  - **Qué hace hoy `reciclarSesion`:** vuelve a `scheduled`, borra `start_time`/`end_time`,
+    **cambia el vehículo** y **deja `km_start`**. Ese KM es una lectura del odómetro de *otro
+    momento* y, si cambió el auto, de *otro vehículo*. Al finalizar la clase nueva, `km_end − km_start`
+    sale negativo o inflado, o choca con la validación `km_end ≥ km_start`.
+  - **El odómetro solo avanza**, así que un `km_start` viejo nunca sirve para una clase futura.
+  - **Decisión del owner:** bloquear. Una clase en curso no se reprograma desde la ficha; primero
+    "Cancelar inicio" en Asistencia (`cancelStart()`, vuelve a `scheduled` con `km_start = null`).
+    Implementado en **fix-246-b** (indicador "En curso" sin lápiz + rechazo en el facade).
