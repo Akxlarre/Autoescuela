@@ -2713,4 +2713,79 @@ describe('AdminAlumnoDetalleFacade', () => {
       expect(toastSpy.success).not.toHaveBeenCalled();
     });
   });
+
+  // ── fix-244-b ───────────────────────────────────────────────────────────────
+
+  describe('isLoadingInstructores — fix-244-b (I18)', () => {
+    it('queda en true mientras llega la consulta y vuelve a false al terminar', async () => {
+      let responder!: (v: { data: unknown[]; error: null }) => void;
+      const pendiente = new Promise<{ data: unknown[]; error: null }>((r) => (responder = r));
+      const query: any = {
+        select: vi.fn(() => query),
+        eq: vi.fn(() => query),
+        is: vi.fn(() => query),
+        then: (ok: any, ko: any) => pendiente.then(ok, ko),
+      };
+      supabaseSpy.client.from = vi.fn(() => query);
+
+      const carga = facade.loadInstructores();
+      expect(facade.isLoadingInstructores()).toBe(true);
+      responder({ data: [], error: null });
+      await carga;
+      expect(facade.isLoadingInstructores()).toBe(false);
+    });
+
+    it('vuelve a false aunque la consulta falle', async () => {
+      const query: any = {
+        select: vi.fn(() => query),
+        eq: vi.fn(() => query),
+        is: vi.fn(() => query),
+        then: (_ok: any, ko: any) => Promise.reject(new Error('red')).then(undefined, ko),
+      };
+      supabaseSpy.client.from = vi.fn(() => query);
+
+      await facade.loadInstructores().catch(() => undefined);
+      expect(facade.isLoadingInstructores()).toBe(false);
+    });
+  });
+
+  describe('clasesPorDiaParaReagendar — fix-244-b (J07)', () => {
+    function clase(
+      sessionId: number,
+      scheduledDate: string,
+      estado: Partial<{ cancelada: boolean; ausente: boolean; completada: boolean }> = {},
+    ): any {
+      return {
+        numero: sessionId,
+        sessionId,
+        scheduledDate,
+        scheduledAt: `${scheduledDate}T12:00:00Z`,
+        cancelada: false,
+        ausente: false,
+        completada: false,
+        ...estado,
+      };
+    }
+
+    it('cuenta las clases vigentes por fecha, sin canceladas ni las que se están reagendando', () => {
+      (facade as any)._clasesPracticas.set([
+        clase(1, '2026-11-16'),
+        clase(2, '2026-11-16', { completada: true }),
+        clase(3, '2026-11-17', { cancelada: true }),
+        clase(4, '2026-11-02', { ausente: true }),
+        clase(5, '2026-11-03', { ausente: true }),
+        { ...clase(6, '2026-11-18'), sessionId: null, scheduledDate: null },
+      ]);
+      facade.setReagendarSeleccion([
+        { sessionId: 4, claseNumero: 4, origen: 'no_show' },
+        { sessionId: 3, claseNumero: 3, origen: 'cancelled' },
+      ]);
+
+      expect(facade.clasesPorDiaParaReagendar()).toEqual({
+        '2026-11-16': 2,
+        // La inasistencia que no se reagenda sigue ocupando su día (fix-300-m).
+        '2026-11-03': 1,
+      });
+    });
+  });
 });

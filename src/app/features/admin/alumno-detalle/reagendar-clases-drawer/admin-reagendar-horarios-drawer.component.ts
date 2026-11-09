@@ -63,6 +63,7 @@ import type { EnrollmentAssignmentData } from '@core/models/ui/enrollment-assign
         <app-assignment-step
           [data]="assignmentData()"
           [loading]="isSaving()"
+          [instructorsLoading]="facade.isLoadingInstructores()"
           [hidePaymentMode]="true"
           nextLabel="Guardar Reagendamiento"
           (dataChange)="onDataChange($event)"
@@ -117,6 +118,8 @@ export class AdminReagendarHorariosDrawerComponent implements OnInit {
         // Mismo tope que el wizard admin/secretaria (vs 1 en el flujo público).
         maxClassesPerDay: 2,
         isComplete: slots.length === requiredCount,
+        // fix-244-b (J07): las clases que el alumno ya tiene ese día ocupan cupo del tope.
+        existingPerDay: this.facade.clasesPorDiaParaReagendar(),
       },
       promotionId: null,
       promotionGroups: [],
@@ -143,7 +146,9 @@ export class AdminReagendarHorariosDrawerComponent implements OnInit {
   protected async onSave(): Promise<void> {
     const enrollmentId = this.facade.alumno()?.enrollmentId;
     const instructorId = this.instructorId();
-    if (!enrollmentId || !instructorId || this.selectedSlotIds().length === 0) return;
+    // fix-244-b (I16): el 2º clic de un doble clic llega antes de que el botón se deshabilite.
+    if (!enrollmentId || !instructorId || this.selectedSlotIds().length === 0 || this.isSaving())
+      return;
 
     const razon = this.razon();
     if (!razon) {
@@ -167,9 +172,8 @@ export class AdminReagendarHorariosDrawerComponent implements OnInit {
       });
       this.layoutDrawer.close();
     } catch (err) {
-      this.saveError.set(
-        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar.',
-      );
+      // fix-244-b (I15): el error de Supabase es un objeto plano, no un Error: igual se sanitiza.
+      this.saveError.set(this.sanitizer.sanitize(err).message || 'Error al guardar.');
     } finally {
       this.isSaving.set(false);
     }

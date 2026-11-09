@@ -86,7 +86,8 @@ import { vehicleDocWarningLabelGeneric } from '@core/utils/vehicle-document-stat
         <div class="space-y-3">
           <span class="text-xs font-bold uppercase tracking-widest text-brand">1. Instructor</span>
 
-          @if (facade.isLoadingSchedule() && facade.instructores().length === 0) {
+          <!-- fix-244-b (I18): mientras carga, skeleton (ni "sin instructores" ni la lista de otro alumno) -->
+          @if (facade.isLoadingInstructores()) {
             <div class="flex flex-col gap-2">
               @for (i of skeletonRows; track i) {
                 <div
@@ -429,7 +430,8 @@ export class AdminReprogramarClaseDrawerComponent implements OnInit {
     const instructorId = this.selectedInstructorId();
     const slotId = this.selectedSlotId();
     const target = this.facade.reprogramarTarget();
-    if (!instructorId || !slotId || !target) return;
+    // fix-244-b (I16): el 2º clic de un doble clic llega antes de que el botón se deshabilite.
+    if (!instructorId || !slotId || !target || this.isSaving()) return;
 
     this.isSaving.set(true);
     this.saveError.set(null);
@@ -445,9 +447,8 @@ export class AdminReprogramarClaseDrawerComponent implements OnInit {
       });
       this.layoutDrawer.close();
     } catch (err) {
-      this.saveError.set(
-        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar.',
-      );
+      // fix-244-b (I15): el error de Supabase es un objeto plano, no un Error: igual se sanitiza.
+      this.saveError.set(this.sanitizer.sanitize(err).message || 'Error al guardar.');
     } finally {
       this.isSaving.set(false);
     }

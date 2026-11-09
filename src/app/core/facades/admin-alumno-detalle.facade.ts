@@ -196,6 +196,8 @@ export class AdminAlumnoDetalleFacade {
   private readonly _instructores = signal<InstructorOption[]>([]);
   private readonly _scheduleGrid = signal<ScheduleGrid | null>(null);
   private readonly _isLoadingSchedule = signal(false);
+  /** fix-244-b (I18): carga de la lista de instructores, distinta de la de la grilla. */
+  private readonly _isLoadingInstructores = signal(false);
   private readonly _reprogramarTarget = signal<{
     sessionId: number | null;
     claseNumero: number;
@@ -259,6 +261,23 @@ export class AdminAlumnoDetalleFacade {
   readonly instructores = this._instructores.asReadonly();
   readonly scheduleGrid = this._scheduleGrid.asReadonly();
   readonly isLoadingSchedule = this._isLoadingSchedule.asReadonly();
+  readonly isLoadingInstructores = this._isLoadingInstructores.asReadonly();
+
+  /**
+   * fix-244-b (J07): clases que el alumno ya tiene por fecha, para el tope por día del paso 2 de
+   * "Reagendar Clases". Misma regla que `computeBlockedDates()` (fix-300-m: las canceladas no
+   * ocupan cupo, las inasistencias sí), sin las clases que se están reagendando.
+   */
+  readonly clasesPorDiaParaReagendar = computed<Record<string, number>>(() => {
+    const moviendo = new Set(this._reagendarSeleccion().map((c) => c.sessionId));
+    const porDia: Record<string, number> = {};
+    for (const clase of this._clasesPracticas()) {
+      if (!clase.scheduledDate || clase.cancelada) continue;
+      if (clase.sessionId !== null && moviendo.has(clase.sessionId)) continue;
+      porDia[clase.scheduledDate] = (porDia[clase.scheduledDate] ?? 0) + 1;
+    }
+    return porDia;
+  });
   readonly reprogramarTarget = this._reprogramarTarget.asReadonly();
 
   // Computed: porcentajes Clase B
@@ -1486,6 +1505,15 @@ export class AdminAlumnoDetalleFacade {
 
   /** Carga los instructores activos con vehículo asignado de la sede del alumno. */
   async loadInstructores(): Promise<void> {
+    this._isLoadingInstructores.set(true);
+    try {
+      await this.fetchInstructores();
+    } finally {
+      this._isLoadingInstructores.set(false);
+    }
+  }
+
+  private async fetchInstructores(): Promise<void> {
     const branchId = this._alumno()?.branchId ?? null;
 
     let query = this.supabase.client

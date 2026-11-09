@@ -325,41 +325,41 @@ concurrencia (2 pestañas del mismo navegador comparten sesión).
 
 | ID | Caso | Resultado esperado | Auto | Res. |
 |---|---|---|---|---|
-| I01 | Ficha → Ficha técnica → "Reprogramar" en una clase agendada | Drawer "Reprogramar Clase" con "Clase #N — Nombre" | ✓ | |
-| I02 | Lista de instructores | Sede del alumno + "ambas sedes" de la otra | ✓ | |
-| I03 | Elegir instructor → horario → Confirmar | Toast "Clase reprogramada correctamente"; la ficha y la Agenda reflejan el cambio | ✓ | |
-| I04 | Misma hora que otra clase del alumno, con otro instructor **(§4)** | Bloqueado (S5) | ✓ | |
-| I05 | Día donde el alumno ya tiene 2 clases | Todos los horarios de ese día aparecen ocupados (sin explicar por qué) — anotar | — | |
-| I06 | Horarios de hoy que ya pasaron | No se pueden elegir (S2) | ✓ | |
-| I07 | Reprogramar un `no_show` (D10) **(§4)** | Deja de verse "Ausente" y no cuenta para penalización (S9) | — | |
-| I08 | Reprogramar una clase `in_progress` | ¿Debería permitirse? Hoy vuelve a "Agendada" conservando el KM inicial (S9) — **decisión** | — | |
-| I09 | Reprogramar una clase completada | No hay botón | ✓ | |
-| I10 | Clase sin sesión (número sin agendar) | Crea la clase nueva | — | |
-| I11 | Historial de reagendamientos después de I03 | ¿Aparece? Hoy la reprogramación individual no lo registra (S9) | — | |
-| I12 | Vehículo con documentos vencidos | Triángulo con tooltip (fix-165) | ✓ | |
-| I13 | Cambiar de instructor rápido y confirmar | Se guarda con el vehículo del instructor elegido, no del anterior | — | |
-| I14 | "Cancelar" | Hoy cierra todo el drawer en vez de volver a la Ficha técnica — confirmar si es lo deseado | — | |
-| I15 | Error al guardar (choque detectado por la BD) | Mensaje legible en el drawer, sin cerrar | — | |
-| I16 | Doble clic en "Confirmar Reprogramación" | Una sola actualización | — | |
-| I17 | Notificaciones | Se crean para el alumno y el instructor (aunque sus portales estén bloqueados) — confirmar si molesta | — | |
-| I18 | Mientras cargan los instructores (traspasado de `024b` F03) | Se ve un estado de carga, no "No hay instructores disponibles" por un instante | — | |
-| I19 | Instructor sin horarios (traspasado de `024b` F05) | "Sin disponibilidad", con explicación | — | |
-| I20 | Navegar semanas y días dentro del panel (traspasado de `024b` F06) | Las flechas se deshabilitan en la primera y la última semana; al cambiar de semana se elige el primer día | — | |
+| I01 | Ficha → Ficha técnica → "Reprogramar" en una clase agendada | Drawer "Reprogramar Clase" con "Clase #N — Nombre" | ✓ | ✅ agenda-5 |
+| I02 | Lista de instructores | Sede del alumno + "ambas sedes" de la otra | ✓ | ✅ agenda-5 |
+| I03 | Elegir instructor → horario → Confirmar | Toast "Clase reprogramada correctamente"; la ficha y la Agenda reflejan el cambio | ✓ | ✅ agenda-5 (vista: el horario viejo queda libre y el nuevo ocupado) |
+| I04 | Misma hora que otra clase del alumno, con otro instructor **(§4)** | Bloqueado (S5) | ✓ | ✅ agenda-5 (fix-299-m) |
+| I05 | Día donde el alumno ya tiene 2 clases | Todos los horarios de ese día aparecen ocupados (sin explicar por qué) — anotar | — | ✅ agenda-5 — tope 2 fijo, no `max_classes_per_day` (=1): **decisión** |
+| I06 | Horarios de hoy que ya pasaron | No se pueden elegir (S2) | ✓ | ✅ fix-228-b (la vista no ofrece bloques empezados) |
+| I07 | Reprogramar un `no_show` (D10) **(§4)** | Deja de verse "Ausente" y no cuenta para penalización (S9) | — | ✅ alumnos-b-ficha F04 (fix-279-m) |
+| I08 | Reprogramar una clase `in_progress` | ¿Debería permitirse? Hoy vuelve a "Agendada" conservando el KM inicial (S9) — **decisión** | — | decisión: hoy se ofrece; vuelve a "Agendada", borra la hora de inicio y conserva el KM inicial |
+| I09 | Reprogramar una clase completada | No hay botón | ✓ | ✅ agenda-5 |
+| I10 | Clase sin sesión (número sin agendar) | Crea la clase nueva | — | ✅ agenda-5 |
+| I11 | Historial de reagendamientos después de I03 | ¿Aparece? Hoy la reprogramación individual no lo registra (S9) | — | ✅ agenda-5 + alumnos-b-ficha F13 |
+| I12 | Vehículo con documentos vencidos | Triángulo con tooltip (fix-165) | ✓ | ✅ agenda-5 (RTRE29) |
+| I13 | Cambiar de instructor rápido y confirmar | Se guarda con el vehículo del instructor elegido, no del anterior | — | ✅ agenda-5 |
+| I14 | "Cancelar" | Hoy cierra todo el drawer en vez de volver a la Ficha técnica — confirmar si es lo deseado | — | ✅ alumnos-b-ficha F11 (vuelve a la Ficha técnica) |
+| I15 | Error al guardar (choque detectado por la BD) | Mensaje legible en el drawer, sin cerrar | — | ✅ Corregido en fix-244-b: muestra el mensaje de la BD ("…se solapa…") y el panel queda abierto |
+| I16 | Doble clic en "Confirmar Reprogramación" | Una sola actualización | — | ✅ Corregido en fix-244-b: guarda una vez (1 fila en el historial) |
+| I17 | Notificaciones | Se crean para el alumno y el instructor (aunque sus portales estén bloqueados) — confirmar si molesta | — | ✅ agenda-5: avisos al alumno y al instructor — **decisión** (§5) |
+| I18 | Mientras cargan los instructores (traspasado de `024b` F03) | Se ve un estado de carga, no "No hay instructores disponibles" por un instante | — | ✅ Corregido en fix-244-b: skeleton mientras cargan |
+| I19 | Instructor sin horarios (traspasado de `024b` F05) | "Sin disponibilidad", con explicación | — | ✅ agenda-5 |
+| I20 | Navegar semanas y días dentro del panel (traspasado de `024b` F06) | Las flechas se deshabilitan en la primera y la última semana; al cambiar de semana se elige el primer día | — | ✅ agenda-5 |
 
 ### J. Flujo 3 — Reagendamiento masivo (ficha → "Reagendar Clases")
 
 | ID | Caso | Resultado esperado | Auto | Res. |
 |---|---|---|---|---|
-| J01 | Alumno sin clases penalizadas ni no asistidas | No aparece el botón | ✓ | |
-| J02 | D11 | Botón "Reagendar Clases (N)"; paso 1 con checklist de clases | ✓ | |
-| J03 | Paso 2 sin razón | "Selecciona una razón para el reagendamiento." | ✓ | |
-| J04 | Razón "Otro" sin detalle | "Especifica el motivo cuando eliges 'Otro'." | ✓ | |
-| J05 | Una clase falla a mitad del guardado **(§4)** | Todo o nada; hoy quedan cambios parciales sin historial (S10) | — | |
-| J06 | Guardado exitoso | Clases en "Agendada", historial con fecha anterior/nueva, asistencia vieja archivada (no "Ausente") | ✓ | |
-| J07 | Tope por día con una clase ya existente ese día | No deja 3 clases el mismo día (S5) | — | |
-| J08 | Horarios de hoy ya pasados | No se pueden elegir (S2) | — | |
-| J09 | Volver al paso 1 desde el paso 2 | Conserva la selección | — | |
-| J10 | Después de reagendar, ¿la penalización vuelve a cancelar? | No (regresión `fix-191-m`) | — | |
+| J01 | Alumno sin clases penalizadas ni no asistidas | No aparece el botón | ✓ | ✅ agenda-5 |
+| J02 | D11 | Botón "Reagendar Clases (N)"; paso 1 con checklist de clases | ✓ | ✅ asistencia-clase-b J04 |
+| J03 | Paso 2 sin razón | "Selecciona una razón para el reagendamiento." | ✓ | ✅ agenda-5 |
+| J04 | Razón "Otro" sin detalle | "Especifica el motivo cuando eliges 'Otro'." | ✓ | ✅ agenda-5 |
+| J05 | Una clase falla a mitad del guardado **(§4)** | Todo o nada; hoy quedan cambios parciales sin historial (S10) | — | ✅ fix-383-m (RPC en una transacción, test SQL) |
+| J06 | Guardado exitoso | Clases en "Agendada", historial con fecha anterior/nueva, asistencia vieja archivada (no "Ausente") | ✓ | ✅ agenda-5 |
+| J07 | Tope por día con una clase ya existente ese día | No deja 3 clases el mismo día (S5) | — | ✅ Corregido en fix-244-b: con 1 clase ese día solo deja elegir 1 más (tope 2; el valor del tope sigue como decisión del owner) |
+| J08 | Horarios de hoy ya pasados | No se pueden elegir (S2) | — | ✅ fix-228-b (vista) |
+| J09 | Volver al paso 1 desde el paso 2 | Conserva la selección | — | ✅ asistencia-clase-b J12 |
+| J10 | Después de reagendar, ¿la penalización vuelve a cancelar? | No (regresión `fix-191-m`) | — | ✅ agenda-5: asistencia archivada (fix-191-m) y la ficha ya no ofrece "Reagendar" |
 
 ### K. Flujo 4 — Iniciar y finalizar la clase (ciclo de vida)
 
@@ -420,10 +420,10 @@ Marcar ✅/❌ en cada celda. "—" = no aplica.
 
 | ID | Caso | Resultado esperado | Auto | Res. |
 |---|---|---|---|---|
-| N01 | "Eliminar horario" | Pide confirmación; cancela solo las clases agendadas; los horarios quedan libres en la Agenda | ✓ | |
-| N02 | "Reactivar horario" en un alumno penalizado (D11) **(§4)** | No debe revivir clases canceladas por penalización ni fechas pasadas (S13) | — | |
-| N03 | Reactivar cuando otro alumno ya tomó uno de esos horarios | Mensaje claro de cuál choca; hoy falla todo con "Error al reactivar el horario" | — | |
-| N04 | Eliminar y reactivar enseguida | Las clases vuelven a sus horarios originales | ✓ | |
+| N01 | "Eliminar horario" | Pide confirmación; cancela solo las clases agendadas; los horarios quedan libres en la Agenda | ✓ | ✅ acciones-masivas H06/H09 |
+| N02 | "Reactivar horario" en un alumno penalizado (D11) **(§4)** | No debe revivir clases canceladas por penalización ni fechas pasadas (S13) | — | ✅ fechas pasadas no reviven (fix-364-m); canceladas por la penalización sí — **decisión** |
+| N03 | Reactivar cuando otro alumno ya tomó uno de esos horarios | Mensaje claro de cuál choca; hoy falla todo con "Error al reactivar el horario" | — | ⚠️ agenda-5: todo o nada ✅; el aviso es el genérico del trigger, sin decir cuál choca |
+| N04 | Eliminar y reactivar enseguida | Las clases vuelven a sus horarios originales | ✓ | ✅ acciones-masivas H06/H09 |
 
 ### O. Seguridad (RLS y BD)
 

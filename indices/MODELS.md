@@ -39,7 +39,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `PaymentModeOption` | `enrollment-assignment.model.ts` | Opción de modalidad de pago (full / deposit) con cantidad de clases prácticas asociadas |
 | `InstructorOption` | `enrollment-assignment.model.ts` | Instructor disponible para asignación: nombre, vehículo, patente |
 | `TimeSlot`, `ScheduleGrid` | `enrollment-assignment.model.ts` | Grilla semanal de disponibilidad del instructor: slots por hora/día con status (available / selected / occupied) |
-| `SlotSelection` | `enrollment-assignment.model.ts` | Estado de selección de horarios: IDs seleccionados, cantidad requerida vs actual, flag isComplete |
+| `SlotSelection` | `enrollment-assignment.model.ts` | Estado de selección de horarios: IDs seleccionados, cantidad requerida vs actual, flag isComplete. `existingPerDay?` (fix-244-b): clases que el alumno ya tiene por fecha — el tope `maxClassesPerDay` las suma a lo seleccionado |
 | `PromotionOption`, `PromotionGroup` | `enrollment-assignment.model.ts` | Promociones abiertas/finalizadas para cursos profesionales: código, inscritos/capacidad, agrupadas por status |
 | `SingularFeature` | `enrollment-assignment.model.ts` | Características incluidas/excluidas del curso singular (informativo) |
 | `EnrollmentDocumentsData` | `enrollment-documents.model.ts` | Paso 3 del Wizard: modelo compuesto con vista condicional (class-b / professional), foto carnet, documentos profesionales, autorización notarial para menores |
