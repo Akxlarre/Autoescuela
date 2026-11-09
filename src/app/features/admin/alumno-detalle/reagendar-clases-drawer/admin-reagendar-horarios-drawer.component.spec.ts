@@ -15,6 +15,8 @@ describe('AdminReagendarHorariosDrawerComponent.onSave — razón (fix-008-i)', 
       instructores: () => [],
       scheduleGrid: () => null,
       isLoadingSchedule: () => false,
+      isLoadingInstructores: () => false,
+      clasesPorDiaParaReagendar: () => ({}),
       loadInstructores: vi.fn().mockResolvedValue(undefined),
       reagendarClasesPenalizadas: vi.fn().mockResolvedValue(undefined),
     };
@@ -88,6 +90,49 @@ describe('AdminReagendarHorariosDrawerComponent.onSave — razón (fix-008-i)', 
       selectedSlotIds: ['2026-08-01T09:00:00'],
       razon: 'medica',
       razonOtro: null,
+    });
+  });
+
+  // ─── fix-244-b ──────────────────────────────────────────────────────────────
+
+  it('I16: un doble clic en Guardar llama una sola vez al facade', async () => {
+    const { component, facadeSpy } = createComponent();
+    component['razon'].set('medica');
+    let resolver!: () => void;
+    facadeSpy.reagendarClasesPenalizadas.mockReturnValue(new Promise<void>((r) => (resolver = r)));
+
+    const primero = component['onSave']();
+    const segundo = component['onSave']();
+    resolver();
+    await Promise.all([primero, segundo]);
+
+    expect(facadeSpy.reagendarClasesPenalizadas).toHaveBeenCalledTimes(1);
+  });
+
+  it('I15: un error plano de Supabase (no Error) muestra su mensaje y no cierra', async () => {
+    const { component, facadeSpy, layoutDrawerSpy } = createComponent();
+    component['razon'].set('medica');
+    facadeSpy.reagendarClasesPenalizadas.mockRejectedValue({
+      message: 'El instructor ya tiene una clase agendada que se solapa',
+      code: 'P0001',
+    });
+
+    await component['onSave']();
+
+    expect(component['saveError']()).toBe(
+      'El instructor ya tiene una clase agendada que se solapa',
+    );
+    expect(layoutDrawerSpy.close).not.toHaveBeenCalled();
+  });
+
+  it('J07: el paso 2 pasa a la grilla las clases que el alumno ya tiene por día', () => {
+    const { component, facadeSpy } = createComponent();
+    (facadeSpy as Record<string, unknown>)['clasesPorDiaParaReagendar'] = () => ({
+      '2026-11-10': 1,
+    });
+
+    expect(component['assignmentData']().slotSelection.existingPerDay).toEqual({
+      '2026-11-10': 1,
     });
   });
 });

@@ -29,6 +29,11 @@ export function sameDaySelectedCount(
   return selectedSlotIds.filter((id) => slots.find((s) => s.id === id)?.date === date).length;
 }
 
+/** Cupo del día que ya ocupan las clases que el alumno tiene (fix-244-b). */
+function existingOn(sel: SlotSelection, date: string): number {
+  return sel.existingPerDay?.[date] ?? 0;
+}
+
 /**
  * ¿Se puede seleccionar este slot? Considera: ocupado, ya seleccionado, tope total
  * (requiredCount) y tope por día (maxClassesPerDay).
@@ -41,7 +46,10 @@ export function isSlotSelectable(
   if (slot.status === 'occupied') return false;
   if (sel.selectedSlotIds.includes(slot.id)) return true;
   if (sel.currentCount >= sel.requiredCount) return false;
-  return sameDaySelectedCount(grid, sel.selectedSlotIds, slot.date) < sel.maxClassesPerDay;
+  return (
+    existingOn(sel, slot.date) + sameDaySelectedCount(grid, sel.selectedSlotIds, slot.date) <
+    sel.maxClassesPerDay
+  );
 }
 
 /**
@@ -62,7 +70,11 @@ export function toggleSlotIds(
     return current.filter((id) => id !== slot.id);
   }
   if (current.length >= sel.requiredCount) return null;
-  if (sameDaySelectedCount(grid, current, slot.date) >= sel.maxClassesPerDay) return null;
+  if (
+    existingOn(sel, slot.date) + sameDaySelectedCount(grid, current, slot.date) >=
+    sel.maxClassesPerDay
+  )
+    return null;
   return [...current, slot.id];
 }
 
@@ -82,7 +94,9 @@ export function maxSelectableSlots(grid: ScheduleGrid | null, sel: SlotSelection
     if (s && s.status !== 'available') perDate.set(s.date, (perDate.get(s.date) ?? 0) + 1);
   }
   let total = 0;
-  for (const count of perDate.values()) total += Math.min(count, sel.maxClassesPerDay);
+  for (const [date, count] of perDate) {
+    total += Math.min(count, Math.max(0, sel.maxClassesPerDay - existingOn(sel, date)));
+  }
   return total;
 }
 

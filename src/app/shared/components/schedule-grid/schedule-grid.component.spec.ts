@@ -54,6 +54,7 @@ function selection(over: Partial<SlotSelection> = {}): SlotSelection {
     currentCount: selectedSlotIds.length,
     maxClassesPerDay: over.maxClassesPerDay ?? 1,
     isComplete: false,
+    ...(over.existingPerDay ? { existingPerDay: over.existingPerDay } : {}),
   };
 }
 
@@ -150,6 +151,53 @@ describe('schedule-grid.logic', () => {
     it('maxSelectableSlots respeta el cupo por día', () => {
       expect(maxSelectableSlots(buildGrid(), selection({ maxClassesPerDay: 1 }))).toBe(2);
       expect(maxSelectableSlots(buildGrid(), selection({ maxClassesPerDay: 3 }))).toBe(6);
+    });
+  });
+
+  // ── fix-244-b (J07): clases que el alumno ya tiene ese día ─────────────────
+  describe('existingPerDay — el tope por día suma las clases que ya tiene el alumno', () => {
+    const conUna = { '2026-06-22': 1 };
+
+    it('con 1 clase ese día y tope 2, permite elegir solo 1 más', () => {
+      const vacia = selection({ maxClassesPerDay: 2, requiredCount: 4, existingPerDay: conUna });
+      expect(isSlotSelectable(slot('s-l1', '2026-06-22', '08:30'), buildGrid(), vacia)).toBe(true);
+
+      const conUnaElegida = selection({
+        selectedSlotIds: ['s-l1'],
+        maxClassesPerDay: 2,
+        requiredCount: 4,
+        existingPerDay: conUna,
+      });
+      expect(
+        isSlotSelectable(slot('s-l2', '2026-06-22', '09:20'), buildGrid(), conUnaElegida),
+      ).toBe(false);
+      expect(
+        toggleSlotIds(slot('s-l2', '2026-06-22', '09:20'), buildGrid(), conUnaElegida),
+      ).toBeNull();
+      // Otro día no se ve afectado.
+      expect(
+        toggleSlotIds(slot('s-m1', '2026-06-23', '08:30'), buildGrid(), conUnaElegida),
+      ).toEqual(['s-l1', 's-m1']);
+    });
+
+    it('con el día ya lleno, ningún horario de ese día es elegible', () => {
+      const sel = selection({
+        maxClassesPerDay: 2,
+        requiredCount: 4,
+        existingPerDay: { '2026-06-22': 2 },
+      });
+      expect(isSlotSelectable(slot('s-l1', '2026-06-22', '08:30'), buildGrid(), sel)).toBe(false);
+    });
+
+    it('maxSelectableSlots descuenta el cupo ya usado', () => {
+      const sel = selection({ maxClassesPerDay: 2, requiredCount: 4, existingPerDay: conUna });
+      // 22/6: 2 − 1 = 1; 23/6: 2 → 3
+      expect(maxSelectableSlots(buildGrid(), sel)).toBe(3);
+    });
+
+    it('sin existingPerDay se comporta como antes', () => {
+      const sel = selection({ selectedSlotIds: ['s-l1'], maxClassesPerDay: 2, requiredCount: 4 });
+      expect(isSlotSelectable(slot('s-l2', '2026-06-22', '09:20'), buildGrid(), sel)).toBe(true);
     });
   });
 
