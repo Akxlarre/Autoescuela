@@ -1,4 +1,11 @@
-import { NoRowsAffectedError, assertWriteOk, toFriendlyDbMessage } from './db-error.utils';
+import type { PostgrestResponse, PostgrestMaybeSingleResponse } from '@supabase/supabase-js';
+import { expectTypeOf } from 'vitest';
+import {
+  NoRowsAffectedError,
+  assertReadOk,
+  assertWriteOk,
+  toFriendlyDbMessage,
+} from './db-error.utils';
 
 /**
  * fix-015 AC2 — Sanitización de errores de BD.
@@ -135,5 +142,66 @@ describe('assertWriteOk', () => {
     expect(() =>
       assertWriteOk({ data: [{ id: 7 }], error: null }, { requireRows: true }),
     ).not.toThrow();
+  });
+});
+
+/**
+ * spec 0060-b — supabase-js tampoco lanza cuando una LECTURA falla: resuelve `{ data: null, error }`
+ * y el `data ?? []` de después la convierte en "no hay nada". `assertReadOk` lanza ese error y
+ * devuelve `data`, para que la pantalla muestre "no se pudo cargar" en vez de ceros.
+ */
+describe('assertReadOk', () => {
+  it('devuelve data cuando no hay error', () => {
+    const rows = [{ id: 1 }, { id: 2 }];
+    expect(assertReadOk({ data: rows, error: null })).toBe(rows);
+  });
+
+  it('una lista vacía sin error es un resultado válido, no un error', () => {
+    expect(assertReadOk({ data: [], error: null })).toEqual([]);
+  });
+
+  it('un maybeSingle sin fila devuelve null sin lanzar', () => {
+    expect(assertReadOk({ data: null, error: null })).toBeNull();
+  });
+
+  it('lanza el error de la respuesta tal cual (conserva el código para toFriendlyDbMessage)', () => {
+    const error = { code: '57014', message: 'canceling statement due to statement timeout' };
+    let caught: unknown = null;
+    try {
+      assertReadOk({ data: null, error });
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBe(error);
+  });
+
+  it('lanza aunque la respuesta traiga data junto al error', () => {
+    const error = { message: 'Failed to fetch' };
+    expect(() => assertReadOk({ data: [{ id: 1 }], error })).toThrow();
+  });
+
+  it('acepta la respuesta de una edge function (functions.invoke)', () => {
+    const error = { name: 'FunctionsFetchError', message: 'Failed to send a request' };
+    expect(() => assertReadOk({ data: null, error })).toThrow();
+    expect(assertReadOk({ data: { ok: true }, error: null })).toEqual({ ok: true });
+  });
+
+  describe('tipos', () => {
+    it('una lista de PostgREST devuelve el arreglo sin null', () => {
+      const result = { data: [], error: null } as unknown as PostgrestResponse<{ id: number }>;
+      expectTypeOf(assertReadOk(result)).toEqualTypeOf<{ id: number }[]>();
+    });
+
+    it('un maybeSingle conserva el null: puede no haber fila', () => {
+      const result = { data: null, error: null } as unknown as PostgrestMaybeSingleResponse<{
+        id: number;
+      }>;
+      expectTypeOf(assertReadOk(result)).toEqualTypeOf<{ id: number } | null>();
+    });
+
+    it('una consulta tipada como any devuelve any (la mayoría de los facades)', () => {
+      const result: any = { data: [], error: null };
+      expectTypeOf(assertReadOk(result)).toBeAny();
+    });
   });
 });
