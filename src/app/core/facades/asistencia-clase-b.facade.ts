@@ -22,6 +22,26 @@ import {
 import type { EstadoPagoClase } from '@core/models/ui/estado-pago-clase.model';
 import { isVehicleOperational } from '@core/utils/vehicle-status.utils';
 import {
+  type ChoqueReactivacion,
+  type SesionAgendable,
+  type SesionAgendableRow,
+  SESION_AGENDABLE_SELECT,
+  findReactivationConflicts,
+  reactivationConflictMessage,
+  toSesionAgendable,
+} from '@core/utils/reactivation-conflicts.utils';
+import {
+  SIN_ELIMINACION_MSG,
+  type ScheduleNoticeKind,
+  reactivateConfirmMessage,
+  scheduleRemovalNotices,
+} from '@core/utils/schedule-removal.utils';
+import type {
+  ReactivateScheduleResultRow,
+  RemoveScheduleResultRow,
+  UltimaEliminacionRow,
+} from '@core/models/dto/class-b-schedule-removal.model';
+import {
   type ClassBAbsence,
   type ClassBSessionAction,
   StaleSessionError,
@@ -592,48 +612,33 @@ export class AsistenciaClaseBFacade {
     this._isSaving.set(true);
     this._savingAlertaId.set(enrollmentId);
     try {
-      const { data, error } = await this.supabase.client
-        .from('class_b_sessions')
-        .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
-        .eq('enrollment_id', enrollmentId)
-        .eq('status', 'scheduled')
-        .gt('scheduled_at', new Date().toISOString())
-        .select('id');
-
+      // spec 0058-b: una sola transacción cancela las clases futuras, registra la eliminación
+      // (para poder deshacerla), liga cada clase a ella y sella la penalización (fix-391-m).
+      const { data, error } = await this.supabase.client.rpc('remove_class_b_schedule', {
+        p_enrollment_ids: [enrollmentId],
+      });
       if (error) throw error;
 
-      if (!data?.length) {
+      const row = ((data ?? []) as RemoveScheduleResultRow[])[0];
+      if (!row) {
         this.toast.info('Este alumno no tiene clases futuras agendadas');
         return;
       }
 
-      // fix-391-m: cancelar a mano también es penalizar. Se registra en la matrícula, como hace
-      // la regla automática, para que esas faltas no vuelvan a ofrecer "Eliminar" cuando al
-      // alumno se le reagenden las clases.
-      const stamp = await this.supabase.client
-        .from('enrollments')
-        .update({ absence_penalty_applied_at: new Date().toISOString() })
-        .eq('id', enrollmentId)
-        .select('id');
-      const stamped = !stamp.error && !!stamp.data?.length;
-
       this._alertas.update((rows) =>
         rows.map((r) =>
-          r.enrollmentId === enrollmentId
-            ? { ...r, horarioActivo: false, parPenalizado: stamped || r.parPenalizado }
-            : r,
+          r.enrollmentId === enrollmentId ? { ...r, horarioActivo: false, parPenalizado: true } : r,
         ),
       );
-      if (stamped) {
-        this.toast.success('Horario eliminado');
-      } else {
-        this.toast.warning(
-          'Horario eliminado, sin registrar la penalización',
-          'Si se reagendan sus clases, la alerta volverá a ofrecer "Eliminar". Avisa al administrador.',
-        );
-      }
-    } catch {
-      this.toast.error('Error al eliminar el horario');
+      this.toast.success('Horario eliminado');
+      this.notifyHorario('removed', enrollmentId, alerta?.alumnoName, {
+        count: row.cancelled_count,
+        firstAt: row.first_scheduled_at,
+        studentUserId: row.student_user_id,
+        instructorUserIds: row.instructor_user_ids,
+      });
+    } catch (err) {
+      this.toast.error('Error al eliminar el horario', this.sanitizer.sanitize(err).message);
     } finally {
       this._isSaving.set(false);
       this._savingAlertaId.set(null);
@@ -641,30 +646,27 @@ export class AsistenciaClaseBFacade {
   }
 
   /**
-   * Reactiva el horario previamente eliminado de un alumno.
+   * Reactiva el horario eliminado de un alumno: deshace SOLO su última eliminación (spec 0058-b).
    *
-   * fix-364-m: solo las clases canceladas FUTURAS y con confirmación. Antes revivía también las
-   * de fechas pasadas, que el cierre nocturno convertía en inasistencias esa misma noche. La
-   * disponibilidad la revisan los triggers de doble agendamiento de la BD (instructor, alumno y
-   * vehículo); como es un solo UPDATE, si un horario ya está ocupado no se reactiva ninguna.
+   * Las clases canceladas por otra vía (penalización automática, feriado, instructor) no están
+   * ligadas a una eliminación y no se reviven: se recuperan con "Reagendar Clases". Solo vuelven
+   * las futuras (fix-364-m); los choques se avisan antes de confirmar (fix-245-b) y el trigger
+   * de doble agendamiento sigue siendo la red de seguridad dentro de la RPC.
    */
   async reactivateSchedule(enrollmentId: number): Promise<void> {
-    const alerta = this._alertas().find((a) => a.enrollmentId === enrollmentId);
+    const alumnoName = this._alertas().find((a) => a.enrollmentId === enrollmentId)?.alumnoName;
 
     this._isSaving.set(true);
     this._savingAlertaId.set(enrollmentId);
     try {
-      const { data: futuras, error: lookupError } = await this.supabase.client
-        .from('class_b_sessions')
-        .select('id')
-        .eq('enrollment_id', enrollmentId)
-        .eq('status', 'cancelled')
-        .gt('scheduled_at', new Date().toISOString());
+      const eliminacion = await this.fetchUltimaEliminacion(enrollmentId);
+      if (!eliminacion || eliminacion.reactivated_at) {
+        this.toast.info('No hay un horario eliminado para reactivar', SIN_ELIMINACION_MSG);
+        return;
+      }
 
-      if (lookupError) throw lookupError;
-
-      const ids = (futuras ?? []).map((s: { id: number }) => s.id);
-      if (ids.length === 0) {
+      const candidatas = await this.fetchClasesDeEliminacion(eliminacion.id);
+      if (candidatas.length === 0) {
         this.toast.info(
           'No hay clases futuras para reactivar',
           'Para darle nuevas horas usa "Reagendar Clases" en la ficha del alumno.',
@@ -672,40 +674,165 @@ export class AsistenciaClaseBFacade {
         return;
       }
 
-      const confirmed = await this.confirmModal.confirm({
-        title: 'Reactivar horario',
-        message: `${
-          ids.length === 1
-            ? 'Se volverá a agendar 1 clase futura'
-            : `Se volverán a agendar ${ids.length} clases futuras`
-        } de ${alerta?.alumnoName ?? 'este alumno'}, en su horario original. Las clases de fechas pasadas quedan canceladas.`,
-        confirmLabel: 'Reactivar',
-        cancelLabel: 'Cancelar',
-        severity: 'warn',
-      });
-      if (!confirmed) return;
+      const choques = await this.findChoquesDeReactivacion(enrollmentId, candidatas);
+      if (choques.length > 0) {
+        this.toast.error('No se pudo reactivar el horario', reactivationConflictMessage(choques));
+        return;
+      }
 
-      assertWriteOk(
-        await this.supabase.client
-          .from('class_b_sessions')
-          .update({ status: 'scheduled', cancelled_at: null })
-          .in('id', ids)
-          .eq('status', 'cancelled')
-          .select('id'),
-        { requireRows: true },
-      );
+      if (!(await this.confirmReactivacion(candidatas.length, alumnoName, eliminacion))) return;
+
+      const { data, error } = await this.supabase.client.rpc('reactivate_class_b_schedule', {
+        p_enrollment_id: enrollmentId,
+      });
+      if (error) throw error;
+      const row = ((data ?? []) as ReactivateScheduleResultRow[])[0];
 
       this._alertas.update((rows) =>
-        rows.map((r) => (r.enrollmentId === enrollmentId ? { ...r, horarioActivo: true } : r)),
+        rows.map((r) =>
+          r.enrollmentId === enrollmentId
+            ? { ...r, horarioActivo: true, parPenalizado: !!row?.previous_penalty_applied_at }
+            : r,
+        ),
       );
       this.toast.success('Horario reactivado');
+      if (row) {
+        this.notifyHorario('reactivated', enrollmentId, alumnoName, {
+          count: row.reactivated_count,
+          firstAt: row.first_scheduled_at,
+          studentUserId: row.student_user_id,
+          instructorUserIds: row.instructor_user_ids,
+        });
+      }
     } catch (err) {
-      // P0001 = mensaje del trigger de doble agendamiento, ya redactado para el usuario.
+      // P0001 = mensaje de la RPC o del trigger de doble agendamiento, ya redactado para el usuario.
       this.toast.error('No se pudo reactivar el horario', this.sanitizer.sanitize(err).message);
     } finally {
       this._isSaving.set(false);
       this._savingAlertaId.set(null);
     }
+  }
+
+  /** Última eliminación de la matrícula, con el nombre de quien la hizo (spec 0058-b). */
+  private async fetchUltimaEliminacion(enrollmentId: number): Promise<UltimaEliminacionRow | null> {
+    const { data, error } = await this.supabase.client
+      .from('class_b_schedule_removals')
+      .select(
+        'id, removed_at, reactivated_at, removed_by_user:users!class_b_schedule_removals_removed_by_fkey(first_names, paternal_last_name)',
+      )
+      .eq('enrollment_id', enrollmentId)
+      .order('id', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return (data as UltimaEliminacionRow | null) ?? null;
+  }
+
+  /** Clases futuras que canceló esa eliminación y que siguen canceladas. */
+  private async fetchClasesDeEliminacion(removalId: number): Promise<SesionAgendable[]> {
+    const { data, error } = await this.supabase.client
+      .from('class_b_sessions')
+      .select(SESION_AGENDABLE_SELECT)
+      .eq('schedule_removal_id', removalId)
+      .eq('status', 'cancelled')
+      .gt('scheduled_at', new Date().toISOString());
+    if (error) throw error;
+    return ((data ?? []) as SesionAgendableRow[]).map(toSesionAgendable);
+  }
+
+  private confirmReactivacion(
+    count: number,
+    alumnoName: string | undefined,
+    eliminacion: UltimaEliminacionRow,
+  ): Promise<boolean> {
+    const u = eliminacion.removed_by_user;
+    const removedByName = u ? `${u.first_names ?? ''} ${u.paternal_last_name ?? ''}`.trim() : '';
+    return this.confirmModal.confirm({
+      title: 'Reactivar horario',
+      message: reactivateConfirmMessage({
+        count,
+        alumnoName: alumnoName ?? 'este alumno',
+        removedAt: eliminacion.removed_at,
+        removedByName: removedByName || null,
+      }),
+      confirmLabel: 'Reactivar',
+      cancelLabel: 'Cancelar',
+      severity: 'warn',
+    });
+  }
+
+  /** Avisos al alumno y a los instructores tras eliminar (AC9) o reactivar (AC5). */
+  private notifyHorario(
+    kind: ScheduleNoticeKind,
+    enrollmentId: number,
+    alumnoName: string | undefined,
+    r: {
+      count: number;
+      firstAt: string | null;
+      studentUserId: number | null;
+      instructorUserIds: number[];
+    },
+  ): void {
+    if (!r.firstAt || r.count <= 0) return;
+    const notices = scheduleRemovalNotices({
+      kind,
+      count: r.count,
+      firstAt: r.firstAt,
+      alumnoName: alumnoName ?? 'el alumno',
+    });
+    const ref = { referenceType: 'enrollment', referenceId: enrollmentId };
+    if (r.studentUserId) {
+      this.notifications
+        .notifyUsers([r.studentUserId], { ...notices.alumno, ...ref })
+        .catch(() => this.toast.warning('No se pudo avisar al alumno'));
+    }
+    if (r.instructorUserIds.length > 0) {
+      this.notifications
+        .notifyUsers(r.instructorUserIds, { ...notices.instructor, ...ref })
+        .catch(() => this.toast.warning('No se pudo avisar al instructor'));
+    }
+  }
+
+  /**
+   * fix-245-b (N03): clases activas del mismo instructor, vehículo o matrícula que se solapan con
+   * las que se quieren reactivar. Misma regla que los triggers de doble agendamiento.
+   */
+  private async findChoquesDeReactivacion(
+    enrollmentId: number,
+    candidatas: SesionAgendable[],
+  ): Promise<ChoqueReactivacion[]> {
+    const instantes = candidatas
+      .map((c) => (c.scheduledAt ? new Date(c.scheduledAt).getTime() : NaN))
+      .filter((t) => !Number.isNaN(t));
+    if (instantes.length === 0) return [];
+
+    // Margen holgado alrededor de las candidatas: cubre cualquier duración de una práctica.
+    const MARGEN_MS = 12 * 60 * 60_000;
+    const desde = new Date(Math.min(...instantes) - MARGEN_MS).toISOString();
+    const hasta = new Date(Math.max(...instantes) + MARGEN_MS).toISOString();
+    const lista = (xs: Array<number | null>) =>
+      [...new Set(xs.filter((x) => x !== null))].join(',');
+    const filtros = [
+      lista(candidatas.map((c) => c.instructorId)) &&
+        `instructor_id.in.(${lista(candidatas.map((c) => c.instructorId))})`,
+      lista(candidatas.map((c) => c.vehicleId)) &&
+        `vehicle_id.in.(${lista(candidatas.map((c) => c.vehicleId))})`,
+      `enrollment_id.eq.${enrollmentId}`,
+    ].filter(Boolean);
+
+    const { data, error } = await this.supabase.client
+      .from('class_b_sessions')
+      .select(SESION_AGENDABLE_SELECT)
+      .in('status', ['scheduled', 'in_progress', 'completed'])
+      .gte('scheduled_at', desde)
+      .lte('scheduled_at', hasta)
+      .or(filtros.join(','));
+    if (error) throw error;
+
+    return findReactivationConflicts(
+      candidatas,
+      ((data ?? []) as SesionAgendableRow[]).map(toSesionAgendable),
+    );
   }
 
   /**

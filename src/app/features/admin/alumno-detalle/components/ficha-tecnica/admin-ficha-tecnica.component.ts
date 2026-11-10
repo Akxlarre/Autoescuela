@@ -3,6 +3,18 @@ import { CommonModule } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
 
+/**
+ * fix-246-b (I08): qué ofrece la última columna de la ficha para una clase.
+ * - `en-curso`: iniciada (tiene hora y KM de inicio): no se reprograma; primero "Cancelar inicio".
+ * - `reprogramar`: lápiz.
+ * - `null`: completada, nada que hacer.
+ */
+export function accionDeClase(clase: ClasePracticaUI): 'reprogramar' | 'en-curso' | null {
+  if (clase.enCurso) return 'en-curso';
+  if (clase.completada) return null;
+  return 'reprogramar';
+}
+
 @Component({
   selector: 'app-admin-ficha-tecnica',
   standalone: true,
@@ -156,7 +168,18 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                   </div>
                 </td>
                 <td class="text-center no-print">
-                  @if (!clase.completada) {
+                  <!-- fix-246-b: una clase iniciada no se reprograma; primero Cancelar inicio -->
+                  @if (accionDeClase(clase) === 'en-curso') {
+                    <span
+                      class="micro-label inline-flex items-center gap-1"
+                      [title]="enCursoHint"
+                      data-llm-info="clase-en-curso"
+                      [attr.data-llm-description]="enCursoHint"
+                    >
+                      <app-icon name="lock" [size]="11" />
+                      En curso
+                    </span>
+                  } @else if (accionDeClase(clase) === 'reprogramar') {
                     <button
                       aria-label="Reprogramar clase"
                       type="button"
@@ -194,7 +217,17 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 }
               </div>
               <div class="flex items-center gap-2">
-                @if (!clase.completada) {
+                @if (accionDeClase(clase) === 'en-curso') {
+                  <span
+                    class="micro-label inline-flex items-center gap-1"
+                    [title]="enCursoHint"
+                    data-llm-info="clase-en-curso"
+                    [attr.data-llm-description]="enCursoHint"
+                  >
+                    <app-icon name="lock" [size]="10" />
+                    En curso
+                  </span>
+                } @else if (accionDeClase(clase) === 'reprogramar') {
                   <button
                     aria-label="Reprogramar"
                     type="button"
@@ -405,4 +438,10 @@ export class AdminFichaTecnicaComponent {
   printing = input<boolean>(false);
   imprimirFicha = output<void>();
   reprogramarRequested = output<ClasePracticaUI>();
+
+  protected readonly accionDeClase = accionDeClase;
+
+  /** fix-246-b (I08): por qué una clase en curso no ofrece reprogramar. */
+  protected readonly enCursoHint =
+    'La clase ya se inició. Para moverla, usa "Cancelar inicio" en Asistencia y luego reprográmala.';
 }

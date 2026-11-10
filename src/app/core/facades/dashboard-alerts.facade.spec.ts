@@ -5,6 +5,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ToastService } from '@core/services/ui/toast.service';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
 
 // El piloto se controla desde el test: por defecto las vistas de Clase Profesional están
 // habilitadas, para que los tests de sus alertas describan el comportamiento sin recorte.
@@ -19,6 +20,8 @@ describe('DashboardAlertsFacade', () => {
   let fromSpy: ReturnType<typeof vi.fn>;
   let confirmSpy: ReturnType<typeof vi.fn>;
   let toast: { success: any; error: any; info: any; warning: any };
+  let rpcSpy: ReturnType<typeof vi.fn>;
+  let notifyUsers: ReturnType<typeof vi.fn>;
 
   /**
    * Builds a query chain that resolves with the provided result.
@@ -57,8 +60,11 @@ describe('DashboardAlertsFacade', () => {
     confirmSpy = vi.fn().mockResolvedValue(true);
     toast = { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() };
 
+    rpcSpy = vi.fn().mockResolvedValue({ data: [], error: null });
+    notifyUsers = vi.fn().mockResolvedValue(undefined);
+
     const supabaseMock = {
-      client: { from: fromSpy },
+      client: { from: fromSpy, rpc: rpcSpy },
     } as unknown as SupabaseService;
 
     const authMock = {
@@ -78,6 +84,7 @@ describe('DashboardAlertsFacade', () => {
         { provide: BranchFacade, useValue: branchMock },
         { provide: ConfirmModalService, useValue: { confirm: confirmSpy } },
         { provide: ToastService, useValue: toast },
+        { provide: NotificationsFacade, useValue: { notifyUsers } },
       ],
     });
 
@@ -1593,43 +1600,71 @@ describe('DashboardAlertsFacade', () => {
       expect(toast.success).not.toHaveBeenCalled();
     });
 
-    it('fix-391-m: al cancelar registra la penalización de las matrículas afectadas', async () => {
-      const chains = [
-        buildChain({ data: SESSIONS, error: null }),
-        buildChain({ data: [{ id: 1 }, { id: 2 }, { id: 3 }], error: null }),
-        buildChain({ data: [{ id: 301 }, { id: 302 }], error: null }),
-      ];
-      let call = 0;
-      fromSpy.mockImplementation(() => chains[Math.min(call++, chains.length - 1)]);
+    // spec 0058-b: la cancelación pasa por la RPC (una eliminación por matrícula, en una sola
+    // transacción) para que "Reactivar horario" pueda deshacerla.
+    const RPC_ROWS = [
+      {
+        enrollment_id: 301,
+        removal_id: 41,
+        cancelled_count: 2,
+        first_scheduled_at: '2026-10-20T13:30:00.000Z',
+        student_user_id: 701,
+        instructor_user_ids: [801],
+      },
+      {
+        enrollment_id: 302,
+        removal_id: 42,
+        cancelled_count: 1,
+        first_scheduled_at: '2026-10-21T13:30:00.000Z',
+        student_user_id: 702,
+        instructor_user_ids: [801],
+      },
+    ];
 
-      await facade.clearSchedules([301, 302]);
-
-      expect(fromSpy).toHaveBeenNthCalledWith(3, 'enrollments');
-      expect(chains[2].update).toHaveBeenCalledWith({
-        absence_penalty_applied_at: expect.any(String),
-      });
-      expect(chains[2].in).toHaveBeenCalledWith('id', [301, 302]);
-      expect(toast.warning).not.toHaveBeenCalled();
-    });
-
-    it('al confirmar cancela por id, deja cancelled_at y avisa el resultado', async () => {
-      const [, update] = mockLookupThenUpdate(
-        { data: SESSIONS, error: null },
-        { data: [{ id: 1 }, { id: 2 }, { id: 3 }], error: null },
-      );
+    it('0058-b AC1: al confirmar llama a la RPC solo con las clases que vio el usuario', async () => {
+      mockLookupThenUpdate({ data: SESSIONS, error: null });
+      rpcSpy.mockResolvedValue({ data: RPC_ROWS, error: null });
 
       const result = await facade.clearSchedules([301, 302]);
 
       expect(result).toBe(true);
-      expect(update.update).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'cancelled', cancelled_at: expect.any(String) }),
-      );
-      expect(update.in).toHaveBeenCalledWith('id', [1, 2, 3]);
-      expect(update.eq).toHaveBeenCalledWith('status', 'scheduled');
+      // la búsqueda es la única llamada directa antes de la RPC (el sello va dentro de ella)
+      expect(fromSpy).toHaveBeenNthCalledWith(1, 'class_b_sessions');
+      expect(rpcSpy).toHaveBeenCalledTimes(1);
+      expect(rpcSpy).toHaveBeenCalledWith('remove_class_b_schedule', {
+        p_enrollment_ids: [301, 302],
+        p_session_ids: [1, 2, 3],
+      });
+      expect(toast.warning).not.toHaveBeenCalled();
       expect(toast.success).toHaveBeenCalledWith(
         'Horarios borrados',
         'Se cancelaron 3 clases de 2 alumnos.',
       );
+    });
+
+    it('0058-b AC9: avisa a cada alumno y a sus instructores', async () => {
+      mockLookupThenUpdate({ data: SESSIONS, error: null });
+      rpcSpy.mockResolvedValue({ data: RPC_ROWS, error: null });
+
+      await facade.clearSchedules([301, 302]);
+
+      expect(notifyUsers).toHaveBeenCalledWith(
+        [701],
+        expect.objectContaining({
+          subject: 'Horario eliminado',
+          referenceType: 'enrollment',
+          referenceId: 301,
+        }),
+      );
+      expect(notifyUsers).toHaveBeenCalledWith(
+        [702],
+        expect.objectContaining({ referenceId: 302 }),
+      );
+      const instructorCall = notifyUsers.mock.calls.find(
+        ([ids, p]: [number[], { message: string }]) =>
+          ids[0] === 801 && p.message.includes('Juan Pérez'),
+      );
+      expect(instructorCall).toBeDefined();
     });
 
     it('sin clases futuras avisa y no pide confirmación', async () => {
@@ -1643,20 +1678,20 @@ describe('DashboardAlertsFacade', () => {
     });
 
     it('si la cancelación falla avisa el error y no da éxito', async () => {
-      mockLookupThenUpdate(
-        { data: SESSIONS, error: null },
-        { data: null, error: { message: 'RLS violation', code: '42501' } },
-      );
+      mockLookupThenUpdate({ data: SESSIONS, error: null });
+      rpcSpy.mockResolvedValue({ data: null, error: { message: 'RLS violation', code: '42501' } });
 
       const result = await facade.clearSchedules([301, 302]);
 
       expect(result).toBe(false);
       expect(toast.success).not.toHaveBeenCalled();
       expect(toast.error).toHaveBeenCalled();
+      expect(notifyUsers).not.toHaveBeenCalled();
     });
 
-    it('si la RLS filtra todas las clases (0 filas, sin error) tampoco da éxito', async () => {
-      mockLookupThenUpdate({ data: SESSIONS, error: null }, { data: [], error: null });
+    it('si la RLS filtra todas las clases (la RPC no devuelve filas) tampoco da éxito', async () => {
+      mockLookupThenUpdate({ data: SESSIONS, error: null });
+      rpcSpy.mockResolvedValue({ data: [], error: null });
 
       const result = await facade.clearSchedules([301, 302]);
 

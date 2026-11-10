@@ -74,6 +74,12 @@ export interface SlotSelection {
   currentCount: number;
   maxClassesPerDay: number;
   isComplete: boolean;
+  /**
+   * Clases que el alumno YA tiene por fecha (`YYYY-MM-DD` → cantidad), sin contar las que se
+   * están eligiendo. Ocupan cupo del tope por día (fix-244-b, reagendamiento masivo). Sin este
+   * campo, el tope cuenta solo lo seleccionado (matrícula: el alumno aún no tiene clases).
+   */
+  existingPerDay?: Readonly<Record<string, number>>;
 }
 
 // ─── Promotion / Cohort (Professional only) ───

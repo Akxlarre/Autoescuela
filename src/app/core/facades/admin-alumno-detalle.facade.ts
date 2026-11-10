@@ -121,6 +121,26 @@ const PRACTICAS_REQUERIDAS_B = 12;
 const TEORIA_MIN_PROF = 75;
 const NOTA_MIN_PROF = 75;
 
+/** Estado previo de una sesión antes de reciclarla (reprogramación individual). */
+interface PreviousSessionRow {
+  instructor_id: number;
+  scheduled_at: string | null;
+  status?: string;
+}
+
+/**
+ * fix-246-b (I08): una clase iniciada tiene hora y KM de inicio de ESE momento y vehículo;
+ * reciclarla los dejaría pegados a una clase futura (el odómetro solo avanza). Primero se
+ * cancela el inicio en Asistencia.
+ */
+function assertNoEnCurso(prev: PreviousSessionRow | null): void {
+  if (prev?.status === 'in_progress') {
+    throw new Error(
+      'Esta clase ya se inició. Para moverla, primero usa "Cancelar inicio" en Asistencia y luego reprográmala.',
+    );
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminAlumnoDetalleFacade {
   private readonly sanitizer = inject(ErrorSanitizerService);
@@ -196,6 +216,8 @@ export class AdminAlumnoDetalleFacade {
   private readonly _instructores = signal<InstructorOption[]>([]);
   private readonly _scheduleGrid = signal<ScheduleGrid | null>(null);
   private readonly _isLoadingSchedule = signal(false);
+  /** fix-244-b (I18): carga de la lista de instructores, distinta de la de la grilla. */
+  private readonly _isLoadingInstructores = signal(false);
   private readonly _reprogramarTarget = signal<{
     sessionId: number | null;
     claseNumero: number;
@@ -259,6 +281,23 @@ export class AdminAlumnoDetalleFacade {
   readonly instructores = this._instructores.asReadonly();
   readonly scheduleGrid = this._scheduleGrid.asReadonly();
   readonly isLoadingSchedule = this._isLoadingSchedule.asReadonly();
+  readonly isLoadingInstructores = this._isLoadingInstructores.asReadonly();
+
+  /**
+   * fix-244-b (J07): clases que el alumno ya tiene por fecha, para el tope por día del paso 2 de
+   * "Reagendar Clases". Misma regla que `computeBlockedDates()` (fix-300-m: las canceladas no
+   * ocupan cupo, las inasistencias sí), sin las clases que se están reagendando.
+   */
+  readonly clasesPorDiaParaReagendar = computed<Record<string, number>>(() => {
+    const moviendo = new Set(this._reagendarSeleccion().map((c) => c.sessionId));
+    const porDia: Record<string, number> = {};
+    for (const clase of this._clasesPracticas()) {
+      if (!clase.scheduledDate || clase.cancelada) continue;
+      if (clase.sessionId !== null && moviendo.has(clase.sessionId)) continue;
+      porDia[clase.scheduledDate] = (porDia[clase.scheduledDate] ?? 0) + 1;
+    }
+    return porDia;
+  });
   readonly reprogramarTarget = this._reprogramarTarget.asReadonly();
 
   // Computed: porcentajes Clase B
@@ -801,6 +840,7 @@ export class AdminAlumnoDetalleFacade {
             kmFin: null,
             observaciones: null,
             completada: false,
+            enCurso: false,
             ausente: false,
             cancelada: false,
             justificada: false,
@@ -831,6 +871,7 @@ export class AdminAlumnoDetalleFacade {
           kmFin: ses.km_end,
           observaciones: ses.performance_notes ?? ses.notes ?? null,
           completada: ses.status === 'completed',
+          enCurso: ses.status === 'in_progress',
           ausente: ses.status === 'no_show',
           cancelada: ses.status === 'cancelled',
           justificada: attendance?.status === 'excused',
@@ -1486,6 +1527,15 @@ export class AdminAlumnoDetalleFacade {
 
   /** Carga los instructores activos con vehículo asignado de la sede del alumno. */
   async loadInstructores(): Promise<void> {
+    this._isLoadingInstructores.set(true);
+    try {
+      await this.fetchInstructores();
+    } finally {
+      this._isLoadingInstructores.set(false);
+    }
+  }
+
+  private async fetchInstructores(): Promise<void> {
     const branchId = this._alumno()?.branchId ?? null;
 
     let query = this.supabase.client
@@ -1608,6 +1658,10 @@ export class AdminAlumnoDetalleFacade {
    * Mueve una sesión existente a otro horario (fix-279-m). Reciclar la fila es un
    * reagendamiento: archiva su asistencia vigente y deja la fila en el historial con la razón,
    * igual que `reagendarClasesPenalizadas()`. Devuelve el instructor que tenía antes.
+   *
+   * Instructor y fecha anteriores se capturan ANTES del update, que los pisa: al instructor se le
+   * notifica el bloque liberado (AC5) y ambos van al historial. El update suelta el vínculo con
+   * "Eliminar horario" (spec 0058-b): una clase reprogramada ya no la deshace "Reactivar horario".
    */
   private async reciclarSesion(
     sessionId: number,
@@ -1615,14 +1669,13 @@ export class AdminAlumnoDetalleFacade {
     vehicleId: number,
   ): Promise<number | null> {
     if (!payload.razon) throw new Error('Selecciona la razón del reagendamiento.');
-    // Instructor y fecha anteriores se capturan ANTES del update, que los pisa: al instructor
-    // se le notifica el bloque liberado (AC5) y ambos van al historial.
     const { data: previous } = await this.supabase.client
       .from('class_b_sessions')
-      .select('instructor_id, scheduled_at')
+      .select('instructor_id, scheduled_at, status')
       .eq('id', sessionId)
       .single();
-    const prev = previous as { instructor_id: number; scheduled_at: string | null } | null;
+    const prev = previous as PreviousSessionRow | null;
+    assertNoEnCurso(prev);
     const previousInstructorId = prev?.instructor_id ?? null;
 
     const { error } = await this.supabase.client
@@ -1634,6 +1687,7 @@ export class AdminAlumnoDetalleFacade {
         start_time: null,
         end_time: null,
         status: 'scheduled',
+        schedule_removal_id: null,
       })
       .eq('id', sessionId);
     if (error) throw error;

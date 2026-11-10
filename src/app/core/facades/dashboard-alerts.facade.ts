@@ -13,6 +13,9 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ToastService } from '@core/services/ui/toast.service';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
+import { scheduleRemovalNotices } from '@core/utils/schedule-removal.utils';
+import type { RemoveScheduleResultRow } from '@core/models/dto/class-b-schedule-removal.model';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { isBlockedInPilot } from '@core/config/pilot-phase.config';
@@ -29,7 +32,7 @@ import {
   enrollmentsWithConsecutiveAbsences,
   enrollmentsWithUnpenalizedPair,
 } from '@core/utils/class-b-session.utils';
-import { assertWriteOk, toFriendlyDbMessage } from '@core/utils/db-error.utils';
+import { toFriendlyDbMessage } from '@core/utils/db-error.utils';
 import { buildHolidayClassDetails, type HolidayClassRow } from '@core/utils/holiday-classes.utils';
 import type { AlertModel } from '@core/models/ui/dashboard.model';
 
@@ -82,6 +85,7 @@ export class DashboardAlertsFacade {
   private readonly branchFacade = inject(BranchFacade);
   private readonly confirmModal = inject(ConfirmModalService);
   private readonly toast = inject(ToastService);
+  private readonly notifications = inject(NotificationsFacade);
 
   // ── SWR State ────────────────────────────────────────────────────────────
   private _initialized = false;
@@ -218,35 +222,13 @@ export class DashboardAlertsFacade {
     if (enrollmentIds.length === 0) return false;
 
     try {
-      const { data, error } = await this.supabase.client
-        .from('class_b_sessions')
-        .select(
-          'id, enrollment_id, enrollments!inner(students!inner(users!inner(first_names, paternal_last_name)))',
-        )
-        .in('enrollment_id', enrollmentIds)
-        .eq('status', 'scheduled')
-        .gt('scheduled_at', new Date().toISOString());
-      if (error) throw error;
-
-      const sessions = (data ?? []) as any[];
-      if (sessions.length === 0) {
+      const { sessionIds, groups } = await this.fetchClasesABorrar(enrollmentIds);
+      if (sessionIds.length === 0) {
         this.toast.info(
           'No hay clases futuras que cancelar',
           'Estos alumnos ya no tienen clases prácticas agendadas.',
         );
         return false;
-      }
-
-      const groups = new Map<number, { alumnoName: string; clases: number }>();
-      for (const session of sessions) {
-        const user = session.enrollments?.students?.users;
-        const group = groups.get(session.enrollment_id) ?? {
-          alumnoName:
-            `${user?.first_names ?? ''} ${user?.paternal_last_name ?? ''}`.trim() || 'Alumno',
-          clases: 0,
-        };
-        group.clases += 1;
-        groups.set(session.enrollment_id, group);
       }
 
       const confirmed = await this.confirmModal.confirm({
@@ -258,35 +240,28 @@ export class DashboardAlertsFacade {
       });
       if (!confirmed) return false;
 
-      // Por id y todavía 'scheduled': solo lo que el usuario vio en el diálogo.
-      const result = assertWriteOk(
-        await this.supabase.client
-          .from('class_b_sessions')
-          .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
-          .in(
-            'id',
-            sessions.map((s) => s.id),
-          )
-          .eq('status', 'scheduled')
-          .select('id'),
-        { requireRows: true },
+      // spec 0058-b: una transacción por todo el lote. Por cada matrícula cancela solo las clases
+      // que el usuario vio en el diálogo (y que siguen agendadas), registra la eliminación para
+      // que "Reactivar horario" pueda deshacerla y sella la penalización (fix-391-m).
+      const { data: removed, error: rpcError } = await this.supabase.client.rpc(
+        'remove_class_b_schedule',
+        {
+          p_enrollment_ids: [...groups.keys()],
+          p_session_ids: sessionIds,
+        },
       );
+      if (rpcError) throw rpcError;
 
-      const cancelled = (result.data as unknown[]).length;
-
-      // fix-391-m: cancelar a mano también es penalizar; se registra en cada matrícula para que
-      // esas faltas no vuelvan a entrar en "Borrar horarios" cuando se reagenden las clases.
-      const stamp = await this.supabase.client
-        .from('enrollments')
-        .update({ absence_penalty_applied_at: new Date().toISOString() })
-        .in('id', [...groups.keys()])
-        .select('id');
-      if (stamp.error || !stamp.data?.length) {
-        this.toast.warning(
-          'No se registró la penalización',
-          'Las clases se cancelaron, pero estos alumnos pueden volver a aparecer en "Borrar horarios". Avisa al administrador.',
+      const rows = (removed ?? []) as RemoveScheduleResultRow[];
+      const cancelled = rows.reduce((sum, r) => sum + r.cancelled_count, 0);
+      if (cancelled === 0) {
+        this.toast.error(
+          'No se pudieron borrar los horarios',
+          'Las clases ya no estaban agendadas o no tienes acceso a ellas.',
         );
+        return false;
       }
+      this.notifyHorariosBorrados(rows, groups);
       this.toast.success(
         'Horarios borrados',
         `Se ${cancelled === 1 ? 'canceló 1 clase' : `cancelaron ${cancelled} clases`} de ${
@@ -299,6 +274,63 @@ export class DashboardAlertsFacade {
       console.error('[DashboardAlertsFacade] clearSchedules error:', err);
       this.toast.error(toFriendlyDbMessage(err, 'No se pudieron borrar los horarios'));
       return false;
+    }
+  }
+
+  /** Clases futuras agendadas de esas matrículas, agrupadas por alumno para el diálogo. */
+  private async fetchClasesABorrar(enrollmentIds: number[]): Promise<{
+    sessionIds: number[];
+    groups: Map<number, { alumnoName: string; clases: number }>;
+  }> {
+    const { data, error } = await this.supabase.client
+      .from('class_b_sessions')
+      .select(
+        'id, enrollment_id, enrollments!inner(students!inner(users!inner(first_names, paternal_last_name)))',
+      )
+      .in('enrollment_id', enrollmentIds)
+      .eq('status', 'scheduled')
+      .gt('scheduled_at', new Date().toISOString());
+    if (error) throw error;
+
+    const sessions = (data ?? []) as any[];
+    const groups = new Map<number, { alumnoName: string; clases: number }>();
+    for (const session of sessions) {
+      const user = session.enrollments?.students?.users;
+      const group = groups.get(session.enrollment_id) ?? {
+        alumnoName:
+          `${user?.first_names ?? ''} ${user?.paternal_last_name ?? ''}`.trim() || 'Alumno',
+        clases: 0,
+      };
+      group.clases += 1;
+      groups.set(session.enrollment_id, group);
+    }
+    return { sessionIds: sessions.map((s) => s.id as number), groups };
+  }
+
+  /** spec 0058-b AC9: avisa a cada alumno y a sus instructores que se cancelaron sus clases. */
+  private notifyHorariosBorrados(
+    rows: RemoveScheduleResultRow[],
+    groups: Map<number, { alumnoName: string }>,
+  ): void {
+    for (const r of rows) {
+      if (!r.first_scheduled_at || r.cancelled_count <= 0) continue;
+      const notices = scheduleRemovalNotices({
+        kind: 'removed',
+        count: r.cancelled_count,
+        firstAt: r.first_scheduled_at,
+        alumnoName: groups.get(r.enrollment_id)?.alumnoName ?? 'el alumno',
+      });
+      const ref = { referenceType: 'enrollment', referenceId: r.enrollment_id };
+      if (r.student_user_id) {
+        this.notifications
+          .notifyUsers([r.student_user_id], { ...notices.alumno, ...ref })
+          .catch(() => this.toast.warning('No se pudo avisar a un alumno'));
+      }
+      if (r.instructor_user_ids.length > 0) {
+        this.notifications
+          .notifyUsers(r.instructor_user_ids, { ...notices.instructor, ...ref })
+          .catch(() => this.toast.warning('No se pudo avisar a un instructor'));
+      }
     }
   }
 

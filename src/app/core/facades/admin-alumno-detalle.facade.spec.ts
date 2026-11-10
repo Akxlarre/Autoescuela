@@ -380,6 +380,16 @@ describe('AdminAlumnoDetalleFacade', () => {
         );
       });
 
+      it('spec 0058-b AC-E3: al reciclar la sesión suelta el vínculo con "Eliminar horario"', async () => {
+        const { sessions } = mockSesionExistente();
+
+        await facade.reprogramarClase(basePayload);
+
+        expect(sessions.update).toHaveBeenCalledWith(
+          expect.objectContaining({ status: 'scheduled', schedule_removal_id: null }),
+        );
+      });
+
       it('con razón "otro" guarda el detalle escrito', async () => {
         const { history } = mockSesionExistente();
 
@@ -399,6 +409,24 @@ describe('AdminAlumnoDetalleFacade', () => {
 
         expect(sessions.update).not.toHaveBeenCalled();
         expect(history.insert).not.toHaveBeenCalled();
+      });
+
+      it('fix-246-b (I08): una clase en curso no se reprograma — pide "Cancelar inicio" y no toca nada', async () => {
+        const sessions = chainMock({
+          data: { instructor_id: 999, scheduled_at: '2026-07-01T13:00:00Z', status: 'in_progress' },
+          error: null,
+        });
+        const history = chainMock({ data: [], error: null });
+        supabaseSpy.client.from = mockFromByTable({
+          class_b_sessions: sessions,
+          class_b_reschedule_history: history,
+        });
+
+        await expect(facade.reprogramarClase(basePayload)).rejects.toThrow('Cancelar inicio');
+
+        expect(sessions.update).not.toHaveBeenCalled();
+        expect(history.insert).not.toHaveBeenCalled();
+        expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
       });
 
       it('agendar una clase que no tenía sesión no archiva nada ni escribe historial', async () => {
@@ -810,6 +838,17 @@ describe('AdminAlumnoDetalleFacade', () => {
           km_end: null,
           instructors: null,
         },
+        {
+          id: 504,
+          class_number: 4,
+          scheduled_at: '2026-06-04T09:00:00',
+          status: 'in_progress',
+          student_signature: false,
+          instructor_signature: false,
+          km_start: 15230,
+          km_end: null,
+          instructors: null,
+        },
       ]);
 
       TestBed.resetTestingModule();
@@ -835,6 +874,13 @@ describe('AdminAlumnoDetalleFacade', () => {
       expect(clase2?.ausente).toBe(true);
       expect(clase2?.completada).toBe(false);
       expect(clase3?.ausente).toBe(true);
+
+      // fix-246-b (I08): in_progress → enCurso (la ficha no ofrece reprogramarla).
+      const clase4 = facade.clasesPracticas().find((c) => c.numero === 4);
+      expect(clase4?.enCurso).toBe(true);
+      expect(clase4?.completada).toBe(false);
+      expect(clase1?.enCurso).toBe(false);
+      expect(clase2?.enCurso).toBe(false);
 
       // La grilla debe reflejar la justificación sin perder el color rojo (ausente=true
       // se mantiene): clase 2 sigue sin justificar, clase 3 ya fue perdonada.
@@ -2711,6 +2757,81 @@ describe('AdminAlumnoDetalleFacade', () => {
 
       expect(toastSpy.error).toHaveBeenCalledWith('No se pudo marcar al alumno como ex-alumno.');
       expect(toastSpy.success).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── fix-244-b ───────────────────────────────────────────────────────────────
+
+  describe('isLoadingInstructores — fix-244-b (I18)', () => {
+    it('queda en true mientras llega la consulta y vuelve a false al terminar', async () => {
+      let responder!: (v: { data: unknown[]; error: null }) => void;
+      const pendiente = new Promise<{ data: unknown[]; error: null }>((r) => (responder = r));
+      const query: any = {
+        select: vi.fn(() => query),
+        eq: vi.fn(() => query),
+        is: vi.fn(() => query),
+        then: (ok: any, ko: any) => pendiente.then(ok, ko),
+      };
+      supabaseSpy.client.from = vi.fn(() => query);
+
+      const carga = facade.loadInstructores();
+      expect(facade.isLoadingInstructores()).toBe(true);
+      responder({ data: [], error: null });
+      await carga;
+      expect(facade.isLoadingInstructores()).toBe(false);
+    });
+
+    it('vuelve a false aunque la consulta falle', async () => {
+      const query: any = {
+        select: vi.fn(() => query),
+        eq: vi.fn(() => query),
+        is: vi.fn(() => query),
+        then: (_ok: any, ko: any) => Promise.reject(new Error('red')).then(undefined, ko),
+      };
+      supabaseSpy.client.from = vi.fn(() => query);
+
+      await facade.loadInstructores().catch(() => undefined);
+      expect(facade.isLoadingInstructores()).toBe(false);
+    });
+  });
+
+  describe('clasesPorDiaParaReagendar — fix-244-b (J07)', () => {
+    function clase(
+      sessionId: number,
+      scheduledDate: string,
+      estado: Partial<{ cancelada: boolean; ausente: boolean; completada: boolean }> = {},
+    ): any {
+      return {
+        numero: sessionId,
+        sessionId,
+        scheduledDate,
+        scheduledAt: `${scheduledDate}T12:00:00Z`,
+        cancelada: false,
+        ausente: false,
+        completada: false,
+        ...estado,
+      };
+    }
+
+    it('cuenta las clases vigentes por fecha, sin canceladas ni las que se están reagendando', () => {
+      (facade as any)._clasesPracticas.set([
+        clase(1, '2026-11-16'),
+        clase(2, '2026-11-16', { completada: true }),
+        clase(3, '2026-11-17', { cancelada: true }),
+        clase(4, '2026-11-02', { ausente: true }),
+        clase(5, '2026-11-03', { ausente: true }),
+        { ...clase(6, '2026-11-18'), sessionId: null, scheduledDate: null },
+      ]);
+      facade.setReagendarSeleccion([
+        { sessionId: 4, claseNumero: 4, origen: 'no_show' },
+        { sessionId: 3, claseNumero: 3, origen: 'cancelled' },
+      ]);
+
+      expect(facade.clasesPorDiaParaReagendar()).toEqual({
+        '2026-11-16': 2,
+        // La inasistencia que no se reagenda sigue ocupando su día (fix-300-m).
+        '2026-11-03': 1,
+      });
     });
   });
 });

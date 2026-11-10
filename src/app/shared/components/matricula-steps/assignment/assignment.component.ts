@@ -65,6 +65,11 @@ export function licenseWarningFn(data: EnrollmentAssignmentData): LicenseValidat
 export class AssignmentComponent {
   data = input.required<EnrollmentAssignmentData>();
   loading = input<boolean>(false);
+  /**
+   * fix-244-b (I18): la lista de instructores todavía está cargando. Muestra el skeleton en vez de
+   * "No hay instructores disponibles" (o la lista de otro alumno). Opcional: la matrícula no lo usa.
+   */
+  instructorsLoading = input<boolean>(false);
   /** Número de paso a mostrar en el encabezado (default: 2 para flujo admin). */
   stepNumber = input<number>(2);
   /** Oculta la sección de modalidad de pago (cuando ya fue elegida en un paso previo). */
