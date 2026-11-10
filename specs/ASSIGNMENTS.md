@@ -266,6 +266,7 @@
 | ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `i` | [0010-i-clase-7-bloqueada-sin-segundo-pago](specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | 2026-10-13 |
 | ASG-i-023 | Testing: Matrícula presencial (Clase B, refuerzo y Clase Profesional) | `i` | [fix-058-i-testing-matricula-presencial](fixes/fix-058-i-testing-matricula-presencial/fix.md) | 2026-10-18 |
 | ASG-i-029 | Testing: Contabilidad (cuadratura, historial, reportes, anticipos, liquidaciones, cursos) | `i` | [fix-073-i-testing-contabilidad](fixes/fix-073-i-testing-contabilidad/fix.md) | 2026-11-09 |
+| ASG-b-102 | Sin red, 11 pantallas muestran ceros o "sin datos" en vez de un error | `b` | [0060-b-lecturas-fallidas-como-ceros](specs/0060-b-lecturas-fallidas-como-ceros/spec.md) | 2026-11-10 |
 <!-- AUTO-GENERATED:END -->
 
 ---
