@@ -150,7 +150,7 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
 
     @if (variant() === 'segmented') {
       <div
-        class="tabs-segmented-row flex gap-1 self-start p-1 rounded-lg bg-subtle"
+        class="tabs-segmented-row flex w-fit max-w-full gap-1 self-start p-1 rounded-lg bg-subtle"
         [class.flex-wrap]="wrap()"
         [class.overflow-x-auto]="!wrap()"
         [class.custom-scrollbar-hidden]="!wrap()"
@@ -159,7 +159,7 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
         @for (tab of tabs(); track tab.id) {
           <button
             role="tab"
-            class="tap-area px-4 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer border-0 flex items-center justify-center gap-1.5 shrink-0"
+            class="tap-area px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 cursor-pointer border-0 flex items-center justify-center gap-1.5 shrink-0"
             [style.background]="activeId() === tab.id ? 'var(--bg-surface)' : 'transparent'"
             [style.color]="activeId() === tab.id ? 'var(--text-primary)' : 'var(--text-muted)'"
             [style.box-shadow]="
@@ -317,6 +317,35 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
             transparent 100%
           )
           no-repeat bottom center;
+      }
+      .tab-count {
+        animation: tab-badge-in 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+        transform-origin: center;
+        overflow: hidden;
+      }
+      @keyframes tab-badge-in {
+        0% {
+          opacity: 0;
+          transform: scale(0.4);
+          min-width: 0;
+          max-width: 0;
+          padding-inline: 0;
+        }
+        60% {
+          opacity: 0.8;
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1);
+          min-width: 1.25rem;
+          max-width: 3rem;
+          padding-inline: 0.375rem;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .tab-count {
+          animation: none !important;
+        }
       }
     `,
   ],

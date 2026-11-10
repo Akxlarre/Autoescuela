@@ -15,7 +15,7 @@ import {
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { TaskListContentComponent } from '@shared/components/task-list-content/task-list-content.component';
 import { AnnouncementsContentComponent } from '@shared/components/announcements-content/announcements-content.component';
-import { TabsComponent } from '@shared/components/tabs/tabs.component';
+import { TabsComponent, type TabOption } from '@shared/components/tabs/tabs.component';
 import { TaskDetailModalComponent } from '@features/tareas/task-detail-modal.component';
 import { TaskCreateDrawerComponent } from '@features/tareas/task-create-drawer.component';
 import { AnnouncementComposerDrawerComponent } from '@features/comunicados/announcement-composer-drawer.component';
@@ -57,11 +57,11 @@ type Canal = 'tareas' | 'comunicados';
       <app-section-hero
         density="slim"
         [animateOnInit]="false"
-        [loading]="facade.isLoading()"
+        [loading]="canal() === 'comunicados' ? announcements.isLoading() : facade.isLoading()"
         title="Comunicación"
-        contextLine="Coordinación operativa del equipo"
+        [contextLine]="heroContextLine()"
         icon="message-circle"
-        [actions]="heroActions"
+        [actions]="heroActions()"
         [kpis]="heroKpis()"
         (actionClick)="onHeroAction($event)"
       />
@@ -70,6 +70,7 @@ type Canal = 'tareas' | 'comunicados';
            Son dos canales distintos, no dos filtros del mismo. -->
       <app-tabs
         class="bento-banner"
+        variant="segmented"
         [tabs]="canalTabs()"
         [activeId]="canal()"
         (activeIdChange)="onCanalChange($event)"
@@ -116,7 +117,7 @@ export class AdminTareasComponent implements OnInit, AfterViewInit {
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   protected readonly activeTab = signal<TaskTab>('sent');
-  protected readonly canal = signal<Canal>('tareas');
+  protected readonly canal = signal<Canal>('comunicados');
 
   protected readonly tabs = computed(() => [
     {
@@ -147,49 +148,121 @@ export class AdminTareasComponent implements OnInit, AfterViewInit {
     }
   });
 
-  protected readonly heroActions: SectionHeroAction[] = [
+  protected readonly heroContextLine = computed(() =>
+    this.canal() === 'comunicados'
+      ? 'Avisos y difusión masiva a los alumnos'
+      : 'Coordinación operativa del equipo',
+  );
+
+  protected readonly heroActions = computed((): SectionHeroAction[] => {
+    if (this.canal() === 'comunicados') {
+      return [
+        {
+          id: 'nuevo-comunicado',
+          label: 'Nuevo comunicado',
+          icon: 'megaphone',
+          primary: true,
+        },
+        {
+          id: 'nueva-comunicacion',
+          label: 'Nueva tarea',
+          icon: 'clipboard-list',
+          primary: false,
+        },
+      ];
+    }
+    return [
+      {
+        id: 'nueva-comunicacion',
+        label: 'Nueva tarea',
+        icon: 'clipboard-list',
+        primary: true,
+      },
+      {
+        id: 'nuevo-comunicado',
+        label: 'Nuevo comunicado',
+        icon: 'megaphone',
+        primary: false,
+      },
+    ];
+  });
+
+  protected readonly canalTabs = computed((): TabOption[] => [
     {
-      id: 'nueva-comunicacion',
-      label: 'Nueva comunicación',
-      icon: 'message-circle',
-      primary: true,
-    },
-    {
-      id: 'nuevo-comunicado',
-      label: 'Nuevo comunicado',
+      id: 'comunicados',
+      label: 'Comunicados a alumnos',
       icon: 'megaphone',
-      primary: false,
+      count: this.announcements.announcements().length || null,
     },
-  ];
-
-  protected readonly canalTabs = computed(() => [
-    { id: 'tareas', label: 'Tareas del equipo', count: this.facade.pendingCount() },
-    { id: 'comunicados', label: 'Comunicados a alumnos', count: null },
+    {
+      id: 'tareas',
+      label: 'Tareas del equipo',
+      icon: 'clipboard-list',
+      count: this.facade.pendingCount() || null,
+    },
   ]);
 
-  protected readonly heroKpis = computed((): SectionHeroKpi[] => [
-    {
-      id: 'pendientes',
-      label: 'Pendientes',
-      value: this.facade.pendingCount(),
-      icon: 'clock',
-      color: 'warning',
-    },
-    {
-      id: 'vencidas',
-      label: 'Vencidas',
-      value: this.facade.overdueCount(),
-      icon: 'alert-triangle',
-      color: 'error',
-    },
-    { id: 'asignadas', label: 'Asignadas', value: this.facade.sentTasks().length, icon: 'send' },
-    {
-      id: 'recibidas',
-      label: 'Recibidas',
-      value: this.facade.receivedTasks().length,
-      icon: 'inbox',
-    },
-  ]);
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => {
+    if (this.canal() === 'comunicados') {
+      const allAnnouncements = this.announcements.announcements();
+      const enviados = allAnnouncements.filter((a) => a.status === 'enviado').length;
+      const programados = allAnnouncements.filter((a) => a.status === 'programado').length;
+      const totalAlumnos = allAnnouncements.reduce((sum, a) => sum + (a.recipients_total ?? 0), 0);
+
+      return [
+        {
+          id: 'enviados',
+          label: 'Enviados',
+          value: enviados,
+          icon: 'send',
+          color: 'success',
+        },
+        {
+          id: 'programados',
+          label: 'Programados',
+          value: programados,
+          icon: 'clock',
+          color: 'warning',
+        },
+        {
+          id: 'alcance',
+          label: 'Alumnos alcanzados',
+          value: totalAlumnos,
+          icon: 'users',
+        },
+        {
+          id: 'total',
+          label: 'Total registros',
+          value: allAnnouncements.length,
+          icon: 'megaphone',
+        },
+      ];
+    }
+
+    return [
+      {
+        id: 'pendientes',
+        label: 'Pendientes',
+        value: this.facade.pendingCount(),
+        icon: 'clock',
+        color: 'warning',
+      },
+      {
+        id: 'vencidas',
+        label: 'Vencidas',
+        value: this.facade.overdueCount(),
+        icon: 'alert-triangle',
+        color: 'error',
+      },
+      { id: 'asignadas', label: 'Asignadas', value: this.facade.sentTasks().length, icon: 'send' },
+      {
+        id: 'recibidas',
+        label: 'Recibidas',
+        value: this.facade.receivedTasks().length,
+        icon: 'inbox',
+      },
+    ];
+  });
 
   // Densidad adaptativa (spec 0028/0029): sin límite en desktop, acotado
   // en tablet/mobile o con el drawer lateral abierto (tier por contenedor).
@@ -235,7 +308,7 @@ export class AdminTareasComponent implements OnInit, AfterViewInit {
 
   protected onHeroAction(id: string): void {
     if (id === 'nueva-comunicacion') {
-      this.drawer.open(TaskCreateDrawerComponent, 'Nueva comunicación', 'message-circle');
+      this.drawer.open(TaskCreateDrawerComponent, 'Nueva tarea', 'clipboard-list');
     }
     if (id === 'nuevo-comunicado') {
       this.drawer.open(AnnouncementComposerDrawerComponent, 'Nuevo comunicado', 'megaphone');
