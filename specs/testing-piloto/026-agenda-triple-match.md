@@ -329,7 +329,7 @@ concurrencia (2 pestañas del mismo navegador comparten sesión).
 | I02 | Lista de instructores | Sede del alumno + "ambas sedes" de la otra | ✓ | ✅ agenda-5 |
 | I03 | Elegir instructor → horario → Confirmar | Toast "Clase reprogramada correctamente"; la ficha y la Agenda reflejan el cambio | ✓ | ✅ agenda-5 (vista: el horario viejo queda libre y el nuevo ocupado) |
 | I04 | Misma hora que otra clase del alumno, con otro instructor **(§4)** | Bloqueado (S5) | ✓ | ✅ agenda-5 (fix-299-m) |
-| I05 | Día donde el alumno ya tiene 2 clases | Todos los horarios de ese día aparecen ocupados (sin explicar por qué) — anotar | — | ✅ agenda-5 — tope 2 fijo, no `max_classes_per_day` (=1): **decisión** |
+| I05 | Día donde el alumno ya tiene 2 clases | Todos los horarios de ese día aparecen ocupados (sin explicar por qué) — anotar | — | ✅ agenda-5 — tope 2 en lo interno; la web queda en 1 (`max_classes_per_day`). Decidido por el owner: diferencia intencional (DG-024) |
 | I06 | Horarios de hoy que ya pasaron | No se pueden elegir (S2) | ✓ | ✅ fix-228-b (la vista no ofrece bloques empezados) |
 | I07 | Reprogramar un `no_show` (D10) **(§4)** | Deja de verse "Ausente" y no cuenta para penalización (S9) | — | ✅ alumnos-b-ficha F04 (fix-279-m) |
 | I08 | Reprogramar una clase `in_progress` | ¿Debería permitirse? Hoy vuelve a "Agendada" conservando el KM inicial (S9) — **decisión** | — | ✅ Decidido (bloquear) e implementado en fix-246-b: muestra "En curso" sin lápiz y orienta a "Cancelar inicio" en Asistencia; el facade rechaza si igual llega |
@@ -421,7 +421,7 @@ Marcar ✅/❌ en cada celda. "—" = no aplica.
 | ID | Caso | Resultado esperado | Auto | Res. |
 |---|---|---|---|---|
 | N01 | "Eliminar horario" | Pide confirmación; cancela solo las clases agendadas; los horarios quedan libres en la Agenda | ✓ | ✅ acciones-masivas H06/H09 |
-| N02 | "Reactivar horario" en un alumno penalizado (D11) **(§4)** | No debe revivir clases canceladas por penalización ni fechas pasadas (S13) | — | ✅ fechas pasadas no reviven (fix-364-m); canceladas por la penalización sí — **decisión** |
+| N02 | "Reactivar horario" en un alumno penalizado (D11) **(§4)** | No debe revivir clases canceladas por penalización ni fechas pasadas (S13) | — | ✅ fechas pasadas no reviven (fix-364-m); canceladas por otro motivo ya no reviven: Reactivar solo deshace el último "Eliminar horario" y devuelve el sello (spec `0058-b`, cerrada 2026-11-09; e2e `asistencia-clase-b.spec.ts` › N02) |
 | N03 | Reactivar cuando otro alumno ya tomó uno de esos horarios | Mensaje claro de cuál choca; hoy falla todo con "Error al reactivar el horario" | — | ✅ Corregido en fix-245-b: todo o nada; el aviso nombra la clase que choca (número, día, hora y con qué) antes de pedir confirmación |
 | N04 | Eliminar y reactivar enseguida | Las clases vuelven a sus horarios originales | ✓ | ✅ acciones-masivas H06/H09 |
 
@@ -718,7 +718,7 @@ No se pueden marcar ✅/❌ hasta que alguien defina la regla:
 | C06 / H08 | ¿Cuál es el horizonte real de agendamiento: 28 días o el límite de 2/3/4 meses? |
 | C08 | ¿El límite de la Agenda es una preferencia por computador o una regla de la escuela? |
 | H05 / L04 | ¿Se puede agendar en una hora de hoy que ya pasó (p. ej., para registrar una clase hecha)? |
-| L06 / J07 | ¿El máximo es 2 clases por día fijo, o `courses.max_classes_per_day`? ¿Cuenta las clases que el alumno ya tiene ese día? |
+| L06 / J07 | ~~¿El máximo es 2 clases por día fijo, o `courses.max_classes_per_day`? ¿Cuenta las clases que el alumno ya tiene ese día?~~ **Resuelto 2026-11-09:** web 1, interno 2 (intencional, DG-024); sí cuenta las existentes (fix-244-b). |
 | B14 / L10 | ¿Un vehículo en mantención debe dejar de ofrecer horarios? |
 | H11 / S20 | ¿La advertencia de documentos debe calcularse con la fecha de la clase? ¿Se debe **bloquear** agendar con SOAP vencido (circular sin SOAP es ilegal)? |
 | B15 / M09 | ¿Cómo se manejan los feriados (horarios ofrecidos, clases agendadas, cron)? |

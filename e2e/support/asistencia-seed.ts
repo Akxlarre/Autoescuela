@@ -65,6 +65,11 @@ const recursos = new Map<number, Promise<Recursos>>();
 const sesiones: number[] = [];
 /** Usuarios de los alumnos sembrados: la app les deja notificaciones ("Clase completada"). */
 const usuarios: number[] = [];
+/**
+ * Matrículas sembradas: "Eliminar/Reactivar horario" (spec 0058-b) avisan también a los
+ * instructores, que no son usuarios sembrados; esos avisos se reconocen por la matrícula.
+ */
+const matriculas: number[] = [];
 /** Kilometraje original de los vehículos usados, para devolverlo al terminar. */
 const kmOriginal = new Map<number, number>();
 
@@ -125,7 +130,10 @@ export async function seedClase(spec: ClaseSpec, cleanup: Cleanup): Promise<Clas
       cleanup,
     ));
   const enrollmentId = spec.de?.enrollmentId ?? alumno.enrollmentIds[0];
-  if (!spec.de) usuarios.push(alumno.userId);
+  if (!spec.de) {
+    usuarios.push(alumno.userId);
+    matriculas.push(enrollmentId);
+  }
 
   const hora = `${String(spec.cupo.hora).padStart(2, '0')}:00`;
   const { data: session, error } = await sb
@@ -171,6 +179,14 @@ export async function limpiarAsistencia(): Promise<void> {
   }
   const userIds = usuarios.splice(0);
   if (userIds.length) await sb.from('notifications').delete().in('recipient_id', userIds);
+  const enrollmentIds = matriculas.splice(0);
+  if (enrollmentIds.length) {
+    await sb
+      .from('notifications')
+      .delete()
+      .eq('reference_type', 'enrollment')
+      .in('reference_id', enrollmentIds);
+  }
   for (const [vehicleId, km] of kmOriginal) {
     await sb.from('vehicles').update({ current_km: km }).eq('id', vehicleId);
   }

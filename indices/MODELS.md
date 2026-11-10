@@ -88,6 +88,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `ClassBExamQuestion` | `dto` | `src/app/core/models/dto/class-b-exam-question.model.ts` |
 | `ClassBExamScore` | `dto` | `src/app/core/models/dto/class-b-exam-score.model.ts` |
 | `ClassBPracticeAttendance` | `dto` | `src/app/core/models/dto/class-b-practice-attendance.model.ts` |
+| `ClassBScheduleRemoval`, `UltimaEliminacionRow`, `RemoveScheduleResultRow`, `ReactivateScheduleResultRow` | `dto` | `src/app/core/models/dto/class-b-schedule-removal.model.ts` (spec 0058-b) |
 | `ClassBSession` | `dto` | `src/app/core/models/dto/class-b-session.model.ts` |
 | `ClassBTheorySession` | `dto` | `src/app/core/models/dto/class-b-theory-session.model.ts` |
 | `ClassBTopic`, `ClassBTopicInsert`, `ClassBTopicUpdate` | `dto` | `src/app/core/models/dto/class-b-topics.model.ts` |

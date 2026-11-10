@@ -776,70 +776,7 @@ describe('AsistenciaClaseBFacade', () => {
         resolve(responses[Math.min(call++, responses.length - 1)]);
     };
 
-    it('reactivateSchedule busca solo las clases canceladas futuras', async () => {
-      mock.setResult('class_b_sessions', []);
-
-      await facade.reactivateSchedule(10);
-
-      const b = mock.builderFor('class_b_sessions');
-      expect(b.eq).toHaveBeenCalledWith('enrollment_id', 10);
-      expect(b.eq).toHaveBeenCalledWith('status', 'cancelled');
-      expect(b.gt).toHaveBeenCalledWith('scheduled_at', NOW);
-    });
-
-    it('reactivateSchedule sin clases futuras avisa y no reactiva nada', async () => {
-      mock.setResult('class_b_sessions', []);
-
-      await facade.reactivateSchedule(10);
-
-      expect(confirmModal.confirm).not.toHaveBeenCalled();
-      expect(mock.builderFor('class_b_sessions').update).not.toHaveBeenCalled();
-      expect(toast.info).toHaveBeenCalled();
-      expect(toast.success).not.toHaveBeenCalled();
-      expect(facade.alertas()[0].horarioActivo).toBe(false);
-    });
-
-    it('reactivateSchedule pide confirmación con la cantidad y el alumno', async () => {
-      confirmModal.confirm.mockResolvedValue(false);
-      mock.setResult('class_b_sessions', [{ id: 7 }, { id: 8 }]);
-
-      await facade.reactivateSchedule(10);
-
-      const config = confirmModal.confirm.mock.calls[0][0];
-      expect(config.message).toContain('2 clases futuras');
-      expect(config.message).toContain('Juan Pérez');
-      expect(mock.builderFor('class_b_sessions').update).not.toHaveBeenCalled();
-      expect(toast.success).not.toHaveBeenCalled();
-    });
-
-    it('reactivateSchedule al confirmar reactiva por id y marca el horario activo', async () => {
-      mock.setResult('class_b_sessions', [{ id: 7 }, { id: 8 }]);
-
-      await facade.reactivateSchedule(10);
-
-      const b = mock.builderFor('class_b_sessions');
-      expect(b.update).toHaveBeenCalledWith({ status: 'scheduled', cancelled_at: null });
-      expect(b.in).toHaveBeenCalledWith('id', [7, 8]);
-      expect(toast.success).toHaveBeenCalledWith('Horario reactivado');
-      expect(facade.alertas()[0].horarioActivo).toBe(true);
-      expect(facade.savingAlertaId()).toBeNull();
-    });
-
-    it('reactivateSchedule muestra el mensaje del trigger si un horario ya está ocupado', async () => {
-      const mensaje = 'El instructor ya tiene una clase agendada que se solapa con este horario.';
-      mockSessionResponses(
-        { data: [{ id: 7 }], error: null },
-        { data: null, error: { code: 'P0001', message: mensaje } },
-      );
-
-      await facade.reactivateSchedule(10);
-
-      expect(toast.error).toHaveBeenCalledWith('No se pudo reactivar el horario', mensaje);
-      expect(toast.success).not.toHaveBeenCalled();
-      expect(facade.alertas()[0].horarioActivo).toBe(false);
-    });
-
-    // ── fix-245-b (N03): el choque se detecta ANTES de confirmar y dice cuál clase ──
+    // ── spec 0058-b: Reactivar deshace solo la última eliminación ──
     const futura = {
       id: 7,
       class_number: 3,
@@ -849,8 +786,161 @@ describe('AsistenciaClaseBFacade', () => {
       vehicle_id: 4,
       enrollment_id: 10,
     };
+    const ultimaEliminacion = (over: Record<string, unknown> = {}) =>
+      mock.setResult('class_b_schedule_removals:maybeSingle', {
+        id: 33,
+        removed_at: '2026-10-05T14:00:00.000Z',
+        reactivated_at: null,
+        removed_by_user: { first_names: 'Sofía', paternal_last_name: 'Rojas' },
+        ...over,
+      });
+    const rpcReactivar = {
+      reactivated_count: 1,
+      first_scheduled_at: futura.scheduled_at,
+      student_user_id: 501,
+      instructor_user_ids: [601],
+      previous_penalty_applied_at: null,
+    };
 
+    it('0058-b AC4: sin eliminación que deshacer no busca clases ni llama a la RPC', async () => {
+      mock.setResult('class_b_schedule_removals:maybeSingle', null);
+
+      await facade.reactivateSchedule(10);
+
+      const r = mock.builderFor('class_b_schedule_removals');
+      expect(r.eq).toHaveBeenCalledWith('enrollment_id', 10);
+      expect(r.order).toHaveBeenCalledWith('id', { ascending: false });
+      expect(mock.client.rpc).not.toHaveBeenCalled();
+      expect(confirmModal.confirm).not.toHaveBeenCalled();
+      expect(toast.info).toHaveBeenCalledWith(
+        'No hay un horario eliminado para reactivar',
+        expect.stringContaining('Reagendar Clases'),
+      );
+    });
+
+    it('0058-b AC-E1: si la última eliminación ya se reactivó, no revive una anterior', async () => {
+      ultimaEliminacion({ reactivated_at: '2026-10-06T10:00:00.000Z' });
+
+      await facade.reactivateSchedule(10);
+
+      expect(mock.client.rpc).not.toHaveBeenCalled();
+      expect(toast.info).toHaveBeenCalledWith(
+        'No hay un horario eliminado para reactivar',
+        expect.any(String),
+      );
+    });
+
+    it('0058-b AC2: solo busca las clases futuras ligadas a esa eliminación', async () => {
+      ultimaEliminacion();
+      mock.setResult('class_b_sessions', []);
+
+      await facade.reactivateSchedule(10);
+
+      const b = mock.builderFor('class_b_sessions');
+      expect(b.eq).toHaveBeenCalledWith('schedule_removal_id', 33);
+      expect(b.eq).toHaveBeenCalledWith('status', 'cancelled');
+      expect(b.gt).toHaveBeenCalledWith('scheduled_at', NOW);
+      expect(mock.client.rpc).not.toHaveBeenCalled();
+      expect(toast.info).toHaveBeenCalledWith(
+        'No hay clases futuras para reactivar',
+        expect.stringContaining('Reagendar Clases'),
+      );
+      expect(facade.alertas()[0].horarioActivo).toBe(false);
+    });
+
+    it('0058-b: el modal dice cuántas vuelven, quién y cuándo las eliminó', async () => {
+      confirmModal.confirm.mockResolvedValue(false);
+      ultimaEliminacion();
+      mockSessionResponses(
+        { data: [futura, { ...futura, id: 8 }], error: null },
+        { data: [], error: null },
+      );
+
+      await facade.reactivateSchedule(10);
+
+      const config = confirmModal.confirm.mock.calls[0][0];
+      expect(config.message).toContain('2 clases futuras de Juan Pérez');
+      expect(config.message).toContain('que eliminó Sofía Rojas el 5 de octubre');
+      expect(mock.client.rpc).not.toHaveBeenCalled();
+    });
+
+    it('0058-b AC2/AC3/AC7: al confirmar llama a la RPC y deja la alerta como antes de eliminar', async () => {
+      (facade as any)._alertas.set([
+        makeAlerta({ nivel: 'danger', horarioActivo: false, parPenalizado: true }),
+      ]);
+      ultimaEliminacion();
+      mockSessionResponses({ data: [futura], error: null }, { data: [], error: null });
+      mock.setRpcResult('reactivate_class_b_schedule', [rpcReactivar]);
+
+      await facade.reactivateSchedule(10);
+
+      expect(mock.client.rpc).toHaveBeenCalledWith('reactivate_class_b_schedule', {
+        p_enrollment_id: 10,
+      });
+      expect(mock.builderFor('class_b_sessions').update).not.toHaveBeenCalled();
+      expect(toast.success).toHaveBeenCalledWith('Horario reactivado');
+      expect(facade.alertas()[0].horarioActivo).toBe(true);
+      expect(facade.alertas()[0].parPenalizado).toBe(false);
+      expect(facade.savingAlertaId()).toBeNull();
+    });
+
+    it('0058-b AC3: si la matrícula ya estaba penalizada antes de eliminar, sigue penalizada', async () => {
+      ultimaEliminacion();
+      mockSessionResponses({ data: [futura], error: null }, { data: [], error: null });
+      mock.setRpcResult('reactivate_class_b_schedule', [
+        { ...rpcReactivar, previous_penalty_applied_at: '2026-09-01T00:00:00.000Z' },
+      ]);
+
+      await facade.reactivateSchedule(10);
+
+      expect(facade.alertas()[0].parPenalizado).toBe(true);
+    });
+
+    it('0058-b AC5: avisa al alumno y a los instructores', async () => {
+      ultimaEliminacion();
+      mockSessionResponses({ data: [futura], error: null }, { data: [], error: null });
+      mock.setRpcResult('reactivate_class_b_schedule', [rpcReactivar]);
+
+      await facade.reactivateSchedule(10);
+
+      expect(notifications.notifyUsers).toHaveBeenCalledWith(
+        [501],
+        expect.objectContaining({
+          subject: 'Horario reactivado',
+          referenceType: 'enrollment',
+          referenceId: 10,
+        }),
+      );
+      expect(notifications.notifyUsers.mock.calls[0][1].message).toContain('volvió a la agenda');
+      expect(notifications.notifyUsers).toHaveBeenCalledWith(
+        [601],
+        expect.objectContaining({ subject: 'Horario reactivado' }),
+      );
+      expect(notifications.notifyUsers.mock.calls[1][1].message).toContain('Juan Pérez');
+    });
+
+    it('0058-b AC-E4: si otra sesión ya lo reactivó, muestra el error de la RPC y no avisa', async () => {
+      ultimaEliminacion();
+      mockSessionResponses({ data: [futura], error: null }, { data: [], error: null });
+      mock.setRpcResult('reactivate_class_b_schedule', null, {
+        code: 'P0001',
+        message: 'El horario ya estaba reactivado.',
+      });
+
+      await facade.reactivateSchedule(10);
+
+      expect(toast.error).toHaveBeenCalledWith(
+        'No se pudo reactivar el horario',
+        'El horario ya estaba reactivado.',
+      );
+      expect(notifications.notifyUsers).not.toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(facade.alertas()[0].horarioActivo).toBe(false);
+    });
+
+    // ── fix-245-b (N03): el choque se detecta ANTES de confirmar y dice cuál clase ──
     it('fix-245-b: si otro alumno tomó el horario, avisa qué clase choca sin confirmar ni escribir', async () => {
+      ultimaEliminacion();
       mockSessionResponses(
         { data: [futura], error: null },
         { data: [{ ...futura, id: 50, enrollment_id: 20, vehicle_id: 8 }], error: null },
@@ -859,7 +949,7 @@ describe('AsistenciaClaseBFacade', () => {
       await facade.reactivateSchedule(10);
 
       expect(confirmModal.confirm).not.toHaveBeenCalled();
-      expect(mock.builderFor('class_b_sessions').update).not.toHaveBeenCalled();
+      expect(mock.client.rpc).not.toHaveBeenCalled();
       expect(toast.error).toHaveBeenCalledWith(
         'No se pudo reactivar el horario',
         expect.stringContaining('Clase 3'),
@@ -869,11 +959,9 @@ describe('AsistenciaClaseBFacade', () => {
     });
 
     it('fix-245-b: busca choques entre las clases activas del instructor, vehículo o matrícula', async () => {
-      mockSessionResponses(
-        { data: [futura], error: null },
-        { data: [], error: null },
-        { data: [{ id: 7 }], error: null },
-      );
+      ultimaEliminacion();
+      mockSessionResponses({ data: [futura], error: null }, { data: [], error: null });
+      mock.setRpcResult('reactivate_class_b_schedule', [rpcReactivar]);
 
       await facade.reactivateSchedule(10);
 
@@ -886,33 +974,62 @@ describe('AsistenciaClaseBFacade', () => {
       expect(toast.success).toHaveBeenCalledWith('Horario reactivado');
     });
 
-    it('fix-391-m: removeSchedule registra la penalización en la matrícula', async () => {
+    // ── spec 0058-b: Eliminar pasa por la RPC (transacción) y avisa ──
+    const rpcEliminar = {
+      enrollment_id: 10,
+      removal_id: 33,
+      cancelled_count: 2,
+      first_scheduled_at: '2026-10-08T13:30:00.000Z',
+      student_user_id: 501,
+      instructor_user_ids: [601, 602],
+    };
+
+    it('0058-b AC1: removeSchedule llama a la RPC con la matrícula y deja la alerta penalizada', async () => {
       (facade as any)._alertas.set([makeAlerta({ nivel: 'danger', horarioActivo: true })]);
-      mock.setResult('class_b_sessions', [{ id: 7 }]);
-      mock.setResult('enrollments', [{ id: 10 }]);
+      mock.setRpcResult('remove_class_b_schedule', [rpcEliminar]);
 
       await facade.removeSchedule(10);
 
-      const b = mock.builderFor('enrollments');
-      expect(b.update).toHaveBeenCalledWith({ absence_penalty_applied_at: NOW });
-      expect(b.eq).toHaveBeenCalledWith('id', 10);
+      expect(confirmModal.confirm).toHaveBeenCalled();
+      expect(mock.client.rpc).toHaveBeenCalledWith('remove_class_b_schedule', {
+        p_enrollment_ids: [10],
+      });
+      expect(mock.builderFor('class_b_sessions').update).not.toHaveBeenCalled();
+      expect(mock.builderFor('enrollments').update).not.toHaveBeenCalled();
+      expect(toast.success).toHaveBeenCalledWith('Horario eliminado');
+      expect(facade.alertas()[0].horarioActivo).toBe(false);
       expect(facade.alertas()[0].parPenalizado).toBe(true);
     });
 
-    it('fix-391-m: si no se pudo registrar la penalización, lo avisa en vez de dar éxito', async () => {
+    it('0058-b AC9: removeSchedule avisa al alumno y a cada instructor', async () => {
       (facade as any)._alertas.set([makeAlerta({ nivel: 'danger', horarioActivo: true })]);
-      mock.setResult('class_b_sessions', [{ id: 7 }]);
-      mock.setResult('enrollments', []);
+      mock.setRpcResult('remove_class_b_schedule', [rpcEliminar]);
+
+      await facade.removeSchedule(10);
+
+      expect(notifications.notifyUsers).toHaveBeenCalledWith(
+        [501],
+        expect.objectContaining({ subject: 'Horario eliminado', referenceId: 10 }),
+      );
+      expect(notifications.notifyUsers.mock.calls[0][1].message).toContain(
+        'Se cancelaron tus 2 clases prácticas',
+      );
+      expect(notifications.notifyUsers).toHaveBeenCalledWith(
+        [601, 602],
+        expect.objectContaining({ subject: 'Horario eliminado' }),
+      );
+    });
+
+    it('0058-b: si la RPC falla, no da éxito ni avisa', async () => {
+      (facade as any)._alertas.set([makeAlerta({ nivel: 'danger', horarioActivo: true })]);
+      mock.setRpcResult('remove_class_b_schedule', null, { code: '42501', message: 'x' });
 
       await facade.removeSchedule(10);
 
       expect(toast.success).not.toHaveBeenCalled();
-      expect(toast.warning).toHaveBeenCalledWith(
-        'Horario eliminado, sin registrar la penalización',
-        expect.stringContaining('Avisa al administrador'),
-      );
-      expect(facade.alertas()[0].horarioActivo).toBe(false);
-      expect(facade.alertas()[0].parPenalizado).toBeFalsy();
+      expect(toast.error).toHaveBeenCalled();
+      expect(notifications.notifyUsers).not.toHaveBeenCalled();
+      expect(facade.alertas()[0].horarioActivo).toBe(true);
     });
 
     it('fix-391-m: fetchAlertas marca parPenalizado cuando las faltas son anteriores a la penalización', async () => {
@@ -949,29 +1066,15 @@ describe('AsistenciaClaseBFacade', () => {
       expect(by(11).parPenalizado).toBe(false);
     });
 
-    it('removeSchedule cancela solo clases agendadas futuras', async () => {
+    it('removeSchedule sin clases futuras (la RPC no devuelve filas) no dice "Horario eliminado"', async () => {
       (facade as any)._alertas.set([makeAlerta({ nivel: 'danger', horarioActivo: true })]);
-      mock.setResult('class_b_sessions', [{ id: 7 }]);
-      mock.setResult('enrollments', [{ id: 10 }]);
-
-      await facade.removeSchedule(10);
-
-      const b = mock.builderFor('class_b_sessions');
-      expect(confirmModal.confirm).toHaveBeenCalled();
-      expect(b.eq).toHaveBeenCalledWith('status', 'scheduled');
-      expect(b.gt).toHaveBeenCalledWith('scheduled_at', NOW);
-      expect(toast.success).toHaveBeenCalledWith('Horario eliminado');
-      expect(facade.alertas()[0].horarioActivo).toBe(false);
-    });
-
-    it('removeSchedule sin clases futuras no dice "Horario eliminado"', async () => {
-      (facade as any)._alertas.set([makeAlerta({ nivel: 'danger', horarioActivo: true })]);
-      mock.setResult('class_b_sessions', []);
+      mock.setRpcResult('remove_class_b_schedule', []);
 
       await facade.removeSchedule(10);
 
       expect(toast.success).not.toHaveBeenCalled();
       expect(toast.info).toHaveBeenCalled();
+      expect(notifications.notifyUsers).not.toHaveBeenCalled();
       expect(facade.alertas()[0].horarioActivo).toBe(true);
     });
   });

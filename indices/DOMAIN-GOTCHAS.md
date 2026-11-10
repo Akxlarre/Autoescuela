@@ -138,6 +138,12 @@
 - **Trampa:** cambiar un tope de negocio (ej. clases máximas por día) en un solo archivo y asumir que aplica a todo el sistema.
 - **Realidad:** el tope vivía por separado en el wizard público, el wizard interno, la reasignación de clases canceladas y el cálculo de fechas bloqueadas de reprogramación — 4 puntos, uno de ellos no evidente hasta revisar el Facade completo.
 - **Fuente:** `specs/fixes/fix-062-m-unificar-limite-clases-dia`
+- **Cuando el tope difiere entre canales, puede ser intencional:** hoy la matrícula web permite
+  1 clase por día (lee `courses.max_classes_per_day` = 1) y todo lo interno de la escuela —
+  matrícula presencial, reagendar, reprogramar, fechas bloqueadas — permite 2. Es una decisión de
+  negocio del owner (2026-11-09), no una inconsistencia: no subas la columna a 2 (cambia la web) ni
+  hagas que lo interno la lea (baja lo presencial a 1). Antes de "unificar" un tope, preguntá qué
+  canal debe cambiar.
 
 ### DG-025 — Un cron que actualiza sin re-verificar el estado puede pisar un cambio hecho en la misma corrida
 - **Trampa:** que una función de fin de día haga `UPDATE ... SET status='no_show' WHERE id=...` sin `AND status='scheduled'`, confiando en que el cursor del loop refleja el estado actual.
@@ -2019,6 +2025,25 @@
   filtra en la landing con `safeHttpUrl()` (`webs/src/lib/safe-url.ts`, y su copia en la
   hidratación de `LandingLayout.astro`).
 - **Fuente:** `specs/fixes/fix-500-m-configuracion-web-urls-y-formatos`.
+
+### DG-122 — "Reactivar horario" revive solo las clases que canceló el último "Eliminar horario": cualquier otra cancelación deja `schedule_removal_id` en NULL
+
+- **Trampa:** escribir un camino nuevo que cancele clases de Clase B (`status = 'cancelled'`) y
+  copiar el `schedule_removal_id` que la fila ya tenía, o asumir que "Reactivar" revive todas las
+  clases futuras canceladas de la matrícula.
+- **Realidad:** `reactivate_class_b_schedule()` revive solo las clases futuras con
+  `schedule_removal_id` = la última fila de `class_b_schedule_removals` de esa matrícula. Ese id lo
+  escribe únicamente `remove_class_b_schedule()`. Si otro camino (cancelación individual, ausencia,
+  reprogramación, reciclaje desde la ficha) cancela o mueve una clase sin dejarlo en NULL, Reactivar
+  la reviviría junto con las del horario eliminado; si lo deja apuntando a la eliminación, una clase
+  cancelada por otro motivo vuelve a la agenda.
+- **Regla de aplicabilidad:** todo `UPDATE` de `class_b_sessions` que cambie `status` o
+  `scheduled_at` fuera de `remove_class_b_schedule()` pone `schedule_removal_id = NULL` en el mismo
+  `UPDATE` (así lo hacen `reschedule_class_b_sessions` y `reciclarSesion()` de la ficha). Para eliminar
+  un horario, siempre la RPC; nunca un `update` directo desde un Facade.
+- **Fuente:** `specs/specs/0058-b-reactivar-horario-deshace-eliminar`, migración
+  `20261109180000_spec0058b_reactivar_deshace_eliminar.sql`, test
+  `supabase/tests/asistencia/spec0058b-reactivar-deshace-eliminar.sql`.
 
 ## Convención para agregar una entrada nueva
 
