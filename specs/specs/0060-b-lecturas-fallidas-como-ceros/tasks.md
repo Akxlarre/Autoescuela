@@ -96,13 +96,19 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
   - **Para correrlo:** contra el build de producción en un puerto libre; si el 4200 lo ocupa otro
     checkout, Playwright lo reutiliza y prueba otro código.
 
-- [ ] **T0.5** — Corregir `swr-pattern.md` y `facades.md`
+- [x] **T0.5** — Corregir `swr-pattern.md` y `facades.md`
   - **AC ref:** AC2
   - **DoD:**
-    - [ ] El ejemplo de `refreshSilently()` no es un `catch` vacío y el de `fetchData()` revisa `error`
-    - [ ] Los casos A y B de la spec quedan enunciados como regla, con su criterio de aplicabilidad
-    - [ ] Corrige además el typo del ejemplo (`refreshSilently(): {Promise<void>`)
-    - [ ] Pasa el Harness Gate
+    - [x] El ejemplo de `refreshSilently()` no es un `catch` vacío y el de `fetchData()` revisa
+      `error` (con `assertReadOk`). `initialize()` además marca `_initialized` solo si la carga
+      salió bien, para que una primera carga fallida se reintente con skeleton
+    - [x] Los casos A y B quedan enunciados como regla, con su criterio de aplicabilidad: "¿lo que
+      está en pantalla responde a la misma pregunta que la consulta que falló?"
+    - [x] Corrige además el typo del ejemplo (`refreshSilently(): {Promise<void>`)
+    - [x] Pasa el Harness Gate (sin citar tracks: la regla se sostiene sola)
+  - **Resultado (2026-11-10):** `swr-pattern.md` gana la sección "Errores de carga" (3 reglas,
+    pantalla, cuándo agregar `_refreshFailed`) y dos prohibiciones; `facades.md` §4 muestra la
+    lectura con su error y remite a `swr-pattern.md`.
 
 - [ ] **T0.6** — Gotcha e índices
   - **DoD:**
