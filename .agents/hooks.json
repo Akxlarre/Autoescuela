@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node scripts/antigravity-pre-write.cjs"
+            "command": "node .agents/scripts/antigravity-pre-write.cjs"
           }
         ]
       },
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node scripts/antigravity-run-command.cjs"
+            "command": "node .agents/scripts/antigravity-run-command.cjs"
           }
         ]
       }
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node scripts/antigravity-post-read.cjs"
+            "command": "node .agents/scripts/antigravity-post-read.cjs"
           }
         ]
       },
@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node scripts/antigravity-post-write.cjs"
+            "command": "node .agents/scripts/antigravity-post-write.cjs"
           }
         ]
       }
@@ -43,7 +43,7 @@
     "Stop": [
       {
         "type": "command",
-        "command": "node scripts/antigravity-stop.cjs"
+        "command": "node .agents/scripts/antigravity-stop.cjs"
       }
     ]
   }
