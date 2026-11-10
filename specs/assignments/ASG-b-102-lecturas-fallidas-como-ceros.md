@@ -1,14 +1,14 @@
 # Asignación ASG-b-102 — Sin red, 11 pantallas muestran ceros o "sin datos" en vez de un error
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** cualquiera
 > **tipo_sugerido:** spec
 > **priority:** P1
 > **created:** 2026-10-07
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-11-10
+> **resulting_track:** 0060-b-lecturas-fallidas-como-ceros
 
 ---
 
