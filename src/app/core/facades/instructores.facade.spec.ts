@@ -927,4 +927,156 @@ describe('InstructoresFacade', () => {
       expect(facade.isLoadingHoras()).toBe(false);
     });
   });
+
+  // ── spec 0060-b (DoD-F): lecturas fallidas, casos A y B ────────────────────
+  describe('spec 0060-b — manejo de lecturas fallidas', () => {
+    const row = (id: number) => ({
+      id,
+      user_id: id,
+      type: 'practical',
+      license_number: `B-${id}`,
+      license_class: 'B',
+      license_expiry: '2028-01-01',
+      license_status: 'valid',
+      active: true,
+      registration_date: '2026-01-01',
+      both_branches: false,
+      users: {
+        id,
+        rut: `11.111.111-${id}`,
+        first_names: 'Juan',
+        paternal_last_name: `P${id}`,
+        maternal_last_name: null,
+        email: `i${id}@t.cl`,
+        phone: null,
+        active: true,
+        branch_id: 1,
+      },
+      vehicle_assignments: [],
+    });
+
+    const queryMock = (promise: Promise<unknown>) => {
+      const q: any = {
+        select: vi.fn(() => q),
+        is: vi.fn(() => q),
+        eq: vi.fn(() => q),
+        in: vi.fn(() => q),
+        gte: vi.fn(() => q),
+        lt: vi.fn(() => q),
+        order: vi.fn(() => q),
+        then: (onF: any, onR: any) => promise.then(onF, onR),
+      };
+      return q;
+    };
+
+    it('primera carga con error: deja error() y no inicializa _initialized para reintentar con skeleton', async () => {
+      supabaseSpy.client.from = vi
+        .fn()
+        .mockImplementation(() =>
+          queryMock(Promise.resolve({ data: null, error: { message: 'network down' } })),
+        );
+
+      await facade.initialize();
+
+      expect(facade.error()).toBe('No se pudo cargar la lista de instructores.');
+      expect(facade.instructores()).toEqual([]);
+      expect(facade.refreshFailed()).toBe(false);
+    });
+
+    it('cambio de sede con error: retira los datos anteriores (caso A)', async () => {
+      // 1. Carga inicial en sede 1 exitosa
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      supabaseSpy.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'instructors')
+          return queryMock(Promise.resolve({ data: [row(1)], error: null }));
+        return queryMock(Promise.resolve({ data: [], error: null }));
+      });
+
+      await facade.initialize();
+      expect(facade.instructores().length).toBe(1);
+
+      // 2. Cambio a sede 2 falla
+      branchFacadeSpy.selectedBranchId.mockReturnValue(2);
+      supabaseSpy.client.from = vi
+        .fn()
+        .mockImplementation(() =>
+          queryMock(Promise.resolve({ data: null, error: { message: 'sede 2 inaccesible' } })),
+        );
+
+      await facade.initialize();
+
+      expect(facade.error()).toBe('No se pudo cargar la lista de instructores.');
+      expect(facade.instructores()).toEqual([]); // no deben quedar los datos de la sede 1
+    });
+
+    it('refresco silencioso con error: datos visibles se quedan y activa refreshFailed (caso B)', async () => {
+      // 1. Carga inicial exitosa
+      supabaseSpy.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'instructors')
+          return queryMock(Promise.resolve({ data: [row(1)], error: null }));
+        return queryMock(Promise.resolve({ data: [], error: null }));
+      });
+      await facade.initialize();
+      expect(facade.instructores().length).toBe(1);
+
+      // 2. Refresco en background falla
+      supabaseSpy.client.from = vi
+        .fn()
+        .mockImplementation(() =>
+          queryMock(Promise.resolve({ data: null, error: { message: 'timeout' } })),
+        );
+
+      await (facade as any).refreshSilently();
+
+      expect(facade.instructores().length).toBe(1); // datos previos se mantienen
+      expect(facade.refreshFailed()).toBe(true);
+    });
+
+    it('reintento exitoso: limpia error() y refreshFailed()', async () => {
+      // 1. Fallo inicial
+      supabaseSpy.client.from = vi
+        .fn()
+        .mockImplementation(() =>
+          queryMock(Promise.resolve({ data: null, error: { message: 'fallo temporal' } })),
+        );
+      await facade.initialize();
+      expect(facade.error()).toBeTruthy();
+
+      // 2. Reintento exitoso
+      supabaseSpy.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'instructors')
+          return queryMock(Promise.resolve({ data: [row(1)], error: null }));
+        return queryMock(Promise.resolve({ data: [], error: null }));
+      });
+
+      await facade.reintentar();
+
+      expect(facade.error()).toBeNull();
+      expect(facade.refreshFailed()).toBe(false);
+      expect(facade.instructores().length).toBe(1);
+    });
+
+    it('falla una consulta combinada (both_branches): la carga completa falla (AC7)', async () => {
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      let callCount = 0;
+      supabaseSpy.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'instructors') {
+          callCount++;
+          // Primera llamada (sede 1) OK, segunda llamada (both_branches) falla
+          if (callCount === 1) {
+            return queryMock(Promise.resolve({ data: [row(1)], error: null }));
+          }
+          return queryMock(
+            Promise.resolve({ data: null, error: { message: 'both_branches failed' } }),
+          );
+        }
+        return queryMock(Promise.resolve({ data: [], error: null }));
+      });
+
+      await facade.initialize();
+
+      expect(facade.error()).toBe('No se pudo cargar la lista de instructores.');
+      expect(facade.instructores()).toEqual([]);
+    });
+  });
 });

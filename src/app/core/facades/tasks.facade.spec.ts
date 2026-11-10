@@ -752,4 +752,71 @@ describe('TasksFacade', () => {
       expect(mockSupabase.client.removeChannel).toHaveBeenCalled();
     });
   });
+
+  // ── spec 0060-b (DoD-F): lecturas fallidas, casos A y B ────────────────────
+  describe('spec 0060-b — manejo de lecturas fallidas', () => {
+    it('primera carga con error: deja error() y tasks vacío', async () => {
+      mockSupabase.client.from.mockReturnValue(
+        createMockQueryBuilder(null, { message: 'network down' }),
+      );
+
+      await facade.initialize();
+
+      expect(facade.error()).toBe('No se pudieron cargar las tareas.');
+      expect(facade.tasks()).toEqual([]);
+      expect(facade.refreshFailed()).toBe(false);
+    });
+
+    it('cambio de sede con error: retira las tareas anteriores (caso A)', async () => {
+      // 1. Carga inicial en sede 1 exitosa
+      mockBranch.selectedBranchId.mockReturnValue(1);
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([makeRawDbTask()]));
+      await facade.initialize();
+      expect(facade.tasks().length).toBe(1);
+
+      // 2. Cambio a sede 2 falla
+      mockBranch.selectedBranchId.mockReturnValue(2);
+      mockSupabase.client.from.mockReturnValue(
+        createMockQueryBuilder(null, { message: 'sede 2 down' }),
+      );
+
+      await facade.initialize();
+
+      expect(facade.error()).toBe('No se pudieron cargar las tareas.');
+      expect(facade.tasks()).toEqual([]); // no deben quedar las de la sede 1
+    });
+
+    it('refresco silencioso con error: datos visibles se quedan y activa refreshFailed (caso B)', async () => {
+      // 1. Carga inicial exitosa
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([makeRawDbTask()]));
+      await facade.initialize();
+      expect(facade.tasks().length).toBe(1);
+
+      // 2. Refresco en background falla
+      mockSupabase.client.from.mockReturnValue(
+        createMockQueryBuilder(null, { message: 'timeout' }),
+      );
+
+      await (facade as any).refreshSilently();
+
+      expect(facade.tasks().length).toBe(1); // datos visibles se mantienen
+      expect(facade.refreshFailed()).toBe(true);
+    });
+
+    it('reintento exitoso: limpia error() y refreshFailed()', async () => {
+      // 1. Fallo inicial
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder(null, { message: 'fail' }));
+      await facade.initialize();
+      expect(facade.error()).toBeTruthy();
+
+      // 2. Reintento exitoso
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([makeRawDbTask()]));
+
+      await facade.reintentar();
+
+      expect(facade.error()).toBeNull();
+      expect(facade.refreshFailed()).toBe(false);
+      expect(facade.tasks().length).toBe(1);
+    });
+  });
 });
