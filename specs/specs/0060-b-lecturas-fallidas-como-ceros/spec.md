@@ -124,16 +124,16 @@ error que se captura y la pantalla no muestra).
   una carga falla, no si el tiempo real deja de llegar sin que se dispare ninguna. Riesgo menor,
   distinto de este: se propone como asignación aparte.
 
-## 7. Preguntas abiertas (owner)
+## 7. Decisiones del owner (2026-11-10)
 
-1. **Caso B, alcance del bloqueo:** ¿basta bloquear las acciones que guardan un valor calculado
-   con los datos en pantalla, o con datos sin actualizar se bloquea toda escritura de esa pantalla?
-   Propuesta: solo las primeras; el resto valida en la BD.
+1. **Caso B, alcance del bloqueo:** con datos sin actualizar se bloquean solo las acciones que
+   guardan un valor calculado con los datos en pantalla. El resto de las escrituras sigue
+   disponible y valida en la BD.
 2. **Lectura secundaria que falla** (un catálogo o un nombre que acompaña a la lista, sin entrar en
-   ningún total): ¿pantalla completa en error, o lista visible con un aviso? Propuesta: se decide
-   por pantalla en el plan; en las de dinero, siempre error completo.
-3. **Textos:** ¿un mensaje único para toda la app ("No se pudieron cargar los datos") o uno por
-   pantalla, como hoy en Agenda y Caja? Propuesta: por pantalla, con el mismo botón "Reintentar".
+   ningún total): se decide por pantalla en el plan, entre error completo o lista visible con
+   aviso. En las pantallas de dinero, siempre error completo.
+3. **Textos:** un mensaje por pantalla, como hoy en Agenda y Caja, con el mismo botón
+   "Reintentar".
 
 ## 8. Riesgos
 
