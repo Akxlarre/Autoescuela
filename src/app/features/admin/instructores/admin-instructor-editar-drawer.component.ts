@@ -423,7 +423,12 @@ import {
             <!-- ── Historial de Asignaciones ───────────────────────────────────── -->
             <h3 class="section-title">Historial de Asignaciones</h3>
             <div class="flex flex-col gap-2 mb-6">
-              @if (facade.assignmentHistory().length === 0) {
+              @if (facade.assignmentHistoryError()) {
+                <div class="flex flex-col items-center gap-2 py-6 text-center">
+                  <app-icon name="alert-triangle" [size]="28" color="var(--state-error)" />
+                  <p class="text-xs text-error">{{ facade.assignmentHistoryError() }}</p>
+                </div>
+              } @else if (facade.assignmentHistory().length === 0) {
                 <div class="flex flex-col items-center gap-2 py-6">
                   <app-icon name="file-text" [size]="28" color="var(--text-muted)" />
                   <p class="text-xs text-center text-text-muted">
@@ -834,7 +839,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.facade.loadVehicles();
+    void this.facade.loadVehicles().catch(() => undefined);
   }
 
   protected verDocumentos(inst: { id: number; nombre: string }): void {

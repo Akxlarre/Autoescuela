@@ -10,6 +10,9 @@ import {
 } from '@angular/core';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { TaskListContentComponent } from '@shared/components/task-list-content/task-list-content.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { IconComponent } from '@shared/components/icon/icon.component';
 import { TaskDetailModalComponent } from '@features/tareas/task-detail-modal.component';
 import { TasksFacade } from '@core/facades/tasks.facade';
 import { LayoutService } from '@core/services/ui/layout.service';
@@ -35,6 +38,9 @@ interface FilterTab {
   imports: [
     SectionHeroComponent,
     TaskListContentComponent,
+    AlertCardComponent,
+    EmptyStateComponent,
+    IconComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
     CardHoverDirective,
@@ -53,21 +59,57 @@ interface FilterTab {
         [loadingKpiCount]="2"
       />
 
-      <!-- Lista de tareas + densidad adaptativa (spec 0028/0029) -->
-      <app-task-list-content
-        class="bento-banner card p-0 overflow-hidden bento-fill"
-        appCardHover
-        [tabs]="filterTabs()"
-        [activeTab]="activeFilter()"
-        [tasks]="filteredTasks()"
-        [loading]="facade.isLoading()"
-        [maxVisible]="maxVisible()"
-        [emptyMessage]="emptyMessage()"
-        [emptySubtitle]="emptySubtitle()"
-        emptyIcon="clipboard-list"
-        (activeTabChange)="activeFilter.set($any($event))"
-        (taskClicked)="openDetail($event)"
-      />
+      <!-- Caso B: Aviso de refresco fallido -->
+      @if (facade.refreshFailed()) {
+        <div class="bento-banner" role="alert">
+          <app-alert-card severity="error" title="No se pudieron actualizar las tareas">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span class="text-compact text-text-secondary">
+                Los datos mostrados pueden no estar actualizados.
+              </span>
+              <button
+                type="button"
+                class="btn-secondary flex items-center gap-2 shrink-0"
+                data-llm-action="reintentar-tareas"
+                [disabled]="facade.isLoading()"
+                (click)="facade.reintentar()"
+              >
+                <app-icon name="refresh-cw" [size]="14" />
+                Reintentar
+              </button>
+            </div>
+          </app-alert-card>
+        </div>
+      }
+
+      @if (facade.error() && facade.tasks().length === 0) {
+        <div class="bento-banner card p-6 flex-1 flex items-center justify-center bento-fill">
+          <app-empty-state
+            icon="alert-triangle"
+            [message]="facade.error()!"
+            subtitle="Revisa tu conexión e inténtalo de nuevo."
+            actionLabel="Reintentar"
+            actionIcon="refresh-cw"
+            (action)="facade.reintentar()"
+          />
+        </div>
+      } @else {
+        <!-- Lista de tareas + densidad adaptativa (spec 0028/0029) -->
+        <app-task-list-content
+          class="bento-banner card p-0 overflow-hidden bento-fill"
+          appCardHover
+          [tabs]="filterTabs()"
+          [activeTab]="activeFilter()"
+          [tasks]="filteredTasks()"
+          [loading]="facade.isLoading()"
+          [maxVisible]="maxVisible()"
+          [emptyMessage]="emptyMessage()"
+          [emptySubtitle]="emptySubtitle()"
+          emptyIcon="clipboard-list"
+          (activeTabChange)="activeFilter.set($any($event))"
+          (taskClicked)="openDetail($event)"
+        />
+      }
     </div>
   `,
 })
@@ -128,21 +170,26 @@ export class InstructorTareasComponent implements OnInit, AfterViewInit {
   );
 
   /** KPIs del strip del hero slim (antes: 2 celdas `bento-square` sueltas). */
-  protected readonly heroKpis = computed<SectionHeroKpi[]>(() => [
-    {
-      id: 'pendientes',
-      label: 'Pendientes',
-      value: this.facade.pendingCount(),
-      icon: 'clock',
-      color: 'warning',
-    },
-    {
-      id: 'en-progreso',
-      label: 'En progreso',
-      value: this.inProgressCount(),
-      icon: 'activity',
-    },
-  ]);
+  protected readonly heroKpis = computed<SectionHeroKpi[]>(() => {
+    if (this.facade.error() && this.facade.tasks().length === 0) {
+      return [];
+    }
+    return [
+      {
+        id: 'pendientes',
+        label: 'Pendientes',
+        value: this.facade.pendingCount(),
+        icon: 'clock',
+        color: 'warning',
+      },
+      {
+        id: 'en-progreso',
+        label: 'En progreso',
+        value: this.inProgressCount(),
+        icon: 'activity',
+      },
+    ];
+  });
 
   // ── empty state contextual ───────────────────────────────────────────────────
   protected readonly emptyMessage = computed(() => {

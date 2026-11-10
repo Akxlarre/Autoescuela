@@ -275,7 +275,12 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
             <div class="flex flex-col gap-3 mb-6">
               <h3 class="section-header">Historial de Vehículos Asignados</h3>
 
-              @if (facade.assignmentHistory().length === 0) {
+              @if (facade.assignmentHistoryError()) {
+                <div class="flex flex-col items-center gap-2 py-6 text-center">
+                  <app-icon name="alert-triangle" [size]="28" color="var(--state-error)" />
+                  <p class="text-xs text-error">{{ facade.assignmentHistoryError() }}</p>
+                </div>
+              } @else if (facade.assignmentHistory().length === 0) {
                 <div class="flex flex-col items-center gap-2 py-6">
                   <app-icon name="file-text" [size]="28" color="var(--text-muted)" />
                   <p class="text-xs text-text-muted">Sin historial de asignaciones de vehículos</p>

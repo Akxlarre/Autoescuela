@@ -146,6 +146,7 @@ export class InstructoresFacade {
   private readonly _instructores = signal<InstructorTableRow[]>([]);
   private readonly _isLoading = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
+  private readonly _refreshFailed = signal<boolean>(false);
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
 
@@ -158,6 +159,7 @@ export class InstructoresFacade {
   private readonly _isSubmitting = signal(false);
   private readonly _selectedInstructor = signal<InstructorTableRow | null>(null);
   private readonly _assignmentHistory = signal<VehicleAssignmentHistory[]>([]);
+  private readonly _assignmentHistoryError = signal<string | null>(null);
 
   private readonly _horasMonth = signal<number>(chileParts().month);
   private readonly _horasYear = signal<number>(chileYear());
@@ -178,11 +180,13 @@ export class InstructoresFacade {
   readonly instructores = this._instructores.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly refreshFailed = this._refreshFailed.asReadonly();
   readonly branches = this._branches.asReadonly();
   readonly vehicles = this._vehicles.asReadonly();
   readonly isSubmitting = this._isSubmitting.asReadonly();
   readonly selectedInstructor = this._selectedInstructor.asReadonly();
   readonly assignmentHistory = this._assignmentHistory.asReadonly();
+  readonly assignmentHistoryError = this._assignmentHistoryError.asReadonly();
   readonly horasMonth = this._horasMonth.asReadonly();
   readonly horasYear = this._horasYear.asReadonly();
   readonly horasMensuales = this._horasMensuales.asReadonly();
@@ -235,26 +239,45 @@ export class InstructoresFacade {
   async initialize(): Promise<void> {
     const currentBranchId = this.getActiveBranchId();
     if (this._initialized && currentBranchId === this._lastBranchId) {
-      this.refreshSilently();
+      void this.refreshSilently();
       return;
     }
-    this._initialized = true;
     this._lastBranchId = currentBranchId;
+    const requestToken = this.listGuard.next();
     this._isLoading.set(true);
+    this._error.set(null);
     try {
-      await this.fetchData();
+      await this.fetchData(requestToken);
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._initialized = true;
     } catch {
-      // fix-209-b: el error ya quedó en `error` (lo muestra la tabla); no relanzar.
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._instructores.set([]);
+      this._error.set('No se pudo cargar la lista de instructores.');
     } finally {
-      this._isLoading.set(false);
+      if (this.listGuard.isCurrent(requestToken)) {
+        this._isLoading.set(false);
+      }
     }
   }
 
-  private async refreshSilently(): Promise<void> {
+  async reintentar(): Promise<void> {
+    this._error.set(null);
+    this._refreshFailed.set(false);
+    this._initialized = false;
+    await this.initialize();
+  }
+
+  async refreshSilently(): Promise<void> {
+    const requestToken = this.listGuard.next();
     try {
-      await this.fetchData();
+      await this.fetchData(requestToken);
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._refreshFailed.set(false);
+      this._error.set(null);
     } catch {
-      // Fail silencioso — datos stale siguen visibles
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._refreshFailed.set(true);
     }
   }
 
@@ -289,8 +312,7 @@ export class InstructoresFacade {
     )
   `;
 
-  private async fetchData(): Promise<void> {
-    const requestToken = this.listGuard.next();
+  private async fetchData(requestToken: number): Promise<void> {
     const branchId = this.getActiveBranchId();
 
     let query = this.supabase.client
@@ -304,13 +326,7 @@ export class InstructoresFacade {
     }
 
     const { data, error } = await query;
-
-    if (error) {
-      if (this.listGuard.isCurrent(requestToken)) {
-        this._error.set(this.sanitizer.sanitize(error).message);
-      }
-      throw error;
-    }
+    if (error) throw error;
 
     let rows = (data as unknown as InstructorRow[]) ?? [];
     if (branchId !== null) rows = await this.mergeBothBranchesInstructors(rows);
@@ -336,7 +352,8 @@ export class InstructoresFacade {
       .is('vehicle_assignments.end_date', null)
       .eq('both_branches', true);
 
-    if (bbError || !bothBranchesData) return rows;
+    if (bbError) throw bbError;
+    if (!bothBranchesData) return rows;
     const seenIds = new Set(rows.map((r) => r.id));
     const merged = [...rows];
     for (const extra of bothBranchesData as unknown as InstructorRow[]) {
@@ -364,7 +381,7 @@ export class InstructoresFacade {
       .gte('scheduled_at', start)
       .lt('scheduled_at', endExclusive);
 
-    if (error) return counts;
+    if (error) throw error;
 
     for (const row of (data as { instructor_id: number }[]) ?? []) {
       counts.set(row.instructor_id, (counts.get(row.instructor_id) ?? 0) + 1);
@@ -378,10 +395,9 @@ export class InstructoresFacade {
       .from('branches')
       .select('id, name')
       .order('name');
-    if (!error) {
-      this._branches.set((data as BranchOption[]) ?? []);
-      this._branchesLoaded = true;
-    }
+    if (error) throw error;
+    this._branches.set((data as BranchOption[]) ?? []);
+    this._branchesLoaded = true;
   }
 
   async loadVehicles(): Promise<void> {
@@ -395,13 +411,16 @@ export class InstructoresFacade {
       .select('id, license_plate, brand, model, year, status, branch_id, both_branches')
       .order('license_plate');
 
-    if (vError || !allVehicles) return;
+    if (vError) throw vError;
+    if (!allVehicles) return;
 
     // Cargar asignaciones activas para saber cuáles están asignados
-    const { data: activeAssignments } = await this.supabase.client
+    const { data: activeAssignments, error: aError } = await this.supabase.client
       .from('vehicle_assignments')
       .select('vehicle_id')
       .is('end_date', null);
+
+    if (aError) throw aError;
 
     const assignedIds = new Set(
       (activeAssignments ?? []).map((a: { vehicle_id: number }) => a.vehicle_id),
@@ -442,50 +461,58 @@ export class InstructoresFacade {
   }
 
   async loadAssignmentHistory(instructorId: number): Promise<void> {
-    const { data, error } = await this.supabase.client
-      .from('vehicle_assignments')
-      .select(
-        `
-        id,
-        start_date,
-        end_date,
-        vehicle_id,
-        vehicles ( license_plate, brand, model, year ),
-        assigned_by_user:users!vehicle_assignments_assigned_by_fkey ( first_names, paternal_last_name )
-      `,
-      )
-      .eq('instructor_id', instructorId)
-      .order('start_date', { ascending: false });
+    this._assignmentHistory.set([]);
+    this._assignmentHistoryError.set(null);
+    try {
+      const { data, error } = await this.supabase.client
+        .from('vehicle_assignments')
+        .select(
+          `
+          id,
+          start_date,
+          end_date,
+          vehicle_id,
+          vehicles ( license_plate, brand, model, year ),
+          assigned_by_user:users!vehicle_assignments_assigned_by_fkey ( first_names, paternal_last_name )
+        `,
+        )
+        .eq('instructor_id', instructorId)
+        .order('start_date', { ascending: false });
 
-    if (error || !data) {
+      if (error) throw error;
+      if (!data) {
+        this._assignmentHistory.set([]);
+        return;
+      }
+
+      this._assignmentHistory.set(
+        data.map((a: Record<string, unknown>) => {
+          const v = a['vehicles'] as {
+            license_plate: string;
+            brand: string | null;
+            model: string | null;
+            year: number | null;
+          } | null;
+          const assignedByUser = a['assigned_by_user'] as {
+            first_names: string;
+            paternal_last_name: string;
+          } | null;
+          return {
+            id: a['id'] as number,
+            vehiclePlate: v?.license_plate ?? '—',
+            vehicleModel: [v?.brand, v?.model, v?.year].filter(Boolean).join(' '),
+            startDate: a['start_date'] as string,
+            endDate: (a['end_date'] as string) ?? null,
+            assignedBy: assignedByUser
+              ? `${assignedByUser.first_names} ${assignedByUser.paternal_last_name}`
+              : null,
+          };
+        }),
+      );
+    } catch {
       this._assignmentHistory.set([]);
-      return;
+      this._assignmentHistoryError.set('No se pudo cargar el historial de asignaciones.');
     }
-
-    this._assignmentHistory.set(
-      data.map((a: Record<string, unknown>) => {
-        const v = a['vehicles'] as {
-          license_plate: string;
-          brand: string | null;
-          model: string | null;
-          year: number | null;
-        } | null;
-        const assignedByUser = a['assigned_by_user'] as {
-          first_names: string;
-          paternal_last_name: string;
-        } | null;
-        return {
-          id: a['id'] as number,
-          vehiclePlate: v?.license_plate ?? '—',
-          vehicleModel: [v?.brand, v?.model, v?.year].filter(Boolean).join(' '),
-          startDate: a['start_date'] as string,
-          endDate: (a['end_date'] as string) ?? null,
-          assignedBy: assignedByUser
-            ? `${assignedByUser.first_names} ${assignedByUser.paternal_last_name}`
-            : null,
-        };
-      }),
-    );
   }
 
   /** Abre el drawer de horas en el mes actual (fix-208-b: antes quedaba el mes de la vez anterior). */
@@ -684,7 +711,7 @@ export class InstructoresFacade {
       const aviso = instructorCreatedToast(sendInvite, data?.inviteEmailSent);
       this.toast[aviso.kind](aviso.summary, aviso.detail);
       this._vehiclesLoaded = false;
-      await Promise.all([this.refreshSilently(), this.loadVehicles()]);
+      await Promise.all([this.refreshSilently(), this.loadVehicles().catch(() => undefined)]);
       return (data?.instructorId as number | undefined) ?? null;
     } catch (err: unknown) {
       const msg =
@@ -733,7 +760,7 @@ export class InstructoresFacade {
       if (data?.error) throw new Error(data.error);
 
       this._vehiclesLoaded = false;
-      await Promise.all([this.refreshSilently(), this.loadVehicles()]);
+      await Promise.all([this.refreshSilently(), this.loadVehicles().catch(() => undefined)]);
       this.toast.success(
         'Instructor actualizado',
         'Los datos han sido actualizados correctamente.',

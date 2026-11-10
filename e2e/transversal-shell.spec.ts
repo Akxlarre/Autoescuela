@@ -484,6 +484,8 @@ const X01_SCREENS: X01Screen[] = [
   S('ex-alumnos'),
   S('documentos'),
   S('flota'),
+  S('instructores'),
+  S('observaciones'),
   S('profesional/promociones'),
   S('profesional/alumnos'),
   // Etapa 1 — Dinero
@@ -496,8 +498,6 @@ const X01_SCREENS: X01Screen[] = [
   S('certificados', '0060-b etapa 2'),
   // Etapa 3a — Gestión Clase B
   S('asistencia', '0060-b etapa 3a'),
-  S('instructores', '0060-b etapa 3a'),
-  S('observaciones', '0060-b etapa 3a'),
   // Etapa 3b — Clase Profesional (la sede 2 la tiene)
   S('profesional/certificados', '0060-b etapa 3b'),
   S('profesional/archivo', '0060-b etapa 3b'),

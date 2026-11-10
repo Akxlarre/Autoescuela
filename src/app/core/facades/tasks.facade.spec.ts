@@ -417,6 +417,38 @@ describe('TasksFacade', () => {
       expect(ids).toContain(50); // both_branches
       expect(ids).not.toContain(40); // otra sede, sin grant → excluido
     });
+
+    it('si falla la consulta de both_branches (bbError), lanza y expone recipientsError (AC7)', async () => {
+      mockSupabase.client.from.mockImplementation((table: string) => {
+        if (table === 'users') {
+          return createMockQueryBuilder([
+            {
+              id: 30,
+              first_names: 'Carlos',
+              paternal_last_name: 'Muñoz',
+              branch_id: 1,
+              roles: { name: 'instructor' },
+            },
+          ]);
+        }
+        if (table === 'instructors') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({
+              data: null,
+              error: new Error('Error al verificar instructores both_branches'),
+            }),
+          };
+        }
+        throw new Error(`Tabla inesperada en el test: ${table}`);
+      });
+
+      await expect(facade.loadRecipients()).rejects.toThrow();
+      expect(facade.recipients()).toEqual([]);
+      expect(facade.recipientsError()).toBe(
+        'No se pudieron verificar los permisos de instructores.',
+      );
+    });
   });
 
   // ── updateStatus() — AC2, AC3 ───────────────────────────────────────────────
@@ -750,6 +782,73 @@ describe('TasksFacade', () => {
       await facade.initialize();
       facade.dispose();
       expect(mockSupabase.client.removeChannel).toHaveBeenCalled();
+    });
+  });
+
+  // ── spec 0060-b (DoD-F): lecturas fallidas, casos A y B ────────────────────
+  describe('spec 0060-b — manejo de lecturas fallidas', () => {
+    it('primera carga con error: deja error() y tasks vacío', async () => {
+      mockSupabase.client.from.mockReturnValue(
+        createMockQueryBuilder(null, { message: 'network down' }),
+      );
+
+      await facade.initialize();
+
+      expect(facade.error()).toBe('No se pudieron cargar las tareas.');
+      expect(facade.tasks()).toEqual([]);
+      expect(facade.refreshFailed()).toBe(false);
+    });
+
+    it('cambio de sede con error: retira las tareas anteriores (caso A)', async () => {
+      // 1. Carga inicial en sede 1 exitosa
+      mockBranch.selectedBranchId.mockReturnValue(1);
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([makeRawDbTask()]));
+      await facade.initialize();
+      expect(facade.tasks().length).toBe(1);
+
+      // 2. Cambio a sede 2 falla
+      mockBranch.selectedBranchId.mockReturnValue(2);
+      mockSupabase.client.from.mockReturnValue(
+        createMockQueryBuilder(null, { message: 'sede 2 down' }),
+      );
+
+      await facade.initialize();
+
+      expect(facade.error()).toBe('No se pudieron cargar las tareas.');
+      expect(facade.tasks()).toEqual([]); // no deben quedar las de la sede 1
+    });
+
+    it('refresco silencioso con error: datos visibles se quedan y activa refreshFailed (caso B)', async () => {
+      // 1. Carga inicial exitosa
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([makeRawDbTask()]));
+      await facade.initialize();
+      expect(facade.tasks().length).toBe(1);
+
+      // 2. Refresco en background falla
+      mockSupabase.client.from.mockReturnValue(
+        createMockQueryBuilder(null, { message: 'timeout' }),
+      );
+
+      await (facade as any).refreshSilently();
+
+      expect(facade.tasks().length).toBe(1); // datos visibles se mantienen
+      expect(facade.refreshFailed()).toBe(true);
+    });
+
+    it('reintento exitoso: limpia error() y refreshFailed()', async () => {
+      // 1. Fallo inicial
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder(null, { message: 'fail' }));
+      await facade.initialize();
+      expect(facade.error()).toBeTruthy();
+
+      // 2. Reintento exitoso
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([makeRawDbTask()]));
+
+      await facade.reintentar();
+
+      expect(facade.error()).toBeNull();
+      expect(facade.refreshFailed()).toBe(false);
+      expect(facade.tasks().length).toBe(1);
     });
   });
 });

@@ -13,6 +13,9 @@ import {
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { TaskListContentComponent } from '@shared/components/task-list-content/task-list-content.component';
 import { AnnouncementsContentComponent } from '@shared/components/announcements-content/announcements-content.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
+import { IconComponent } from '@shared/components/icon/icon.component';
 import { TabsComponent } from '@shared/components/tabs/tabs.component';
 import { TaskDetailModalComponent } from '@features/tareas/task-detail-modal.component';
 import { TaskCreateDrawerComponent } from '@features/tareas/task-create-drawer.component';
@@ -41,6 +44,9 @@ type Canal = 'tareas' | 'comunicados';
     SectionHeroComponent,
     TaskListContentComponent,
     AnnouncementsContentComponent,
+    EmptyStateComponent,
+    AlertCardComponent,
+    IconComponent,
     TabsComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
@@ -73,22 +79,58 @@ type Canal = 'tareas' | 'comunicados';
         (activeIdChange)="onCanalChange($event)"
       />
 
+      <!-- Caso B: Aviso de refresco fallido -->
+      @if (canal() === 'tareas' && facade.refreshFailed()) {
+        <div class="bento-banner" role="alert">
+          <app-alert-card severity="error" title="No se pudieron actualizar las tareas">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span class="text-compact text-text-secondary">
+                Los datos mostrados pueden no estar actualizados.
+              </span>
+              <button
+                type="button"
+                class="btn-secondary flex items-center gap-2 shrink-0"
+                data-llm-action="reintentar-tareas"
+                [disabled]="facade.isLoading()"
+                (click)="facade.reintentar()"
+              >
+                <app-icon name="refresh-cw" [size]="14" />
+                Reintentar
+              </button>
+            </div>
+          </app-alert-card>
+        </div>
+      }
+
       @if (canal() === 'tareas') {
-        <!-- Lista con tabs + densidad adaptativa (spec 0028/0029) -->
-        <app-task-list-content
-          class="bento-banner card p-0 overflow-hidden bento-fill"
-          appCardHover
-          [tabs]="tabs()"
-          [activeTab]="activeTab()"
-          [tasks]="activeTasks()"
-          [loading]="facade.isLoading()"
-          [maxVisible]="maxVisible()"
-          emptyMessage="Sin tareas en esta sección"
-          emptySubtitle="Las tareas aparecerán aquí cuando sean creadas o asignadas."
-          emptyIcon="message-circle"
-          (activeTabChange)="activeTab.set($any($event))"
-          (taskClicked)="openDetail($event)"
-        />
+        @if (facade.error() && facade.tasks().length === 0) {
+          <div class="bento-banner card p-6 flex-1 flex items-center justify-center bento-fill">
+            <app-empty-state
+              icon="alert-triangle"
+              [message]="facade.error()!"
+              subtitle="Revisa tu conexión e inténtalo de nuevo."
+              actionLabel="Reintentar"
+              actionIcon="refresh-cw"
+              (action)="facade.reintentar()"
+            />
+          </div>
+        } @else {
+          <!-- Lista con tabs + densidad adaptativa (spec 0028/0029) -->
+          <app-task-list-content
+            class="bento-banner card p-0 overflow-hidden bento-fill"
+            appCardHover
+            [tabs]="tabs()"
+            [activeTab]="activeTab()"
+            [tasks]="activeTasks()"
+            [loading]="facade.isLoading()"
+            [maxVisible]="maxVisible()"
+            emptyMessage="Sin tareas en esta sección"
+            emptySubtitle="Las tareas aparecerán aquí cuando sean creadas o asignadas."
+            emptyIcon="message-circle"
+            (activeTabChange)="activeTab.set($any($event))"
+            (taskClicked)="openDetail($event)"
+          />
+        }
       } @else {
         <app-announcements-content
           class="bento-banner card p-0 overflow-hidden bento-fill"
@@ -177,27 +219,32 @@ export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
     { id: 'comunicados', label: 'Comunicados a alumnos', count: null },
   ]);
 
-  protected readonly heroKpis = computed((): SectionHeroKpi[] => [
-    {
-      id: 'mis-pendientes',
-      label: 'Mis pendientes',
-      value: this.pendingMineCount(),
-      icon: 'clock',
-      color: 'warning',
-    },
-    {
-      id: 'recibidas',
-      label: 'Recibidas',
-      value: this.facade.receivedTasks().length,
-      icon: 'inbox',
-    },
-    {
-      id: 'enviadas',
-      label: 'Enviadas',
-      value: this.sentTasks().filter((t) => isTaskOpen(t.status)).length,
-      icon: 'send',
-    },
-  ]);
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => {
+    if (this.canal() === 'tareas' && this.facade.error() && this.facade.tasks().length === 0) {
+      return [];
+    }
+    return [
+      {
+        id: 'mis-pendientes',
+        label: 'Mis pendientes',
+        value: this.pendingMineCount(),
+        icon: 'clock',
+        color: 'warning',
+      },
+      {
+        id: 'recibidas',
+        label: 'Recibidas',
+        value: this.facade.receivedTasks().length,
+        icon: 'inbox',
+      },
+      {
+        id: 'enviadas',
+        label: 'Enviadas',
+        value: this.sentTasks().filter((t) => isTaskOpen(t.status)).length,
+        icon: 'send',
+      },
+    ];
+  });
 
   // Densidad adaptativa (spec 0028/0029): sin límite en desktop, acotado
   // en tablet/mobile o con el drawer lateral abierto (tier por contenedor).

@@ -671,7 +671,7 @@ export class AdminInstructorCrearDrawerComponent {
         this.sedeId.set(null);
       }
     });
-    this.facade.loadVehicles();
+    void this.facade.loadVehicles().catch(() => undefined);
   }
 
   protected onRutInput(event: Event): void {

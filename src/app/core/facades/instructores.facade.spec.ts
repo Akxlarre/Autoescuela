@@ -559,6 +559,123 @@ describe('InstructoresFacade', () => {
       );
     });
 
+    it('crearInstructor() con fallo en loadVehicles() sigue devolviendo instructorId (Caso B)', async () => {
+      supabaseSpy.client.functions = {
+        invoke: vi.fn().mockResolvedValue({
+          data: { instructorId: 77, inviteEmailSent: true },
+          error: null,
+        }),
+      };
+      vi.spyOn(facade, 'loadVehicles').mockRejectedValue(new Error('Network error on vehicles'));
+
+      const id = await facade.crearInstructor({
+        rut: '12345678-5',
+        firstNames: 'Pedro',
+        paternalLastName: 'Soto',
+        maternalLastName: '',
+        email: 'pedro@test.cl',
+        phone: '',
+        type: 'practice',
+        licenseNumber: '123',
+        licenseClass: 'B',
+        licenseExpiry: '2030-01-01',
+        vehicleId: null,
+        branchId: 1,
+        bothBranches: false,
+      } as any);
+
+      expect(id).toBe(77);
+      expect(toastSpy.error).not.toHaveBeenCalled();
+    });
+
+    it('editarInstructor() con fallo en loadVehicles() sigue devolviendo true (Caso B)', async () => {
+      supabaseSpy.client.functions = {
+        invoke: vi.fn().mockResolvedValue({
+          data: { success: true },
+          error: null,
+        }),
+      };
+      vi.spyOn(facade, 'loadVehicles').mockRejectedValue(new Error('Network error on vehicles'));
+
+      const ok = await facade.editarInstructor(1, 10, {
+        firstNames: 'Juan',
+        paternalLastName: 'Perez',
+        maternalLastName: '',
+        phone: '',
+        email: 'juan@test.cl',
+        currentEmail: 'juan@test.cl',
+        type: 'practice',
+        licenseNumber: '',
+        licenseClass: 'B',
+        licenseExpiry: '2030-01-01',
+        active: true,
+        vehicleId: null,
+        currentVehicleId: null,
+        branchId: 1,
+        bothBranches: false,
+      } as any);
+
+      expect(ok).toBe(true);
+      expect(toastSpy.error).not.toHaveBeenCalled();
+      expect(toastSpy.success).toHaveBeenCalled();
+    });
+
+    it('loadAssignmentHistory() con error limpia historial previo y expone assignmentHistoryError (Caso A)', async () => {
+      // 1. Simular historial previo de otro instructor
+      (facade as any)._assignmentHistory.set([
+        {
+          id: 99,
+          vehiclePlate: 'PREV-12',
+          vehicleModel: 'Auto Anterior',
+          startDate: '2025-01-01',
+          endDate: null,
+          assignedBy: 'Admin',
+        },
+      ]);
+      expect(facade.assignmentHistory().length).toBe(1);
+
+      // 2. Simular fallo en la consulta del nuevo instructor
+      supabaseSpy.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({
+          data: null,
+          error: new Error('Network error on vehicle_assignments'),
+        }),
+      });
+
+      await facade.loadAssignmentHistory(2);
+
+      // 3. El historial previo DEBE haberse limpiado (no mostrar datos del instructor anterior)
+      expect(facade.assignmentHistory()).toEqual([]);
+      expect(facade.assignmentHistoryError()).toBe(
+        'No se pudo cargar el historial de asignaciones.',
+      );
+
+      // 4. Una carga exitosa posterior limpia el error y llena el historial
+      supabaseSpy.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({
+          data: [
+            {
+              id: 1,
+              start_date: '2026-02-01',
+              end_date: null,
+              vehicles: { license_plate: 'NEW-34', brand: 'Toyota', model: 'Yaris', year: 2024 },
+              assigned_by_user: { first_names: 'Secretaria', paternal_last_name: 'A' },
+            },
+          ],
+          error: null,
+        }),
+      });
+
+      await facade.loadAssignmentHistory(2);
+      expect(facade.assignmentHistoryError()).toBeNull();
+      expect(facade.assignmentHistory().length).toBe(1);
+      expect(facade.assignmentHistory()[0].vehiclePlate).toBe('NEW-34');
+    });
+
     it('editarInstructor() con email duplicado — fix-029-i: lee error.context y muestra el mensaje de negocio real, no el genérico del sanitizer', async () => {
       const duplicateEmailError = Object.assign(
         new Error('Edge Function returned a non-2xx status code'),
@@ -846,6 +963,27 @@ describe('InstructoresFacade', () => {
       await first;
       expect(facade.instructores().map((i) => i.id)).toEqual([2]);
     });
+
+    it('la respuesta con error de la sede anterior no pisa la de la sede vigente ni vacia instructores (Regla 3)', async () => {
+      let rejectOld!: (e: unknown) => void;
+      mockTables([
+        new Promise((_, rej) => (rejectOld = rej)),
+        Promise.resolve({ data: [row(2)], error: null }),
+      ]);
+      const first = facade.initialize();
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      await facade.initialize();
+      expect(facade.instructores().map((i) => i.id)).toEqual([2]);
+      expect(facade.error()).toBeNull();
+
+      // Falla la petición vieja de la sede anterior
+      rejectOld(new Error('Network error on old branch request'));
+      await first;
+
+      // NO debe vaciar la lista de la sede vigente ni ponerle error
+      expect(facade.instructores().map((i) => i.id)).toEqual([2]);
+      expect(facade.error()).toBeNull();
+    });
   });
 
   // fix-208-b (S16 de ASG-i-034): horas acotadas a la sede, error visible, mes actual al abrir.
@@ -925,6 +1063,158 @@ describe('InstructoresFacade', () => {
       await old;
       expect(facade.horasMensuales().map((r) => r.nombre)).toEqual(['Ana']);
       expect(facade.isLoadingHoras()).toBe(false);
+    });
+  });
+
+  // ── spec 0060-b (DoD-F): lecturas fallidas, casos A y B ────────────────────
+  describe('spec 0060-b — manejo de lecturas fallidas', () => {
+    const row = (id: number) => ({
+      id,
+      user_id: id,
+      type: 'practical',
+      license_number: `B-${id}`,
+      license_class: 'B',
+      license_expiry: '2028-01-01',
+      license_status: 'valid',
+      active: true,
+      registration_date: '2026-01-01',
+      both_branches: false,
+      users: {
+        id,
+        rut: `11.111.111-${id}`,
+        first_names: 'Juan',
+        paternal_last_name: `P${id}`,
+        maternal_last_name: null,
+        email: `i${id}@t.cl`,
+        phone: null,
+        active: true,
+        branch_id: 1,
+      },
+      vehicle_assignments: [],
+    });
+
+    const queryMock = (promise: Promise<unknown>) => {
+      const q: any = {
+        select: vi.fn(() => q),
+        is: vi.fn(() => q),
+        eq: vi.fn(() => q),
+        in: vi.fn(() => q),
+        gte: vi.fn(() => q),
+        lt: vi.fn(() => q),
+        order: vi.fn(() => q),
+        then: (onF: any, onR: any) => promise.then(onF, onR),
+      };
+      return q;
+    };
+
+    it('primera carga con error: deja error() y no inicializa _initialized para reintentar con skeleton', async () => {
+      supabaseSpy.client.from = vi
+        .fn()
+        .mockImplementation(() =>
+          queryMock(Promise.resolve({ data: null, error: { message: 'network down' } })),
+        );
+
+      await facade.initialize();
+
+      expect(facade.error()).toBe('No se pudo cargar la lista de instructores.');
+      expect(facade.instructores()).toEqual([]);
+      expect(facade.refreshFailed()).toBe(false);
+    });
+
+    it('cambio de sede con error: retira los datos anteriores (caso A)', async () => {
+      // 1. Carga inicial en sede 1 exitosa
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      supabaseSpy.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'instructors')
+          return queryMock(Promise.resolve({ data: [row(1)], error: null }));
+        return queryMock(Promise.resolve({ data: [], error: null }));
+      });
+
+      await facade.initialize();
+      expect(facade.instructores().length).toBe(1);
+
+      // 2. Cambio a sede 2 falla
+      branchFacadeSpy.selectedBranchId.mockReturnValue(2);
+      supabaseSpy.client.from = vi
+        .fn()
+        .mockImplementation(() =>
+          queryMock(Promise.resolve({ data: null, error: { message: 'sede 2 inaccesible' } })),
+        );
+
+      await facade.initialize();
+
+      expect(facade.error()).toBe('No se pudo cargar la lista de instructores.');
+      expect(facade.instructores()).toEqual([]); // no deben quedar los datos de la sede 1
+    });
+
+    it('refresco silencioso con error: datos visibles se quedan y activa refreshFailed (caso B)', async () => {
+      // 1. Carga inicial exitosa
+      supabaseSpy.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'instructors')
+          return queryMock(Promise.resolve({ data: [row(1)], error: null }));
+        return queryMock(Promise.resolve({ data: [], error: null }));
+      });
+      await facade.initialize();
+      expect(facade.instructores().length).toBe(1);
+
+      // 2. Refresco en background falla
+      supabaseSpy.client.from = vi
+        .fn()
+        .mockImplementation(() =>
+          queryMock(Promise.resolve({ data: null, error: { message: 'timeout' } })),
+        );
+
+      await (facade as any).refreshSilently();
+
+      expect(facade.instructores().length).toBe(1); // datos previos se mantienen
+      expect(facade.refreshFailed()).toBe(true);
+    });
+
+    it('reintento exitoso: limpia error() y refreshFailed()', async () => {
+      // 1. Fallo inicial
+      supabaseSpy.client.from = vi
+        .fn()
+        .mockImplementation(() =>
+          queryMock(Promise.resolve({ data: null, error: { message: 'fallo temporal' } })),
+        );
+      await facade.initialize();
+      expect(facade.error()).toBeTruthy();
+
+      // 2. Reintento exitoso
+      supabaseSpy.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'instructors')
+          return queryMock(Promise.resolve({ data: [row(1)], error: null }));
+        return queryMock(Promise.resolve({ data: [], error: null }));
+      });
+
+      await facade.reintentar();
+
+      expect(facade.error()).toBeNull();
+      expect(facade.refreshFailed()).toBe(false);
+      expect(facade.instructores().length).toBe(1);
+    });
+
+    it('falla una consulta combinada (both_branches): la carga completa falla (AC7)', async () => {
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      let callCount = 0;
+      supabaseSpy.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'instructors') {
+          callCount++;
+          // Primera llamada (sede 1) OK, segunda llamada (both_branches) falla
+          if (callCount === 1) {
+            return queryMock(Promise.resolve({ data: [row(1)], error: null }));
+          }
+          return queryMock(
+            Promise.resolve({ data: null, error: { message: 'both_branches failed' } }),
+          );
+        }
+        return queryMock(Promise.resolve({ data: [], error: null }));
+      });
+
+      await facade.initialize();
+
+      expect(facade.error()).toBe('No se pudo cargar la lista de instructores.');
+      expect(facade.instructores()).toEqual([]);
     });
   });
 });

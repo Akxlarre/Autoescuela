@@ -44,9 +44,13 @@ describe('InstructorTareasComponent — computed filter signals', () => {
   const receivedTasksSignal = signal<TaskRow[]>([]);
 
   const mockFacade = {
+    tasks: signal<TaskRow[]>([]).asReadonly(),
     receivedTasks: receivedTasksSignal.asReadonly(),
     pendingCount: signal(0).asReadonly(),
     isLoading: signal(false).asReadonly(),
+    error: signal<string | null>(null).asReadonly(),
+    refreshFailed: signal(false).asReadonly(),
+    reintentar: vi.fn().mockResolvedValue(undefined),
     initialize: vi.fn().mockResolvedValue(undefined),
     dispose: vi.fn(),
     selectTask: vi.fn(),

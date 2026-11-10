@@ -5,6 +5,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
+import { assertReadOk } from '@core/utils/db-error.utils';
 import { resolveVehicleStatus } from '@core/utils/vehicle-status.utils';
 import { resolveDocStatus } from '@core/utils/vehicle-document-status.utils';
 import { chileDayRange, chileMonth, chileParts } from '@core/utils/chile-time.utils';
@@ -31,12 +32,14 @@ export class FlotaFacade {
   private readonly _vehicles = signal<VehicleTableRow[]>([]);
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
+  private readonly _refreshFailed = signal(false);
   /** Texto del buscador del listado (hotfix-073-b: antes no filtraba nada). */
   private readonly _searchTerm = signal('');
   private readonly _statusFilter = signal<VehicleStatus | null>(null);
   private readonly _selectedVehicleId = signal<number | null>(null);
   private readonly _vehicleAgenda = signal<VehicleAgendaSlot[]>([]);
   private readonly _isLoadingAgenda = signal(false);
+  private readonly _vehicleAgendaError = signal<string | null>(null);
 
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
@@ -48,11 +51,13 @@ export class FlotaFacade {
   readonly vehicles = this._vehicles.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly refreshFailed = this._refreshFailed.asReadonly();
   readonly searchTerm = this._searchTerm.asReadonly();
   readonly statusFilter = this._statusFilter.asReadonly();
   readonly selectedVehicleId = this._selectedVehicleId.asReadonly();
   readonly vehicleAgenda = this._vehicleAgenda.asReadonly();
   readonly isLoadingAgenda = this._isLoadingAgenda.asReadonly();
+  readonly vehicleAgendaError = this._vehicleAgendaError.asReadonly();
 
   readonly kpis = computed((): FlotaKpis => {
     const vs = this._vehicles();
@@ -129,24 +134,34 @@ export class FlotaFacade {
       return;
     }
 
+    this._lastBranchId = branchId;
     this._isLoading.set(true);
     this._error.set(null);
     try {
       await this.fetchVehiclesData();
       this._initialized = true;
-      this._lastBranchId = branchId;
     } catch {
+      this._vehicles.set([]);
       this._error.set('Error al cargar la flota vehicular.');
     } finally {
       this._isLoading.set(false);
     }
   }
 
+  async reintentar(): Promise<void> {
+    this._error.set(null);
+    this._refreshFailed.set(false);
+    this._initialized = false;
+    await this.initialize();
+  }
+
   async refreshSilently(): Promise<void> {
     try {
       await this.fetchVehiclesData();
+      this._refreshFailed.set(false);
+      this._error.set(null);
     } catch {
-      // Swallowed
+      this._refreshFailed.set(true);
     }
   }
 
@@ -195,7 +210,8 @@ export class FlotaFacade {
     if (branchId !== null) query = query.eq('branch_id', branchId);
     const { data, error } = await query;
 
-    if (error || !data) return new Map();
+    if (error) throw error;
+    if (!data) return new Map();
 
     const totals = new Map<number, number>();
     for (const row of data as { vehicle_id: number; amount: number }[]) {
@@ -324,6 +340,8 @@ export class FlotaFacade {
   /** `dateStr`: día de Chile a consultar, 'YYYY-MM-DD'. */
   async loadVehicleAgenda(vehicleId: number, dateStr: string): Promise<void> {
     this._isLoadingAgenda.set(true);
+    this._vehicleAgenda.set([]);
+    this._vehicleAgendaError.set(null);
     try {
       const day = chileDayRange(dateStr);
       const [sessionsResult, maintenancesResult] = await Promise.all([
@@ -343,10 +361,13 @@ export class FlotaFacade {
           .eq('scheduled_date', dateStr),
       ]);
 
+      const sessionsData = assertReadOk(sessionsResult);
+      const maintenancesData = assertReadOk(maintenancesResult);
+
       // fix-221-b: antes una grilla fija de horas en punto de 08 a 17 (pisaba la clase de las
       // 11:50 con la de las 11:00 y no mostraba las de la tarde ni los mantenimientos).
       const slots = buildVehicleAgenda(
-        (sessionsResult.data ?? []).map((s: any) => {
+        (sessionsData ?? []).map((s: any) => {
           const at = chileParts(s.scheduled_at);
           const user = s.enrollments?.students?.users;
           return {
@@ -358,12 +379,15 @@ export class FlotaFacade {
             studentName: user ? `${user.first_names} ${user.paternal_last_name}` : null,
           };
         }),
-        (maintenancesResult.data ?? []).map((m: any) => ({
+        (maintenancesData ?? []).map((m: any) => ({
           type: m.type ?? null,
           description: m.description ?? null,
         })),
       );
       this._vehicleAgenda.set(slots);
+    } catch {
+      this._vehicleAgenda.set([]);
+      this._vehicleAgendaError.set('No se pudo cargar la agenda del vehículo.');
     } finally {
       this._isLoadingAgenda.set(false);
     }
