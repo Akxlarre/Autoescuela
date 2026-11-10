@@ -476,7 +476,29 @@ test('G01 · G02 · G04 · G10: justificar una inasistencia', async ({ pageAs, c
   });
 });
 
-test('H05 · H06 · H08 · fix-391-m: "Eliminar" pasa a "Reactivar" y, ya penalizado, no se vuelve a ofrecer', async ({
+/** Avisos de un usuario sobre una matrícula (spec 0058-b: van con `reference_type` 'enrollment'). */
+async function avisos(userId: number, enrollmentId: number): Promise<string[]> {
+  const sb = await getAdminClient();
+  const { data } = await sb
+    .from('notifications')
+    .select('subject')
+    .eq('recipient_id', userId)
+    .eq('reference_type', 'enrollment')
+    .eq('reference_id', enrollmentId);
+  return (data ?? []).map((n) => n.subject as string);
+}
+
+async function sello(enrollmentId: number): Promise<string | null> {
+  const sb = await getAdminClient();
+  const { data } = await sb
+    .from('enrollments')
+    .select('absence_penalty_applied_at')
+    .eq('id', enrollmentId)
+    .single();
+  return data!.absence_penalty_applied_at as string | null;
+}
+
+test('H05 · H06 · H08 · N02 (spec 0058-b): "Reactivar" deshace solo lo eliminado, devuelve el sello y avisa', async ({
   pageAs,
   cleanup,
 }) => {
@@ -500,6 +522,20 @@ test('H05 · H06 · H08 · fix-391-m: "Eliminar" pasa a "Reactivar" y, ya penali
     },
     cleanup,
   );
+  // AC4: futura cancelada por otro motivo (feriado, instructor), sin eliminación ligada.
+  const ajena = await seedClase(
+    {
+      label: 'AsisPenal',
+      branchId: SEDE_A,
+      cupo: { inst: 2, hora: 5 },
+      classNumber: 4,
+      status: 'cancelled',
+      dia: addDaysIso(chileToday(), 401),
+      de: falta1,
+    },
+    cleanup,
+  );
+  expect(await sello(falta1.enrollmentId)).toBeNull();
   const page = await pageAs('secretariaA');
   await abrir(page, '/app/secretaria/asistencia', null);
 
@@ -510,21 +546,40 @@ test('H05 · H06 · H08 · fix-391-m: "Eliminar" pasa a "Reactivar" y, ya penali
   await expect(toast(page, 'Horario eliminado')).toBeVisible();
   await expect(accion(alerta(page, falta1), 'reactivate-schedule')).toBeVisible();
   expect((await estadoClase(futura.sessionId)).status).toBe('cancelled');
+  expect(await sello(falta1.enrollmentId)).not.toBeNull();
+  // AC9: el alumno recibe el aviso de la eliminación.
+  expect(await avisos(falta1.alumno.userId, falta1.enrollmentId)).toContain('Horario eliminado');
 
   // H08: tras recargar sigue ofreciendo "Reactivar" (fix-365-m).
   await page.reload();
   await abrir(page, '/app/secretaria/asistencia', null);
   await expect(accion(alerta(page, falta1), 'reactivate-schedule')).toBeVisible(CARGA);
 
-  // fix-391-m: con las clases de vuelta, esas faltas ya penalizadas no ofrecen "Eliminar".
+  // AC2: el modal dice qué vuelve y quién lo eliminó.
   await accion(alerta(page, falta1), 'reactivate-schedule').click();
+  const modal = page
+    .locator('[role="dialog"][aria-labelledby="confirm-modal-title"]')
+    .filter({ hasText: 'Reactivar horario' });
+  await expect(modal).toContainText('que eliminó', CARGA);
+  test.info().annotations.push({
+    type: 'modal Reactivar',
+    description: (await modal.innerText()).replace(/\s+/g, ' '),
+  });
   await accion(page, 'confirm-modal-accept').click();
   await expect(toast(page, 'Horario reactivado')).toBeVisible();
   expect((await estadoClase(futura.sessionId)).status).toBe('scheduled');
+  // AC4: la cancelada sin eliminación ligada no revive.
+  expect((await estadoClase(ajena.sessionId)).status).toBe('cancelled');
+  // AC3: el sello vuelve a lo que había antes de eliminar (nada).
+  expect(await sello(falta1.enrollmentId)).toBeNull();
+  // AC5: el alumno recibe el aviso de la reactivación.
+  expect(await avisos(falta1.alumno.userId, falta1.enrollmentId)).toContain('Horario reactivado');
+
+  // AC7: la alerta vuelve a como estaba antes de eliminar: "Eliminar" disponible otra vez.
   await page.reload();
   await abrir(page, '/app/secretaria/asistencia', null);
-  await expect(alerta(page, falta1)).toContainText('Ya penalizado', CARGA);
-  await expect(accion(alerta(page, falta1), 'remove-schedule')).toHaveCount(0);
+  await expect(accion(alerta(page, falta1), 'remove-schedule')).toBeVisible(CARGA);
+  await expect(alerta(page, falta1)).not.toContainText('Ya penalizado');
   await expect(accion(alerta(page, falta1), 'reactivate-schedule')).toHaveCount(0);
 });
 

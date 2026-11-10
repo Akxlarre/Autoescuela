@@ -1658,6 +1658,10 @@ export class AdminAlumnoDetalleFacade {
    * Mueve una sesión existente a otro horario (fix-279-m). Reciclar la fila es un
    * reagendamiento: archiva su asistencia vigente y deja la fila en el historial con la razón,
    * igual que `reagendarClasesPenalizadas()`. Devuelve el instructor que tenía antes.
+   *
+   * Instructor y fecha anteriores se capturan ANTES del update, que los pisa: al instructor se le
+   * notifica el bloque liberado (AC5) y ambos van al historial. El update suelta el vínculo con
+   * "Eliminar horario" (spec 0058-b): una clase reprogramada ya no la deshace "Reactivar horario".
    */
   private async reciclarSesion(
     sessionId: number,
@@ -1665,8 +1669,6 @@ export class AdminAlumnoDetalleFacade {
     vehicleId: number,
   ): Promise<number | null> {
     if (!payload.razon) throw new Error('Selecciona la razón del reagendamiento.');
-    // Instructor y fecha anteriores se capturan ANTES del update, que los pisa: al instructor
-    // se le notifica el bloque liberado (AC5) y ambos van al historial.
     const { data: previous } = await this.supabase.client
       .from('class_b_sessions')
       .select('instructor_id, scheduled_at, status')
@@ -1685,6 +1687,7 @@ export class AdminAlumnoDetalleFacade {
         start_time: null,
         end_time: null,
         status: 'scheduled',
+        schedule_removal_id: null,
       })
       .eq('id', sessionId);
     if (error) throw error;

@@ -30,9 +30,26 @@ function at(days: number): string {
   return when.toISOString();
 }
 
+/** Matrículas sembradas por el test en curso. */
+const matriculas: number[] = [];
+
+// spec 0058-b: Eliminar/Reactivar y "Borrar horarios" avisan al alumno y a los instructores
+// (que no son sembrados). Los avisos llevan la matrícula; se borran antes que el cleanup.
+test.afterEach(async () => {
+  const ids = matriculas.splice(0);
+  if (!ids.length) return;
+  const sb = await getAdminClient();
+  await sb
+    .from('notifications')
+    .delete()
+    .eq('reference_type', 'enrollment')
+    .in('reference_id', ids);
+});
+
 async function seed(label: string, cleanup: Cleanup): Promise<Seed> {
   const alumno = await createE2eAlumno({ label, branchId: 1, enrollments: [{}] }, cleanup);
   const enrollmentId = alumno.enrollmentIds[0];
+  matriculas.push(enrollmentId);
   const sb = await getAdminClient();
 
   const { data: sample, error: sampleErr } = await sb

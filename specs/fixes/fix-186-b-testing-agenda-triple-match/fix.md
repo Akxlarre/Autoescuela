@@ -296,7 +296,7 @@ F13 (fix-279-m). J02, J09 → `asistencia-clase-b.spec.ts` J04 · J12 (fix-382-m
 |---|---|---|
 | I05 / J07 / L06 | ¿Tope de 1 o de 2 clases por día? | `courses.max_classes_per_day` = 1, pero la matrícula presencial (`secretaria-matricula.component.ts:298`), el reagendamiento masivo (`admin-reagendar-horarios-drawer.component.ts:118`) y reprogramar (`computeBlockedDates`, `>= 2`) usan **2 fijo**. Solo la matrícula pública lee el curso. Contradice la fila "Otro (tope por día)" del 2026-10-16, que lo daba por resuelto |
 | I08 | ¿Se puede reprogramar una clase en curso? | Se ofrece: vuelve a "Agendada", borra la hora de inicio y **conserva el KM inicial** |
-| N02 | ¿"Reactivar" debe revivir las canceladas por la penalización automática? | Revive todas las futuras canceladas, venga de "Eliminar" (deshacerlo es lo esperado) o del cron (hoy apagado en las 2 sedes, spec `0048-b`) |
+| ~~N02~~ | ~~¿"Reactivar" debe revivir las canceladas por la penalización automática?~~ **Resuelto: no, solo deshace "Eliminar" → spec 0058-b** | Revive todas las futuras canceladas, venga de "Eliminar" (deshacerlo es lo esperado) o del cron (hoy apagado en las 2 sedes, spec `0048-b`) |
 | I17 | ¿Avisos a alumnos e instructores con el portal bloqueado? | Se crean |
 
 **Grupo 2 cerrado** salvo las decisiones de arriba. Los 4 ❌ (I15, I16, I18, J07) se
@@ -306,10 +306,11 @@ confirmar y el aviso nombra la clase, su día y hora, y con qué choca.
 
 ### Respuestas del owner (2026-11-09)
 
-- **I05 / J07 / L06 — tope por día: 2.** La app ya usa 2 en matrícula presencial, masivo y
-  reprogramar. Queda una inconsistencia: `courses.max_classes_per_day` sigue en 1 en los 6 cursos
-  B y la **matrícula pública** lo lee, así que ahí el tope efectivo es 1. Pendiente decidir si se
-  sube la columna a 2 (cambio de datos en producción) o si la web pública queda en 1 a propósito.
+- **I05 / J07 / L06 — tope por día: cerrado.** Decisión de negocio: la **matrícula web queda en
+  1** clase por día (lee `courses.max_classes_per_day` = 1) y **todo lo interno en 2** (matrícula
+  presencial, "Reagendar Clases", "Reprogramar", fechas bloqueadas). La diferencia es intencional;
+  no se toca la columna ni el código. Anotado en `indices/DOMAIN-GOTCHAS.md` (DG-024) para que no se
+  "corrija" como inconsistencia.
 - **I08 — reprogramar una clase en curso:** el owner preguntó de dónde sale el caso. Análisis:
   - **Cómo se llega:** el instructor (o asistencia) presiona "Iniciar clase", que pone
     `in_progress`, `start_time` y `km_start` (`AsistenciaClaseBFacade.startClass`). El lápiz de la
@@ -324,3 +325,30 @@ confirmar y el aviso nombra la clase, su día y hora, y con qué choca.
   - **Decisión del owner:** bloquear. Una clase en curso no se reprograma desde la ficha; primero
     "Cancelar inicio" en Asistencia (`cancelStart()`, vuelve a `scheduled` con `km_start = null`).
     Implementado en **fix-246-b** (indicador "En curso" sin lápiz + rechazo en el facade).
+- **N02 — "Reactivar horario": decidido (2026-11-09), opción B.** Reactivar es un *deshacer* de
+  "Eliminar horario", no un perdón: solo revive lo cancelado por la última eliminación, devuelve el
+  sello de penalización a su valor anterior, avisa y deja rastro. Lleva migración → spec
+  **`0058-b-reactivar-horario-deshace-eliminar`** (borrador; quedan 2 preguntas: quién puede
+  reactivar y si "Eliminar" también avisa). Análisis que llevó a la decisión:
+  - **Qué hace:** `AsistenciaClaseBFacade.reactivateSchedule()` vuelve a `scheduled` **todas** las
+    clases futuras `cancelled` de la matrícula, sin mirar quién ni por qué las canceló. Desde
+    fix-245-b antes revisa choques con instructor, auto y alumno.
+  - **De dónde salen las canceladas futuras:** (a) "Eliminar horario" en Asistencia y (b) "Borrar
+    horarios" masivo en las alertas del dashboard — los dos marcan
+    `enrollments.absence_penalty_applied_at`; (c) la penalización automática por 2 faltas seguidas
+    (`apply_class_b_absence_penalty`, spec `0048-b`) — **apagada en las 2 sedes**
+    (`auto_cancel_enabled = false`); (d) feriados — solo cancela clases del día o pasadas, nunca
+    revive; (e) `InstructorClasesFacade.cancelClass()` — sin UI que la llame hoy, pero si se conecta,
+    Reactivar reviviría una clase que canceló el instructor.
+  - **Huecos:** no hay columna de motivo u origen de la cancelación, así que no se puede distinguir
+    (a) de (c); Reactivar **no limpia** `absence_penalty_applied_at` (las faltas anteriores no
+    vuelven a contar: es un perdón silencioso y la matrícula sigue figurando penalizada); no avisa al
+    alumno ni al instructor; no deja rastro de quién reactivó.
+  - **Exposición hoy:** 0 clases futuras canceladas en producción y el cron apagado → riesgo bajo.
+  - **Opciones:** **A)** dejarlo y sumar rastro + avisos; **B)** Reactivar = "deshacer Eliminar":
+    solo revive lo cancelado por esa acción (requiere marcar el origen en la cancelación, migración),
+    limpia el sello de penalización y avisa; lo cancelado por la penalización automática se recupera
+    solo con "Reagendar Clases"; **C)** quitar Reactivar y usar siempre "Reagendar Clases".
+    Recomendación: **B**, como spec (lleva migración).
+  - **Preguntas al owner:** ¿reactivar es un perdón o un deshacer? ¿se limpia el sello de
+    penalización? ¿quién puede hacerlo? ¿se avisa al alumno y al instructor?

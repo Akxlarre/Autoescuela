@@ -380,6 +380,16 @@ describe('AdminAlumnoDetalleFacade', () => {
         );
       });
 
+      it('spec 0058-b AC-E3: al reciclar la sesión suelta el vínculo con "Eliminar horario"', async () => {
+        const { sessions } = mockSesionExistente();
+
+        await facade.reprogramarClase(basePayload);
+
+        expect(sessions.update).toHaveBeenCalledWith(
+          expect.objectContaining({ status: 'scheduled', schedule_removal_id: null }),
+        );
+      });
+
       it('con razón "otro" guarda el detalle escrito', async () => {
         const { history } = mockSesionExistente();
 
