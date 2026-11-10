@@ -168,6 +168,19 @@ El linter AST se ejecuta con `npm run lint:arch` y valida **8 reglas**:
 | 7 | Sin @keyframes en SCSS | Regex en .scss/.css |
 | 8 | Sin colores Tailwind hardcodeados | Regex en .ts/.html |
 
+## Antigravity (`.agents/`)
+
+Antigravity no lee `.claude/`. Su adaptador vive en `.agents/`:
+
+- **Hooks** (`.agents/hooks.json` + `.agents/scripts/antigravity-*.cjs`): traducen el payload de
+  Antigravity y llaman a los mismos scripts de `.claude/hooks/` (Spec Gate, Discovery Gate,
+  Architect Guard, Harness Gate). Las reglas de escritura son una sola. Al terminar, el Stop solo
+  corre el cierre automático de hotfix: no hay verificador de ACs ni chequeo de índices.
+- **Reglas y skills** (`.agents/rules/`, `.agents/skills/`): **copias** de `.claude/rules/` y
+  `.claude/skills/`. Se editan siempre en `.claude/` y se copian con `npm run agents:sync`.
+  `npm run lint:arch` falla (**ARCH-30**, `scripts/check-agents-mirror.mjs`) si una copia quedó
+  desfasada, falta o sobra. El sync no borra lo que sobra: eso se decide a mano.
+
 ## Diferencia entre Hooks y Linter
 
 | | Pre-Write Guard (Hook) | architect.js (Linter) |
