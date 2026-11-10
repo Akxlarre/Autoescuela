@@ -1,14 +1,14 @@
 # Asignación ASG-i-029 — Testing: Contabilidad (cuadratura, historial, reportes, anticipos, liquidaciones, cursos)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-09-29
 > **created_by:** i
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-11-09
+> **resulting_track:** fix-073-i-testing-contabilidad
 
 ---
 
