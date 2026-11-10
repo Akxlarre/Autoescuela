@@ -1,7 +1,7 @@
 # Fix: Testing — autenticación, sesión, roles y bloqueo de fase piloto
 > id: fix-183-b-testing-autenticacion-sesion
 > refs: ASG-i-022
-> status: in_progress
+> status: done
 > created: 2026-10-05
 
 ## Root Cause
@@ -275,7 +275,8 @@ pantalla no muestra datos. B06 usa la secretaria de la sede 2 y al terminar guar
 en `e2e/.auth/secretariaB.json` (como `auth.setup.ts`); verificado con un test posterior que usa esa
 sesión (`certificacion-profesional.spec.ts` P03) en la misma corrida.
 
-**Queda (prueba manual, ~1 minuto, antes de cerrar este track):**
-- O05: en `/login`, dejar que el navegador o el gestor de contraseñas complete correo y clave, y
-  comprobar que "Iniciar sesión" se habilita y entra **sin tocar los campos**. No se puede
-  automatizar: Chrome no deja que un script dispare el autocompletado real.
+### Casos manuales
+
+| Caso | Resultado |
+|---|---|
+| O05 | ✅ en `/login`, el gestor de contraseñas / autocompletado del navegador completa correo y clave, el botón "Iniciar sesión" se habilita inmediatamente y entra limpio al dashboard sin tocar los campos (verificado con Google Password Manager en Chrome). |

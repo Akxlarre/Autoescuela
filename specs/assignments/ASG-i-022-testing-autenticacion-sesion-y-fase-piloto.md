@@ -1,6 +1,6 @@
 # Asignación ASG-i-022 — Testing: Autenticación, sesión, roles y bloqueo de fase piloto
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P0
