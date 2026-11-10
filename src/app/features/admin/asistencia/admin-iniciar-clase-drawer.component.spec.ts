@@ -90,6 +90,41 @@ describe('AdminIniciarClaseDrawerComponent', () => {
     });
   });
 
+  describe('fix-247-b: aviso de documentos del vehículo', () => {
+    const vehiculo = (id: number, plate: string, expiredDocs: string[]) => ({
+      id,
+      plate,
+      brand: null,
+      model: null,
+      currentKm: 100,
+      docWarning: expiredDocs.length ? { expiredDocs, expiringSoonDocs: [] } : null,
+    });
+
+    beforeEach(() => {
+      facadeSpy.vehiclesPorSede.mockReturnValue([
+        vehiculo(7, 'RTRE29', ['SOAP']),
+        vehiculo(8, 'AB1234', []),
+      ]);
+    });
+
+    it('avisa con la patente y el documento al elegir un vehículo con el SOAP vencido', () => {
+      (component as any).onVehicleSelectChange(7);
+      expect((component as any).vehicleDocWarning()).toBe('Vehículo RTRE29: SOAP vencido');
+    });
+
+    it('no dice nada con un vehículo al día ni sin vehículo elegido', () => {
+      expect((component as any).vehicleDocWarning()).toBe('');
+      (component as any).onVehicleSelectChange(8);
+      expect((component as any).vehicleDocWarning()).toBe('');
+    });
+
+    it('es solo un aviso: con el SOAP vencido igual se inicia la clase', async () => {
+      (component as any).onVehicleSelectChange(7);
+      await component.onSubmit(facadeSpy.selectedPractica());
+      expect(facadeSpy.startClass).toHaveBeenCalledWith(1, 100, 7);
+    });
+  });
+
   // ─── fix-078: iniciar clase ya no auto-abre Finalizar Clase ────────────────
   describe('onSubmit (fix-078)', () => {
     it('startClass exitoso → cierra el drawer, no abre AdminFinalizarClaseDrawerComponent', async () => {
@@ -100,6 +135,16 @@ describe('AdminIniciarClaseDrawerComponent', () => {
       expect(facadeSpy.startClass).toHaveBeenCalledWith(cls.id, expect.anything(), undefined);
       expect(layoutDrawerSpy.close).toHaveBeenCalled();
       expect(layoutDrawerSpy.open).not.toHaveBeenCalled();
+    });
+
+    it('hotfix-186-b: un doble clic inicia la clase una sola vez', async () => {
+      const cls = facadeSpy.selectedPractica();
+
+      const primero = component.onSubmit(cls);
+      const segundo = component.onSubmit(cls);
+      await Promise.all([primero, segundo]);
+
+      expect(facadeSpy.startClass).toHaveBeenCalledTimes(1);
     });
   });
 

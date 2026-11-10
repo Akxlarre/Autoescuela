@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { kmWarning, odometerFontTier } from '@core/utils/odometer.utils';
+import { vehicleDocWarningLabel } from '@core/utils/vehicle-document-status.utils';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { FormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -226,6 +227,16 @@ import { formatCLP } from '@core/utils/date.utils';
               El vehículo de esta clase está en Mantenimiento o Fuera de servicio. Elige otro.
             </p>
           }
+          @if (vehicleDocWarning(); as aviso) {
+            <p
+              class="flex items-start gap-1.5 text-sm text-warning"
+              data-testid="vehiculo-documentos"
+              role="status"
+            >
+              <app-icon name="triangle-alert" [size]="16" class="shrink-0 mt-0.5" />
+              <span>{{ aviso }}</span>
+            </p>
+          }
 
           <!-- Formulario odómetro -->
           <div
@@ -418,6 +429,15 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
     return this.facade.vehiclesPorSede().find((v) => v.id === id) ?? null;
   });
 
+  /**
+   * fix-247-b: aviso de documentos vencidos o por vencer del vehículo con el que sale la clase
+   * (mismo texto que la grilla de la Agenda). Solo avisa: "Comenzar Clase" sigue habilitado.
+   */
+  protected readonly vehicleDocWarning = computed(() => {
+    const v = this.selectedVehicle();
+    return v ? vehicleDocWarningLabel(v.plate, v.docWarning) : '';
+  });
+
   /** Opciones formateadas para p-select (plate · brand model). */
   protected readonly vehicleOptions = computed(() =>
     this.facade.vehiclesPorSede().map((v) => ({
@@ -503,7 +523,9 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
   }
 
   async onSubmit(cls: NonNullable<ReturnType<typeof this.facade.selectedPractica>>): Promise<void> {
-    if (this.form.invalid) return;
+    // hotfix-186-b: el botón se deshabilita recién en el siguiente render; un doble clic
+    // llamaría dos veces y el segundo inicio diría "La clase cambió" sin que nadie la tocara.
+    if (this.form.invalid || this.isSubmitting()) return;
     if (this.classVehicleUnavailable()) {
       this.error.set('Elige un vehículo disponible antes de iniciar la clase.');
       return;
