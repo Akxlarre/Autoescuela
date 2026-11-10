@@ -256,6 +256,7 @@ export class AdminFinalizarClaseDrawerComponent implements OnInit {
 
   /** fix-378-m: devuelve la clase a "Pendiente" (con confirmación en el facade). */
   protected async onCancelStart(cls: { id: number }): Promise<void> {
+    if (this.isSubmitting()) return; // hotfix-186-b: doble clic
     this.isSubmitting.set(true);
     try {
       const done = await this.facade.cancelStart(cls.id);
@@ -293,7 +294,8 @@ export class AdminFinalizarClaseDrawerComponent implements OnInit {
     studentId: number | null;
     kmStart: number | null;
   }): Promise<void> {
-    if (!this.canFinalize(cls)) return;
+    // hotfix-186-b: un doble clic no cierra dos veces (el segundo diría "La clase cambió").
+    if (!this.canFinalize(cls) || this.isSubmitting()) return;
     this.isSubmitting.set(true);
     this.error.set(null);
     try {

@@ -21,6 +21,7 @@ import {
 } from '@core/utils/estado-pago-clase.utils';
 import type { EstadoPagoClase } from '@core/models/ui/estado-pago-clase.model';
 import { isVehicleOperational } from '@core/utils/vehicle-status.utils';
+import { buildVehicleDocWarningMap } from '@core/utils/vehicle-document-status.utils';
 import {
   type ChoqueReactivacion,
   type SesionAgendable,
@@ -897,16 +898,28 @@ export class AsistenciaClaseBFacade {
 
     if (error) return;
 
+    const operativos = (data ?? []).filter((v: any) => isVehicleOperational(v.status));
+
+    // fix-247-b: mismo aviso de documentos que la grilla de la Agenda. Si la lectura falla, el
+    // selector igual se muestra, solo que sin aviso.
+    const ids = operativos.map((v: any) => v.id as number);
+    const { data: docs } = ids.length
+      ? await this.supabase.client
+          .from('vehicle_documents')
+          .select('vehicle_id, type, expiry_date, status')
+          .in('vehicle_id', ids)
+      : { data: [] };
+    const avisos = buildVehicleDocWarningMap(docs ?? []);
+
     this._vehiclesPorSede.set(
-      (data ?? [])
-        .filter((v: any) => isVehicleOperational(v.status))
-        .map((v: any) => ({
-          id: v.id,
-          plate: v.license_plate,
-          brand: v.brand ?? null,
-          model: v.model ?? null,
-          currentKm: v.current_km ?? null,
-        })),
+      operativos.map((v: any) => ({
+        id: v.id,
+        plate: v.license_plate,
+        brand: v.brand ?? null,
+        model: v.model ?? null,
+        currentKm: v.current_km ?? null,
+        docWarning: avisos.get(v.id) ?? null,
+      })),
     );
   }
 

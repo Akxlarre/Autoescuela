@@ -44,6 +44,16 @@ describe('AdminFinalizarClaseDrawerComponent', () => {
       expect(dashboardFacadeSpy.refreshLiveClassesOnly).toHaveBeenCalled();
       expect(layoutDrawerSpy.close).toHaveBeenCalled();
     });
+
+    it('hotfix-186-b: un doble clic cierra la clase una sola vez', async () => {
+      const cls = { id: 1, studentId: 42, kmStart: 1000 };
+
+      const primero = component.onFinalize(cls);
+      const segundo = component.onFinalize(cls);
+      await Promise.all([primero, segundo]);
+
+      expect(facadeSpy.finishClass).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('fix-375-m / fix-378-m', () => {

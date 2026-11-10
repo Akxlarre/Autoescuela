@@ -4,6 +4,7 @@
  */
 
 import type { EvaluationChecklistItem } from './instructor-portal.model';
+import type { VehicleDocWarningInfo } from '@core/utils/vehicle-document-status.utils';
 export type { EvaluationChecklistItem };
 
 export type ClasePracticaStatus = 'presente' | 'ausente' | 'en_curso' | 'pendiente';
@@ -88,6 +89,8 @@ export interface VehicleOption {
   brand: string | null;
   model: string | null;
   currentKm: number | null;
+  /** fix-247-b: documentos vencidos o por vencer; null si están al día. */
+  docWarning: VehicleDocWarningInfo | null;
 }
 
 /**

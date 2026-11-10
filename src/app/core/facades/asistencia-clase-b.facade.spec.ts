@@ -1467,6 +1467,23 @@ describe('AsistenciaClaseBFacade', () => {
       await facade.loadVehiclesByBranch(1);
       expect(facade.vehiclesPorSede().map((v) => v.id)).toEqual([1, 4]);
     });
+
+    it('fix-247-b: adjunta el aviso de documentos vencidos o por vencer de cada vehículo', async () => {
+      mock.setResult('vehicles', [
+        { id: 1, license_plate: 'AA1111', status: 'available', current_km: 10 },
+        { id: 2, license_plate: 'BB2222', status: 'available', current_km: 20 },
+      ]);
+      mock.setResult('vehicle_documents', [
+        { vehicle_id: 1, type: 'soap', expiry_date: '2000-01-01', status: 'valid' },
+        { vehicle_id: 2, type: 'soap', expiry_date: '2999-01-01', status: 'valid' },
+      ]);
+      await facade.loadVehiclesByBranch(1);
+
+      expect(mock.builderFor('vehicle_documents').in).toHaveBeenCalledWith('vehicle_id', [1, 2]);
+      const [conSoapVencido, alDia] = facade.vehiclesPorSede();
+      expect(conSoapVencido.docWarning?.expiredDocs).toHaveLength(1);
+      expect(alDia.docWarning).toBeNull();
+    });
   });
 
   describe('startClass', () => {
