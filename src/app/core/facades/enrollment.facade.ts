@@ -885,29 +885,46 @@ export class EnrollmentFacade {
   // 3. MÉTODOS DE ACCIÓN — Step 2 (Asignación)
   // ══════════════════════════════════════════════════════════════════════════════
 
-  /** Carga instructores con vehículo asignado activo para la sucursal. */
+  /**
+   * Carga instructores con vehículo asignado activo para la sucursal, más los "ambas sedes" de
+   * la otra sede (fix-248-b). Qué horarios ofrece cada uno en esta sede lo decide la vista de
+   * disponibilidad (`branch_ids`, spec 0057-b).
+   */
   async loadInstructors(branchId: number): Promise<void> {
     this._scheduleBranchId = branchId;
-    const { data, error } = await this.supabase.client
-      .from('instructors')
-      .select(
-        `id,
-         users!inner(first_names, paternal_last_name),
-         vehicle_assignments!inner(
-           vehicles!inner(brand, model, license_plate)
-         )`,
-      )
-      .eq('active', true)
-      .eq('users.branch_id', branchId)
-      // Solo la asignación activa (end_date IS NULL); excluye historial de vehículos
-      .is('vehicle_assignments.end_date', null);
+    const instructorsWithVehicle = () =>
+      this.supabase.client
+        .from('instructors')
+        .select(
+          `id,
+           users!inner(first_names, paternal_last_name),
+           vehicle_assignments!inner(
+             vehicles!inner(brand, model, license_plate)
+           )`,
+        )
+        .eq('active', true)
+        // Solo la asignación activa (end_date IS NULL); excluye historial de vehículos
+        .is('vehicle_assignments.end_date', null);
+
+    // PostgREST no deja combinar en un .or() la columna embebida users.branch_id con la raíz
+    // both_branches (PGRST100): segunda query + mezcla, como la Agenda (fix-028-i).
+    const [fromBranch, bothBranches] = await Promise.all([
+      instructorsWithVehicle().eq('users.branch_id', branchId),
+      instructorsWithVehicle().eq('both_branches', true),
+    ]);
+    const error = fromBranch.error ?? bothBranches.error;
 
     if (error) {
       this._error.set('Error al cargar instructores: ' + this.sanitizer.sanitize(error).message);
       return;
     }
 
-    const options: InstructorOption[] = (data ?? []).map((row: any) => ({
+    const seenIds = new Set<number>();
+    const data = [...(fromBranch.data ?? []), ...(bothBranches.data ?? [])].filter(
+      (row: any) => !seenIds.has(row.id) && seenIds.add(row.id),
+    );
+
+    const options: InstructorOption[] = data.map((row: any) => ({
       id: row.id,
       name: `${row.users.first_names} ${row.users.paternal_last_name}`,
       vehicleDescription:
@@ -2020,7 +2037,10 @@ export class EnrollmentFacade {
         if (sessions && sessions.length > 0) {
           const instructorId = sessions[0].instructor_id;
           this._selectedInstructorId.set(instructorId);
-          this._selectedSlotIds.set(sessions.map((s: any) => String(s.scheduled_at)));
+          const reservedSlotIds = sessions.map((s: any) => String(s.scheduled_at));
+          this._selectedSlotIds.set(reservedSlotIds);
+          // fix-249-b: son reservas de este borrador; sin esto la grilla las ve ocupadas.
+          this._ownReservedSlotIds.set(reservedSlotIds);
         }
       } else if (currentStep >= 2 && courseOption.category === 'professional') {
         // Cargar lista de promociones para que el paso 2 tenga opciones disponibles

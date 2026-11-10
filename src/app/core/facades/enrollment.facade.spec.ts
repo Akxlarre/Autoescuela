@@ -464,6 +464,62 @@ describe('EnrollmentFacade', () => {
     });
   });
 
+  // ── fix-248-b: instructores "ambas sedes" en el paso 2 ──
+
+  describe('loadInstructors — instructores "ambas sedes" (fix-248-b)', () => {
+    const fila = (id: number, nombre: string, patente: string) => ({
+      id,
+      users: { first_names: nombre, paternal_last_name: 'Prueba' },
+      vehicle_assignments: [
+        { vehicles: { brand: 'Suzuki', model: 'Swift', license_plate: patente } },
+      ],
+    });
+
+    /** Primera query: los de la sede; segunda: los "ambas sedes" de cualquier sede. */
+    function mockQueries(deLaSede: unknown[], ambasSedes: unknown[]) {
+      const sede = createMockQueryBuilder(deLaSede);
+      const ambas = createMockQueryBuilder(ambasSedes);
+      mockSupabase.client.from = vi.fn().mockReturnValueOnce(sede).mockReturnValueOnce(ambas);
+      return { sede, ambas };
+    }
+
+    it('suma a los "ambas sedes" de otra sede, con su vehículo', async () => {
+      const { ambas } = mockQueries(
+        [fila(222, 'Gabriel', 'ABCD43')],
+        [fila(8, 'Carlos', 'AB1234')],
+      );
+
+      await facade.loadInstructors(1);
+
+      expect(ambas.eq).toHaveBeenCalledWith('both_branches', true);
+      expect(ambas.is).toHaveBeenCalledWith('vehicle_assignments.end_date', null);
+      expect(facade.instructors().map((i) => [i.id, i.plate])).toEqual([
+        [222, 'ABCD43'],
+        [8, 'AB1234'],
+      ]);
+    });
+
+    it('no duplica al "ambas sedes" que ya es de la sede', async () => {
+      mockQueries([fila(8, 'Carlos', 'AB1234')], [fila(8, 'Carlos', 'AB1234')]);
+
+      await facade.loadInstructors(2);
+
+      expect(facade.instructors().map((i) => i.id)).toEqual([8]);
+    });
+
+    it('si falla la segunda query avisa el error y no deja la lista a medias', async () => {
+      mockSupabase.client.from = vi
+        .fn()
+        .mockReturnValueOnce(createMockQueryBuilder([fila(222, 'Gabriel', 'ABCD43')]))
+        .mockReturnValueOnce(createMockQueryBuilder(null, { message: 'boom' }));
+
+      await facade.loadInstructors(1);
+
+      expect(facade.error()).toContain('Error al cargar instructores');
+      expect(facade.instructors()).toEqual([]);
+    });
+  });
+
   // ── Load Courses ──
 
   describe('loadCourses', () => {
@@ -1754,6 +1810,43 @@ describe('EnrollmentFacade', () => {
 
       return { contractBuilder };
     }
+
+    it('fix-249-b: los horarios que ya reservó el borrador siguen siendo propios en la grilla', async () => {
+      const reservada = '2026-11-16T12:00:00+00:00';
+      buildResumeMocks(2);
+      const conReservas = mockSupabase.client.from.getMockImplementation()!;
+      mockSupabase.client.from = vi
+        .fn()
+        .mockImplementation((table: string) =>
+          table === 'class_b_sessions'
+            ? createMockQueryBuilder([{ scheduled_at: reservada, instructor_id: 8 }], null)
+            : conReservas(table),
+        );
+
+      expect(await facade.resumeDraft(77)).toBe(true);
+
+      // La vista ve la reserva del propio borrador como ocupada.
+      const vista = createMockQueryBuilder();
+      vista.order = vi.fn().mockResolvedValue({
+        data: [
+          {
+            instructor_id: 8,
+            vehicle_id: 9,
+            slot_start: reservada,
+            slot_end: '2026-11-16T12:45:00+00:00',
+            slot_status: 'occupied',
+          },
+        ],
+        error: null,
+      });
+      mockSupabase.client.from = vi.fn().mockReturnValue(vista);
+      await facade.loadScheduleGrid(8, true);
+
+      expect(facade.selectedSlotIds()).toEqual([reservada]);
+      expect(facade.scheduleGrid()!.slots.map((s) => [s.id, s.status])).toEqual([
+        [reservada, 'available'],
+      ]);
+    });
 
     it('en el paso 4 (Pago), rehidrata el pago pero NO consulta digital_contracts', async () => {
       buildResumeMocks(4);

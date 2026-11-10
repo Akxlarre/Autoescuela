@@ -1,7 +1,8 @@
 # Fix: Testing — Agenda Clase B y Triple Match
 > id: fix-186-b-testing-agenda-triple-match
 > refs: ASG-i-026
-> status: in_progress
+> status: done
+> closed: 2026-11-10
 > created: 2026-10-06
 
 ## Root Cause
@@ -83,13 +84,19 @@ verificado después que no quedó nada) + regresión `supabase/tests/rls/0047-b-
 | H3 | S11: la Agenda nunca muestra errores de carga | 🟠 | track propio (pendiente) |
 | H4 | S6 + S19: horarios "ambas sedes" (falso libre para secretaria, filas duplicadas) | 🟡 hoy sin datos que lo gatillen | track propio (pendiente) |
 | H5 | S18: "Clic para agendar" + pastilla sin color | 🟡 | hotfix (pendiente) |
-| H6 | S16 (corregido en hotfix-171-b), S17 (confirmada en G04 y G05) | 🟡 | S17: track propio (pendiente) |
+| H6 | S16 (corregido en hotfix-171-b), S17 (confirmada en G04 y G05) | ✅ | S17 → `fix-239-b` (cerrado) |
 
 ## Casos manuales pendientes
 
-| Casos | Estado |
+> **Superado en parte (2026-11-10):** la tabla de abajo es el estado del 2026-10-06. Se
+> resolvieron en las tandas siguientes: A–F y P (tercera y quinta), G (tercera y quinta), I, J y N
+> (sexta), K (séptima), M (cuarta) y L (tercera). De H, siete casos pasaron a `fix-058-i`
+> (tercera tanda); los 11 restantes, en la octava tanda. Solo queda la spec `0059-b` (K14), que
+> sigue su propio track.
+
+| Casos | Estado (2026-10-06) |
 |---|---|
-| G01–G07, H*, I*, J*, K (ver séptima tanda), L (matriz por flujo), M*, N* | Pendientes — necesitan 2 navegadores, hora real (cron de las 22:00) o decisiones de §5 del checklist |
+| G01–G07, H*, I*, J*, K, L (matriz por flujo), M*, N* | Pendientes — necesitaban 2 navegadores, hora real (cron de las 22:00) o decisiones de §5 del checklist |
 | A05, A07, A09, B03–B16, C07–C13, D04/D05/D07/D08, E05–E08/E10/E11, F02/F03/F05–F08, P01/P03/P05–P08 | Pendientes (visuales/manuales) |
 
 ## Estado al 2026-10-16 (revisión contra `main` y producción)
@@ -393,3 +400,30 @@ evitan esos instructores.
 | K14 | ¿Se guarda la imagen de la firma o basta saber que se firmó? | **Guardar la imagen**, "por si acaso" (respaldo de que la clase se hizo). Hoy solo se guarda `true/false` (`student_signature`, `instructor_signature`) y el dibujo se descarta (S15 del checklist 027). Lleva almacenamiento y datos personales → spec `0059-b` |
 
 **Grupo 3 cerrado.** Queda abierta solo la spec `0059-b` (K14).
+
+## Octava tanda (2026-11-10) — §H (paso 2 de la matrícula presencial)
+
+Los 11 casos H que seguían sin resultado, en `e2e/matricula-paso2.spec.ts`. Como secretaria de la
+sede 1, cada test siembra un alumno E2E- con un borrador ya en el paso 2 y lo retoma desde
+"Matrículas en progreso". **4 tests en verde, 2 corridas seguidas** (`--repeat-each=2`,
+`--workers=1`). Los que pasan al paso 3 reservan 12 clases reales de un instructor y las borran al
+terminar. Verificado por SQL: 0 matrículas E2E- y 0 clases reservadas sin matrícula (los 7
+usuarios E2E- que quedan en la base son de octubre, de otros tracks).
+
+| Casos | Resultado |
+|---|---|
+| H01 | ✅ instructores activos con vehículo, cada uno con "marca modelo · patente" |
+| **H02** | ❌→✅ **S7 confirmada**: Carlos Muñoz (sede 2, "ambas sedes", vehículo AB1234 también de ambas, 1088 horarios libres para la sede 1) no aparecía al matricular en la sede 1. La Agenda y la ficha del alumno sí lo mostraban (fix-028-i, spec 0004-m); la matrícula no. Corregido en **fix-248-b**. La matrícula online ya lo resolvía en su función del servidor (`public-enrollment`) |
+| H03 | ✅ no aparecen ni el instructor sin vehículo (Paulina Silva) ni uno de la otra sede que no es "ambas" (Roberto Araya). En el piloto no hay instructores solo teóricos (`type = 'theory'`) |
+| H04 | ✅ al elegir instructor y modalidad: grilla con "Semana 1 de N" y el contador "0 / 12" |
+| H07 | ✅ con 2 horarios elegidos en un día, el resto de ese día queda deshabilitado ("Puedes seleccionar hasta 2 clases por día") |
+| H12 | ✅ los horarios ocupados por otra clase del instructor (Gabriel Molina, el único de la sede 1 con clases futuras) están deshabilitados en todas las semanas |
+| H15 | ✅ cambiar de instructor con 2 horarios elegidos deja "0 / 12" y la grilla nueva sin selección |
+| H17 | ✅ continuar (12 clases reservadas en la BD) y volver: las 12 siguen elegidas, ninguna "ocupada", y se puede continuar |
+| **H18** | ❌→✅ **S15 de `fix-058-i` confirmada**: al retomar un borrador con sus clases ya reservadas, las 12 se veían elegidas pero **grises y deshabilitadas** ("ocupadas"); se podía seguir, pero no cambiar ninguna. Corregido en **fix-249-b**. (H18 no estaba en la lista; se probó porque usa el mismo flujo de H17) |
+| H19 | ✅ cubierto: `fix-058-i` (matrícula 8495 confirmada con sus 12 clases "Agendada" en la Agenda) |
+| H20 | ✅ descartar el borrador borra sus 12 clases reservadas (y la matrícula, el alumno y el usuario sin otras matrículas) |
+| H22 | ✅ "Refuerzo Clase B" pide 6 clases ("0 / 6") y no ofrece pago parcial |
+
+**§H cerrado.** Con esto el checklist queda completo salvo la spec `0059-b` (K14), que sigue su
+propio track.
