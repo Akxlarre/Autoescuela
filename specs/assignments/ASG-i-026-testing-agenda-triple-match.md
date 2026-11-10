@@ -1,6 +1,6 @@
 # Asignación ASG-i-026 — Testing: Agenda Clase B y Triple Match
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P0

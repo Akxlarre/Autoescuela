@@ -246,7 +246,36 @@ respuesta del perfil; cambio de clave y logout interceptados). Regresión `contr
 
 **Pasan a `fix-181-b`** (esperan el dominio definitivo y la URL de Auth): D05, D07, D08, D10, L05.
 
-**Quedan (prueba manual única, antes de cerrar este track):**
+**Quedaban (prueba manual única, antes de cerrar este track):**
 - B04 app abierta más de 1 h y seguir usándola; B05 suspender el equipo 2+ h y volver; B06 cerrar
   la sesión desde otro lado (en una cuenta que no use la suite).
 - O05 autocompletar del navegador / gestor de contraseñas en el login.
+
+## Novena tanda (2026-11-10) — B04, B05 y B06 sin esperar horas
+
+`e2e/auth-sesion-9.spec.ts`: **3/3 en verde**, más `auth-sesion-2.spec.ts` en la misma corrida
+(24/24). No crea datos (verificado por SQL).
+
+El cliente de Supabase relee la sesión guardada en cada ciclo de renovación (cada 30 s) y al volver
+la pestaña a primer plano. Marcar la sesión guardada como vencida reproduce lo que ve la app tras
+una hora abierta o al despertar el equipo, **sin adelantar el reloj del navegador**: con el reloj
+adelantado, cada token nuevo del servidor también parecería vencido. Cada test entra con un login
+propio, no con la sesión guardada de la suite (renovar rota el refresh token).
+
+| Caso | Resultado |
+|---|---|
+| B04 | ✅ con la sesión vencida, la app la renueva sola (`/auth/v1/token` 200) y Alumnos y Agenda cargan con datos, sin errores de consola ni de red |
+| B05 | ✅ con la sesión vencida y el access token ya inválido, al volver a primer plano renueva **antes** de pedir datos: ninguna petición sale con el token inválido y Alumnos carga |
+| B06 | ✅ otra sesión de la misma cuenta cierra "todas las sesiones" (`signOut({ scope: 'global' })`); en la siguiente renovación el servidor rechaza el refresh token y la app vuelve a `/login`, sin otros errores. Mientras el access token siga vigente (hasta 1 h) la app no se entera: es un JWT y la BD lo acepta. Es el comportamiento de Supabase, no un bug |
+
+**Sobre la cuenta de B06:** el checklist pedía una cuenta que no use la suite. `instructor@test.com`
+no sirve: en el piloto entra a `/modulo-no-disponible`, que está fuera del `AppShell`, y la vuelta al
+login vive en el shell (`app-shell.component.ts`, si `isAuthenticated()` es falso). Es correcto: esa
+pantalla no muestra datos. B06 usa la secretaria de la sede 2 y al terminar guarda una sesión nueva
+en `e2e/.auth/secretariaB.json` (como `auth.setup.ts`); verificado con un test posterior que usa esa
+sesión (`certificacion-profesional.spec.ts` P03) en la misma corrida.
+
+**Queda (prueba manual, ~1 minuto, antes de cerrar este track):**
+- O05: en `/login`, dejar que el navegador o el gestor de contraseñas complete correo y clave, y
+  comprobar que "Iniciar sesión" se habilita y entra **sin tocar los campos**. No se puede
+  automatizar: Chrome no deja que un script dispare el autocompletado real.
