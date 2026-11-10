@@ -370,36 +370,61 @@ export class TasksFacade {
     const currentUser = this.auth.currentUser();
     if (!currentUser?.dbId) return false;
 
+    // 0ms Optimistic UI: inserta inmediatamente la respuesta en memoria local
+    const tempId = `temp-${Date.now()}`;
+    const optimisticReply: TaskReply = {
+      id: tempId,
+      task_id: taskId,
+      from_user_id: currentUser.dbId,
+      body,
+      created_at: new Date().toISOString(),
+    };
+    this._selectedTaskReplies.update((replies) => [...replies, optimisticReply]);
+
     try {
-      const { error } = await this.supabase.client.from('task_replies').insert({
-        task_id: taskId,
-        from_user_id: currentUser.dbId,
-        body,
-      });
+      const { data, error } = await this.supabase.client
+        .from('task_replies')
+        .insert({
+          task_id: taskId,
+          from_user_id: currentUser.dbId,
+          body,
+        })
+        .select()
+        .single();
       if (error) throw error;
 
-      // Auto-advance question from pending → in_progress on first reply
-      const task = this._tasks().find((t) => t.id === taskId);
-      if (task?.type === 'question' && task.status === 'pending') {
-        // fix-362-m: la respuesta ya se guardó; no se lanza (el catch diría que no se envió y
-        // el usuario la mandaría dos veces). Se avisa que el estado no avanzó.
-        const { error: advanceError } = await this.supabase.client
-          .from('tasks')
-          .update({ status: 'in_progress' })
-          .eq('id', taskId);
-        if (advanceError) {
-          this.toast.warning(
-            'Respuesta enviada',
-            'No se pudo pasar la consulta a "en curso". Cámbiale el estado a mano.',
-          );
-        }
+      if (data) {
+        this._selectedTaskReplies.update((replies) =>
+          replies.map((r) => (r.id === tempId ? (data as TaskReply) : r)),
+        );
       }
 
+      await this.maybeAdvanceQuestion(taskId);
       await this.refreshSilently();
       return true;
     } catch {
+      // Rollback del mensaje optimista en caso de fallo de red
+      this._selectedTaskReplies.update((replies) => replies.filter((r) => r.id !== tempId));
       this.toast.error('Error al enviar la respuesta');
       return false;
+    }
+  }
+
+  private async maybeAdvanceQuestion(taskId: string): Promise<void> {
+    const task = this._tasks().find((t) => t.id === taskId);
+    if (task?.type !== 'question' || task.status !== 'pending') return;
+
+    // fix-362-m: la respuesta ya se guardó; no se lanza (el catch diría que no se envió y
+    // el usuario la mandaría dos veces). Se avisa que el estado no avanzó.
+    const { error } = await this.supabase.client
+      .from('tasks')
+      .update({ status: 'in_progress' })
+      .eq('id', taskId);
+    if (error) {
+      this.toast.warning(
+        'Respuesta enviada',
+        'No se pudo pasar la consulta a "en curso". Cámbiale el estado a mano.',
+      );
     }
   }
 

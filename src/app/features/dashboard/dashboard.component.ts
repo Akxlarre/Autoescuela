@@ -164,7 +164,11 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
       }
 
       <!-- ── Celda protagonista: tabs con scroll interno ── -->
-      <div class="bento-banner bento-card bento-fill flex flex-col min-h-0 overflow-hidden">
+      <div
+        class="bento-banner bento-card bento-fill flex flex-col min-h-0 overflow-hidden transition-opacity"
+        [class.opacity-60]="facade.isRefreshing()"
+        [attr.aria-busy]="facade.isRefreshing()"
+      >
         <div class="shrink-0 border-b border-border-subtle mb-4">
           <app-tabs [tabs]="tabs" [activeId]="activeTab()" (activeIdChange)="setTab($event)" />
         </div>
