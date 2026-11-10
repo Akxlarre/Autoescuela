@@ -204,9 +204,10 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
   - **AC ref:** AC3, AC5
   - **DoD:** DoD-F, más:
     - [ ] Una alerta que no cargó no se muestra como "sin alertas"
-- [ ] **T3.4** — `instructores.facade.ts`, `flota.facade.ts`, `tasks.facade.ts`
+- [x] **T3.4** — `instructores.facade.ts`, `flota.facade.ts`, `tasks.facade.ts`
   - **AC ref:** AC3
   - **DoD:** DoD-F
+  - **Resultado (2026-11-10):** Migrados `instructores.facade.ts`, `flota.facade.ts` y `tasks.facade.ts` junto con sus pantallas (`admin-instructores`, `flota-list-content`, `admin-flota`, `secretaria-observaciones`, `admin-tareas`, `instructor-tareas`). Lecturas con `assertReadOk` o `if (error) throw error`. Manejo de Caso A (empty state con botón Reintentar y sin ceros en KPIs) y Caso B (alert card de datos desactualizados con Reintentar). Fuera de PENDING en `unchecked-reads.guard.spec.ts` y sin knownBug en X01 de `e2e/transversal-shell.spec.ts`. Verde en tests de unidad, test-tz (UTC, Asia/Tokyo, America/Santiago) y E2E X01.
 - [ ] **T3.5** — Portales: `instructor-alumnos`, `instructor-clases`, `student-clases`, `student-home`
   - **AC ref:** AC3
   - **DoD:** DoD-F

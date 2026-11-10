@@ -26,6 +26,7 @@ import { InputTextModule } from 'primeng/inputtext';
 // Shared Components
 import { IconComponent } from '../icon/icon.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
+import { AlertCardComponent } from '../alert-card/alert-card.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '../section-hero/section-hero.component';
 import { ClearFiltersButtonComponent } from '../clear-filters-button/clear-filters-button.component';
@@ -81,6 +82,7 @@ import { VehiculoCardComponent } from '../vehiculo-card/vehiculo-card.component'
     InputTextModule,
     IconComponent,
     EmptyStateComponent,
+    AlertCardComponent,
     SkeletonBlockComponent,
     SectionHeroComponent,
     VehiculoCardComponent,
@@ -108,6 +110,29 @@ import { VehiculoCardComponent } from '../vehiculo-card/vehiculo-card.component'
         [actions]="heroActions()"
         (actionClick)="handleHeroAction($event)"
       />
+
+      <!-- Caso B: Aviso de refresco fallido -->
+      @if (refreshFailed()) {
+        <div class="bento-banner" role="alert">
+          <app-alert-card severity="error" title="No se pudo actualizar la flota vehicular">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span class="text-compact text-text-secondary">
+                Los datos mostrados pueden no estar actualizados.
+              </span>
+              <button
+                type="button"
+                class="btn-secondary flex items-center gap-2 shrink-0"
+                data-llm-action="reintentar-flota"
+                [disabled]="isLoading()"
+                (click)="refreshRequested.emit()"
+              >
+                <app-icon name="refresh-cw" [size]="14" />
+                Reintentar
+              </button>
+            </div>
+          </app-alert-card>
+        </div>
+      }
 
       <!-- TABLA CARD (Dual-Viewport) -->
       <div
@@ -493,6 +518,7 @@ export class FlotaListContentComponent {
   readonly isLoading = input(false);
   /** hotfix-087-b: error de carga del facade (sin datos que mostrar). */
   readonly error = input<string | null>(null);
+  readonly refreshFailed = input(false);
   readonly basePath = input<string>('/app/admin');
   /** Columna "Sede" solo tiene sentido cuando se ven vehículos de varias sedes a la vez. */
   readonly showSedeColumn = input(false);
@@ -536,30 +562,33 @@ export class FlotaListContentComponent {
     { label: `${this.kpis().total} vehículos`, icon: 'car', style: 'default' },
   ]);
 
-  readonly heroKpis = computed((): SectionHeroKpi[] => [
-    { id: 'total', label: 'Total', value: this.kpis().total, icon: 'car', color: 'default' },
-    {
-      id: 'disponibles',
-      label: 'Disponibles',
-      value: this.kpis().available,
-      icon: 'circle-check',
-      color: 'success',
-    },
-    {
-      id: 'en-taller',
-      label: 'En Taller',
-      value: this.kpis().maintenance,
-      icon: 'wrench',
-      color: 'warning',
-    },
-    {
-      id: 'de-baja',
-      label: 'De Baja',
-      value: this.kpis().outOfService,
-      icon: 'circle-x',
-      color: 'error',
-    },
-  ]);
+  readonly heroKpis = computed((): SectionHeroKpi[] => {
+    if (this.error() && this.vehicles().length === 0) return [];
+    return [
+      { id: 'total', label: 'Total', value: this.kpis().total, icon: 'car', color: 'default' },
+      {
+        id: 'disponibles',
+        label: 'Disponibles',
+        value: this.kpis().available,
+        icon: 'circle-check',
+        color: 'success',
+      },
+      {
+        id: 'en-taller',
+        label: 'En Taller',
+        value: this.kpis().maintenance,
+        icon: 'wrench',
+        color: 'warning',
+      },
+      {
+        id: 'de-baja',
+        label: 'De Baja',
+        value: this.kpis().outOfService,
+        icon: 'circle-x',
+        color: 'error',
+      },
+    ];
+  });
 
   readonly heroActions = computed((): SectionHeroAction[] => [
     { id: 'new-vehicle', label: 'Nuevo Vehículo', icon: 'plus', primary: true },

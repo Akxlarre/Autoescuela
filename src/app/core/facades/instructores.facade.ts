@@ -146,6 +146,7 @@ export class InstructoresFacade {
   private readonly _instructores = signal<InstructorTableRow[]>([]);
   private readonly _isLoading = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
+  private readonly _refreshFailed = signal<boolean>(false);
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
 
@@ -178,6 +179,7 @@ export class InstructoresFacade {
   readonly instructores = this._instructores.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly refreshFailed = this._refreshFailed.asReadonly();
   readonly branches = this._branches.asReadonly();
   readonly vehicles = this._vehicles.asReadonly();
   readonly isSubmitting = this._isSubmitting.asReadonly();
@@ -235,26 +237,37 @@ export class InstructoresFacade {
   async initialize(): Promise<void> {
     const currentBranchId = this.getActiveBranchId();
     if (this._initialized && currentBranchId === this._lastBranchId) {
-      this.refreshSilently();
+      void this.refreshSilently();
       return;
     }
-    this._initialized = true;
     this._lastBranchId = currentBranchId;
     this._isLoading.set(true);
+    this._error.set(null);
     try {
       await this.fetchData();
+      this._initialized = true;
     } catch {
-      // fix-209-b: el error ya quedó en `error` (lo muestra la tabla); no relanzar.
+      this._instructores.set([]);
+      this._error.set('No se pudo cargar la lista de instructores.');
     } finally {
       this._isLoading.set(false);
     }
   }
 
-  private async refreshSilently(): Promise<void> {
+  async reintentar(): Promise<void> {
+    this._error.set(null);
+    this._refreshFailed.set(false);
+    this._initialized = false;
+    await this.initialize();
+  }
+
+  async refreshSilently(): Promise<void> {
     try {
       await this.fetchData();
+      this._refreshFailed.set(false);
+      this._error.set(null);
     } catch {
-      // Fail silencioso — datos stale siguen visibles
+      this._refreshFailed.set(true);
     }
   }
 
@@ -304,13 +317,7 @@ export class InstructoresFacade {
     }
 
     const { data, error } = await query;
-
-    if (error) {
-      if (this.listGuard.isCurrent(requestToken)) {
-        this._error.set(this.sanitizer.sanitize(error).message);
-      }
-      throw error;
-    }
+    if (error) throw error;
 
     let rows = (data as unknown as InstructorRow[]) ?? [];
     if (branchId !== null) rows = await this.mergeBothBranchesInstructors(rows);
@@ -336,7 +343,8 @@ export class InstructoresFacade {
       .is('vehicle_assignments.end_date', null)
       .eq('both_branches', true);
 
-    if (bbError || !bothBranchesData) return rows;
+    if (bbError) throw bbError;
+    if (!bothBranchesData) return rows;
     const seenIds = new Set(rows.map((r) => r.id));
     const merged = [...rows];
     for (const extra of bothBranchesData as unknown as InstructorRow[]) {
@@ -364,7 +372,7 @@ export class InstructoresFacade {
       .gte('scheduled_at', start)
       .lt('scheduled_at', endExclusive);
 
-    if (error) return counts;
+    if (error) throw error;
 
     for (const row of (data as { instructor_id: number }[]) ?? []) {
       counts.set(row.instructor_id, (counts.get(row.instructor_id) ?? 0) + 1);
@@ -378,10 +386,9 @@ export class InstructoresFacade {
       .from('branches')
       .select('id, name')
       .order('name');
-    if (!error) {
-      this._branches.set((data as BranchOption[]) ?? []);
-      this._branchesLoaded = true;
-    }
+    if (error) throw error;
+    this._branches.set((data as BranchOption[]) ?? []);
+    this._branchesLoaded = true;
   }
 
   async loadVehicles(): Promise<void> {
@@ -395,13 +402,16 @@ export class InstructoresFacade {
       .select('id, license_plate, brand, model, year, status, branch_id, both_branches')
       .order('license_plate');
 
-    if (vError || !allVehicles) return;
+    if (vError) throw vError;
+    if (!allVehicles) return;
 
     // Cargar asignaciones activas para saber cuáles están asignados
-    const { data: activeAssignments } = await this.supabase.client
+    const { data: activeAssignments, error: aError } = await this.supabase.client
       .from('vehicle_assignments')
       .select('vehicle_id')
       .is('end_date', null);
+
+    if (aError) throw aError;
 
     const assignedIds = new Set(
       (activeAssignments ?? []).map((a: { vehicle_id: number }) => a.vehicle_id),
@@ -457,7 +467,8 @@ export class InstructoresFacade {
       .eq('instructor_id', instructorId)
       .order('start_date', { ascending: false });
 
-    if (error || !data) {
+    if (error) throw error;
+    if (!data) {
       this._assignmentHistory.set([]);
       return;
     }

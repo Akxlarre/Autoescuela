@@ -3,7 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
-import { assertWriteOk, NoRowsAffectedError } from '@core/utils/db-error.utils';
+import { assertWriteOk, NoRowsAffectedError, assertReadOk } from '@core/utils/db-error.utils';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -69,10 +69,12 @@ export class TasksFacade {
   private _tasks = signal<TaskRow[]>([]);
   private _isLoading = signal(false);
   private _error = signal<string | null>(null);
+  private readonly _refreshFailed = signal(false);
   private _selectedTaskId = signal<string | null>(null);
   private _recipients = signal<RecipientOption[]>([]);
   private _selectedTaskReplies = signal<TaskReply[]>([]);
   private _initialized = false;
+  private _lastBranchId: number | null | undefined = undefined;
   private _sentChannel: RealtimeChannel | null = null;
   private _receivedChannel: RealtimeChannel | null = null;
 
@@ -80,6 +82,7 @@ export class TasksFacade {
   readonly tasks = this._tasks.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly refreshFailed = this._refreshFailed.asReadonly();
   readonly recipients = this._recipients.asReadonly();
   readonly selectedTaskReplies = this._selectedTaskReplies.asReadonly();
 
@@ -123,33 +126,53 @@ export class TasksFacade {
   // 3. MÉTODOS DE CICLO DE VIDA
 
   async initialize(): Promise<void> {
-    if (this._initialized) {
-      this.refreshSilently();
+    const currentUser = this.auth.currentUser();
+    const branchId = resolveBranchScope(
+      currentUser?.role,
+      currentUser?.branchId,
+      this.branchFacade.selectedBranchId(),
+      currentUser?.canAccessBothBranches,
+    );
+    if (this._initialized && branchId === this._lastBranchId) {
+      void this.refreshSilently();
       return;
     }
-    this._initialized = true;
+    this._lastBranchId = branchId;
     this._isLoading.set(true);
+    this._error.set(null);
     try {
       await this.fetchData();
-      const dbId = this.auth.currentUser()?.dbId;
+      this._initialized = true;
+      const dbId = currentUser?.dbId;
       if (dbId) this.subscribeRealtime(dbId);
     } catch {
-      this._error.set('Error al cargar tareas');
+      this._tasks.set([]);
+      this._error.set('No se pudieron cargar las tareas.');
     } finally {
       this._isLoading.set(false);
     }
   }
 
-  private async refreshSilently(): Promise<void> {
+  async reintentar(): Promise<void> {
+    this._error.set(null);
+    this._refreshFailed.set(false);
+    this._initialized = false;
+    await this.initialize();
+  }
+
+  async refreshSilently(): Promise<void> {
     try {
       await this.fetchData();
+      this._refreshFailed.set(false);
+      this._error.set(null);
     } catch {
-      // fail silently — stale data stays visible
+      this._refreshFailed.set(true);
     }
   }
 
   dispose(): void {
     this._initialized = false;
+    this._lastBranchId = undefined;
     this.disposeRealtime();
   }
 
@@ -493,10 +516,11 @@ export class TasksFacade {
     const secretaryBranchId = fromRole === 'secretary' ? currentUser.branchId : null;
     let bothBranchesInstructorIds: Set<number> | null = null;
     if (secretaryBranchId != null) {
-      const { data: bothBranchesRows } = await this.supabase.client
+      const { data: bothBranchesRows, error: bbError } = await this.supabase.client
         .from('instructors')
         .select('user_id')
         .eq('both_branches', true);
+      if (bbError) return;
       bothBranchesInstructorIds = new Set(
         ((bothBranchesRows ?? []) as Array<{ user_id: number }>).map((r) => r.user_id),
       );
