@@ -379,7 +379,7 @@ decisión en §5.
 | O02 | Login a 375 / 768 / 1440 px | Sin scroll horizontal; la card no se corta | ✓ | |
 | O03 | Solo teclado en el login | Tab recorre correo → contraseña → ojo → checkbox → botón → "¿Olvidaste…?"; el foco se ve | — | |
 | O04 | Lector de pantalla: error de login | Se anuncia (`role="alert"`, `aria-live`) | — | |
-| O05 | Autocompletar del navegador / gestor de contraseñas | Completa correo y contraseña y el botón se habilita | — | |
+| O05 | Autocompletar del navegador / gestor de contraseñas | Completa correo y contraseña y el botón se habilita | — | ✅ |
 | O06 | Mensaje de error largo | No rompe la card | — | |
 
 ---
