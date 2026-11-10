@@ -63,7 +63,7 @@ Entre paréntesis, lecturas F1+F2 detectadas.
 |---|---|---|
 | **1 — Dinero** | `pagos` (8), `liquidaciones` (3), `dashboard` (3), `enrollment-payment` (3), `reportes-contables` (F3), `anticipos` (1) | `admin-pagos`, `*-contabilidad-reportes`, `*-contabilidad-liquidaciones`, `secretaria-dashboard` |
 | **2 — Lecturas que alimentan una escritura o decisión** | `enrollment` (22), `admin-alumno-detalle` (8), `cursos-singulares` (6), `certificacion-clase-b` (4), `enrollment-documents` (2), `public-enrollment` (2), `admin-pre-inscritos` (2), `student-enrollment-context` (1), `servicios-especiales` (F3) | Matrícula presencial y pública, ficha del alumno, Cursos singulares, Servicios especiales, Certificados |
-| **3a — Gestión Clase B** | `asistencia-clase-b` (5), `admin-alumnos` (4), `dashboard-alerts` (4), `dms` (4), `flota` (2), `instructores` (1), `tasks` (1), `instructor-alumnos` (2), `instructor-clases` (1), `student-clases` (4), `ex-alumnos` (KPIs) | Asistencia, Alumnos, Ex-Alumnos, Documentos, Flota, Instructores, Comunicación, portales |
+| **3a — Gestión Clase B** | `asistencia-clase-b` (5), `admin-alumnos` (4), `dashboard-alerts` (4), `dms` (4), `flota` (2), `instructores` (1), `tasks` (1), `instructor-alumnos` (2), `instructor-clases` (1), `student-clases` (4), `student-home` (4, sumado por el guard), `ex-alumnos` (KPIs) | Asistencia, Alumnos, Ex-Alumnos, Documentos, Flota, Instructores, Comunicación, portales |
 | **3b — Profesional** | `asistencia-profesional` (12), `certificacion-profesional` (6), `archivo-profesional` (5), `admin-alumnos-profesional` (3), `libro-de-clases` (1), `promociones` (1), `relatores` (1) | Módulo Clase Profesional |
 
 La lista definitiva de cada etapa es la que entregue `PENDING` al crear el guard: si el detector
@@ -236,3 +236,6 @@ Total: 6 a 9 días de trabajo, en 6 PR.
 ## Changelog
 
 - 2026-11-10 — plan inicial
+- 2026-11-10 — T0.3: el guard dejó 31 facades en `PENDING` (se sumó `student-home`, cabecera de
+  `Promise.all` en varias líneas que el conteo inicial no veía). `reportes-contables` y
+  `servicios-especiales` pasan el guard: siguen en sus etapas como casos F3, a cargo del E2E.

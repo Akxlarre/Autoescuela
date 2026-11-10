@@ -49,21 +49,28 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
   - **Resultado (2026-11-10):** `npm run test:ci` 4791 ✅, `lint:arch` 0 errores, `tsc` de specs
     sin errores nuevos (los 120 que reporta ya estaban en `main`).
 
-- [ ] **T0.2** — Detector de lecturas sin chequeo (`unchecked-reads.guard.spec.ts`)
+- [x] **T0.2** — Detector de lecturas sin chequeo (`unchecked-reads.guard.spec.ts`)
   - **AC ref:** AC1
   - **DoD:**
-    - [ ] Tests del detector: F1 en una línea, F1 en varias líneas, F2 (`Promise.all` con `.data`
+    - [x] Tests del detector: F1 en una línea, F1 en varias líneas, F2 (`Promise.all` con `.data`
       sin `.error`), lectura con `error` capturado, lectura con `assertReadOk`, y no marca una
-      escritura
-    - [ ] Misma estructura que `unchecked-writes.guard.spec.ts`
+      escritura. Además: `await q` de un builder armado antes, renombres (`data: rows`,
+      `error: e`), `throwOnError()`, patrones `{ data }` dentro de la tupla de un `Promise.all`,
+      y que el chequeo de `.error` se busque solo dentro del mismo método (13 casos)
+    - [x] Misma estructura que `unchecked-writes.guard.spec.ts`
+  - **Límite conocido:** no ve una desestructuración anidada (`{ data: { session } }`, solo la
+    usa `auth.getSession()`), ni que la pantalla muestre un error que el facade sí captura (F3).
 
-- [ ] **T0.3** — Lista `PENDING` con dueño por etapa
+- [x] **T0.3** — Lista `PENDING` con dueño por etapa
   - **AC ref:** AC1, AC9
   - **DoD:**
-    - [ ] Cada facade que el detector marca está en `PENDING` con la etapa que lo cubre
-    - [ ] Test que falla si un facade en `PENDING` ya no tiene lecturas sin chequeo
-    - [ ] `cuadratura.facade.ts` y `agenda.facade.ts` pasan sin estar en la lista
-    - [ ] Si la lista difiere de §2 del plan, se actualiza el plan
+    - [x] Cada facade que el detector marca está en `PENDING` con la etapa que lo cubre (31)
+    - [x] Test que falla si un facade en `PENDING` ya no tiene lecturas sin chequeo, y otro que
+      falla si una entrada nombra un facade que no existe
+    - [x] `cuadratura.facade.ts` y `agenda.facade.ts` pasan sin estar en la lista
+    - [x] Si la lista difiere de §2 del plan, se actualiza el plan: se sumó `student-home`
+      (etapa 3a); `reportes-contables` y `servicios-especiales` pasan el guard (son F3)
+  - **Resultado (2026-11-10):** guard 78/78, `npm run test:ci` 4869 ✅, `lint:arch` 0 errores.
 
 - [ ] **T0.4** — Bloque "X01. Pantallas sin red" en `e2e/transversal-shell.spec.ts`
   - **AC ref:** AC8
@@ -176,7 +183,7 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
 - [ ] **T3.4** — `instructores.facade.ts`, `flota.facade.ts`, `tasks.facade.ts`
   - **AC ref:** AC3
   - **DoD:** DoD-F
-- [ ] **T3.5** — Portales: `instructor-alumnos`, `instructor-clases`, `student-clases`
+- [ ] **T3.5** — Portales: `instructor-alumnos`, `instructor-clases`, `student-clases`, `student-home`
   - **AC ref:** AC3
   - **DoD:** DoD-F
 - [ ] **T3.6** — Validación de la etapa
