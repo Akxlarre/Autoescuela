@@ -1,6 +1,6 @@
 # Spec 0060-b — Una lectura que falla se ve como error, no como ceros o "sin datos"
 
-> **Status:** draft
+> **Status:** approved (owner, 2026-11-10)
 > **Created:** 2026-11-10
 > **Owner:** Akxlarre
 > **Priority:** P1

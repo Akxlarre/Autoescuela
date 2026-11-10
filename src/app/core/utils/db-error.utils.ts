@@ -57,6 +57,30 @@ export function assertWriteOk<T extends { error: unknown; data?: unknown }>(
 }
 
 /**
+ * `data` de una respuesta sin error. supabase-js tipa la respuesta como una unión
+ * (`{ data: T; error: null } | { data: null; error: E }`): se toma la rama de éxito, así una lista
+ * queda sin `null` y un `maybeSingle()` conserva el suyo (puede no haber fila). Si la respuesta no
+ * es una unión (mocks, `any`), se usa su `data` tal cual.
+ */
+type ReadData<R extends { data: unknown }> = [Extract<R, { error: null }>] extends [never]
+  ? R['data']
+  : Extract<R, { error: null }>['data'];
+
+/**
+ * Convierte el `{ error }` de una lectura de supabase-js en una excepción y devuelve `data`.
+ *
+ * supabase-js tampoco lanza cuando un select/rpc/functions.invoke de lectura falla: resuelve
+ * `{ data: null, error }`. El `data ?? []` de después lo convierte en "no hay nada", y la pantalla
+ * muestra $0 o "sin datos" en vez de "no se pudo cargar" (spec 0060-b). Par de `assertWriteOk`.
+ *
+ * No exige filas: una lista vacía o un `maybeSingle()` sin fila son resultados válidos.
+ */
+export function assertReadOk<R extends { data: unknown; error: unknown }>(result: R): ReadData<R> {
+  if (result.error) throw result.error;
+  return result.data as ReadData<R>;
+}
+
+/**
  * Traduce un error de BD a un mensaje seguro y accionable para el usuario.
  * Nunca incluye el texto original del error.
  *
