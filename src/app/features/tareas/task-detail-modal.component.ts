@@ -13,6 +13,7 @@ import { TaskReplyThreadComponent } from '@shared/components/task-reply-thread/t
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { TasksFacade } from '@core/facades/tasks.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
@@ -45,6 +46,7 @@ const TYPE_ICON: Record<string, string> = {
     DrawerFormComponent,
     DrawerContentLoaderComponent,
     SkeletonBlockComponent,
+    EmptyStateComponent,
   ],
   template: `
     @if (task()) {
@@ -249,10 +251,15 @@ const TYPE_ICON: Record<string, string> = {
         }
       </app-drawer-form>
     } @else {
-      <div class="flex flex-col items-center justify-center p-8 text-center text-text-muted">
-        <app-icon name="clipboard-list" [size]="32" class="opacity-40 mb-2" />
-        <p class="text-sm">Selecciona una tarea para ver el detalle.</p>
-      </div>
+      <app-drawer-form [hasFooter]="false">
+        <div class="flex flex-col items-center justify-center min-h-[300px] w-full py-12">
+          <app-empty-state
+            icon="clipboard-list"
+            message="No hay tarea seleccionada"
+            subtitle="Selecciona una tarea de la lista para ver el detalle."
+          />
+        </div>
+      </app-drawer-form>
     }
   `,
 })
@@ -290,9 +297,16 @@ export class TaskDetailModalComponent {
   };
 
   constructor() {
+    let hadInitialTask = false;
     effect(() => {
       const t = this.task();
-      if (!t) return;
+      if (!t) {
+        if (hadInitialTask) {
+          this.drawer.close();
+        }
+        return;
+      }
+      hadInitialTask = true;
 
       void this.tasksFacade.loadReplies(t.id);
 
@@ -350,7 +364,10 @@ export class TaskDetailModalComponent {
 
     this.isMutating.set(true);
     const ok = await this.tasksFacade.softDelete(t.id);
-    if (ok) this.tasksFacade.selectTask(null);
+    if (ok) {
+      this.drawer.close();
+      this.tasksFacade.selectTask(null);
+    }
     this.isMutating.set(false);
   }
 }
