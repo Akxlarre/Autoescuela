@@ -2045,6 +2045,28 @@
   `20261109180000_spec0058b_reactivar_deshace_eliminar.sql`, test
   `supabase/tests/asistencia/spec0058b-reactivar-deshace-eliminar.sql`.
 
+### DG-123 — Una lectura de supabase-js que falla tampoco lanza: con `data ?? []` la pantalla dice "no hay nada"
+
+- **Trampa:** leer con `const { data } = await query` dentro de un `try` y asumir que, si la red
+  se corta, la consulta tarda demasiado o la RLS la rechaza, cae al `catch` y la pantalla muestra
+  el error. O tomar de un `Promise.all` el `.data` de cada resultado sin mirar su `.error`.
+- **Realidad:** igual que en las escrituras (DG-103), supabase-js resuelve `{ data: null, error }`
+  en vez de lanzar. El `data ?? []` de después convierte la falla en una lista vacía: la pantalla
+  muestra $0, 0 o "sin datos" sin ningún aviso, y el usuario no distingue "no hay nada" de "no
+  cargó". Con la red cortada, así se veían 11 de 15 pantallas de la secretaria, entre ellas la Caja
+  Diaria en $0 con "Caja Abierta". Hay una segunda forma que el código no deja ver: el Facade sí
+  captura el error, pero la pantalla nunca lee su `error()` y muestra la lista vacía igual.
+- **Regla de aplicabilidad:** toda lectura de un Facade (`select`, `rpc` de lectura,
+  `functions.invoke`) revisa su error antes de usar `data`: `assertReadOk(...)`
+  (`core/utils/db-error.utils.ts`) o `if (error) throw error`. Cuando varias consultas forman un
+  mismo total, basta que una falle para que la carga completa falle. Qué muestra la pantalla en
+  cada caso (primera carga o cambio de consulta vs. refresco con datos ya visibles) está en
+  `.claude/rules/swr-pattern.md` §"Errores de carga".
+- **Fuente:** `specs/specs/0060-b-lecturas-fallidas-como-ceros` (hallazgo X01 de
+  `fix-190-b`). Lo vigila `src/app/core/facades/unchecked-reads.guard.spec.ts` (la lectura que
+  descarta su error), y el bloque X01 de `e2e/transversal-shell.spec.ts` (la pantalla que no lo
+  muestra: no es detectable por análisis de texto).
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

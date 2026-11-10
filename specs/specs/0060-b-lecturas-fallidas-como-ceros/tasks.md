@@ -110,10 +110,13 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
     pantalla, cuándo agregar `_refreshFailed`) y dos prohibiciones; `facades.md` §4 muestra la
     lectura con su error y remite a `swr-pattern.md`.
 
-- [ ] **T0.6** — Gotcha e índices
+- [x] **T0.6** — Gotcha e índices
   - **DoD:**
-    - [ ] Gotcha nuevo en `indices/DOMAIN-GOTCHAS.md`, par de DG-103: una lectura que falla no lanza
-    - [ ] `npm run lint:arch` y `npm run test:ci` en verde
+    - [x] Gotcha nuevo en `indices/DOMAIN-GOTCHAS.md`, par de DG-103: una lectura que falla no
+      lanza (DG-123, con las dos formas: el Facade descarta el error / la pantalla no lo muestra)
+    - [x] `npm run lint:arch` (0 errores) y `npm run test:ci` en verde (4869). Una primera corrida
+      dio 1 falla que no se repitió en dos corridas más: test intermitente ajeno a esta etapa
+  - **Etapa 0 cerrada (2026-11-10).**
 
 ---
 
