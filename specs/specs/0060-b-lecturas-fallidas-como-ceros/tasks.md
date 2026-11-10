@@ -72,14 +72,29 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
       (etapa 3a); `reportes-contables` y `servicios-especiales` pasan el guard (son F3)
   - **Resultado (2026-11-10):** guard 78/78, `npm run test:ci` 4869 ✅, `lint:arch` 0 errores.
 
-- [ ] **T0.4** — Bloque "X01. Pantallas sin red" en `e2e/transversal-shell.spec.ts`
+- [x] **T0.4** — Bloque "X01. Pantallas sin red" en `e2e/transversal-shell.spec.ts`
   - **AC ref:** AC8
   - **DoD:**
-    - [ ] Corta `rest/v1` y `functions/v1` con `page.route(... abort)` y navega por el menú (SPA)
-    - [ ] Una fila por pantalla de la tabla X01 de `fix-190-b`, más las pantallas de admin,
-      instructor y alumno de los facades en `PENDING`
-    - [ ] Agenda y Caja Diaria pasan; las no migradas quedan como `knownBug`
-    - [ ] Corre contra el build de producción
+    - [x] Corta `rest/v1` y `functions/v1` con `page.route(... abort)` y navega por el menú (SPA).
+      La red se corta recién cuando el ítem del menú ya está visible: los de Clase Profesional
+      aparecen después de una consulta y, cortando antes, nunca aparecían
+    - [x] Una fila por pantalla de la tabla X01 de `fix-190-b` (secretaria sede 2), más Clase
+      Profesional y Anticipos (admin): 22 pantallas.
+      **Quedan fuera:** los portales de instructor y alumno (no hay cuentas E2E de esos roles) y
+      Relatores y Asistencia Prof. (ocultos en el menú por el recorte del piloto). Sus facades
+      siguen cubiertos por el guard; su pantalla se verifica a mano en su etapa
+    - [x] Agenda y Caja Diaria pasan; las no migradas quedan como `knownBug`
+    - [x] Corre contra el build de producción (`ng serve -c production`)
+  - **Resultado (2026-11-10):** 48/48 con `--repeat-each=2`. Sin marcas
+    (`E2E_SHOW_KNOWN_BUGS=1`) las 12 marcadas fallan por no mostrar "Reintentar".
+    **10 pantallas ya cumplen**, varias por tracks posteriores a X01: Agenda, Caja Diaria,
+    Dashboard, Servicios especiales, Alumnos, Ex-Alumnos, Documentos (`fix-473-m`), Flota,
+    Promociones y Base Alumnos Prof.
+    **12 quedan marcadas:** Pagos, Reportes, Liquidaciones, Anticipos (etapa 1); Cursos
+    singulares, Certificados (etapa 2); Asistencia, Instructores, Comunicación (etapa 3a);
+    Certificados Prof., Archivo, Libro de Clases (etapa 3b).
+  - **Para correrlo:** contra el build de producción en un puerto libre; si el 4200 lo ocupa otro
+    checkout, Playwright lo reutiliza y prueba otro código.
 
 - [ ] **T0.5** — Corregir `swr-pattern.md` y `facades.md`
   - **AC ref:** AC2

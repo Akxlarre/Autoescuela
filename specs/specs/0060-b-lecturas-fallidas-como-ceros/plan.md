@@ -239,3 +239,8 @@ Total: 6 a 9 días de trabajo, en 6 PR.
 - 2026-11-10 — T0.3: el guard dejó 31 facades en `PENDING` (se sumó `student-home`, cabecera de
   `Promise.all` en varias líneas que el conteo inicial no veía). `reportes-contables` y
   `servicios-especiales` pasan el guard: siguen en sus etapas como casos F3, a cargo del E2E.
+- 2026-11-10 — T0.4: el E2E de X01 muestra que 10 pantallas ya avisan del error (varias por tracks
+  posteriores a X01, como `fix-473-m` en Documentos). Servicios especiales ya no es caso F3. En
+  Dashboard, Documentos y Flota la pantalla principal ya avisa, pero sus facades siguen en
+  `PENDING`: las lecturas sin chequeo están en otros caminos (drawers, KPIs, refrescos), así que la
+  etapa sigue siendo necesaria, con menos trabajo de pantalla.
