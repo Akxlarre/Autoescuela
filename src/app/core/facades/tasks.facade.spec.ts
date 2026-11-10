@@ -417,6 +417,38 @@ describe('TasksFacade', () => {
       expect(ids).toContain(50); // both_branches
       expect(ids).not.toContain(40); // otra sede, sin grant → excluido
     });
+
+    it('si falla la consulta de both_branches (bbError), lanza y expone recipientsError (AC7)', async () => {
+      mockSupabase.client.from.mockImplementation((table: string) => {
+        if (table === 'users') {
+          return createMockQueryBuilder([
+            {
+              id: 30,
+              first_names: 'Carlos',
+              paternal_last_name: 'Muñoz',
+              branch_id: 1,
+              roles: { name: 'instructor' },
+            },
+          ]);
+        }
+        if (table === 'instructors') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({
+              data: null,
+              error: new Error('Error al verificar instructores both_branches'),
+            }),
+          };
+        }
+        throw new Error(`Tabla inesperada en el test: ${table}`);
+      });
+
+      await expect(facade.loadRecipients()).rejects.toThrow();
+      expect(facade.recipients()).toEqual([]);
+      expect(facade.recipientsError()).toBe(
+        'No se pudieron verificar los permisos de instructores.',
+      );
+    });
   });
 
   // ── updateStatus() — AC2, AC3 ───────────────────────────────────────────────

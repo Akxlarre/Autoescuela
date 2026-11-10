@@ -72,6 +72,7 @@ export class TasksFacade {
   private readonly _refreshFailed = signal(false);
   private _selectedTaskId = signal<string | null>(null);
   private _recipients = signal<RecipientOption[]>([]);
+  private readonly _recipientsError = signal<string | null>(null);
   private _selectedTaskReplies = signal<TaskReply[]>([]);
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
@@ -84,6 +85,7 @@ export class TasksFacade {
   readonly error = this._error.asReadonly();
   readonly refreshFailed = this._refreshFailed.asReadonly();
   readonly recipients = this._recipients.asReadonly();
+  readonly recipientsError = this._recipientsError.asReadonly();
   readonly selectedTaskReplies = this._selectedTaskReplies.asReadonly();
 
   // Tasks where the current user is sender OR recipient (personal scope).
@@ -488,6 +490,8 @@ export class TasksFacade {
 
     const branchId = this.branchFacade.selectedBranchId();
 
+    this._recipientsError.set(null);
+
     let query = this.supabase.client
       .from('users')
       .select('id, first_names, paternal_last_name, branch_id, roles!role_id(name)')
@@ -502,7 +506,11 @@ export class TasksFacade {
     }
 
     const { data, error } = await query;
-    if (error) return;
+    if (error) {
+      this._recipients.set([]);
+      this._recipientsError.set('No se pudieron cargar los destinatarios.');
+      throw error;
+    }
 
     // fix-030-i: el SELECT de `users` de arriba NO está scopeado por sede para una secretaria
     // (verificado en vivo: una secretaria de sede 1 puede leer un usuario de sede 2) — el
@@ -520,7 +528,11 @@ export class TasksFacade {
         .from('instructors')
         .select('user_id')
         .eq('both_branches', true);
-      if (bbError) return;
+      if (bbError) {
+        this._recipients.set([]);
+        this._recipientsError.set('No se pudieron verificar los permisos de instructores.');
+        throw bbError;
+      }
       bothBranchesInstructorIds = new Set(
         ((bothBranchesRows ?? []) as Array<{ user_id: number }>).map((r) => r.user_id),
       );

@@ -111,6 +111,20 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                   </div>
                 }
               </div>
+            } @else if (flotaFacade.vehicleAgendaError()) {
+              <div class="flex flex-col items-center justify-center py-20 gap-4 text-center">
+                <div
+                  class="w-16 h-16 rounded-full bg-subtle flex items-center justify-center text-error"
+                >
+                  <app-icon name="alert-triangle" [size]="32" color="var(--state-error)" />
+                </div>
+                <div class="space-y-1">
+                  <p class="font-bold text-text-primary">Error al cargar la agenda</p>
+                  <p class="text-sm text-text-muted">
+                    {{ flotaFacade.vehicleAgendaError() }}
+                  </p>
+                </div>
+              </div>
             } @else if (flotaFacade.vehicleAgenda().length === 0) {
               <div class="flex flex-col items-center justify-center py-20 gap-4 text-center">
                 <div

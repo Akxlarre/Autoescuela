@@ -159,6 +159,7 @@ export class InstructoresFacade {
   private readonly _isSubmitting = signal(false);
   private readonly _selectedInstructor = signal<InstructorTableRow | null>(null);
   private readonly _assignmentHistory = signal<VehicleAssignmentHistory[]>([]);
+  private readonly _assignmentHistoryError = signal<string | null>(null);
 
   private readonly _horasMonth = signal<number>(chileParts().month);
   private readonly _horasYear = signal<number>(chileYear());
@@ -185,6 +186,7 @@ export class InstructoresFacade {
   readonly isSubmitting = this._isSubmitting.asReadonly();
   readonly selectedInstructor = this._selectedInstructor.asReadonly();
   readonly assignmentHistory = this._assignmentHistory.asReadonly();
+  readonly assignmentHistoryError = this._assignmentHistoryError.asReadonly();
   readonly horasMonth = this._horasMonth.asReadonly();
   readonly horasYear = this._horasYear.asReadonly();
   readonly horasMensuales = this._horasMensuales.asReadonly();
@@ -241,16 +243,21 @@ export class InstructoresFacade {
       return;
     }
     this._lastBranchId = currentBranchId;
+    const requestToken = this.listGuard.next();
     this._isLoading.set(true);
     this._error.set(null);
     try {
-      await this.fetchData();
+      await this.fetchData(requestToken);
+      if (!this.listGuard.isCurrent(requestToken)) return;
       this._initialized = true;
     } catch {
+      if (!this.listGuard.isCurrent(requestToken)) return;
       this._instructores.set([]);
       this._error.set('No se pudo cargar la lista de instructores.');
     } finally {
-      this._isLoading.set(false);
+      if (this.listGuard.isCurrent(requestToken)) {
+        this._isLoading.set(false);
+      }
     }
   }
 
@@ -262,11 +269,14 @@ export class InstructoresFacade {
   }
 
   async refreshSilently(): Promise<void> {
+    const requestToken = this.listGuard.next();
     try {
-      await this.fetchData();
+      await this.fetchData(requestToken);
+      if (!this.listGuard.isCurrent(requestToken)) return;
       this._refreshFailed.set(false);
       this._error.set(null);
     } catch {
+      if (!this.listGuard.isCurrent(requestToken)) return;
       this._refreshFailed.set(true);
     }
   }
@@ -302,8 +312,7 @@ export class InstructoresFacade {
     )
   `;
 
-  private async fetchData(): Promise<void> {
-    const requestToken = this.listGuard.next();
+  private async fetchData(requestToken: number): Promise<void> {
     const branchId = this.getActiveBranchId();
 
     let query = this.supabase.client
@@ -452,51 +461,58 @@ export class InstructoresFacade {
   }
 
   async loadAssignmentHistory(instructorId: number): Promise<void> {
-    const { data, error } = await this.supabase.client
-      .from('vehicle_assignments')
-      .select(
-        `
-        id,
-        start_date,
-        end_date,
-        vehicle_id,
-        vehicles ( license_plate, brand, model, year ),
-        assigned_by_user:users!vehicle_assignments_assigned_by_fkey ( first_names, paternal_last_name )
-      `,
-      )
-      .eq('instructor_id', instructorId)
-      .order('start_date', { ascending: false });
+    this._assignmentHistory.set([]);
+    this._assignmentHistoryError.set(null);
+    try {
+      const { data, error } = await this.supabase.client
+        .from('vehicle_assignments')
+        .select(
+          `
+          id,
+          start_date,
+          end_date,
+          vehicle_id,
+          vehicles ( license_plate, brand, model, year ),
+          assigned_by_user:users!vehicle_assignments_assigned_by_fkey ( first_names, paternal_last_name )
+        `,
+        )
+        .eq('instructor_id', instructorId)
+        .order('start_date', { ascending: false });
 
-    if (error) throw error;
-    if (!data) {
+      if (error) throw error;
+      if (!data) {
+        this._assignmentHistory.set([]);
+        return;
+      }
+
+      this._assignmentHistory.set(
+        data.map((a: Record<string, unknown>) => {
+          const v = a['vehicles'] as {
+            license_plate: string;
+            brand: string | null;
+            model: string | null;
+            year: number | null;
+          } | null;
+          const assignedByUser = a['assigned_by_user'] as {
+            first_names: string;
+            paternal_last_name: string;
+          } | null;
+          return {
+            id: a['id'] as number,
+            vehiclePlate: v?.license_plate ?? '—',
+            vehicleModel: [v?.brand, v?.model, v?.year].filter(Boolean).join(' '),
+            startDate: a['start_date'] as string,
+            endDate: (a['end_date'] as string) ?? null,
+            assignedBy: assignedByUser
+              ? `${assignedByUser.first_names} ${assignedByUser.paternal_last_name}`
+              : null,
+          };
+        }),
+      );
+    } catch {
       this._assignmentHistory.set([]);
-      return;
+      this._assignmentHistoryError.set('No se pudo cargar el historial de asignaciones.');
     }
-
-    this._assignmentHistory.set(
-      data.map((a: Record<string, unknown>) => {
-        const v = a['vehicles'] as {
-          license_plate: string;
-          brand: string | null;
-          model: string | null;
-          year: number | null;
-        } | null;
-        const assignedByUser = a['assigned_by_user'] as {
-          first_names: string;
-          paternal_last_name: string;
-        } | null;
-        return {
-          id: a['id'] as number,
-          vehiclePlate: v?.license_plate ?? '—',
-          vehicleModel: [v?.brand, v?.model, v?.year].filter(Boolean).join(' '),
-          startDate: a['start_date'] as string,
-          endDate: (a['end_date'] as string) ?? null,
-          assignedBy: assignedByUser
-            ? `${assignedByUser.first_names} ${assignedByUser.paternal_last_name}`
-            : null,
-        };
-      }),
-    );
   }
 
   /** Abre el drawer de horas en el mes actual (fix-208-b: antes quedaba el mes de la vez anterior). */
@@ -695,7 +711,7 @@ export class InstructoresFacade {
       const aviso = instructorCreatedToast(sendInvite, data?.inviteEmailSent);
       this.toast[aviso.kind](aviso.summary, aviso.detail);
       this._vehiclesLoaded = false;
-      await Promise.all([this.refreshSilently(), this.loadVehicles()]);
+      await Promise.all([this.refreshSilently(), this.loadVehicles().catch(() => undefined)]);
       return (data?.instructorId as number | undefined) ?? null;
     } catch (err: unknown) {
       const msg =
@@ -744,7 +760,7 @@ export class InstructoresFacade {
       if (data?.error) throw new Error(data.error);
 
       this._vehiclesLoaded = false;
-      await Promise.all([this.refreshSilently(), this.loadVehicles()]);
+      await Promise.all([this.refreshSilently(), this.loadVehicles().catch(() => undefined)]);
       this.toast.success(
         'Instructor actualizado',
         'Los datos han sido actualizados correctamente.',

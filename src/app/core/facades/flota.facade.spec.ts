@@ -910,7 +910,21 @@ describe('FlotaFacade.initialize — combustibleMes (fix-007-i)', () => {
       expect(service.vehicles()).toEqual([]);
     });
 
-    it('loadVehicleAgenda: si una consulta del Promise.all falla con error, lanza y no carga agenda (AC7)', async () => {
+    it('loadVehicleAgenda: con error limpia agenda previa y expone vehicleAgendaError (Caso A)', async () => {
+      // 1. Simular agenda previa de otro vehículo
+      (service as any)._vehicleAgenda.set([
+        {
+          hour: '09:00',
+          minute: 0,
+          endHour: '09:50',
+          type: 'class',
+          studentName: 'Alumno Previo',
+          classNumber: 1,
+          status: 'completed',
+        },
+      ]);
+      expect(service.vehicleAgenda().length).toBe(1);
+
       localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
         if (table === 'class_b_sessions') {
           return {
@@ -939,8 +953,43 @@ describe('FlotaFacade.initialize — combustibleMes (fix-007-i)', () => {
         throw new Error(`tabla inesperada: ${table}`);
       });
 
-      await expect(service.loadVehicleAgenda(1, '2026-11-10')).rejects.toBeTruthy();
+      // No lanza hacia el drawer: captura el error
+      await service.loadVehicleAgenda(1, '2026-11-10');
+
+      // 2. Limpia la agenda previa y expone el error
       expect(service.vehicleAgenda()).toEqual([]);
+      expect(service.vehicleAgendaError()).toBe('No se pudo cargar la agenda del vehículo.');
+      expect(service.isLoadingAgenda()).toBe(false);
+
+      // 3. Carga exitosa posterior limpia el error
+      localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'class_b_sessions') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                gte: vi.fn(() => ({
+                  lt: vi.fn(() => ({
+                    order: vi.fn().mockResolvedValue({ data: [], error: null }),
+                  })),
+                })),
+              })),
+            })),
+          };
+        }
+        if (table === 'maintenance_records') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+              })),
+            })),
+          };
+        }
+        throw new Error(`tabla inesperada: ${table}`);
+      });
+
+      await service.loadVehicleAgenda(1, '2026-11-10');
+      expect(service.vehicleAgendaError()).toBeNull();
     });
   });
 });

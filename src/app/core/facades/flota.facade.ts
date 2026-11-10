@@ -39,6 +39,7 @@ export class FlotaFacade {
   private readonly _selectedVehicleId = signal<number | null>(null);
   private readonly _vehicleAgenda = signal<VehicleAgendaSlot[]>([]);
   private readonly _isLoadingAgenda = signal(false);
+  private readonly _vehicleAgendaError = signal<string | null>(null);
 
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
@@ -56,6 +57,7 @@ export class FlotaFacade {
   readonly selectedVehicleId = this._selectedVehicleId.asReadonly();
   readonly vehicleAgenda = this._vehicleAgenda.asReadonly();
   readonly isLoadingAgenda = this._isLoadingAgenda.asReadonly();
+  readonly vehicleAgendaError = this._vehicleAgendaError.asReadonly();
 
   readonly kpis = computed((): FlotaKpis => {
     const vs = this._vehicles();
@@ -338,6 +340,8 @@ export class FlotaFacade {
   /** `dateStr`: día de Chile a consultar, 'YYYY-MM-DD'. */
   async loadVehicleAgenda(vehicleId: number, dateStr: string): Promise<void> {
     this._isLoadingAgenda.set(true);
+    this._vehicleAgenda.set([]);
+    this._vehicleAgendaError.set(null);
     try {
       const day = chileDayRange(dateStr);
       const [sessionsResult, maintenancesResult] = await Promise.all([
@@ -381,6 +385,9 @@ export class FlotaFacade {
         })),
       );
       this._vehicleAgenda.set(slots);
+    } catch {
+      this._vehicleAgenda.set([]);
+      this._vehicleAgendaError.set('No se pudo cargar la agenda del vehículo.');
     } finally {
       this._isLoadingAgenda.set(false);
     }

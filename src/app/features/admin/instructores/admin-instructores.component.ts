@@ -682,13 +682,13 @@ export class AdminInstructoresComponent implements OnInit, AfterViewInit {
 
   protected openVerDrawer(inst: InstructorTableRow): void {
     this.facade.selectInstructor(inst);
-    this.facade.loadAssignmentHistory(inst.id);
+    void this.facade.loadAssignmentHistory(inst.id);
     this.layoutDrawer.open(AdminInstructorVerDrawerComponent, 'Detalle de Instructor', 'eye');
   }
 
   protected openEditarDrawer(inst: InstructorTableRow): void {
     this.facade.selectInstructor(inst);
-    this.facade.loadAssignmentHistory(inst.id);
+    void this.facade.loadAssignmentHistory(inst.id);
     this.layoutDrawer.open(AdminInstructorEditarDrawerComponent, 'Editar instructor', 'edit');
   }
 }

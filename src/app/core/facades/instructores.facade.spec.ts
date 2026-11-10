@@ -559,6 +559,123 @@ describe('InstructoresFacade', () => {
       );
     });
 
+    it('crearInstructor() con fallo en loadVehicles() sigue devolviendo instructorId (Caso B)', async () => {
+      supabaseSpy.client.functions = {
+        invoke: vi.fn().mockResolvedValue({
+          data: { instructorId: 77, inviteEmailSent: true },
+          error: null,
+        }),
+      };
+      vi.spyOn(facade, 'loadVehicles').mockRejectedValue(new Error('Network error on vehicles'));
+
+      const id = await facade.crearInstructor({
+        rut: '12345678-5',
+        firstNames: 'Pedro',
+        paternalLastName: 'Soto',
+        maternalLastName: '',
+        email: 'pedro@test.cl',
+        phone: '',
+        type: 'practice',
+        licenseNumber: '123',
+        licenseClass: 'B',
+        licenseExpiry: '2030-01-01',
+        vehicleId: null,
+        branchId: 1,
+        bothBranches: false,
+      } as any);
+
+      expect(id).toBe(77);
+      expect(toastSpy.error).not.toHaveBeenCalled();
+    });
+
+    it('editarInstructor() con fallo en loadVehicles() sigue devolviendo true (Caso B)', async () => {
+      supabaseSpy.client.functions = {
+        invoke: vi.fn().mockResolvedValue({
+          data: { success: true },
+          error: null,
+        }),
+      };
+      vi.spyOn(facade, 'loadVehicles').mockRejectedValue(new Error('Network error on vehicles'));
+
+      const ok = await facade.editarInstructor(1, 10, {
+        firstNames: 'Juan',
+        paternalLastName: 'Perez',
+        maternalLastName: '',
+        phone: '',
+        email: 'juan@test.cl',
+        currentEmail: 'juan@test.cl',
+        type: 'practice',
+        licenseNumber: '',
+        licenseClass: 'B',
+        licenseExpiry: '2030-01-01',
+        active: true,
+        vehicleId: null,
+        currentVehicleId: null,
+        branchId: 1,
+        bothBranches: false,
+      } as any);
+
+      expect(ok).toBe(true);
+      expect(toastSpy.error).not.toHaveBeenCalled();
+      expect(toastSpy.success).toHaveBeenCalled();
+    });
+
+    it('loadAssignmentHistory() con error limpia historial previo y expone assignmentHistoryError (Caso A)', async () => {
+      // 1. Simular historial previo de otro instructor
+      (facade as any)._assignmentHistory.set([
+        {
+          id: 99,
+          vehiclePlate: 'PREV-12',
+          vehicleModel: 'Auto Anterior',
+          startDate: '2025-01-01',
+          endDate: null,
+          assignedBy: 'Admin',
+        },
+      ]);
+      expect(facade.assignmentHistory().length).toBe(1);
+
+      // 2. Simular fallo en la consulta del nuevo instructor
+      supabaseSpy.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({
+          data: null,
+          error: new Error('Network error on vehicle_assignments'),
+        }),
+      });
+
+      await facade.loadAssignmentHistory(2);
+
+      // 3. El historial previo DEBE haberse limpiado (no mostrar datos del instructor anterior)
+      expect(facade.assignmentHistory()).toEqual([]);
+      expect(facade.assignmentHistoryError()).toBe(
+        'No se pudo cargar el historial de asignaciones.',
+      );
+
+      // 4. Una carga exitosa posterior limpia el error y llena el historial
+      supabaseSpy.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({
+          data: [
+            {
+              id: 1,
+              start_date: '2026-02-01',
+              end_date: null,
+              vehicles: { license_plate: 'NEW-34', brand: 'Toyota', model: 'Yaris', year: 2024 },
+              assigned_by_user: { first_names: 'Secretaria', paternal_last_name: 'A' },
+            },
+          ],
+          error: null,
+        }),
+      });
+
+      await facade.loadAssignmentHistory(2);
+      expect(facade.assignmentHistoryError()).toBeNull();
+      expect(facade.assignmentHistory().length).toBe(1);
+      expect(facade.assignmentHistory()[0].vehiclePlate).toBe('NEW-34');
+    });
+
     it('editarInstructor() con email duplicado — fix-029-i: lee error.context y muestra el mensaje de negocio real, no el genérico del sanitizer', async () => {
       const duplicateEmailError = Object.assign(
         new Error('Edge Function returned a non-2xx status code'),
@@ -845,6 +962,27 @@ describe('InstructoresFacade', () => {
       resolveOld({ data: [row(1)], error: null });
       await first;
       expect(facade.instructores().map((i) => i.id)).toEqual([2]);
+    });
+
+    it('la respuesta con error de la sede anterior no pisa la de la sede vigente ni vacia instructores (Regla 3)', async () => {
+      let rejectOld!: (e: unknown) => void;
+      mockTables([
+        new Promise((_, rej) => (rejectOld = rej)),
+        Promise.resolve({ data: [row(2)], error: null }),
+      ]);
+      const first = facade.initialize();
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      await facade.initialize();
+      expect(facade.instructores().map((i) => i.id)).toEqual([2]);
+      expect(facade.error()).toBeNull();
+
+      // Falla la petición vieja de la sede anterior
+      rejectOld(new Error('Network error on old branch request'));
+      await first;
+
+      // NO debe vaciar la lista de la sede vigente ni ponerle error
+      expect(facade.instructores().map((i) => i.id)).toEqual([2]);
+      expect(facade.error()).toBeNull();
     });
   });
 
