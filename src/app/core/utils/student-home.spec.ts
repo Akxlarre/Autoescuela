@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   computeOverallProgress,
   computeSemaphore,
+  semaphoreFromProfessionalFlag,
   computeAverageGrade,
   computeCertificateBlockingReason,
   deriveCertificateState,
@@ -196,5 +197,31 @@ describe('deriveCertificateState', () => {
     expect(deriveCertificateState({ certificateEnabled: false, certificateIssued: false })).toBe(
       'locked',
     );
+  });
+});
+
+// ── semaphoreFromProfessionalFlag ────────────────────────────────────────────
+
+describe('semaphoreFromProfessionalFlag', () => {
+  it('devuelve green cuando no hay fila (null o undefined)', () => {
+    expect(semaphoreFromProfessionalFlag(null)).toBe('green');
+    expect(semaphoreFromProfessionalFlag(undefined)).toBe('green');
+  });
+
+  it('devuelve green cuando pct_theory es null aunque attendance_flag sea red (sin asistencia registrada)', () => {
+    expect(semaphoreFromProfessionalFlag({ attendance_flag: 'red', pct_theory: null })).toBe(
+      'green',
+    );
+  });
+
+  it('devuelve attendance_flag tal cual cuando pct_theory es un número (incluyendo 0)', () => {
+    expect(semaphoreFromProfessionalFlag({ attendance_flag: 'green', pct_theory: 85 })).toBe(
+      'green',
+    );
+    expect(semaphoreFromProfessionalFlag({ attendance_flag: 'yellow', pct_theory: 65 })).toBe(
+      'yellow',
+    );
+    expect(semaphoreFromProfessionalFlag({ attendance_flag: 'red', pct_theory: 40 })).toBe('red');
+    expect(semaphoreFromProfessionalFlag({ attendance_flag: 'red', pct_theory: 0 })).toBe('red');
   });
 });

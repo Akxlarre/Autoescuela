@@ -322,15 +322,34 @@ describe('StudentHomeFacade — manejo explícito de errores de lectura (0060-b 
       } else {
         res = entry ?? { data: null, count: 0, error: null };
       }
+      const allowedProfAttendanceCols = new Set(['attendance_flag', 'pct_theory']);
+      let activeRes = res;
       const chain: any = {
-        select: vi.fn().mockReturnThis(),
+        select: vi.fn((columns = '') => {
+          if (table === 'v_professional_attendance' && !activeRes.error) {
+            const cols = String(columns)
+              .split(',')
+              .map((c) => c.trim())
+              .filter(Boolean);
+            const invalidCol = cols.find((c) => !allowedProfAttendanceCols.has(c));
+            if (cols.length === 0 || invalidCol) {
+              activeRes = {
+                data: null,
+                error: {
+                  message: `column v_professional_attendance.${invalidCol ?? '*'} does not exist`,
+                },
+              };
+            }
+          }
+          return chain;
+        }),
         eq: vi.fn().mockReturnThis(),
         in: vi.fn().mockReturnThis(),
         gt: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue(res),
-        then: (resolve: any, reject: any) => Promise.resolve(res).then(resolve, reject),
+        maybeSingle: vi.fn(() => Promise.resolve(activeRes)),
+        then: (resolve: any, reject: any) => Promise.resolve(activeRes).then(resolve, reject),
       };
       return chain;
     });
@@ -700,5 +719,67 @@ describe('StudentHomeFacade — manejo explícito de errores de lectura (0060-b 
     await Promise.all([pInit, pRefresh]);
 
     expect(facade.isLoading()).toBe(false);
+  });
+
+  it('Profesional: lee attendance_flag y pct_theory reales sin fallar y expone attendance.semaphore yellow', async () => {
+    const { facade } = setupErrorCase({
+      responses: {
+        enrollments: {
+          data: mockEnrollmentRow({
+            license_group: 'professional',
+            promotion_course_id: 9,
+          }),
+          error: null,
+        },
+        professional_module_grades: { data: [], error: null },
+        v_professional_attendance: {
+          data: { attendance_flag: 'yellow', pct_theory: 65 },
+          error: null,
+        },
+        professional_practice_sessions: { data: null, count: 5, error: null },
+        certificates: { data: null, error: null },
+        professional_practice_attendance: { data: null, count: 2, error: null },
+        professional_theory_sessions: { data: null, count: 4, error: null },
+        professional_theory_attendance: { data: null, count: 3, error: null },
+      },
+    });
+
+    await facade.initialize();
+
+    expect(facade.error()).toBeNull();
+    expect(facade.snapshot()).not.toBeNull();
+    expect(facade.snapshot()?.attendance.semaphore).toBe('yellow');
+    expect(facade.snapshot()?.attendance.consecutiveAbsences).toBe(0);
+  });
+
+  it('Profesional sin asistencia registrada ({ attendance_flag: red, pct_theory: null }) devuelve semáforo green', async () => {
+    const { facade } = setupErrorCase({
+      responses: {
+        enrollments: {
+          data: mockEnrollmentRow({
+            license_group: 'professional',
+            promotion_course_id: 9,
+          }),
+          error: null,
+        },
+        professional_module_grades: { data: [], error: null },
+        v_professional_attendance: {
+          data: { attendance_flag: 'red', pct_theory: null },
+          error: null,
+        },
+        professional_practice_sessions: { data: null, count: 5, error: null },
+        certificates: { data: null, error: null },
+        professional_practice_attendance: { data: null, count: 0, error: null },
+        professional_theory_sessions: { data: null, count: 4, error: null },
+        professional_theory_attendance: { data: null, count: 0, error: null },
+      },
+    });
+
+    await facade.initialize();
+
+    expect(facade.error()).toBeNull();
+    expect(facade.snapshot()).not.toBeNull();
+    expect(facade.snapshot()?.attendance.semaphore).toBe('green');
+    expect(facade.snapshot()?.attendance.consecutiveAbsences).toBe(0);
   });
 });

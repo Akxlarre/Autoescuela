@@ -144,7 +144,7 @@
 | `src/app/core/utils/sede-theme.utils.ts` | `SedeTheme`, `DEFAULT_SEDE_THEME`, `branchIdToTheme` |
 | `src/app/core/utils/servicios-especiales.utils.ts` | `buscarServicioDuplicado`, `mensajeServicioDuplicado`, `noSoloEspacios`, `montoEntero` |
 | `src/app/core/utils/sparkline.utils.ts` | `getSparklinePoints` |
-| `src/app/core/utils/student-home.ts` | `computeOverallProgress`, `computeSemaphore`, `computeAverageGrade`, `computeCertificateBlockingReason`, `deriveCertificateState` |
+| `src/app/core/utils/student-home.ts` | `computeOverallProgress`, `computeSemaphore`, `ProfessionalAttendanceFlagRow`, `semaphoreFromProfessionalFlag`, `computeAverageGrade`, `computeCertificateBlockingReason`, `deriveCertificateState` |
 | `src/app/core/utils/student-name.util.ts` | `StudentNameParts`, `buildStudentDisplayName`, `sortByPaternalLastNameAsc` |
 | `src/app/core/utils/subnav-tier.utils.ts` | `SubnavTier`, `pickSubnavTier`, `canUseIconTier`, `fitsEqualColumns` (hotfix-170-m: con pestañas `flex-1` manda la más ancha × n, no el total) |
 | `src/app/core/utils/website-config.utils.ts` | Configuración web (fix-491/492/493-m): `whyUsToPublish`/`DEFAULT_WHY_US` (publicar conserva "Por qué elegirnos"), `configTabsWithErrors` (pestañas con campos inválidos), `courseCardControls` (controles de una card de curso; sin precio propio desde fix-501-m), `promoTextValidator`; fix-500-m: `domainValidator`, `httpUrlValidator`, `whatsappValidator`, `googleMapsEmbedValidator` (la landing ponía URLs editables en un iframe y en enlaces: un `javascript:` se ejecutaba); fix-502-m: `contactPolicyMismatch` (contacto de la web vs política de privacidad de la sede) |

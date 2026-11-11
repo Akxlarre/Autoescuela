@@ -13,6 +13,7 @@ import {
   computeOverallProgress,
   computeSemaphore,
   deriveCertificateState,
+  semaphoreFromProfessionalFlag,
 } from '@core/utils/student-home';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
 import type {
@@ -429,9 +430,12 @@ export class StudentHomeFacade {
         .select('module_number, module, grade, passed, status')
         .eq('enrollment_id', enrollmentId)
         .order('module_number', { ascending: true }),
+      // Se consulta `attendance_flag, pct_theory` en lugar de `semaphore` porque la vista
+      // nunca tuvo `semaphore` ni `consecutive_absences`; antes de assertReadOk ese 400 se
+      // tragaba en silencio durante meses porque la lectura no revisaba su error.
       this.supabase.client
         .from('v_professional_attendance')
-        .select('semaphore, consecutive_absences')
+        .select('attendance_flag, pct_theory')
         .eq('enrollment_id', enrollmentId)
         .maybeSingle(),
       promotionCourseId
@@ -495,8 +499,10 @@ export class StudentHomeFacade {
     }));
 
     const avgGrade = computeAverageGrade(modules);
-    const consecutiveAbsences = Number(semaphoreData?.consecutive_absences ?? 0);
-    const semaphore = (semaphoreData?.semaphore as any) ?? computeSemaphore(consecutiveAbsences);
+    // En Profesional no existe el dato de faltas seguidas porque v_professional_attendance no
+    // lo tiene; por eso se deja en 0 y el chip "faltas seguidas" no aparece en esa matrícula.
+    const consecutiveAbsences = 0;
+    const semaphore = semaphoreFromProfessionalFlag(semaphoreData);
 
     const grades: StudentHomeGrades = {
       finalExamGrade: null,
