@@ -16,6 +16,11 @@ import { chileParts, chileYear, formatChilePattern, monthDays } from '../_shared
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import {
+  calcPayrollBaseAmount,
+  roundPayrollHours,
+  sumPayrollHours,
+} from '../_shared/payroll-totals.ts';
 import { authErrorResponse, requireStaff, resolveBranchScope } from '../_shared/staff-auth.ts';
 
 const corsHeaders = {
@@ -120,6 +125,7 @@ interface ReportData {
   branchName: string;
   generatedBy: string;
   rows: LiqRow[];
+  totalHoras: number;
   totalNomina: number;
   totalAnticipos: number;
   totalAPagar: number;
@@ -235,11 +241,11 @@ Deno.serve(async (req: Request) => {
         const rawU = instr.users;
         const u = Array.isArray(rawU) ? rawU[0] : rawU;
         const nombre = `${u?.first_names ?? ''} ${u?.paternal_last_name ?? ''}`.trim() || '—';
-        const totalHours = hoursMap.get(instr.id) ?? 0;
+        const totalHours = roundPayrollHours(hoursMap.get(instr.id) ?? 0);
         const totalAdvances = advancesMap.get(instr.id) ?? 0;
         const payment = paymentsMap.get(instr.id);
         const amountPerHour = rateByBranch.get(u?.branch_id) ?? AMOUNT_DEFAULT;
-        const totalBaseAmount = totalHours * amountPerHour;
+        const totalBaseAmount = calcPayrollBaseAmount(totalHours, amountPerHour);
         const finalPaymentAmount = Math.max(0, totalBaseAmount - totalAdvances);
         return {
           instructorId: instr.id,
@@ -256,6 +262,7 @@ Deno.serve(async (req: Request) => {
       })
       .sort((a: LiqRow, b: LiqRow) => a.nombre.localeCompare(b.nombre));
 
+    const totalHoras = sumPayrollHours(rows);
     const totalNomina = rows.reduce((s, r) => s + r.totalBaseAmount, 0);
     const totalAnticipos = rows.reduce((s, r) => s + r.totalAdvances, 0);
     const totalAPagar = rows.reduce((s, r) => s + r.finalPaymentAmount, 0);
@@ -268,6 +275,7 @@ Deno.serve(async (req: Request) => {
       branchName,
       generatedBy,
       rows,
+      totalHoras,
       totalNomina,
       totalAnticipos,
       totalAPagar,
@@ -354,7 +362,7 @@ function buildExcelPayload(d: ReportData) {
   rows.push([
     'TOTALES',
     '',
-    d.rows.reduce((s, r) => s + r.totalHours, 0),
+    d.totalHoras,
     '',
     d.totalNomina,
     d.totalAnticipos,
@@ -558,7 +566,7 @@ function buildPdf(data: ReportData): Uint8Array {
   resetColor();
   ops.push('0.1 0.22 0.38 rg');
   T(cols.nombre.x, y - 10, `TOTALES (${data.rows.length} instructores)`, 8, true);
-  T(cols.horas.x, y - 10, String(data.rows.reduce((s, r) => s + r.totalHours, 0)), 8, true);
+  T(cols.horas.x, y - 10, String(data.totalHoras), 8, true);
   T(cols.base.x, y - 10, clp(data.totalNomina), 8, true);
   T(cols.anticipos.x, y - 10, clp(data.totalAnticipos), 8, true);
   T(cols.total.x, y - 10, clp(data.totalAPagar), 8, true);

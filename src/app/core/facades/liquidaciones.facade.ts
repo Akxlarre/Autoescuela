@@ -296,14 +296,14 @@ export class LiquidacionesFacade {
           const rawU = instr.users as any;
           const u = Array.isArray(rawU) ? rawU[0] : rawU;
           const nombre = `${u?.first_names ?? ''} ${u?.paternal_last_name ?? ''}`.trim() || '—';
-          const totalHours = hoursMap.get(instr.id) ?? 0;
+          const totalHours = Math.round((hoursMap.get(instr.id) ?? 0) * 10) / 10;
           const practicalSessions = sessionsMap.get(instr.id) ?? 0;
           const totalAdvances = advancesMap.get(instr.id) ?? 0;
           const payment = paymentsMap.get(instr.id);
           // spec 0014-m: tarifa resuelta por la sede del instructor (no un valor único).
           // "Todas las escuelas" sigue calculando bien cada fila con la tarifa de su sede.
           const amountPerHour = this.payrollConfig.rateForBranch(u?.branch_id ?? null);
-          const totalBaseAmount = totalHours * amountPerHour;
+          const totalBaseAmount = Math.round(totalHours * amountPerHour);
           const finalPaymentAmount = Math.max(0, totalBaseAmount - totalAdvances);
 
           return {

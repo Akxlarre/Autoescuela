@@ -359,5 +359,24 @@ describe('LiquidacionesFacade', () => {
         .filter((chain: any) => chain.update);
       expect(updatedTables.length).toBe(0);
     });
+
+    it('redondea totalBaseAmount a entero CLP cuando horas NUMERIC(6,1) × tarifa produce deriva flotante', async () => {
+      payrollConfigSpy.rateForBranch.mockReturnValue(7000);
+      supabaseSpy.client = mockClientForFetch({
+        instructors: [instructors[0]],
+        instructor_monthly_hours: [
+          { instructor_id: 10, practical_sessions: 3, total_equivalent: 2.3 },
+        ],
+        instructor_advances: [],
+        instructor_monthly_payments: [],
+      });
+
+      await facade.initialize();
+
+      const ana = facade.liquidaciones().find((r) => r.instructorId === 10)!;
+      // En JS crudo 2.3 * 7000 === 16099.999999999998; base_salary es INTEGER en BD.
+      expect(ana.totalBaseAmount).toBe(16100);
+      expect(ana.finalPaymentAmount).toBe(16100);
+    });
   });
 });
