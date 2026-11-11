@@ -1992,5 +1992,59 @@ describe('AsistenciaClaseBFacade', () => {
 
       expect((facade as any).vehicleDocsUnknown()).toBe(false);
     });
+
+    it('refreshAlertasSilently OK no borra refreshFailed cuando el refresco completo previo falló', async () => {
+      facade.setBranchFilter(1);
+      mock.setResult('class_b_sessions', []);
+      mock.setResult('class_b_practice_attendance', []);
+      await facade.initialize();
+      (facade as any)._clasesPracticas.set([
+        makeRow({ id: 1, enrollmentId: 10, status: 'ausente' }),
+      ]);
+
+      // Refresco completo falla → refreshFailed pasa a true y la tabla queda stale
+      mock.setResult('class_b_sessions', null, { message: 'full refresh fail' });
+      await facade.initialize();
+      expect(facade.refreshFailed()).toBe(true);
+
+      // Después justifyAbsence + refreshAlertasSilently salen bien, pero la tabla sigue stale
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_practice_attendance', [{ recorded_at: '2026-06-30T09:00:00Z' }]);
+      mock.setResult('class_b_sessions', []); // countCancelledSince = 0
+
+      let attCalls = 0;
+      mock.builderFor('class_b_practice_attendance').then = (resolve: any) => {
+        attCalls += 1;
+        if (attCalls === 1) {
+          return resolve({ data: [{ recorded_at: '2026-06-30T09:00:00Z' }], error: null });
+        }
+        return resolve({ data: [], error: null });
+      };
+
+      await facade.justifyAbsence(1, 'Certificado médico');
+
+      expect(toast.success).toHaveBeenCalled();
+      expect(facade.refreshFailed()).toBe(true);
+    });
+
+    it('refrescar() con datos cargados y lectura fallando es Caso B: no prende isLoading, mantiene filas y deja refreshFailed en true', async () => {
+      facade.setBranchFilter(1);
+      mock.setResult('class_b_sessions', []);
+      mock.setResult('class_b_practice_attendance', []);
+      await facade.initialize();
+      (facade as any)._clasesPracticas.set([makeRow({ id: 77 })]);
+
+      mock.setResult('class_b_sessions', null, { message: 'refresh fail' });
+      const pending = (facade as any).refrescar();
+
+      expect(facade.isLoading()).toBe(false);
+      await pending;
+
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.clasesPracticas()).toHaveLength(1);
+      expect(facade.clasesPracticas()[0].id).toBe(77);
+      expect(facade.error()).toBeNull();
+      expect(facade.refreshFailed()).toBe(true);
+    });
   });
 });

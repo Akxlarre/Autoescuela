@@ -422,7 +422,7 @@ describe('AsistenciaClaseBContentComponent — errores de carga (spec 0060-b T3.
     return { fixture, component };
   }
 
-  it('Caso A: con error en prácticas oculta heroKpis (sin ceros), oculta la tabla y muestra app-empty-state en wrapper centrado', () => {
+  it('Caso A: con error en prácticas oculta heroKpis (sin ceros), mantiene app-date-input, oculta la tabla y muestra app-empty-state en wrapper centrado', () => {
     const { fixture, component } = mount({
       error: 'No se pudo cargar la asistencia de prácticas',
       kpis: null,
@@ -431,6 +431,10 @@ describe('AsistenciaClaseBContentComponent — errores de carga (spec 0060-b T3.
     (component as any).retry?.subscribe(retrySpy);
 
     expect((component as any).heroKpis()).toEqual([]);
+    expect(fixture.nativeElement.querySelector('app-date-input')).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('[data-llm-action="refresh-attendance"]'),
+    ).not.toBeNull();
     expect(fixture.nativeElement.querySelector('table')).toBeNull();
 
     const bentoFill = fixture.nativeElement.querySelector('.bento-fill');

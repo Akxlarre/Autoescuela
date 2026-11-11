@@ -184,12 +184,46 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
           [class.flex-col]="!isDesktopLayout()"
           [class.flex-row]="isDesktopLayout()"
         >
-          @if (!isLoading() && error(); as loadErr) {
-            <section
-              class="card p-5 flex-1 min-w-0 min-h-0 flex items-center justify-center"
-              role="alert"
-            >
-              <div class="flex-1 flex items-center justify-center">
+          <!-- ── Asistencia del Día (Prácticas) — PROTAGONISTA ────────────── -->
+          <section class="card p-5 flex flex-col gap-4 flex-1 min-w-0 min-h-0" appCardHover>
+            <div class="flex flex-wrap items-center justify-between gap-3 shrink-0">
+              <div class="flex items-center gap-2">
+                <app-icon
+                  name="calendar-check"
+                  [size]="18"
+                  [style.color]="'var(--color-primary)'"
+                />
+                <h2 class="item-title">Asistencia del Día — Prácticas</h2>
+              </div>
+              <div class="flex items-center gap-2">
+                <!-- Selector de fecha -->
+                <div class="flex items-center gap-1.5">
+                  <app-date-input
+                    [value]="selectedDate()"
+                    data-llm-description="Selector de fecha para clases prácticas"
+                    (valueChange)="onDateChange($event)"
+                  />
+                  @if (isFutureDate()) {
+                    <span
+                      class="text-sm font-semibold px-2 py-2 rounded-full text-warning bg-warning/12"
+                    >
+                      Solo lectura
+                    </span>
+                  }
+                </div>
+                <button
+                  class="btn-primary btn-sm flex items-center"
+                  data-llm-action="refresh-attendance"
+                  (click)="refreshRequested.emit()"
+                >
+                  <app-icon name="refresh-cw" [size]="14" />
+                  Actualizar
+                </button>
+              </div>
+            </div>
+
+            @if (!isLoading() && error(); as loadErr) {
+              <div class="flex-1 flex items-center justify-center" role="alert">
                 <app-empty-state
                   icon="circle-alert"
                   [message]="loadErr"
@@ -199,10 +233,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                   (action)="retry.emit()"
                 />
               </div>
-            </section>
-          } @else {
-            <!-- ── Asistencia del Día (Prácticas) — PROTAGONISTA ────────────── -->
-            <section class="card p-5 flex flex-col gap-4 flex-1 min-w-0 min-h-0" appCardHover>
+            } @else {
               @if (refreshFailed()) {
                 <app-alert-card severity="warning" title="No se pudo actualizar la asistencia">
                   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -222,41 +253,6 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                   </div>
                 </app-alert-card>
               }
-              <div class="flex flex-wrap items-center justify-between gap-3 shrink-0">
-                <div class="flex items-center gap-2">
-                  <app-icon
-                    name="calendar-check"
-                    [size]="18"
-                    [style.color]="'var(--color-primary)'"
-                  />
-                  <h2 class="item-title">Asistencia del Día — Prácticas</h2>
-                </div>
-                <div class="flex items-center gap-2">
-                  <!-- Selector de fecha -->
-                  <div class="flex items-center gap-1.5">
-                    <app-date-input
-                      [value]="selectedDate()"
-                      data-llm-description="Selector de fecha para clases prácticas"
-                      (valueChange)="onDateChange($event)"
-                    />
-                    @if (isFutureDate()) {
-                      <span
-                        class="text-sm font-semibold px-2 py-2 rounded-full text-warning bg-warning/12"
-                      >
-                        Solo lectura
-                      </span>
-                    }
-                  </div>
-                  <button
-                    class="btn-primary btn-sm flex items-center"
-                    data-llm-action="refresh-attendance"
-                    (click)="refreshRequested.emit()"
-                  >
-                    <app-icon name="refresh-cw" [size]="14" />
-                    Actualizar
-                  </button>
-                </div>
-              </div>
 
               <!-- Filtros -->
               <div class="flex flex-wrap items-center gap-2 shrink-0">
@@ -576,151 +572,151 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                   }
                 </div>
               }
-            </section>
+            }
+          </section>
 
-            <!-- Rail lateral de alertas (contexto, no bloqueo). Filas compactas
+          <!-- Rail lateral de alertas (contexto, no bloqueo). Filas compactas
                de 1 línea; el detalle completo (última falta, política) va en el
                atributo title (tooltip nativo). Va después de la tabla: a la
                derecha en desktop / debajo en móvil. En desktop el rail llena
                el alto de la fila (min-h-0) y el listado scrollea internamente;
                en móvil altura natural y la página scrollea (dual). -->
-            <!-- Skeleton del rail (fix-046): mismas clases/dimensiones que el rail
+          <!-- Skeleton del rail (fix-046): mismas clases/dimensiones que el rail
                real para que la tabla NO cambie de ancho entre carga y datos
                (antes el aside solo existía tras cargar → la tabla saltaba de
                904→568px). Sin appCardHover: es un placeholder, no interactivo. -->
-            @if (isLoading()) {
-              <aside
-                class="card p-3 flex flex-col gap-1.5 min-h-0 overflow-hidden"
-                [class.w-80]="isDesktopLayout()"
-                [class.shrink-0]="isDesktopLayout()"
-              >
-                <div class="flex items-center gap-1.5 px-1 pb-0.5 shrink-0">
-                  <app-skeleton-block variant="circle" width="14px" height="14px" />
-                  <app-skeleton-block variant="text" width="80px" height="12px" />
-                </div>
-                <div class="flex flex-col gap-1.5 flex-1 min-h-0 overflow-hidden">
-                  @for (i of alertSkeletonIndexes; track i) {
-                    <app-skeleton-block variant="rect" width="100%" height="48px" />
-                  }
-                </div>
-              </aside>
-            } @else if (alertas().length > 0) {
-              <aside
-                class="card p-3 flex flex-col gap-1.5 min-h-0 overflow-hidden"
-                [class.w-80]="isDesktopLayout()"
-                [class.shrink-0]="isDesktopLayout()"
-                appCardHover
-              >
-                <div class="flex items-center gap-1.5 px-1 pb-0.5 shrink-0">
-                  <app-icon
-                    name="alert-triangle"
-                    [size]="14"
-                    [style.color]="'var(--state-warning)'"
-                  />
-                  <h2 class="text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                    Alertas ({{ alertas().length }})
-                  </h2>
-                </div>
+          @if (isLoading()) {
+            <aside
+              class="card p-3 flex flex-col gap-1.5 min-h-0 overflow-hidden"
+              [class.w-80]="isDesktopLayout()"
+              [class.shrink-0]="isDesktopLayout()"
+            >
+              <div class="flex items-center gap-1.5 px-1 pb-0.5 shrink-0">
+                <app-skeleton-block variant="circle" width="14px" height="14px" />
+                <app-skeleton-block variant="text" width="80px" height="12px" />
+              </div>
+              <div class="flex flex-col gap-1.5 flex-1 min-h-0 overflow-hidden">
+                @for (i of alertSkeletonIndexes; track i) {
+                  <app-skeleton-block variant="rect" width="100%" height="48px" />
+                }
+              </div>
+            </aside>
+          } @else if (!error() && alertas().length > 0) {
+            <aside
+              class="card p-3 flex flex-col gap-1.5 min-h-0 overflow-hidden"
+              [class.w-80]="isDesktopLayout()"
+              [class.shrink-0]="isDesktopLayout()"
+              appCardHover
+            >
+              <div class="flex items-center gap-1.5 px-1 pb-0.5 shrink-0">
+                <app-icon
+                  name="alert-triangle"
+                  [size]="14"
+                  [style.color]="'var(--state-warning)'"
+                />
+                <h2 class="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                  Alertas ({{ alertas().length }})
+                </h2>
+              </div>
 
-                <div class="flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto">
-                  @for (alerta of alertas(); track alerta.enrollmentId) {
-                    <!-- Fila de 2 líneas (fix-047): descomprime yendo a lo vertical
+              <div class="flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto">
+                @for (alerta of alertas(); track alerta.enrollmentId) {
+                  <!-- Fila de 2 líneas (fix-047): descomprime yendo a lo vertical
                        (el rail scrollea). Línea 1 = avatar + nombre completo (sin
                        truncar); línea 2 = conteo + última falta + acción. El title
                        conserva la política como enriquecimiento en hover. -->
-                    <div
-                      class="flex flex-col gap-1 rounded-md pl-3 pr-2 py-2 border-l-[3px] transition-colors list-item-hover"
-                      [style.border-left-color]="
-                        alerta.nivel === 'danger' ? 'var(--state-error)' : 'var(--state-warning)'
-                      "
-                      [pTooltip]="alertaTooltip(alerta)"
-                      tooltipPosition="left"
-                    >
-                      <!-- Línea 1: avatar + nombre completo -->
-                      <div class="flex items-center gap-2">
-                        <div
-                          class="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-2xs font-bold text-surface"
-                          [class.bg-error]="alerta.nivel === 'danger'"
-                          [class.bg-warning]="alerta.nivel !== 'danger'"
-                        >
-                          {{ initials(alerta.alumnoName) }}
-                        </div>
-                        <p
-                          class="text-xs font-semibold leading-tight min-w-0 flex-1"
-                          [class.text-error]="alerta.nivel === 'danger'"
-                          [class.text-warning]="alerta.nivel !== 'danger'"
-                        >
-                          {{ alerta.alumnoName }}
-                        </p>
+                  <div
+                    class="flex flex-col gap-1 rounded-md pl-3 pr-2 py-2 border-l-[3px] transition-colors list-item-hover"
+                    [style.border-left-color]="
+                      alerta.nivel === 'danger' ? 'var(--state-error)' : 'var(--state-warning)'
+                    "
+                    [pTooltip]="alertaTooltip(alerta)"
+                    tooltipPosition="left"
+                  >
+                    <!-- Línea 1: avatar + nombre completo -->
+                    <div class="flex items-center gap-2">
+                      <div
+                        class="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-2xs font-bold text-surface"
+                        [class.bg-error]="alerta.nivel === 'danger'"
+                        [class.bg-warning]="alerta.nivel !== 'danger'"
+                      >
+                        {{ initials(alerta.alumnoName) }}
                       </div>
+                      <p
+                        class="text-xs font-semibold leading-tight min-w-0 flex-1"
+                        [class.text-error]="alerta.nivel === 'danger'"
+                        [class.text-warning]="alerta.nivel !== 'danger'"
+                      >
+                        {{ alerta.alumnoName }}
+                      </p>
+                    </div>
 
-                      <!-- Línea 2: detalle (conteo + última falta) + acción -->
-                      <div class="flex items-center justify-between gap-2 pl-7">
-                        <span class="text-2xs text-text-muted leading-tight">
-                          {{ alerta.faltasConsecutivas }}
-                          {{ alerta.faltasConsecutivas === 1 ? 'falta' : 'faltas' }} · últ.
-                          {{ formatIsoDateShort(alerta.ultimaFechaFalta) }}
-                        </span>
-                        <div class="shrink-0">
-                          <!-- Estado por fila (fix-093-b): solo se deshabilita y muestra
+                    <!-- Línea 2: detalle (conteo + última falta) + acción -->
+                    <div class="flex items-center justify-between gap-2 pl-7">
+                      <span class="text-2xs text-text-muted leading-tight">
+                        {{ alerta.faltasConsecutivas }}
+                        {{ alerta.faltasConsecutivas === 1 ? 'falta' : 'faltas' }} · últ.
+                        {{ formatIsoDateShort(alerta.ultimaFechaFalta) }}
+                      </span>
+                      <div class="shrink-0">
+                        <!-- Estado por fila (fix-093-b): solo se deshabilita y muestra
                              spinner el botón de LA alerta en curso. Antes el booleano
                              global isSaving() bloqueaba las de todos los alumnos y no
                              se veía cuál se estaba procesando. "Eliminar" es la acción
                              destructiva del grupo → btn-ghost, el peso visual más bajo
                              (antes btn-primary, invirtiendo la jerarquía). -->
-                          @if (alerta.nivel === 'danger') {
-                            @if (alerta.horarioActivo && alerta.parPenalizado) {
-                              <!-- fix-391-m: esas faltas ya se penalizaron y al alumno se le
+                        @if (alerta.nivel === 'danger') {
+                          @if (alerta.horarioActivo && alerta.parPenalizado) {
+                            <!-- fix-391-m: esas faltas ya se penalizaron y al alumno se le
                                  reagendaron las clases. No se ofrece Eliminar otra vez. -->
-                              <span class="text-2xs text-text-muted">Ya penalizado</span>
-                            } @else if (alerta.horarioActivo) {
-                              <button
-                                class="btn-danger-ghost btn-sm"
-                                [disabled]="isAlertaBusy(alerta.enrollmentId)"
-                                data-llm-action="remove-schedule"
-                                (click)="removeSchedule.emit(alerta.enrollmentId)"
-                              >
-                                @if (isAlertaBusy(alerta.enrollmentId)) {
-                                  <app-icon name="loader-circle" [size]="12" class="animate-spin" />
-                                } @else {
-                                  Eliminar
-                                }
-                              </button>
-                            } @else {
-                              <button
-                                class="btn-secondary btn-sm"
-                                [disabled]="isAlertaBusy(alerta.enrollmentId)"
-                                data-llm-action="reactivate-schedule"
-                                (click)="reactivateSchedule.emit(alerta.enrollmentId)"
-                              >
-                                @if (isAlertaBusy(alerta.enrollmentId)) {
-                                  <app-icon name="loader-circle" [size]="12" class="animate-spin" />
-                                } @else {
-                                  Reactivar
-                                }
-                              </button>
-                            }
-                          } @else if (canRemind()) {
+                            <span class="text-2xs text-text-muted">Ya penalizado</span>
+                          } @else if (alerta.horarioActivo) {
                             <button
-                              class="btn-secondary btn-sm"
+                              class="btn-danger-ghost btn-sm"
                               [disabled]="isAlertaBusy(alerta.enrollmentId)"
-                              data-llm-action="send-reminder"
-                              (click)="sendReminder.emit(alerta.enrollmentId)"
+                              data-llm-action="remove-schedule"
+                              (click)="removeSchedule.emit(alerta.enrollmentId)"
                             >
                               @if (isAlertaBusy(alerta.enrollmentId)) {
                                 <app-icon name="loader-circle" [size]="12" class="animate-spin" />
                               } @else {
-                                Recordar
+                                Eliminar
+                              }
+                            </button>
+                          } @else {
+                            <button
+                              class="btn-secondary btn-sm"
+                              [disabled]="isAlertaBusy(alerta.enrollmentId)"
+                              data-llm-action="reactivate-schedule"
+                              (click)="reactivateSchedule.emit(alerta.enrollmentId)"
+                            >
+                              @if (isAlertaBusy(alerta.enrollmentId)) {
+                                <app-icon name="loader-circle" [size]="12" class="animate-spin" />
+                              } @else {
+                                Reactivar
                               }
                             </button>
                           }
-                        </div>
+                        } @else if (canRemind()) {
+                          <button
+                            class="btn-secondary btn-sm"
+                            [disabled]="isAlertaBusy(alerta.enrollmentId)"
+                            data-llm-action="send-reminder"
+                            (click)="sendReminder.emit(alerta.enrollmentId)"
+                          >
+                            @if (isAlertaBusy(alerta.enrollmentId)) {
+                              <app-icon name="loader-circle" [size]="12" class="animate-spin" />
+                            } @else {
+                              Recordar
+                            }
+                          </button>
+                        }
                       </div>
                     </div>
-                  }
-                </div>
-              </aside>
-            }
+                  </div>
+                }
+              </div>
+            </aside>
           }
         </div>
       }

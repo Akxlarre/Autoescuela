@@ -126,7 +126,7 @@ export class AdminAsistenciaComponent {
   }
 
   protected async onRefresh(): Promise<void> {
-    await Promise.all([this.facade.reload(), this.ciclos.loadCycles()]);
+    await Promise.all([this.facade.refrescar(), this.ciclos.loadCycles()]);
   }
 
   protected async onMarkAttendance(event: {

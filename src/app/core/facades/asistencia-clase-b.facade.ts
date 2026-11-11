@@ -230,6 +230,16 @@ export class AsistenciaClaseBFacade {
     await this.initialize();
   }
 
+  /** Refresca los datos vigentes (Caso B si ya están cargados; si no, carga con skeleton). */
+  async refrescar(): Promise<void> {
+    const branchId = this._branchFilter();
+    if (this._initialized && branchId === this._loadedBranchId) {
+      await this.refreshSilently();
+      return;
+    }
+    await this.reload();
+  }
+
   /** Reintenta respetando caso B (refresco sin skeleton) vs caso A (carga inicial). */
   async reintentar(): Promise<void> {
     if (this._refreshFailed()) {
@@ -1281,8 +1291,6 @@ export class AsistenciaClaseBFacade {
       if (!this.alertasGuard.isCurrent(alertasToken)) return;
       this._alertas.set(alertas);
       this.computeKpis(this._clasesPracticas(), alertas);
-      this._refreshFailed.set(false);
-      this._error.set(null);
     } catch {
       if (!this.alertasGuard.isCurrent(alertasToken)) return;
       // Alertas stale siguen visibles (Caso B)
