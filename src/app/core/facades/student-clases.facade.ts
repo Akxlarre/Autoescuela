@@ -2,6 +2,8 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { AuthFacade } from './auth.facade';
 import { StudentEnrollmentContextFacade } from './student-enrollment-context.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { assertReadOk } from '@core/utils/db-error.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { toChileDate } from '@core/utils/chile-time.utils';
 import { to24hTime } from '@core/utils/date.utils';
 import { classCountFromPracticalHours } from '@core/utils/class-count.utils';
@@ -74,16 +76,20 @@ export class StudentClasesFacade {
   readonly context = inject(StudentEnrollmentContextFacade);
 
   private _initialized = false;
+  private _lastEnrollmentId: number | null = null;
+  private readonly listGuard = createRequestGuard();
 
   // ─── Estado privado ────────────────────────────────────────────────────────
   private readonly _data = signal<StudentClasesData | null>(null);
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
+  private readonly _refreshFailed = signal(false);
 
   // ─── Estado público ────────────────────────────────────────────────────────
   readonly data = this._data.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly refreshFailed = this._refreshFailed.asReadonly();
 
   readonly licenseGroup = computed(() => this._data()?.licenseGroup ?? null);
   readonly kpis = computed(() => this._data()?.kpis ?? null);
@@ -94,44 +100,85 @@ export class StudentClasesFacade {
   // ─── Métodos de acción ────────────────────────────────────────────────────
 
   async initialize(): Promise<void> {
-    if (this._initialized) {
-      void this.refreshSilently();
+    const currentEnrollmentId = this.context.activeEnrollmentId();
+    if (
+      this._initialized &&
+      currentEnrollmentId !== null &&
+      currentEnrollmentId === this._lastEnrollmentId
+    ) {
+      await this.refreshSilently();
       return;
     }
-    this._initialized = true;
+
+    const requestToken = this.listGuard.next();
+    this._initialized = false;
+    this._lastEnrollmentId = null;
+    this._data.set(null);
     this._isLoading.set(true);
     this._error.set(null);
+    this._refreshFailed.set(false);
     try {
-      await this.fetchData();
+      await this.fetchData(requestToken);
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._initialized = true;
+      this._lastEnrollmentId = this.context.activeEnrollmentId();
     } catch (e: unknown) {
-      this._error.set(e instanceof Error ? e.message : 'Error al cargar las clases');
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._data.set(null);
+      this._initialized = false;
+      this._lastEnrollmentId = null;
+      const message =
+        e instanceof Error && e.message === 'Usuario no autenticado'
+          ? 'Usuario no autenticado'
+          : 'No se pudieron cargar tus clases.';
+      this._error.set(message);
     } finally {
-      this._isLoading.set(false);
+      if (this.listGuard.isCurrent(requestToken)) {
+        this._isLoading.set(false);
+      }
     }
   }
 
+  async reintentar(): Promise<void> {
+    this._error.set(null);
+    this._refreshFailed.set(false);
+    this._initialized = false;
+    this._lastEnrollmentId = null;
+    await this.initialize();
+  }
+
   private async refreshSilently(): Promise<void> {
+    const requestToken = this.listGuard.next();
     try {
-      await this.fetchData();
+      await this.fetchData(requestToken);
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._refreshFailed.set(false);
+      this._error.set(null);
     } catch {
-      // Datos stale siguen visibles
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._refreshFailed.set(true);
+    } finally {
+      if (this.listGuard.isCurrent(requestToken)) {
+        this._isLoading.set(false);
+      }
     }
   }
 
   // ─── Fetch ────────────────────────────────────────────────────────────────
 
-  private async fetchData(): Promise<void> {
+  private async fetchData(requestToken: number): Promise<void> {
     const dbId = this.auth.currentUser()?.dbId;
     if (!dbId) throw new Error('Usuario no autenticado');
 
     await this.context.initialize(dbId);
     const activeId = this.context.activeEnrollmentId();
     if (!activeId) {
+      if (!this.listGuard.isCurrent(requestToken)) return;
       this._data.set(null);
       return;
     }
 
-    const { data: enrollment, error: enrollmentError } = await this.supabase.client
+    const enrollmentRes = await this.supabase.client
       .from('enrollments')
       .select(
         'id, license_group, student_id, promotion_course_id, students!inner(id), courses!inner(practical_hours)',
@@ -139,8 +186,9 @@ export class StudentClasesFacade {
       .eq('id', activeId)
       .maybeSingle();
 
-    if (enrollmentError) throw enrollmentError;
+    const enrollment = assertReadOk(enrollmentRes);
     if (!enrollment) {
+      if (!this.listGuard.isCurrent(requestToken)) return;
       this._data.set(null);
       return;
     }
@@ -151,11 +199,13 @@ export class StudentClasesFacade {
     const promotionCourseId: number | null = (enrollment as any).promotion_course_id;
     const practicalHours: number | null = (enrollment as any).courses?.practical_hours ?? null;
 
-    if (licenseGroup === 'class_b') {
-      await this.fetchClassBData(enrollmentId, studentId, practicalHours);
-    } else {
-      await this.fetchProfessionalData(enrollmentId, promotionCourseId);
-    }
+    const loaded =
+      licenseGroup === 'class_b'
+        ? await this.fetchClassBData(enrollmentId, studentId, practicalHours)
+        : await this.fetchProfessionalData(enrollmentId, promotionCourseId);
+
+    if (!this.listGuard.isCurrent(requestToken)) return;
+    this._data.set(loaded);
   }
 
   // ─── Clase B ─────────────────────────────────────────────────────────────
@@ -164,7 +214,7 @@ export class StudentClasesFacade {
     enrollmentId: number,
     _studentId: number,
     practicalHours: number | null = null,
-  ): Promise<void> {
+  ): Promise<StudentClasesData> {
     // La asistencia teórica fue eliminada (Spec 0001 — Ciclos Teóricos): la vista
     // del alumno solo muestra prácticas.
     const [practiceResult, progressResult] = await Promise.all([
@@ -184,7 +234,8 @@ export class StudentClasesFacade {
         .maybeSingle(),
     ]);
 
-    const rawSessions = (practiceResult.data ?? []) as unknown as RawPracticeSession[];
+    const rawSessions = (assertReadOk(practiceResult) ?? []) as unknown as RawPracticeSession[];
+    const progressRow = assertReadOk(progressResult);
     const now = new Date();
 
     const practiceSessions: StudentPracticeSessionRow[] = rawSessions.map((s, i) => {
@@ -201,7 +252,7 @@ export class StudentClasesFacade {
       };
     });
 
-    const completed = progressResult.data?.completed_practices ?? 0;
+    const completed = progressRow?.completed_practices ?? 0;
     const upcoming = practiceSessions.filter(
       (s) => s.status === 'scheduled' || s.status === 'in_progress',
     ).length;
@@ -217,13 +268,13 @@ export class StudentClasesFacade {
       theoryPct: 0,
     };
 
-    this._data.set({
+    return {
       licenseGroup: 'class_b',
       kpis,
       practiceSessions,
       theorySessions: [],
       profSessions: [],
-    });
+    };
   }
 
   // ─── Profesional ─────────────────────────────────────────────────────────
@@ -231,9 +282,9 @@ export class StudentClasesFacade {
   private async fetchProfessionalData(
     enrollmentId: number,
     promotionCourseId: number | null,
-  ): Promise<void> {
+  ): Promise<StudentClasesData> {
     if (!promotionCourseId) {
-      this._data.set({
+      return {
         licenseGroup: 'professional',
         kpis: {
           completedPractices: 0,
@@ -244,8 +295,7 @@ export class StudentClasesFacade {
         practiceSessions: [],
         theorySessions: [],
         profSessions: [],
-      });
-      return;
+      };
     }
 
     const [theoryAttResult, practiceAttResult] = await Promise.all([
@@ -262,8 +312,9 @@ export class StudentClasesFacade {
         .order('date', { referencedTable: 'professional_practice_sessions', ascending: false }),
     ]);
 
-    const rawTheory = (theoryAttResult.data ?? []) as unknown as RawProfTheoryAttendance[];
-    const rawPractice = (practiceAttResult.data ?? []) as unknown as RawProfPracticeAttendance[];
+    const rawTheory = (assertReadOk(theoryAttResult) ?? []) as unknown as RawProfTheoryAttendance[];
+    const rawPractice = (assertReadOk(practiceAttResult) ??
+      []) as unknown as RawProfPracticeAttendance[];
 
     const profSessions: StudentProfSessionRow[] = [
       ...rawTheory
@@ -300,12 +351,12 @@ export class StudentClasesFacade {
       theoryPct,
     };
 
-    this._data.set({
+    return {
       licenseGroup: 'professional',
       kpis,
       practiceSessions: [],
       theorySessions: [],
       profSessions,
-    });
+    };
   }
 }

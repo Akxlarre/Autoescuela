@@ -323,4 +323,290 @@ describe('StudentClasesFacade', () => {
       expect(facade.error()).toBeNull();
     });
   });
+
+  describe('Manejo explícito de errores de lectura (0060-b / DoD-F)', () => {
+    it('Caso A: si falla enrollments en primera carga, data es null y error visible', async () => {
+      const { facade } = setup({
+        tables: {
+          enrollments: { data: null, error: { message: 'db error' } },
+        },
+      });
+
+      await facade.initialize();
+
+      expect(facade.data()).toBeNull();
+      expect(facade.kpis()).toBeNull();
+      expect(facade.error()).toBe('No se pudieron cargar tus clases.');
+      expect(facade.isLoading()).toBe(false);
+      expect((facade as any)._initialized).toBe(false);
+    });
+
+    it('Caso A (Clase B): si falla v_student_progress_b en Promise.all, la carga entera falla', async () => {
+      const { facade } = setup({
+        tables: {
+          enrollments: {
+            data: { id: 100, license_group: 'class_b', student_id: 5, promotion_course_id: null },
+            error: null,
+          },
+          class_b_sessions: { data: [], error: null },
+          v_student_progress_b: { data: null, error: { message: 'view error' } },
+        },
+      });
+
+      await facade.initialize();
+
+      expect(facade.data()).toBeNull();
+      expect(facade.kpis()).toBeNull();
+      expect(facade.error()).toBe('No se pudieron cargar tus clases.');
+    });
+
+    it('Caso A (Profesional): si falla professional_practice_attendance en Promise.all, falla toda la carga', async () => {
+      const { facade } = setup({
+        tables: {
+          enrollments: {
+            data: {
+              id: 100,
+              license_group: 'professional',
+              student_id: 5,
+              promotion_course_id: 77,
+            },
+            error: null,
+          },
+          professional_theory_attendance: { data: [], error: null },
+          professional_practice_attendance: { data: null, error: { message: 'practice err' } },
+        },
+      });
+
+      await facade.initialize();
+
+      expect(facade.data()).toBeNull();
+      expect(facade.error()).toBe('No se pudieron cargar tus clases.');
+    });
+
+    it('Caso A (cambio de matrícula): limpia datos previos al empezar y expone error si falla', async () => {
+      let currentId = 100;
+      const tables = classBTables(
+        [
+          {
+            id: 1,
+            class_number: 1,
+            scheduled_at: FUTURE,
+            duration_min: 45,
+            status: 'scheduled',
+            class_b_practice_attendance: [],
+          },
+        ],
+        1,
+      );
+
+      const mockSupabase = createMockSupabase(tables);
+      const mockAuth = { currentUser: vi.fn(() => ({ dbId: 7 })) };
+      const mockContext = {
+        initialize: vi.fn().mockResolvedValue(undefined),
+        activeEnrollmentId: vi.fn(() => currentId),
+      };
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          { provide: SupabaseService, useValue: mockSupabase },
+          { provide: AuthFacade, useValue: mockAuth },
+          { provide: StudentEnrollmentContextFacade, useValue: mockContext },
+        ],
+      });
+      const facade = TestBed.inject(StudentClasesFacade);
+
+      await facade.initialize();
+      expect(facade.practiceSessions().length).toBe(1);
+
+      // Cambiar a otra matrícula que falla
+      currentId = 200;
+      mockSupabase.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: { message: 'err 200' } }),
+      });
+
+      await facade.initialize();
+
+      // Nunca debe seguir mostrando clases de la matrícula 100
+      expect(facade.data()).toBeNull();
+      expect(facade.practiceSessions()).toEqual([]);
+      expect(facade.error()).toBe('No se pudieron cargar tus clases.');
+    });
+
+    it('Caso B: refresco que falla mantiene datos visibles y activa refreshFailed', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: classBTables(
+          [
+            {
+              id: 1,
+              class_number: 1,
+              scheduled_at: FUTURE,
+              duration_min: 45,
+              status: 'scheduled',
+              class_b_practice_attendance: [],
+            },
+          ],
+          1,
+        ),
+      });
+
+      await facade.initialize();
+      expect(facade.practiceSessions().length).toBe(1);
+      expect(facade.refreshFailed()).toBe(false);
+
+      // Falla en refresco posterior
+      mockSupabase.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: { message: 'temp err' } }),
+      });
+
+      await facade.initialize();
+
+      expect(facade.practiceSessions().length).toBe(1);
+      expect(facade.refreshFailed()).toBe(true);
+      expect(facade.error()).toBeNull();
+    });
+
+    it('reintentar limpia el error y recarga con éxito', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: {
+          enrollments: { data: null, error: { message: 'db down' } },
+        },
+      });
+
+      await facade.initialize();
+      expect(facade.error()).toBe('No se pudieron cargar tus clases.');
+
+      // Ahora reponemos datos exitosos
+      const okTables = classBTables([], 2);
+      mockSupabase.client.from = createMockSupabase(okTables).client.from;
+
+      await facade.reintentar();
+
+      expect(facade.error()).toBeNull();
+      expect(facade.refreshFailed()).toBe(false);
+      expect(facade.kpis()?.completedPractices).toBe(2);
+    });
+
+    it('request guard descarta respuesta vieja fuera de orden', async () => {
+      let currentId = 100;
+      let resolveFirst: any;
+      const firstPromise = new Promise((r) => {
+        resolveFirst = r;
+      });
+
+      const mockSupabase = {
+        client: {
+          from: vi.fn().mockImplementation((table: string) => {
+            if (currentId === 100 && table === 'enrollments') {
+              return {
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                maybeSingle: vi.fn().mockImplementation(() => firstPromise),
+              };
+            }
+            const ok = classBTables([], 5)[table] ?? { data: null, error: null };
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue(ok),
+              then: (res: any, rej: any) => Promise.resolve(ok).then(res, rej),
+            };
+          }),
+        },
+      };
+
+      const mockContext = {
+        initialize: vi.fn().mockResolvedValue(undefined),
+        activeEnrollmentId: vi.fn(() => currentId),
+      };
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          { provide: SupabaseService, useValue: mockSupabase },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ dbId: 7 })) } },
+          { provide: StudentEnrollmentContextFacade, useValue: mockContext },
+        ],
+      });
+      const facade = TestBed.inject(StudentClasesFacade);
+
+      const p1 = facade.initialize();
+      currentId = 200;
+      const p2 = facade.initialize();
+
+      await p2;
+      expect(facade.kpis()?.completedPractices).toBe(5);
+
+      resolveFirst({ data: null, error: { message: 'stale err' } });
+      await p1;
+
+      expect(facade.kpis()?.completedPractices).toBe(5);
+      expect(facade.error()).toBeNull();
+    });
+
+    it('Lección 5: un refresco que pide token nuevo no deja isLoading pegado en true', async () => {
+      let resolveFirst: any;
+      const firstPromise = new Promise((resolve) => {
+        resolveFirst = resolve;
+      });
+
+      let firstCall = true;
+      const mockSupabase = {
+        client: {
+          from: vi.fn().mockImplementation((table: string) => {
+            if (firstCall && table === 'enrollments') {
+              firstCall = false;
+              return {
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                maybeSingle: vi.fn().mockImplementation(() => firstPromise),
+              };
+            }
+            const ok = classBTables([], 3)[table] ?? { data: null, error: null };
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue(ok),
+              then: (res: any, rej: any) => Promise.resolve(ok).then(res, rej),
+            };
+          }),
+        },
+      };
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          { provide: SupabaseService, useValue: mockSupabase },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ dbId: 7 })) } },
+          {
+            provide: StudentEnrollmentContextFacade,
+            useValue: {
+              initialize: vi.fn().mockResolvedValue(undefined),
+              activeEnrollmentId: vi.fn(() => 100),
+            },
+          },
+        ],
+      });
+      const facade = TestBed.inject(StudentClasesFacade);
+
+      const pInit = facade.initialize();
+      const pRefresh = (facade as any).refreshSilently();
+      resolveFirst({
+        data: { id: 100, license_group: 'class_b', student_id: 5, promotion_course_id: null },
+        error: null,
+      });
+
+      await Promise.all([pInit, pRefresh]);
+
+      expect(facade.isLoading()).toBe(false);
+    });
+  });
 });

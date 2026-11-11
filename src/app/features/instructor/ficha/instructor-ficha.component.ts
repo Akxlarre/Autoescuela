@@ -89,11 +89,16 @@ type FichaTab = 'datos' | 'ficha-tecnica';
       appBentoGridLayout
     >
       <!-- ── Error ── -->
-      @if (facade.error()) {
-        <div class="bento-banner">
-          <app-alert-card title="No se pudo cargar la ficha" severity="error">
-            {{ facade.error() }}
-          </app-alert-card>
+      @if (facade.detailError()) {
+        <div class="bento-banner bento-fill card flex items-center justify-center p-6">
+          <app-empty-state
+            icon="alert-triangle"
+            [message]="facade.detailError()!"
+            subtitle="Revisa tu conexión e inténtalo de nuevo."
+            actionLabel="Reintentar"
+            actionIcon="refresh-cw"
+            (action)="reintentar()"
+          />
         </div>
 
         <!-- ── Sin datos (carga completada) ── -->
@@ -594,6 +599,13 @@ export class InstructorFichaComponent implements OnInit {
 
   protected goBack(): void {
     history.back();
+  }
+
+  protected reintentar(): void {
+    const id = this.currentStudentId();
+    if (id !== null) {
+      void this.facade.loadStudentDetail(id);
+    }
   }
 
   protected setActiveTab(tabId: string): void {

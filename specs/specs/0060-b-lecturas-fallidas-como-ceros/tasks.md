@@ -211,6 +211,7 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
 - [ ] **T3.5** — Portales: `instructor-alumnos`, `instructor-clases`, `student-clases`, `student-home`
   - **AC ref:** AC3
   - **DoD:** DoD-F
+  - **Avance (2026-11-10):** Migrados `instructor-alumnos.facade.ts`, `instructor-clases.facade.ts`, `student-clases.facade.ts` y `student-home.facade.ts` junto con sus pantallas y drawers (`instructor-alumnos`, `instructor-ficha`, `instructor-dashboard`, `instructor-clase`, `instructor-clase-detail`, `instructor-evaluacion`, `alumno-clases`, `alumno-dashboard`, `alumno-pruebas-online`). Fuera de PENDING en `unchecked-reads.guard.spec.ts`. Verde en tests de unidad, componentes y `test-tz.mjs`; sin cuenta E2E de instructor/alumno; prueba manual pendiente.
 - [ ] **T3.6** — Validación de la etapa
   - **DoD:** igual que T1.6
 

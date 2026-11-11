@@ -5,6 +5,8 @@ import { AuthFacade } from './auth.facade';
 import { StudentEnrollmentContextFacade } from './student-enrollment-context.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
+import { assertReadOk } from '@core/utils/db-error.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import {
   computeAverageGrade,
   computeCertificateBlockingReason,
@@ -45,15 +47,19 @@ export class StudentHomeFacade {
   // ─── Estado reactivo privado ───────────────────────────────────────────────
 
   private _initialized = false;
+  private _lastEnrollmentId: number | null = null;
+  private readonly listGuard = createRequestGuard();
   private readonly _snapshot = signal<StudentHomeSnapshot | null>(null);
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
+  private readonly _refreshFailed = signal(false);
 
   // ─── Estado público readonly ───────────────────────────────────────────────
 
   readonly snapshot = this._snapshot.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly refreshFailed = this._refreshFailed.asReadonly();
 
   readonly hero = computed(() => this._snapshot()?.hero ?? null);
   readonly progress = computed(() => this._snapshot()?.progress ?? null);
@@ -66,20 +72,51 @@ export class StudentHomeFacade {
   // ─── Métodos de acción ─────────────────────────────────────────────────────
 
   async initialize(): Promise<void> {
-    if (this._initialized) {
-      void this.refreshSilently();
+    const currentEnrollmentId = this.context.activeEnrollmentId();
+    if (
+      this._initialized &&
+      currentEnrollmentId !== null &&
+      currentEnrollmentId === this._lastEnrollmentId
+    ) {
+      await this.refreshSilently();
       return;
     }
-    this._initialized = true;
+
+    const requestToken = this.listGuard.next();
+    this._initialized = false;
+    this._lastEnrollmentId = null;
+    this._snapshot.set(null);
     this._isLoading.set(true);
     this._error.set(null);
+    this._refreshFailed.set(false);
     try {
-      await this.fetchSnapshot();
+      await this.fetchSnapshot(requestToken);
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._initialized = true;
+      this._lastEnrollmentId = this.context.activeEnrollmentId();
     } catch (e: unknown) {
-      this._error.set(e instanceof Error ? e.message : 'Error al cargar los datos del alumno');
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._snapshot.set(null);
+      this._initialized = false;
+      this._lastEnrollmentId = null;
+      const message =
+        e instanceof Error && e.message === 'Usuario no autenticado'
+          ? 'Usuario no autenticado'
+          : 'No se pudo cargar tu resumen.';
+      this._error.set(message);
     } finally {
-      this._isLoading.set(false);
+      if (this.listGuard.isCurrent(requestToken)) {
+        this._isLoading.set(false);
+      }
     }
+  }
+
+  async reintentar(): Promise<void> {
+    this._error.set(null);
+    this._refreshFailed.set(false);
+    this._initialized = false;
+    this._lastEnrollmentId = null;
+    await this.initialize();
   }
 
   async downloadCertificate(): Promise<string | null> {
@@ -101,16 +138,25 @@ export class StudentHomeFacade {
   }
 
   private async refreshSilently(): Promise<void> {
+    const requestToken = this.listGuard.next();
     try {
-      await this.fetchSnapshot();
+      await this.fetchSnapshot(requestToken);
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._refreshFailed.set(false);
+      this._error.set(null);
     } catch {
-      // Fail silencioso — datos stale siguen visibles
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._refreshFailed.set(true);
+    } finally {
+      if (this.listGuard.isCurrent(requestToken)) {
+        this._isLoading.set(false);
+      }
     }
   }
 
   // ─── Fetch principal ───────────────────────────────────────────────────────
 
-  private async fetchSnapshot(): Promise<void> {
+  private async fetchSnapshot(requestToken: number): Promise<void> {
     const dbId = this.auth.currentUser()?.dbId;
     if (!dbId) throw new Error('Usuario no autenticado');
 
@@ -118,12 +164,13 @@ export class StudentHomeFacade {
     await this.context.initialize(dbId);
     const activeId = this.context.activeEnrollmentId();
     if (!activeId) {
+      if (!this.listGuard.isCurrent(requestToken)) return;
       this._snapshot.set(null);
       return;
     }
 
     // 2. Fetch del enrollment activo
-    const { data: enrollmentRow, error: enrollmentError } = await this.supabase.client
+    const enrollmentRes = await this.supabase.client
       .from('enrollments')
       .select(
         `id, number, status, license_group, pending_balance, total_paid,
@@ -136,8 +183,9 @@ export class StudentHomeFacade {
       .eq('id', activeId)
       .maybeSingle();
 
-    if (enrollmentError) throw enrollmentError;
+    const enrollmentRow = assertReadOk(enrollmentRes);
     if (!enrollmentRow) {
+      if (!this.listGuard.isCurrent(requestToken)) return;
       this._snapshot.set(null);
       return;
     }
@@ -156,6 +204,7 @@ export class StudentHomeFacade {
       snapshot = await this.buildProfessionalSnapshot(e, enrollmentId, firstName);
     }
 
+    if (!this.listGuard.isCurrent(requestToken)) return;
     this._snapshot.set(snapshot);
   }
 
@@ -211,11 +260,17 @@ export class StudentHomeFacade {
           .maybeSingle(),
       ]);
 
-    const completedPractices: number = progressResult.data?.completed_practices ?? 0;
+    const progressData = assertReadOk(progressResult);
+    const sessionsData = assertReadOk(sessionsResult);
+    const examData = assertReadOk(examResult);
+    const certData = assertReadOk(certResult);
+    const nextClassData = assertReadOk(nextClassResult);
+
+    const completedPractices: number = progressData?.completed_practices ?? 0;
     const pctOverall = computeOverallProgress(completedPractices, PRACTICES_TOTAL);
 
     // Sessions ordenadas cronológicamente para la lista de 1..12
-    const sessions = (sessionsResult.data ?? []).slice().reverse();
+    const sessions = (sessionsData ?? []).slice().reverse();
     const practices = sessions.map((s: any, i: number) => {
       const att = asistenciaVigente(s);
       const isCompleted = att?.status === 'present' || att?.status === 'late';
@@ -234,7 +289,7 @@ export class StudentHomeFacade {
     }
 
     // Consecutive absences desde las últimas sesiones
-    const recentSortedDesc = sessionsResult.data ?? [];
+    const recentSortedDesc = sessionsData ?? [];
     let consecutiveAbsences = 0;
     for (const s of recentSortedDesc) {
       const att = asistenciaVigente(s);
@@ -279,10 +334,10 @@ export class StudentHomeFacade {
       recentSessions,
     };
 
-    const examGrade = examResult.data?.score ? Number(examResult.data.score) : null;
+    const examGrade = examData?.score ? Number(examData.score) : null;
     const grades: StudentHomeGrades = {
       finalExamGrade: examGrade,
-      finalExamDate: examResult.data?.created_at ?? null,
+      finalExamDate: examData?.created_at ?? null,
       passed: examGrade !== null ? examGrade >= 4 : null,
       modules: [],
       averageGrade: examGrade,
@@ -290,7 +345,7 @@ export class StudentHomeFacade {
 
     const certState = deriveCertificateState({
       certificateEnabled: Boolean(e.certificate_enabled),
-      certificateIssued: Boolean(certResult.data),
+      certificateIssued: Boolean(certData),
     });
 
     const certificateSnapshot: StudentHomeSnapshot = {
@@ -314,14 +369,14 @@ export class StudentHomeFacade {
         blockingReason: null,
       },
       side: {
-        nextClass: nextClassResult.data
+        nextClass: nextClassData
           ? {
-              date: formatChileDate(nextClassResult.data.scheduled_at, {
+              date: formatChileDate(nextClassData.scheduled_at, {
                 weekday: 'short',
                 day: '2-digit',
                 month: 'short',
               }),
-              time: formatChileTime(nextClassResult.data.scheduled_at),
+              time: formatChileTime(nextClassData.scheduled_at),
               instructorName: '',
             }
           : null,
@@ -333,7 +388,7 @@ export class StudentHomeFacade {
     // Ahora que tenemos el snapshot, calculamos blockingReason
     const cert: StudentHomeCertificate = {
       state: certState,
-      folio: certResult.data?.folio ? String(certResult.data.folio) : null,
+      folio: certData?.folio ? String(certData.folio) : null,
       issuedDate: null,
       pdfUrl: certState !== 'locked' ? (e.certificate_b_pdf_url ?? null) : null,
       blockingReason: null,
@@ -384,7 +439,7 @@ export class StudentHomeFacade {
             .order('date', { ascending: true })
             .limit(1)
             .maybeSingle()
-        : Promise.resolve({ data: null }),
+        : Promise.resolve({ data: null, error: null }),
       this.supabase.client
         .from('certificates')
         .select('folio, created_at')
@@ -396,7 +451,7 @@ export class StudentHomeFacade {
             .from('professional_practice_sessions')
             .select('id', { count: 'exact', head: true })
             .eq('promotion_course_id', promotionCourseId)
-        : Promise.resolve({ count: 0 }),
+        : Promise.resolve({ data: null, count: 0, error: null }),
       // Sesiones prácticas asistidas por este enrollment
       this.supabase.client
         .from('professional_practice_attendance')
@@ -409,7 +464,7 @@ export class StudentHomeFacade {
             .from('professional_theory_sessions')
             .select('id', { count: 'exact', head: true })
             .eq('promotion_course_id', promotionCourseId)
-        : Promise.resolve({ count: 0 }),
+        : Promise.resolve({ data: null, count: 0, error: null }),
       // Sesiones teóricas asistidas por este enrollment
       this.supabase.client
         .from('professional_theory_attendance')
@@ -418,7 +473,16 @@ export class StudentHomeFacade {
         .in('status', ['present', 'late']),
     ]);
 
-    const modules = (modulesResult.data ?? []).map((m: any) => ({
+    const modulesData = assertReadOk(modulesResult);
+    const semaphoreData = assertReadOk(semaphoreResult);
+    const nextSessionData = assertReadOk(nextSessionResult);
+    const certData = assertReadOk(certResult);
+    assertReadOk(totalPracticeResult);
+    assertReadOk(attendedPracticeResult);
+    assertReadOk(totalTheoryResult);
+    assertReadOk(attendedTheoryResult);
+
+    const modules = (modulesData ?? []).map((m: any) => ({
       number: m.module_number,
       name: m.module ?? `Módulo ${m.module_number}`,
       grade: m.grade !== null && m.grade !== undefined ? Number(m.grade) : null,
@@ -427,9 +491,8 @@ export class StudentHomeFacade {
     }));
 
     const avgGrade = computeAverageGrade(modules);
-    const consecutiveAbsences = Number(semaphoreResult.data?.consecutive_absences ?? 0);
-    const semaphore =
-      (semaphoreResult.data?.semaphore as any) ?? computeSemaphore(consecutiveAbsences);
+    const consecutiveAbsences = Number(semaphoreData?.consecutive_absences ?? 0);
+    const semaphore = (semaphoreData?.semaphore as any) ?? computeSemaphore(consecutiveAbsences);
 
     const grades: StudentHomeGrades = {
       finalExamGrade: null,
@@ -441,7 +504,7 @@ export class StudentHomeFacade {
 
     const certState = deriveCertificateState({
       certificateEnabled: Boolean(e.certificate_enabled),
-      certificateIssued: Boolean(certResult.data),
+      certificateIssued: Boolean(certData),
     });
 
     const practicesTotal = Number((totalPracticeResult as any).count ?? 0);
@@ -493,9 +556,9 @@ export class StudentHomeFacade {
         blockingReason: null,
       },
       side: {
-        nextClass: nextSessionResult.data
+        nextClass: nextSessionData
           ? {
-              date: formatChileDate(nextSessionResult.data.date, {
+              date: formatChileDate(nextSessionData.date, {
                 weekday: 'short',
                 day: '2-digit',
                 month: 'short',
@@ -511,8 +574,8 @@ export class StudentHomeFacade {
 
     const cert: StudentHomeCertificate = {
       state: certState,
-      folio: certResult.data?.folio ? String(certResult.data.folio) : null,
-      issuedDate: certResult.data?.created_at ?? null,
+      folio: certData?.folio ? String(certData.folio) : null,
+      issuedDate: certData?.created_at ?? null,
       pdfUrl: certState !== 'locked' ? (e.certificate_professional_pdf_url ?? null) : null,
       blockingReason: computeCertificateBlockingReason(snapshot),
     };

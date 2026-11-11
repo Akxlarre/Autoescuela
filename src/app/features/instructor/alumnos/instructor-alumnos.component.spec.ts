@@ -1,5 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import { InstructorAlumnosComponent } from './instructor-alumnos.component';
 import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
 import { LayoutService } from '@core/services/ui/layout.service';
@@ -39,7 +42,17 @@ describe('InstructorAlumnosComponent — densidad app-like', () => {
           useValue: {
             isLoading: signal(false),
             students: signal(students),
+            error: signal<string | null>(null),
+            refreshFailed: signal(false),
+            kpis: signal({
+              totalAlumnos: students.length,
+              activos: 10,
+              completados: 5,
+              promedioProgreso: 42,
+              porCertificar: 2,
+            }),
             initialize: vi.fn(),
+            reintentar: vi.fn(),
             setActiveStudent: vi.fn(),
             openDrawer: vi.fn(),
           },
@@ -120,6 +133,140 @@ describe('InstructorAlumnosComponent — densidad app-like', () => {
       component.clearFilters();
 
       expect(component.mobileShown()).toBe(9);
+    });
+  });
+
+  describe('Casos de error de lectura (0060-b)', () => {
+    it('Caso A: si error está activo y no hay alumnos, heroKpis está vacío', () => {
+      const errorSig = signal<string | null>('No se pudo cargar la lista de alumnos.');
+      const studentsSig = signal<InstructorStudentCard[]>([]);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [InstructorAlumnosComponent],
+        providers: [
+          {
+            provide: InstructorAlumnosFacade,
+            useValue: {
+              isLoading: signal(false),
+              students: studentsSig,
+              error: errorSig,
+              refreshFailed: signal(false),
+              kpis: signal({
+                totalAlumnos: 0,
+                activos: 0,
+                completados: 0,
+                promedioProgreso: 0,
+                porCertificar: 0,
+              }),
+              initialize: vi.fn(),
+              reintentar: vi.fn(),
+              setActiveStudent: vi.fn(),
+              openDrawer: vi.fn(),
+            },
+          },
+          { provide: LayoutService, useValue: { tier: signal('desktop') } },
+        ],
+      });
+
+      const comp = TestBed.createComponent(InstructorAlumnosComponent).componentInstance;
+      expect(comp.heroKpis()).toEqual([]);
+    });
+
+    it('Caso B: si no hay error y hay alumnos, heroKpis tiene métricas', () => {
+      const comp = TestBed.createComponent(InstructorAlumnosComponent).componentInstance;
+      expect(comp.heroKpis().length).toBe(4);
+    });
+
+    it('render Caso A: muestra app-empty-state y click en Reintentar llama reintentar()', () => {
+      const reintentarSpy = vi.fn();
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [InstructorAlumnosComponent],
+        providers: [
+          {
+            provide: InstructorAlumnosFacade,
+            useValue: {
+              isLoading: signal(false),
+              students: signal<InstructorStudentCard[]>([]),
+              error: signal<string | null>('No se pudo cargar la lista de alumnos.'),
+              refreshFailed: signal(false),
+              kpis: signal({
+                totalAlumnos: 0,
+                activos: 0,
+                completados: 0,
+                promedioProgreso: 0,
+                porCertificar: 0,
+              }),
+              initialize: vi.fn(),
+              reintentar: reintentarSpy,
+              setActiveStudent: vi.fn(),
+              openDrawer: vi.fn(),
+            },
+          },
+          { provide: LayoutService, useValue: { tier: signal('desktop') } },
+        ],
+      }).overrideComponent(InstructorAlumnosComponent, {
+        set: { imports: [FormsModule, SelectModule, ChileDatePipe], schemas: [NO_ERRORS_SCHEMA] },
+      });
+
+      const fixture = TestBed.createComponent(InstructorAlumnosComponent);
+      fixture.detectChanges();
+
+      const emptyEl = fixture.nativeElement.querySelector('app-empty-state') as any;
+      expect(emptyEl).not.toBeNull();
+      expect(emptyEl.message).toBe('No se pudo cargar la lista de alumnos.');
+      expect(emptyEl.getAttribute('actionLabel')).toBe('Reintentar');
+
+      emptyEl.dispatchEvent(new CustomEvent('action'));
+      expect(reintentarSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('render Caso B: mantiene alumnos y click en Reintentar del alert-card llama reintentar()', () => {
+      const reintentarSpy = vi.fn();
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [InstructorAlumnosComponent],
+        providers: [
+          {
+            provide: InstructorAlumnosFacade,
+            useValue: {
+              isLoading: signal(false),
+              students: signal(students),
+              error: signal<string | null>(null),
+              refreshFailed: signal(true),
+              kpis: signal({
+                totalAlumnos: students.length,
+                activos: 10,
+                completados: 5,
+                promedioProgreso: 42,
+                porCertificar: 2,
+              }),
+              initialize: vi.fn(),
+              reintentar: reintentarSpy,
+              setActiveStudent: vi.fn(),
+              openDrawer: vi.fn(),
+            },
+          },
+          { provide: LayoutService, useValue: { tier: signal('desktop') } },
+        ],
+      }).overrideComponent(InstructorAlumnosComponent, {
+        set: { imports: [FormsModule, SelectModule, ChileDatePipe], schemas: [NO_ERRORS_SCHEMA] },
+      });
+
+      const fixture = TestBed.createComponent(InstructorAlumnosComponent);
+      fixture.detectChanges();
+
+      const alertEl = fixture.nativeElement.querySelector('app-alert-card') as any;
+      expect(alertEl).not.toBeNull();
+      expect(alertEl.title).toBe('No se pudo actualizar la lista de alumnos');
+
+      const retryBtn = fixture.nativeElement.querySelector(
+        '[data-llm-action="reintentar-alumnos"]',
+      ) as HTMLButtonElement | null;
+      expect(retryBtn).not.toBeNull();
+      retryBtn?.click();
+      expect(reintentarSpy).toHaveBeenCalledTimes(1);
     });
   });
 });

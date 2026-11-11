@@ -5,6 +5,8 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
 import type { Type } from '@angular/core';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { assertReadOk } from '@core/utils/db-error.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import type {
   InstructorStudentCard,
   InstructorStudentDetail,
@@ -44,7 +46,12 @@ export class InstructorAlumnosFacade {
   private _isLoading = signal<boolean>(false);
   private _detailLoading = signal<boolean>(false);
   private _error = signal<string | null>(null);
+  private _detailError = signal<string | null>(null);
+  private _refreshFailed = signal<boolean>(false);
   private _initialized = false;
+
+  private readonly listGuard = createRequestGuard();
+  private readonly studentDetailGuard = createRequestGuard();
 
   readonly students = this._students.asReadonly();
   readonly studentDetail = this._studentDetail.asReadonly();
@@ -53,6 +60,8 @@ export class InstructorAlumnosFacade {
   readonly isLoading = this._isLoading.asReadonly();
   readonly detailLoading = this._detailLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly detailError = this._detailError.asReadonly();
+  readonly refreshFailed = this._refreshFailed.asReadonly();
 
   readonly kpis = computed(() => {
     const s = this._students();
@@ -82,130 +91,157 @@ export class InstructorAlumnosFacade {
       return;
     }
 
+    const requestToken = this.listGuard.next();
     this._isLoading.set(true);
-    await this.fetchStudents();
-    this._isLoading.set(false);
-    this._initialized = true;
-  }
-
-  async fetchStudents(): Promise<void> {
-    const instructorId = await this.profileFacade.getInstructorId();
-    if (!instructorId) return;
-
     this._error.set(null);
     try {
-      const { data: sessionRows, error: sessionError } = await this.supabase.client
-        .from('class_b_sessions')
-        .select('enrollment_id')
-        .eq('instructor_id', instructorId);
-
-      if (sessionError) throw sessionError;
-
-      const enrollmentIds = [...new Set((sessionRows || []).map((r) => r.enrollment_id))];
-      if (enrollmentIds.length === 0) {
-        this._students.set([]);
-        return;
+      await this.fetchStudents(requestToken);
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._initialized = true;
+    } catch {
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._students.set([]);
+      this._error.set('No se pudo cargar la lista de alumnos.');
+    } finally {
+      if (this.listGuard.isCurrent(requestToken)) {
+        this._isLoading.set(false);
       }
-
-      const [enrollmentResult, progressResult] = await Promise.all([
-        this.supabase.client
-          .from('enrollments')
-          .select(
-            `
-            id, number, status, courses!inner(name, code),
-            students!inner(
-              id, users!inner(first_names, paternal_last_name, maternal_last_name, rut, email, phone)
-            ),
-            class_b_sessions(id, status, scheduled_at, class_number)
-          `,
-          )
-          .in('id', enrollmentIds)
-          .in('status', ['active', 'in_progress', 'completed']),
-        this.supabase.client
-          .from('v_student_progress_b')
-          .select('enrollment_id, completed_practices')
-          .in('enrollment_id', enrollmentIds),
-      ]);
-
-      if (enrollmentResult.error) throw enrollmentResult.error;
-
-      const progressMap = new Map<number, { completed: number }>();
-      for (const p of progressResult.data || []) {
-        progressMap.set(p.enrollment_id, {
-          completed: p.completed_practices || 0,
-        });
-      }
-
-      const mappedStudents: InstructorStudentCard[] = [];
-
-      for (const row of enrollmentResult.data || []) {
-        const sessions = row.class_b_sessions || [];
-        const progress = progressMap.get(row.id);
-        const completed =
-          progress?.completed ?? sessions.filter((s: any) => s.status === 'completed').length;
-        const total = 12;
-        const nextSession = sessions
-          .filter((s: any) => s.status === 'scheduled')
-          .sort(
-            (a: any, b: any) =>
-              new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime(),
-          )[0];
-
-        const user = (row.students as any)?.users;
-
-        mappedStudents.push({
-          studentId: (row.students as any)?.id,
-          enrollmentId: row.id,
-          enrollmentNumber: (row as any).number ?? null,
-          name: user
-            ? `${user.first_names} ${user.paternal_last_name} ${user.maternal_last_name || ''}`.trim()
-            : 'Unknown',
-          rut: user?.rut || '',
-          email: user?.email || null,
-          phone: user?.phone || null,
-          courseName: (row.courses as any)?.name || '',
-          courseCode: (row.courses as any)?.code || '',
-          practiceProgress: completed,
-          totalSessions: total,
-          practicePercent: Math.round((completed / total) * 100),
-          theoryPercent: 0, // Asistencia teórica eliminada (Spec 0001 — Ciclos Teóricos)
-          nextClassDate: nextSession ? nextSession.scheduled_at : null,
-          status: row.status as any,
-          statusLabel:
-            row.status === 'active'
-              ? 'Activo'
-              : row.status === 'completed'
-                ? 'Completado'
-                : 'Suspendido',
-          statusColor:
-            row.status === 'active' ? 'success' : row.status === 'completed' ? 'info' : 'warning',
-        });
-      }
-
-      this._students.set(mappedStudents);
-    } catch (err: any) {
-      console.error('Error fetching students:', err);
-      this._error.set(this.sanitizer.sanitize(err).message || 'Error cargando alumnos');
     }
   }
 
-  async loadStudentDetail(studentId: number): Promise<void> {
+  async reintentar(): Promise<void> {
     this._error.set(null);
+    this._refreshFailed.set(false);
+    this._initialized = false;
+    await this.initialize();
+  }
+
+  async refreshSilently(): Promise<void> {
+    const requestToken = this.listGuard.next();
+    try {
+      await this.fetchStudents(requestToken);
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._refreshFailed.set(false);
+      this._error.set(null);
+    } catch {
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._refreshFailed.set(true);
+    } finally {
+      if (this.listGuard.isCurrent(requestToken)) {
+        this._isLoading.set(false);
+      }
+    }
+  }
+
+  async fetchStudents(requestToken?: number): Promise<void> {
+    const token = requestToken ?? this.listGuard.next();
+    const instructorId = await this.profileFacade.getInstructorId();
+    if (!instructorId) return;
+
+    const sessionRes = await this.supabase.client
+      .from('class_b_sessions')
+      .select('enrollment_id')
+      .eq('instructor_id', instructorId);
+
+    const sessionRows = assertReadOk(sessionRes);
+
+    const enrollmentIds = [...new Set((sessionRows || []).map((r) => r.enrollment_id))];
+    if (enrollmentIds.length === 0) {
+      if (!this.listGuard.isCurrent(token)) return;
+      this._students.set([]);
+      return;
+    }
+
+    const [enrollmentResult, progressResult] = await Promise.all([
+      this.supabase.client
+        .from('enrollments')
+        .select(
+          `
+          id, number, status, courses!inner(name, code),
+          students!inner(
+            id, users!inner(first_names, paternal_last_name, maternal_last_name, rut, email, phone)
+          ),
+          class_b_sessions(id, status, scheduled_at, class_number)
+        `,
+        )
+        .in('id', enrollmentIds)
+        .in('status', ['active', 'in_progress', 'completed']),
+      this.supabase.client
+        .from('v_student_progress_b')
+        .select('enrollment_id, completed_practices')
+        .in('enrollment_id', enrollmentIds),
+    ]);
+
+    const enrollmentRows = assertReadOk(enrollmentResult);
+    const progressRows = assertReadOk(progressResult);
+
+    const progressMap = new Map<number, { completed: number }>();
+    for (const p of progressRows || []) {
+      progressMap.set(p.enrollment_id, {
+        completed: p.completed_practices || 0,
+      });
+    }
+
+    const mappedStudents: InstructorStudentCard[] = [];
+
+    for (const row of enrollmentRows || []) {
+      const sessions = row.class_b_sessions || [];
+      const progress = progressMap.get(row.id);
+      const completed =
+        progress?.completed ?? sessions.filter((s: any) => s.status === 'completed').length;
+      const total = 12;
+      const nextSession = sessions
+        .filter((s: any) => s.status === 'scheduled')
+        .sort(
+          (a: any, b: any) =>
+            new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime(),
+        )[0];
+
+      const user = (row.students as any)?.users;
+
+      mappedStudents.push({
+        studentId: (row.students as any)?.id,
+        enrollmentId: row.id,
+        enrollmentNumber: (row as any).number ?? null,
+        name: user
+          ? `${user.first_names} ${user.paternal_last_name} ${user.maternal_last_name || ''}`.trim()
+          : 'Unknown',
+        rut: user?.rut || '',
+        email: user?.email || null,
+        phone: user?.phone || null,
+        courseName: (row.courses as any)?.name || '',
+        courseCode: (row.courses as any)?.code || '',
+        practiceProgress: completed,
+        totalSessions: total,
+        practicePercent: Math.round((completed / total) * 100),
+        theoryPercent: 0, // Asistencia teórica eliminada (Spec 0001 — Ciclos Teóricos)
+        nextClassDate: nextSession ? nextSession.scheduled_at : null,
+        status: row.status as any,
+        statusLabel:
+          row.status === 'active'
+            ? 'Activo'
+            : row.status === 'completed'
+              ? 'Completado'
+              : 'Suspendido',
+        statusColor:
+          row.status === 'active' ? 'success' : row.status === 'completed' ? 'info' : 'warning',
+      });
+    }
+
+    if (!this.listGuard.isCurrent(token)) return;
+    this._students.set(mappedStudents);
+  }
+
+  async loadStudentDetail(studentId: number): Promise<void> {
+    // Caso A al cambiar de alumno: limpiar al inicio para nunca mostrar datos del alumno anterior
+    this._studentDetail.set(null);
+    this._detailError.set(null);
     this._detailLoading.set(true);
 
+    const requestToken = this.studentDetailGuard.next();
+
     try {
-      // `courses!inner` + el filtro por tipo: la Ficha Técnica del instructor son las 12
-      // clases prácticas de Clase B, así que la pregunta no es "cuál es la matrícula
-      // vigente del alumno" sino "cuál es su matrícula de Clase B" (fix-170-b).
-      //
-      // Sin el filtro tomaba la de id más alto: en un alumno que terminó Clase B y después
-      // tomó Profesional —camino normal, la app tiene "Re-matricular"— agarraba la de
-      // Profesional y pintaba las 12 clases B en blanco. El listado decía 3/12 y la ficha
-      // del mismo alumno, 0%.
-      //
-      // El `order` se mantiene: entre varias matrículas de Clase B sigue ganando la más
-      // reciente, que es el criterio que ya había.
-      const { data: enrollmentData, error: e1 } = await this.supabase.client
+      const enrollmentRes = await this.supabase.client
         .from('enrollments')
         .select(
           `
@@ -221,10 +257,10 @@ export class InstructorAlumnosFacade {
         .limit(1)
         .maybeSingle();
 
-      if (e1) throw e1;
+      const enrollmentData = assertReadOk(enrollmentRes);
 
       if (enrollmentData) {
-        const { data: sessions, error: e2 } = await this.supabase.client
+        const sessionsRes = await this.supabase.client
           .from('class_b_sessions')
           .select(
             `
@@ -236,13 +272,14 @@ export class InstructorAlumnosFacade {
           .eq('enrollment_id', enrollmentData.id)
           .order('class_number', { ascending: true });
 
-        if (e2) throw e2;
+        const sessions = assertReadOk(sessionsRes);
 
-        const { data: classTopicsResult } = await this.supabase.client
+        const topicsRes = await this.supabase.client
           .from('class_b_topics')
           .select('*')
           .order('class_number', { ascending: true });
 
+        const classTopicsResult = assertReadOk(topicsRes);
         const classTopics = (classTopicsResult ?? []) as any[];
 
         const user = (enrollmentData.students as any)?.users;
@@ -273,6 +310,8 @@ export class InstructorAlumnosFacade {
           });
         }
 
+        if (!this.studentDetailGuard.isCurrent(requestToken)) return;
+
         this._studentDetail.set({
           studentId: studentId,
           enrollmentId: enrollmentData.id,
@@ -288,17 +327,17 @@ export class InstructorAlumnosFacade {
           fichaTecnica: fichaData,
         });
       } else {
+        if (!this.studentDetailGuard.isCurrent(requestToken)) return;
         this._studentDetail.set(null);
       }
-    } catch (err: any) {
-      console.error(err);
-      this._error.set(this.sanitizer.sanitize(err).message || 'Error cargando detalle');
+    } catch {
+      if (!this.studentDetailGuard.isCurrent(requestToken)) return;
+      this._studentDetail.set(null);
+      this._detailError.set('No se pudo cargar la ficha del alumno.');
     } finally {
-      this._detailLoading.set(false);
+      if (this.studentDetailGuard.isCurrent(requestToken)) {
+        this._detailLoading.set(false);
+      }
     }
-  }
-
-  async refreshSilently(): Promise<void> {
-    await this.fetchStudents();
   }
 }

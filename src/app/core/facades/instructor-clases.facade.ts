@@ -1,4 +1,4 @@
-﻿import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import {
   addDaysIso,
   chileDayRange,
@@ -16,6 +16,8 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { assertReadOk } from '@core/utils/db-error.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { todayIso } from '@core/utils/date.utils';
 import { chileTimeOfDay } from '@core/utils/chile-time.utils';
 import type {
@@ -37,9 +39,17 @@ export class InstructorClasesFacade {
   private _todayClasses = signal<InstructorClassRow[]>([]);
   private _selectedClass = signal<InstructorClassRow | null>(null);
   private _upcomingDays = signal<UpcomingDay[]>([]);
+  private _upcomingDaysError = signal<string | null>(null);
   private _isLoading = signal<boolean>(false);
+  private _detailLoading = signal<boolean>(false);
   private _error = signal<string | null>(null);
+  private _detailError = signal<string | null>(null);
+  private _refreshFailed = signal<boolean>(false);
   private _initialized = false;
+  private _lastDetailSessionId: number | null = null;
+
+  private readonly listGuard = createRequestGuard();
+  private readonly classDetailGuard = createRequestGuard();
 
   /**
    * Contador que se incrementa tras guardar una evaluación con éxito. Los Smart
@@ -58,8 +68,12 @@ export class InstructorClasesFacade {
   readonly todayClasses = this._todayClasses.asReadonly();
   readonly selectedClass = this._selectedClass.asReadonly();
   readonly upcomingDays = this._upcomingDays.asReadonly();
+  readonly upcomingDaysError = this._upcomingDaysError.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
+  readonly detailLoading = this._detailLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly detailError = this._detailError.asReadonly();
+  readonly refreshFailed = this._refreshFailed.asReadonly();
 
   readonly kpis = computed(() => {
     const classes = this._todayClasses();
@@ -86,14 +100,39 @@ export class InstructorClasesFacade {
       return;
     }
 
+    const requestToken = this.listGuard.next();
     this._isLoading.set(true);
-    await this.fetchTodayClasses();
-    this._isLoading.set(false);
+    this._error.set(null);
+    this._upcomingDaysError.set(null);
 
-    if (!this.useMock) {
-      this.setupRealtime();
+    try {
+      await Promise.all([
+        this.loadTodayClassesQuery(requestToken),
+        this.loadUpcomingDaysQuery(requestToken),
+      ]);
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._initialized = true;
+      if (!this.useMock) {
+        this.setupRealtime();
+      }
+    } catch {
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._todayClasses.set([]);
+      this._upcomingDays.set([]);
+      this._error.set('No se pudieron cargar las clases del día.');
+    } finally {
+      if (this.listGuard.isCurrent(requestToken)) {
+        this._isLoading.set(false);
+      }
     }
-    this._initialized = true;
+  }
+
+  async reintentar(): Promise<void> {
+    this._error.set(null);
+    this._upcomingDaysError.set(null);
+    this._refreshFailed.set(false);
+    this._initialized = false;
+    await this.initialize();
   }
 
   dispose(): void {
@@ -119,60 +158,123 @@ export class InstructorClasesFacade {
           filter: `instructor_id=eq.${instructorId}`,
         },
         () => {
-          this.refreshSilently(); // refetch upon changes
+          void this.refreshSilently(); // refetch upon changes
         },
       )
       .subscribe();
   }
 
-  async fetchTodayClasses(): Promise<void> {
+  private async loadTodayClassesQuery(requestToken?: number): Promise<InstructorClassRow[]> {
     if (this.useMock) {
-      this._error.set(null);
-      // Solo mockeamos si no hay datos ya cargados (para mantener el estado de "in_progress" si lo cambiamos)
       if (this._todayClasses().length === 0) {
         this._todayClasses.set(this.getMockClasses());
       }
-      return;
+      return this._todayClasses();
     }
 
     const instructorId = await this.profileFacade.getInstructorId();
-    if (!instructorId) return;
+    if (!instructorId) return [];
 
+    const { start, endExclusive } = chileDayRange(todayIso());
+
+    const res = await this.supabase.client
+      .from('class_b_sessions')
+      .select(
+        `
+        id, scheduled_at, start_time, end_time, duration_min, status, class_number, km_start, km_end, evaluation_grade, notes,
+        enrollments!inner(
+          id, number,
+          students!inner(id, users!inner(id, first_names, paternal_last_name, maternal_last_name, rut))
+        ),
+        vehicles(id, license_plate, brand, model)
+      `,
+      )
+      .eq('instructor_id', instructorId)
+      .gte('scheduled_at', start)
+      .lt('scheduled_at', endExclusive)
+      .order('scheduled_at', { ascending: true });
+
+    const data = assertReadOk(res);
+    if (requestToken !== undefined && !this.listGuard.isCurrent(requestToken)) return [];
+
+    const mapped = (data || []).map(this.mapSessionToRow.bind(this));
+    this._todayClasses.set(mapped);
+
+    // If evaluating specific class, update it
+    const currentSelected = this._selectedClass();
+    if (currentSelected) {
+      const updated = mapped.find((c) => c.sessionId === currentSelected.sessionId);
+      if (updated) this._selectedClass.set(updated);
+    }
+
+    return mapped;
+  }
+
+  async fetchTodayClasses(): Promise<void> {
     this._error.set(null);
     try {
-      const { start, endExclusive } = chileDayRange(todayIso());
-
-      const { data, error } = await this.supabase.client
-        .from('class_b_sessions')
-        .select(
-          `
-          id, scheduled_at, start_time, end_time, duration_min, status, class_number, km_start, km_end, evaluation_grade, notes,
-          enrollments!inner(
-            id, number,
-            students!inner(id, users!inner(id, first_names, paternal_last_name, maternal_last_name, rut))
-          ),
-          vehicles(id, license_plate, brand, model)
-        `,
-        )
-        .eq('instructor_id', instructorId)
-        .gte('scheduled_at', start)
-        .lt('scheduled_at', endExclusive)
-        .order('scheduled_at', { ascending: true });
-
-      if (error) throw error;
-
-      const mapped = (data || []).map(this.mapSessionToRow.bind(this));
-      this._todayClasses.set(mapped);
-
-      // If evaluating specific class, update it
-      const currentSelected = this._selectedClass();
-      if (currentSelected) {
-        const updated = mapped.find((c) => c.sessionId === currentSelected.sessionId);
-        if (updated) this._selectedClass.set(updated);
-      }
+      await this.loadTodayClassesQuery();
     } catch (err: any) {
       console.error('Error fetching today classes:', err);
+      this._todayClasses.set([]);
       this._error.set(this.sanitizer.sanitize(err).message || 'Error al cargar clases');
+    }
+  }
+
+  private async loadUpcomingDaysQuery(requestToken?: number): Promise<UpcomingDay[]> {
+    if (this.useMock) {
+      const mockDays: UpcomingDay[] = [8, 5].map((cantidad, i) => {
+        const fecha = addDaysIso(todayIso(), i + 1);
+        return { fecha, fechaLabel: formatChileDate(fecha, UPCOMING_DAY_LABEL), cantidad };
+      });
+      this._upcomingDays.set(mockDays);
+      return mockDays;
+    }
+
+    const instructorId = await this.profileFacade.getInstructorId();
+    if (!instructorId) return [];
+
+    const today = todayIso();
+    const upcoming = chileRange(addDaysIso(today, 1), addDaysIso(today, 4));
+
+    const res = await this.supabase.client
+      .from('class_b_sessions')
+      .select('id, scheduled_at')
+      .eq('instructor_id', instructorId)
+      .gte('scheduled_at', upcoming.start)
+      .lt('scheduled_at', upcoming.endExclusive)
+      .in('status', ['scheduled', 'in_progress']);
+
+    const data = assertReadOk(res);
+    if (requestToken !== undefined && !this.listGuard.isCurrent(requestToken)) return [];
+
+    const byDate = new Map<string, number>();
+    for (const row of data || []) {
+      const dateKey = toChileDate(row.scheduled_at as string);
+      byDate.set(dateKey, (byDate.get(dateKey) || 0) + 1);
+    }
+
+    const days: UpcomingDay[] = Array.from(byDate.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(0, 3)
+      .map(([fecha, cantidad]) => ({
+        fecha,
+        fechaLabel: formatChileDate(fecha, UPCOMING_DAY_LABEL),
+        cantidad,
+      }));
+
+    this._upcomingDays.set(days);
+    this._upcomingDaysError.set(null);
+    return days;
+  }
+
+  async fetchUpcomingDays(): Promise<void> {
+    try {
+      await this.loadUpcomingDaysQuery();
+    } catch (err: any) {
+      console.error('Error fetching upcoming days:', err);
+      this._upcomingDays.set([]);
+      this._upcomingDaysError.set('No se pudieron cargar los próximos días.');
     }
   }
 
@@ -191,19 +293,30 @@ export class InstructorClasesFacade {
     this.layoutDrawer.open(InstructorEvaluacionComponent, 'Evaluación Práctica', 'clipboard-pen');
   }
 
+  async reintentarDetail(): Promise<void> {
+    if (this._lastDetailSessionId !== null) {
+      await this.loadClassDetail(this._lastDetailSessionId);
+    }
+  }
+
   async loadClassDetail(sessionId: number): Promise<void> {
-    this._error.set(null);
-    this._isLoading.set(true);
+    this._lastDetailSessionId = sessionId;
+    // Caso A al cambiar de clase: limpiar al inicio para nunca mostrar la clase anterior
+    this._selectedClass.set(null);
+    this._detailError.set(null);
+    this._detailLoading.set(true);
 
     if (this.useMock) {
       const mock = this.getMockClasses().find((c) => c.sessionId === sessionId);
       this._selectedClass.set(mock || null);
-      this._isLoading.set(false);
+      this._detailLoading.set(false);
       return;
     }
 
+    const requestToken = this.classDetailGuard.next();
+
     try {
-      const { data, error } = await this.supabase.client
+      const res = await this.supabase.client
         .from('class_b_sessions')
         .select(
           `
@@ -218,7 +331,9 @@ export class InstructorClasesFacade {
         .eq('id', sessionId)
         .maybeSingle();
 
-      if (error) throw error;
+      const data = assertReadOk(res);
+      if (!this.classDetailGuard.isCurrent(requestToken)) return;
+
       if (data) {
         this._selectedClass.set(this.mapSessionToRow(data));
       } else {
@@ -226,9 +341,13 @@ export class InstructorClasesFacade {
       }
     } catch (err: any) {
       console.error('Error fetching class detail:', err);
-      this._error.set(this.sanitizer.sanitize(err).message || 'Error al cargar la clase');
+      if (!this.classDetailGuard.isCurrent(requestToken)) return;
+      this._selectedClass.set(null);
+      this._detailError.set('No se pudo cargar el detalle de la clase.');
     } finally {
-      this._isLoading.set(false);
+      if (this.classDetailGuard.isCurrent(requestToken)) {
+        this._detailLoading.set(false);
+      }
     }
   }
 
@@ -312,11 +431,13 @@ export class InstructorClasesFacade {
 
     try {
       // 1. Get session details for attendance registration
-      const { data: session } = await this.supabase.client
+      const sessionRes = await this.supabase.client
         .from('class_b_sessions')
         .select('enrollment_id, vehicle_id, enrollments!inner(student_id)')
         .eq('id', sessionId)
         .maybeSingle();
+
+      const session = assertReadOk(sessionRes);
 
       // 2. Subir firmas opcionales (mismo helper que saveEvaluation)
       const studentSignatureUrl = extra?.studentSignature
@@ -507,57 +628,25 @@ export class InstructorClasesFacade {
     return data.path;
   }
 
-  async fetchUpcomingDays(): Promise<void> {
-    if (this.useMock) {
-      const mockDays: UpcomingDay[] = [8, 5].map((cantidad, i) => {
-        const fecha = addDaysIso(todayIso(), i + 1);
-        return { fecha, fechaLabel: formatChileDate(fecha, UPCOMING_DAY_LABEL), cantidad };
-      });
-      this._upcomingDays.set(mockDays);
-      return;
-    }
-
-    const instructorId = await this.profileFacade.getInstructorId();
-    if (!instructorId) return;
-
-    try {
-      const today = todayIso();
-      const upcoming = chileRange(addDaysIso(today, 1), addDaysIso(today, 4));
-
-      const { data, error } = await this.supabase.client
-        .from('class_b_sessions')
-        .select('id, scheduled_at')
-        .eq('instructor_id', instructorId)
-        .gte('scheduled_at', upcoming.start)
-        .lt('scheduled_at', upcoming.endExclusive)
-        .in('status', ['scheduled', 'in_progress']);
-
-      if (error) throw error;
-
-      const byDate = new Map<string, number>();
-      for (const row of data || []) {
-        const dateKey = toChileDate(row.scheduled_at as string);
-        byDate.set(dateKey, (byDate.get(dateKey) || 0) + 1);
-      }
-
-      const days: UpcomingDay[] = Array.from(byDate.entries())
-        .sort(([a], [b]) => a.localeCompare(b))
-        .slice(0, 3)
-        .map(([fecha, cantidad]) => ({
-          fecha,
-          fechaLabel: formatChileDate(fecha, UPCOMING_DAY_LABEL),
-          cantidad,
-        }));
-
-      this._upcomingDays.set(days);
-    } catch (err: any) {
-      console.error('Error fetching upcoming days:', err);
-    }
-  }
-
   async refreshSilently(): Promise<void> {
-    if (this.profileFacade.instructorId()) {
-      await this.fetchTodayClasses();
+    if (!this.profileFacade.instructorId()) return;
+
+    const requestToken = this.listGuard.next();
+    try {
+      await Promise.all([
+        this.loadTodayClassesQuery(requestToken),
+        this.loadUpcomingDaysQuery(requestToken),
+      ]);
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._refreshFailed.set(false);
+      this._error.set(null);
+    } catch {
+      if (!this.listGuard.isCurrent(requestToken)) return;
+      this._refreshFailed.set(true);
+    } finally {
+      if (this.listGuard.isCurrent(requestToken)) {
+        this._isLoading.set(false);
+      }
     }
   }
 

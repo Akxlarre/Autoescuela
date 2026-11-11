@@ -8,7 +8,6 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SignaturePadComponent } from '@shared/components/signature-pad/signature-pad.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
@@ -24,7 +23,6 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     EmptyStateComponent,
     SignaturePadComponent,
     SectionHeroComponent,
-    AlertCardComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
@@ -43,7 +41,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 
       <div class="bento-banner">
         <div class="max-w-3xl mx-auto flex flex-col gap-6">
-          @if (clasesFacade.isLoading()) {
+          @if (clasesFacade.detailLoading()) {
             <!-- Skeleton: Resumen de Clase Estilo "Ticket" -->
             <div class="bento-card relative overflow-hidden">
               <div class="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-5 relative z-10">
@@ -105,10 +103,17 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
               <app-skeleton-block variant="rect" width="100%" height="140px" borderRadius="1rem" />
               <app-skeleton-block variant="rect" width="100%" height="100px" borderRadius="1rem" />
             </div>
-          } @else if (clasesFacade.error()) {
-            <app-alert-card title="Error al cargar clase" severity="error">
-              {{ clasesFacade.error() }}
-            </app-alert-card>
+          } @else if (clasesFacade.detailError()) {
+            <div class="bento-card p-6 flex items-center justify-center">
+              <app-empty-state
+                icon="alert-triangle"
+                [message]="clasesFacade.detailError()!"
+                subtitle="Revisa tu conexión e inténtalo de nuevo."
+                actionLabel="Reintentar"
+                actionIcon="refresh-cw"
+                (action)="clasesFacade.reintentarDetail()"
+              />
+            </div>
           } @else if (clasesFacade.selectedClass(); as cls) {
             <!-- Resumen de Clase Estilo "Ticket" -->
             <div class="bento-card relative overflow-hidden" appCardHover>
