@@ -85,7 +85,27 @@ type UploadMode = 'student' | 'school' | 'instructor';
             }
 
             <!-- ── Selector matrícula (AC-E2: alumno con 2+ matrículas, elegido desde el dropdown genérico) ── -->
-            @if (facade.currentUploadMode() === 'student' && showEnrollmentSelector()) {
+            @if (
+              facade.currentUploadMode() === 'student' &&
+                selectedStudentId() &&
+                facade.studentEnrollmentOptionsError();
+              as enrollmentError
+            ) {
+              <app-alert-card severity="error" title="No se pudieron cargar las matrículas">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <span class="text-compact text-text-secondary">{{ enrollmentError }}</span>
+                  <button
+                    type="button"
+                    class="btn-secondary flex items-center gap-2 shrink-0"
+                    data-llm-action="reintentar-matriculas-dms"
+                    (click)="facade.loadStudentEnrollmentOptions(selectedStudentId()!)"
+                  >
+                    <app-icon name="refresh-cw" [size]="14" />
+                    Reintentar
+                  </button>
+                </div>
+              </app-alert-card>
+            } @else if (facade.currentUploadMode() === 'student' && showEnrollmentSelector()) {
               <div class="flex flex-col gap-1.5">
                 <label class="text-sm font-medium text-text-primary">Matrícula *</label>
                 <p-select
@@ -100,6 +120,34 @@ type UploadMode = 'student' | 'school' | 'instructor';
                   data-llm-description="select which enrollment (matrícula) the document belongs to"
                 ></p-select>
               </div>
+            }
+
+            @if (
+              facade.currentUploadMode() === 'student' &&
+                selectedStudentId() &&
+                selectedEnrollmentId() &&
+                facade.studentDocsError();
+              as studentDocsErr
+            ) {
+              <app-alert-card
+                severity="warning"
+                title="No se pudieron verificar documentos previos"
+              >
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <span class="text-compact text-text-secondary">{{ studentDocsErr }}</span>
+                  <button
+                    type="button"
+                    class="btn-secondary flex items-center gap-2 shrink-0"
+                    data-llm-action="reintentar-docs-previos-dms"
+                    (click)="
+                      facade.loadStudentDocuments(selectedStudentId()!, selectedEnrollmentId()!)
+                    "
+                  >
+                    <app-icon name="refresh-cw" [size]="14" />
+                    Reintentar
+                  </button>
+                </div>
+              </app-alert-card>
             }
 
             <!-- ── Selector instructor (modo instructor) ── -->
@@ -119,6 +167,25 @@ type UploadMode = 'student' | 'school' | 'instructor';
                   appendTo="body"
                 ></p-select>
               </div>
+              @if (selectedInstructorId() && facade.instructorDocsError(); as instructorDocsErr) {
+                <app-alert-card
+                  severity="warning"
+                  title="No se pudieron verificar documentos previos"
+                >
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <span class="text-compact text-text-secondary">{{ instructorDocsErr }}</span>
+                    <button
+                      type="button"
+                      class="btn-secondary flex items-center gap-2 shrink-0"
+                      data-llm-action="reintentar-docs-previos-dms"
+                      (click)="facade.loadInstructorDocuments(selectedInstructorId()!)"
+                    >
+                      <app-icon name="refresh-cw" [size]="14" />
+                      Reintentar
+                    </button>
+                  </div>
+                </app-alert-card>
+              }
             }
 
             <!-- ── Selector tipo ── -->

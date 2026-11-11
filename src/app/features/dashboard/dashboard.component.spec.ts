@@ -1,6 +1,10 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import {
+  NO_ERRORS_SCHEMA,
+  signal,
+  ɵresolveComponentResources as resolveComponentResources,
+} from '@angular/core';
 import { DashboardComponent } from './dashboard.component';
 import { ExecutiveDashboardFacade } from '@core/facades/executive-dashboard.facade';
 import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
@@ -38,7 +42,14 @@ function setup(opts: { branchId?: number | null; tier?: 'mobile' | 'tablet' | 'd
     selectedBranchId: signal(opts.branchId ?? null),
     selectedBranchLabel: signal('Autoescuela Chillán'),
   };
-  const alerts = { activeAlerts: signal([]), initialize: vi.fn().mockResolvedValue(undefined) };
+  const alerts = {
+    activeAlerts: signal<any[]>([]),
+    isLoading: signal(false),
+    loadProblem: signal<string | null>(null),
+    refreshFailed: signal(false),
+    initialize: vi.fn().mockResolvedValue(undefined),
+    reintentar: vi.fn().mockResolvedValue(undefined),
+  };
   const drawer = { isOpen: signal(false), open: vi.fn() };
 
   TestBed.configureTestingModule({
@@ -53,7 +64,7 @@ function setup(opts: { branchId?: number | null; tier?: 'mobile' | 'tablet' | 'd
   });
 
   const component = TestBed.runInInjectionContext(() => new DashboardComponent());
-  return { component: component as any, facade, branch, kpis, drawer };
+  return { component: component as any, facade, branch, kpis, drawer, alerts };
 }
 
 describe('DashboardComponent (dashboard ejecutivo)', () => {
@@ -172,6 +183,124 @@ describe('DashboardComponent (dashboard ejecutivo)', () => {
       vi.setSystemTime(new Date('2026-10-14T18:00:00.000Z'));
       component.refreshToday();
       expect(component.today()).toBe('2026-10-14');
+    });
+  });
+
+  describe('alertas: Caso A, Caso B y skeleton (spec 0060-b T3.3)', () => {
+    async function mountDom(
+      overrides: {
+        alerts?: any[];
+        isLoading?: boolean;
+        loadProblem?: string | null;
+        refreshFailed?: boolean;
+      } = {},
+    ) {
+      await resolveComponentResources(() => Promise.resolve(''));
+      TestBed.resetTestingModule();
+      const facade = {
+        preset: signal('this_month'),
+        range: signal({ from: '2026-09-01', to: '2026-09-27' }),
+        isLoading: signal(false),
+        isRefreshing: signal(false),
+        dataPreset: signal('this_month'),
+        kpis: signal(null),
+        receivables: signal(null),
+        series: signal(null),
+        todayOps: signal(null),
+        applyRange: vi.fn().mockResolvedValue(undefined),
+        reload: vi.fn().mockResolvedValue(undefined),
+        sectionError: vi.fn(() => null),
+      };
+      const alerts = {
+        activeAlerts: signal<any[]>(overrides.alerts ?? []),
+        isLoading: signal(overrides.isLoading ?? false),
+        loadProblem: signal<string | null>(overrides.loadProblem ?? null),
+        refreshFailed: signal(overrides.refreshFailed ?? false),
+        initialize: vi.fn().mockResolvedValue(undefined),
+        reintentar: vi.fn().mockResolvedValue(undefined),
+      };
+      TestBed.configureTestingModule({
+        imports: [DashboardComponent],
+        providers: [
+          { provide: ExecutiveDashboardFacade, useValue: facade },
+          { provide: DashboardAlertsFacade, useValue: alerts },
+          {
+            provide: BranchFacade,
+            useValue: {
+              selectedBranchId: signal(null),
+              selectedBranchLabel: signal('Chillán'),
+            },
+          },
+          { provide: LayoutService, useValue: { tier: signal('desktop') } },
+          {
+            provide: LayoutDrawerFacadeService,
+            useValue: { isOpen: signal(false), open: vi.fn() },
+          },
+          { provide: GsapAnimationsService, useValue: { animateBentoGrid: vi.fn() } },
+        ],
+      }).overrideComponent(DashboardComponent, {
+        set: {
+          imports: [],
+          schemas: [NO_ERRORS_SCHEMA],
+          styleUrl: undefined,
+          styleUrls: [],
+          styles: [],
+        },
+      });
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.componentInstance.setTab('hoy');
+      fixture.detectChanges();
+      return { fixture, component: fixture.componentInstance as any, alerts };
+    }
+
+    it('retryAlerts() delega en alertsFacade.reintentar()', () => {
+      const { component, alerts } = setup();
+      component.retryAlerts();
+      expect(alerts.reintentar).toHaveBeenCalledTimes(1);
+    });
+
+    it('Caso A: con loadProblem sin alertas no muestra "Todo en orden"', async () => {
+      const { fixture, alerts } = await mountDom({
+        loadProblem: 'No se pudieron revisar las alertas.',
+      });
+      const text = fixture.nativeElement.textContent as string;
+      const emptyEl = fixture.nativeElement.querySelector('app-empty-state') as any;
+
+      expect(emptyEl).not.toBeNull();
+      expect(emptyEl.message).toBe('No se pudieron revisar las alertas.');
+      expect(emptyEl.getAttribute('actionLabel')).toBe('Reintentar');
+      expect(text).not.toContain('Todo en orden');
+      expect(text).not.toContain('0 alertas');
+
+      emptyEl.dispatchEvent(new CustomEvent('action'));
+      expect(alerts.reintentar).toHaveBeenCalledTimes(1);
+    });
+
+    it('mientras alertsLoading está activo sin alertas no muestra "Todo en orden"', async () => {
+      const { fixture } = await mountDom({ isLoading: true });
+      const text = fixture.nativeElement.textContent as string;
+      const skeletonList = fixture.nativeElement.querySelector('[aria-label="Cargando alertas"]');
+
+      expect(skeletonList).not.toBeNull();
+      expect(text).not.toContain('Todo en orden');
+    });
+
+    it('Caso B: con refreshFailed y alertas visibles muestra app-alert-card con Reintentar', async () => {
+      const { fixture, alerts } = await mountDom({
+        alerts: [{ id: 'a1', title: 'Pago vencido', description: 'Detalle', severity: 'warning' }],
+        refreshFailed: true,
+      });
+      const text = fixture.nativeElement.textContent as string;
+      const alertCard = fixture.nativeElement.querySelector('app-alert-card');
+      const retryBtn = fixture.nativeElement.querySelector(
+        '[data-llm-action="reintentar-alertas-dashboard"]',
+      ) as HTMLButtonElement | null;
+
+      expect(text).toContain('Pago vencido');
+      expect(alertCard).not.toBeNull();
+      expect(retryBtn).not.toBeNull();
+      retryBtn?.click();
+      expect(alerts.reintentar).toHaveBeenCalledTimes(1);
     });
   });
 });

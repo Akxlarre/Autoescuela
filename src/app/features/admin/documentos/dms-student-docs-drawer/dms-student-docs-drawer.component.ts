@@ -48,7 +48,16 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
           }
         </div>
       } @else {
-        @if (facade.studentDocs().length === 0) {
+        @if (facade.studentDocsError(); as error) {
+          <app-empty-state
+            message="No se pudieron cargar los documentos"
+            [subtitle]="error"
+            icon="circle-alert"
+            actionLabel="Reintentar"
+            actionIcon="refresh-cw"
+            (action)="onRetry()"
+          />
+        } @else if (facade.studentDocs().length === 0) {
           <app-empty-state
             message="Sin documentos"
             subtitle="Este alumno aún no tiene documentos."
@@ -199,6 +208,13 @@ export class DmsStudentDocsDrawerComponent {
       }
     } finally {
       this.replacingId.set(null);
+    }
+  }
+
+  onRetry(): void {
+    const detail = this.facade.studentDetail();
+    if (detail?.studentId) {
+      void this.facade.loadStudentDocuments(detail.studentId, detail.enrollmentId ?? undefined);
     }
   }
 

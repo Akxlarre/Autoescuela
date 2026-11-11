@@ -17,6 +17,7 @@ import { TagModule } from 'primeng/tag';
 import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { HelpHintComponent } from '@shared/components/help-hint/help-hint.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -77,6 +78,7 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
     SelectModule,
     FormsModule,
     SectionHeroComponent,
+    AlertCardComponent,
     EmptyStateComponent,
     HelpHintComponent,
     IconComponent,
@@ -122,6 +124,25 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
             <app-skeleton-block variant="rect" width="100%" height="200px" />
           </div>
         } @else {
+          @if (refreshFailed() && activeTab() !== 'templates') {
+            <app-alert-card severity="warning" title="No se pudieron actualizar los documentos">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span class="text-compact text-text-secondary">
+                  Los datos mostrados pueden no estar actualizados.
+                </span>
+                <button
+                  type="button"
+                  class="btn-secondary flex items-center gap-2 shrink-0"
+                  data-llm-action="reintentar-dms"
+                  [disabled]="isLoading()"
+                  (click)="retryRequested.emit()"
+                >
+                  <app-icon name="refresh-cw" [size]="14" />
+                  Reintentar
+                </button>
+              </div>
+            </app-alert-card>
+          }
           <div class="flex-1 min-h-0 flex flex-col">
             @switch (activeTab()) {
               <!-- ══ TAB: DOCUMENTOS DEL ALUMNO ══════════════════════════════ -->
@@ -298,12 +319,18 @@ const ALL_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] = [
                     </div>
                     @if (recentDocs().length === 0) {
                       <div class="p-6 flex-1 flex items-center justify-center">
-                        <app-empty-state
-                          [message]="
-                            loadError() ? 'No se pudieron cargar' : 'Sin documentos recientes'
-                          "
-                          [icon]="loadError() ? 'circle-alert' : 'file-text'"
-                        />
+                        @if (loadError(); as error) {
+                          <app-empty-state
+                            [message]="error"
+                            subtitle="No se pudieron cargar los documentos recientes."
+                            icon="circle-alert"
+                            actionLabel="Reintentar"
+                            actionIcon="refresh-cw"
+                            (action)="retryRequested.emit()"
+                          />
+                        } @else {
+                          <app-empty-state message="Sin documentos recientes" icon="file-text" />
+                        }
                       </div>
                     } @else {
                       <ul
@@ -814,6 +841,7 @@ export class DmsListContentComponent {
   readonly showSedeColumn = input<boolean>(false);
   /** fix-473-m: la primera carga falló → las listas lo dicen (y ofrecen reintentar) en vez de "vacío". */
   readonly loadError = input<string | null>(null);
+  readonly refreshFailed = input<boolean>(false);
   readonly retryRequested = output<void>();
 
   // ── Inputs — editor de plantillas (spec 0016-m) ─────────────────────────────

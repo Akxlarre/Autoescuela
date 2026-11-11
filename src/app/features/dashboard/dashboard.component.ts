@@ -11,9 +11,11 @@ import {
   viewChild,
 } from '@angular/core';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { TabsComponent, type TabOption } from '@shared/components/tabs/tabs.component';
 import { ExecPeriodFilterComponent } from '@shared/components/exec-period-filter/exec-period-filter.component';
@@ -57,9 +59,11 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
   imports: [
     TooltipModule,
     BentoGridLayoutDirective,
+    AlertCardComponent,
     IconComponent,
     SectionHeroComponent,
     EmptyStateComponent,
+    SkeletonBlockComponent,
     KpiCardVariantComponent,
     TabsComponent,
     ExecPeriodFilterComponent,
@@ -295,50 +299,80 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
                       </button>
                     }
                   </div>
-                  @if (alertsProblem() && alerts().length) {
-                    <p class="m-0 mb-2 text-xs text-text-muted" role="status">
-                      {{ alertsProblem() }} Puede faltar alguna.
-                    </p>
+                  @if (alertsRefreshFailed() && alerts().length) {
+                    <app-alert-card
+                      severity="warning"
+                      title="No se pudieron actualizar las alertas"
+                    >
+                      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <span class="text-compact text-text-secondary">
+                          Los datos mostrados pueden no estar actualizados.
+                        </span>
+                        <button
+                          type="button"
+                          class="btn-secondary flex items-center gap-2 shrink-0"
+                          data-llm-action="reintentar-alertas-dashboard"
+                          [disabled]="alertsLoading()"
+                          (click)="retryAlerts()"
+                        >
+                          <app-icon name="refresh-cw" [size]="14" />
+                          Reintentar
+                        </button>
+                      </div>
+                    </app-alert-card>
                   }
-                  <ul class="m-0 p-0 list-none flex flex-col gap-1">
-                    @for (alert of visibleAlerts(); track alert.id) {
-                      <li
-                        class="flex items-start gap-3 py-2 border-b last:border-b-0 border-border-subtle"
-                      >
-                        <app-icon
-                          [name]="alertIcon(alert.severity)"
-                          [size]="14"
-                          class="shrink-0 mt-0.5"
-                          [style.color]="alertColor(alert.severity)"
-                        />
-                        <div class="flex-1 min-w-0">
-                          <p class="m-0 text-sm text-text-primary truncate">{{ alert.title }}</p>
-                          <p class="m-0 text-xs text-text-muted truncate">
-                            {{ alert.description }}
-                          </p>
-                        </div>
-                      </li>
-                    } @empty {
-                      <li class="py-4">
-                        @if (alertsProblem(); as problem) {
-                          <app-empty-state
-                            icon="triangle-alert"
-                            [message]="problem"
-                            subtitle="No significa que no haya alertas. Vuelve a intentarlo."
-                            actionLabel="Reintentar"
-                            actionIcon="refresh-cw"
-                            (action)="retryAlerts()"
+                  @if (alertsLoading() && !alerts().length) {
+                    <ul class="m-0 p-0 list-none flex flex-col gap-2" aria-label="Cargando alertas">
+                      @for (i of [1, 2, 3]; track i) {
+                        <li
+                          class="flex flex-col gap-1.5 py-2 border-b last:border-b-0 border-border-subtle"
+                        >
+                          <app-skeleton-block variant="text" width="58%" height="13px" />
+                          <app-skeleton-block variant="text" width="84%" height="11px" />
+                        </li>
+                      }
+                    </ul>
+                  } @else {
+                    <ul class="m-0 p-0 list-none flex flex-col gap-1">
+                      @for (alert of visibleAlerts(); track alert.id) {
+                        <li
+                          class="flex items-start gap-3 py-2 border-b last:border-b-0 border-border-subtle"
+                        >
+                          <app-icon
+                            [name]="alertIcon(alert.severity)"
+                            [size]="14"
+                            class="shrink-0 mt-0.5"
+                            [style.color]="alertColor(alert.severity)"
                           />
-                        } @else {
-                          <app-empty-state
-                            icon="bell"
-                            message="Todo en orden"
-                            subtitle="No hay alertas importantes por revisar."
-                          />
-                        }
-                      </li>
-                    }
-                  </ul>
+                          <div class="flex-1 min-w-0">
+                            <p class="m-0 text-sm text-text-primary truncate">{{ alert.title }}</p>
+                            <p class="m-0 text-xs text-text-muted truncate">
+                              {{ alert.description }}
+                            </p>
+                          </div>
+                        </li>
+                      } @empty {
+                        <li class="py-4">
+                          @if (alertsProblem(); as problem) {
+                            <app-empty-state
+                              icon="triangle-alert"
+                              [message]="problem"
+                              subtitle="No significa que no haya alertas. Vuelve a intentarlo."
+                              actionLabel="Reintentar"
+                              actionIcon="refresh-cw"
+                              (action)="retryAlerts()"
+                            />
+                          } @else {
+                            <app-empty-state
+                              icon="bell"
+                              message="Todo en orden"
+                              subtitle="No hay alertas importantes por revisar."
+                            />
+                          }
+                        </li>
+                      }
+                    </ul>
+                  }
                 </div>
               </div>
             }
@@ -397,8 +431,10 @@ export class DashboardComponent {
 
   protected readonly alerts = computed(() => this.alertsFacade.activeAlerts());
   protected readonly visibleAlerts = computed(() => this.alerts().slice(0, 5));
+  protected readonly alertsLoading = computed(() => this.alertsFacade.isLoading());
   /** Aviso cuando la lista de alertas no es confiable (carga fallida o incompleta). */
   protected readonly alertsProblem = computed(() => this.alertsFacade.loadProblem());
+  protected readonly alertsRefreshFailed = computed(() => this.alertsFacade.refreshFailed());
 
   constructor() {
     // Branch-scoped (facades.md §7): recarga al cambiar de sede. SWR dentro del Facade.
@@ -441,7 +477,7 @@ export class DashboardComponent {
   }
 
   protected retryAlerts(): void {
-    void this.alertsFacade.initialize();
+    void this.alertsFacade.reintentar();
   }
 
   protected openAlerts(): void {

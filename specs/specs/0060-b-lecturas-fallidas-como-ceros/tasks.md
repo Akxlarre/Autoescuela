@@ -204,6 +204,7 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
   - **AC ref:** AC3, AC5
   - **DoD:** DoD-F, más:
     - [ ] Una alerta que no cargó no se muestra como "sin alertas"
+  - **Avance (2026-11-11):** Migrados `dashboard-alerts.facade.ts` y `dms.facade.ts` junto con sus pantallas y drawers (`dashboard`, `secretaria-dashboard`, `alerts-drawer`, `admin-documentos`, `secretaria-documentos`, `dms-list-content`, `dms-student-docs-drawer`, `dms-instructor-docs-drawer`, `dms-doc-preview-drawer`, `dms-upload-drawer`). Lecturas con `assertReadOk` / `if (error) throw error`, `Promise.all` en alertas (si falla una consulta falla la carga entera, sin alertas parciales), guards de solicitud concurrente/cambio de sede (`createRequestGuard`) en todos los subflujos, Caso A limpiando datos previos y Caso B en refresco silencioso y post-mutaciones con aviso `app-alert-card` y `reintentar()` sin skeleton ni pérdida de datos. Fuera de `PENDING` en `unchecked-reads.guard.spec.ts`. Sin discrepancias de columnas respecto a las migraciones SQL. Verificado con tests unitarios, `test-tz.mjs`, `test:ci`, `ngc --noEmit`, `lint:arch` y Playwright X01 (`/app/secretaria/dashboard`, `/app/secretaria/documentos`). Prueba manual de navegador pendiente antes de cerrar.
 - [x] **T3.4** — `instructores.facade.ts`, `flota.facade.ts`, `tasks.facade.ts`
   - **AC ref:** AC3
   - **DoD:** DoD-F

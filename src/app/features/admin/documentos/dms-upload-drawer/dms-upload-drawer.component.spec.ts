@@ -1,5 +1,13 @@
 import { TestBed } from '@angular/core/testing';
-import { signal, WritableSignal } from '@angular/core';
+import {
+  Component,
+  ContentChild,
+  NO_ERRORS_SCHEMA,
+  signal,
+  TemplateRef,
+  WritableSignal,
+} from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DmsUploadDrawerComponent } from './dms-upload-drawer.component';
 import { ConsentsFacade } from '@core/facades/consents.facade';
@@ -68,10 +76,15 @@ describe('DmsUploadDrawerComponent', () => {
       instructorsWithDocs: signal([]),
       studentDetail,
       studentDocs,
+      studentDocsLoading: signal(false),
+      studentDocsError: signal<string | null>(null),
       studentEnrollmentOptions,
+      studentEnrollmentOptionsError: signal<string | null>(null),
       preselectedEnrollmentId,
       instructorDetail,
       instructorDocs,
+      instructorDocsLoading: signal(false),
+      instructorDocsError: signal<string | null>(null),
       preselectedStudentId: signal(null),
       preselectedInstructorId: signal(null),
       loadStudentDocuments,
@@ -201,5 +214,59 @@ describe('DmsUploadDrawerComponent', () => {
     TestBed.flushEffects();
 
     expect(loadStudentDocuments).not.toHaveBeenCalled();
+  });
+
+  it('DOM: si falla la carga de matrículas del alumno, muestra app-alert-card con botón Reintentar (spec 0060-b T3.3)', async () => {
+    @Component({
+      selector: 'app-drawer-content-loader',
+      standalone: true,
+      imports: [NgTemplateOutlet],
+      template: '<ng-container *ngTemplateOutlet="contentTpl || null" />',
+    })
+    class StubDrawerContentLoaderComponent {
+      @ContentChild('content') contentTpl?: TemplateRef<unknown>;
+    }
+
+    (facadeMock as any).studentEnrollmentOptionsError.set('Error de red en matrículas');
+
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [DmsUploadDrawerComponent],
+      providers: [
+        { provide: DmsFacade, useValue: facadeMock },
+        {
+          provide: ConsentsFacade,
+          useValue: { recordMedicalCertificate: vi.fn().mockResolvedValue(true) },
+        },
+        {
+          provide: ErrorSanitizerService,
+          useValue: { sanitize: (e: unknown) => ({ message: String(e) }) },
+        },
+      ],
+    })
+      .overrideComponent(DmsUploadDrawerComponent, {
+        set: {
+          imports: [StubDrawerContentLoaderComponent],
+          schemas: [NO_ERRORS_SCHEMA],
+        },
+      })
+      .compileComponents();
+
+    const fixture = TestBed.createComponent(DmsUploadDrawerComponent);
+    fixture.componentInstance.selectedStudentId.set(42);
+    fixture.detectChanges();
+
+    const alertCard = fixture.nativeElement.querySelector('app-alert-card');
+    const retryBtn = fixture.nativeElement.querySelector(
+      '[data-llm-action="reintentar-matriculas-dms"]',
+    ) as HTMLButtonElement | null;
+
+    expect(alertCard).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Error de red en matrículas');
+    expect(retryBtn).not.toBeNull();
+
+    loadStudentEnrollmentOptions.mockClear();
+    retryBtn?.click();
+    expect(loadStudentEnrollmentOptions).toHaveBeenCalledWith(42);
   });
 });

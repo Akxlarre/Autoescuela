@@ -14,6 +14,7 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
@@ -51,6 +52,7 @@ import {
     CardHoverDirective,
     ScrollRevealDirective,
     AnimateInDirective,
+    AlertCardComponent,
     IconComponent,
     SectionHeroComponent,
     EmptyStateComponent,
@@ -238,7 +240,7 @@ import {
             </div>
           </div>
 
-          @if (loading()) {
+          @if (loading() || (alertsLoading() && !alerts().length)) {
             <ul class="m-0 p-0 list-none flex flex-col gap-1 overflow-hidden">
               @for (i of [1, 2, 3]; track i) {
                 <li
@@ -253,10 +255,26 @@ import {
               }
             </ul>
           } @else {
-            @if (alertsProblem() && alerts().length) {
-              <p class="m-0 mb-2 text-xs text-text-muted shrink-0" role="status">
-                {{ alertsProblem() }} Puede faltar alguna.
-              </p>
+            @if (alertsRefreshFailed() && alerts().length) {
+              <div class="mb-3 shrink-0">
+                <app-alert-card severity="warning" title="No se pudieron actualizar las alertas">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <span class="text-compact text-text-secondary">
+                      Los datos mostrados pueden no estar actualizados.
+                    </span>
+                    <button
+                      type="button"
+                      class="btn-secondary flex items-center gap-2 shrink-0"
+                      data-llm-action="reintentar-alertas-secretaria"
+                      [disabled]="alertsLoading()"
+                      (click)="retryAlerts()"
+                    >
+                      <app-icon name="refresh-cw" [size]="14" />
+                      Reintentar
+                    </button>
+                  </div>
+                </app-alert-card>
+              </div>
             }
             <div class="scroll-fade flex-1 min-h-0">
               <ul
@@ -365,6 +383,8 @@ export class SecretariaDashboardComponent {
   );
   /** Aviso cuando la lista de alertas no es confiable (carga fallida o incompleta). */
   readonly alertsProblem = computed(() => this.dashboardAlertsFacade.loadProblem());
+  readonly alertsLoading = computed(() => this.dashboardAlertsFacade.isLoading());
+  readonly alertsRefreshFailed = computed(() => this.dashboardAlertsFacade.refreshFailed());
   protected readonly isDrawerOpen = computed(() => this.layoutDrawer.isOpen());
   readonly hero = computed(() => this.dashboardFacade.data()?.hero);
   readonly kpis = computed(() => this.dashboardFacade.data()?.kpis ?? []);
@@ -478,7 +498,7 @@ export class SecretariaDashboardComponent {
   }
 
   retryAlerts(): void {
-    void this.dashboardAlertsFacade.initialize();
+    void this.dashboardAlertsFacade.reintentar();
   }
 
   handleQuickAction(actionId: string): void {
