@@ -58,6 +58,42 @@ interface EgresadoRow {
   students: StudentRow | null;
 }
 
+interface StudentSurveyItem {
+  nombre: string;
+  rating: number;
+  texto: string;
+  iniciales: string;
+}
+
+interface StudentSurveysSummary {
+  avgSatisfaction: number;
+  licenseSuccessRate: number;
+  surveys: StudentSurveyItem[];
+}
+
+function summarizeStudentSurveys(rows: any[]): StudentSurveysSummary {
+  const total = rows.length;
+  if (total === 0) {
+    return { avgSatisfaction: 0, licenseSuccessRate: 0, surveys: [] };
+  }
+  const sumRating = rows.reduce((acc, s) => acc + s.satisfaction_rating, 0);
+  const licenseSuccess = rows.filter((s) => s.obtained_license).length;
+  const surveys: StudentSurveyItem[] = rows.map((s) => {
+    const user = s.enrollments?.students?.users;
+    return {
+      nombre: user ? `${user.first_names} ${user.paternal_last_name}` : 'Alumno Anónimo',
+      rating: s.satisfaction_rating,
+      texto: s.comments || 'Sin comentario',
+      iniciales: user ? user.first_names[0] + user.paternal_last_name[0] : 'AA',
+    };
+  });
+  return {
+    avgSatisfaction: Number((sumRating / total).toFixed(1)),
+    licenseSuccessRate: Math.round((licenseSuccess / total) * 100),
+    surveys,
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Injectable({ providedIn: 'root' })
@@ -70,17 +106,29 @@ export class ExAlumnosFacade {
 
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
+  private _hasStats = false;
+  private _hasSurveys = false;
 
   // ── Estado privado ───────────────────────────────────────────────────────────
   private readonly _egresados = signal<EgresadoTableRow[]>([]);
   private readonly _isLoading = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
+  private readonly _refreshFailed = signal<boolean>(false);
+  private readonly _statsError = signal<string | null>(null);
+  private readonly _statsRefreshFailed = signal<boolean>(false);
+  private readonly _surveysError = signal<string | null>(null);
+  private readonly _surveysRefreshFailed = signal<boolean>(false);
   private readonly _isExporting = signal<boolean>(false);
 
   // ── Estado público ───────────────────────────────────────────────────────────
   readonly egresados = this._egresados.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly refreshFailed = this._refreshFailed.asReadonly();
+  readonly statsError = this._statsError.asReadonly();
+  readonly statsRefreshFailed = this._statsRefreshFailed.asReadonly();
+  readonly surveysError = this._surveysError.asReadonly();
+  readonly surveysRefreshFailed = this._surveysRefreshFailed.asReadonly();
   readonly isExporting = this._isExporting.asReadonly();
 
   // ── Estadísticas — Totales ──
@@ -130,50 +178,125 @@ export class ExAlumnosFacade {
    * anterior no toca nada (antes dejaba la pantalla en "A" con los egresados de "B").
    */
   private readonly egresadosGuard = createRequestGuard();
+  private readonly statsGuard = createRequestGuard();
+  private readonly surveysGuard = createRequestGuard();
 
   // ── Acción principal ─────────────────────────────────────────────────────────
   async loadEgresados(): Promise<void> {
     const branchId = this.getActiveBranchId();
 
     if (this._initialized && branchId === this._lastBranchId) {
-      void this.refreshSilently();
+      await this.refreshSilently();
       return;
     }
 
     const token = this.egresadosGuard.next();
+    const statsToken = this.statsGuard.next();
+    const surveysToken = this.surveysGuard.next();
+    // Caso A (primera carga o cambio de sede): limpiamos datos y estadísticas previas para no
+    // mezclar la sede anterior ni dejar KPIs de otra sede visibles si esta carga falla.
+    // `_lastBranchId` y `_initialized` se actualizan tras completar o en catch para respetar el
+    // refresco SWR si el usuario vuelve a la sede previa mientras esta carga sigue en vuelo.
+    this._egresados.set([]);
+    this._hasStats = false;
+    this.resetStatisticsSignals();
+    this._hasSurveys = false;
+    this._surveys.set([]);
+    this.avgSatisfaction.set(0);
+    this.licenseSuccessRate.set(0);
+
     this._isLoading.set(true);
     this._error.set(null);
+    this._refreshFailed.set(false);
+    this._statsError.set(null);
+    this._statsRefreshFailed.set(false);
+    this._surveysError.set(null);
+    this._surveysRefreshFailed.set(false);
     try {
-      await this.fetchAll(token);
+      await this.fetchAll(token, false, statsToken, surveysToken);
       if (!this.egresadosGuard.isCurrent(token)) return;
-      // fix-287-m: una carga fallida no cuenta como hecha; reintentar vuelve a cargar completo.
-      if (this._error()) return;
       this._initialized = true;
       this._lastBranchId = branchId;
+    } catch (err) {
+      if (!this.egresadosGuard.isCurrent(token)) return;
+      this._egresados.set([]);
+      // fix-287-m: una carga fallida no cuenta como hecha; reintentar vuelve a cargar completo.
+      this._initialized = false;
+      this._lastBranchId = branchId;
+      this._error.set(
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al cargar los egresados.',
+      );
     } finally {
       if (this.egresadosGuard.isCurrent(token)) this._isLoading.set(false);
     }
   }
 
+  async reintentar(): Promise<void> {
+    if (this._refreshFailed()) {
+      await this.refreshSilently();
+      return;
+    }
+    this._error.set(null);
+    this._refreshFailed.set(false);
+    this._initialized = false;
+    await this.loadEgresados();
+  }
+
+  async reintentarStats(): Promise<void> {
+    const statsToken = this.statsGuard.next();
+    if (this._statsRefreshFailed()) {
+      await this.loadStatistics(-1, true, statsToken);
+      return;
+    }
+    this._statsError.set(null);
+    this._statsRefreshFailed.set(false);
+    await this.loadStatistics(-1, false, statsToken);
+  }
+
+  async reintentarSurveys(): Promise<void> {
+    const surveysToken = this.surveysGuard.next();
+    if (this._surveysRefreshFailed()) {
+      await this.loadSurveys(-1, true, surveysToken);
+      return;
+    }
+    this._surveysError.set(null);
+    this._surveysRefreshFailed.set(false);
+    await this.loadSurveys(-1, false, surveysToken);
+  }
+
   private async refreshSilently(): Promise<void> {
     const token = this.egresadosGuard.next();
+    const statsToken = this.statsGuard.next();
+    const surveysToken = this.surveysGuard.next();
     const branchId = this.getActiveBranchId();
     try {
-      await this.fetchAll(token);
-      if (this.egresadosGuard.isCurrent(token) && !this._error()) this._lastBranchId = branchId;
+      await this.fetchAll(token, true, statsToken, surveysToken);
+      if (!this.egresadosGuard.isCurrent(token)) return;
+      this._lastBranchId = branchId;
+      this._refreshFailed.set(false);
+      this._error.set(null);
     } catch {
-      // Swallowed
+      if (!this.egresadosGuard.isCurrent(token)) return;
+      // Regla 2 (caso B): mantener egresados visibles y avisar sin pisar error() de caso A.
+      this._refreshFailed.set(true);
     } finally {
       // Si este refresco reemplazó a una carga completa de otra sede, el skeleton es suyo.
       if (this.egresadosGuard.isCurrent(token)) this._isLoading.set(false);
     }
   }
 
-  private fetchAll(token: number): Promise<unknown> {
+  private fetchAll(
+    token: number,
+    isSilentRefresh: boolean,
+    statsToken: number,
+    surveysToken: number,
+  ): Promise<unknown> {
     return Promise.all([
       this.loadEgresadosList(token),
-      this.loadStatistics(token),
-      this.loadSurveys(),
+      this.loadStatistics(token, isSilentRefresh, statsToken),
+      this.loadSurveys(token, isSilentRefresh, surveysToken),
     ]);
   }
 
@@ -207,13 +330,8 @@ export class ExAlumnosFacade {
       .order('completed_at', { ascending: false });
     if (branchId !== null) query = query.eq('branch_id', branchId);
     const { data, error } = await query;
+    if (error) throw error;
     if (!this.egresadosGuard.isCurrent(token)) return;
-
-    if (error) {
-      this._error.set(this.sanitizer.sanitize(error).message);
-      return;
-    }
-    this._error.set(null);
 
     // fix-276-m: un egresado archivado solo se ve en la Papelera de la Base de Alumnos.
     const rows = ((data as unknown as EgresadoRow[]) ?? []).filter(
@@ -271,7 +389,32 @@ export class ExAlumnosFacade {
     };
   }
 
-  private async loadStatistics(token: number): Promise<void> {
+  private resetStatisticsSignals(): void {
+    this.municipalApprovalRate.set(0);
+    this.psychoApprovalRate.set(0);
+    this.totalExamenes.set(0);
+    this.annualEgresadosTotal.set(0);
+    this.annualLicensesTotal.set(0);
+    this.successConversionRate.set(0);
+  }
+
+  private isStatsCurrent(token: number, statsToken?: number): boolean {
+    if (token >= 0 && !this.egresadosGuard.isCurrent(token)) return false;
+    if (statsToken !== undefined && !this.statsGuard.isCurrent(statsToken)) return false;
+    return true;
+  }
+
+  private isSurveysCurrent(token: number, surveysToken?: number): boolean {
+    if (token >= 0 && !this.egresadosGuard.isCurrent(token)) return false;
+    if (surveysToken !== undefined && !this.surveysGuard.isCurrent(surveysToken)) return false;
+    return true;
+  }
+
+  private async loadStatistics(
+    token: number,
+    isSilentRefresh = false,
+    statsToken?: number,
+  ): Promise<void> {
     try {
       const year = chileYear();
       const startOfYear = `${year}-01-01`;
@@ -282,14 +425,6 @@ export class ExAlumnosFacade {
         .select('passed'); // Eliminamos exam_type por ahora ya que no existe en BD
 
       if (error) throw error;
-      if (exams) {
-        // Como no hay exam_type en BD todavía, mostramos la tasa general para ambos por ahora
-        const approvalRate = this.calculateRate(exams);
-
-        this.municipalApprovalRate.set(approvalRate);
-        this.psychoApprovalRate.set(approvalRate);
-        this.totalExamenes.set(exams.length);
-      }
 
       // 2. Balance Real del Año (Egresados vs Licencias)
       // Contar egresados (enrollments completed este año) — mismo criterio que
@@ -308,8 +443,6 @@ export class ExAlumnosFacade {
       const { count: egresadosCount, error: countErr } = await egresadosCountQuery;
 
       if (countErr) throw countErr;
-      if (!this.egresadosGuard.isCurrent(token)) return;
-      this.annualEgresadosTotal.set(egresadosCount || 0);
 
       // Contar licencias (surveys with obtained_license = true este año)
       const { count: licensesCount, error: licErr } = await this.supabase.client
@@ -319,21 +452,46 @@ export class ExAlumnosFacade {
         .gte('created_at', startOfYear);
 
       if (licErr) throw licErr;
-      if (!this.egresadosGuard.isCurrent(token)) return;
-      const licTotal = licensesCount || 0;
-      this.annualLicensesTotal.set(licTotal);
+      if (!this.isStatsCurrent(token, statsToken)) return;
 
-      // Calcular tasa de conversión
-      if (egresadosCount && egresadosCount > 0) {
-        this.successConversionRate.set(Math.round((licTotal / egresadosCount) * 100));
+      const approvalRate = exams ? this.calculateRate(exams) : 0;
+      const totalExamsCount = exams ? exams.length : 0;
+      const egrTotal = egresadosCount || 0;
+      const licTotal = licensesCount || 0;
+
+      // Como no hay exam_type en BD todavía, mostramos la tasa general para ambos por ahora
+      this.municipalApprovalRate.set(approvalRate);
+      this.psychoApprovalRate.set(approvalRate);
+      this.totalExamenes.set(totalExamsCount);
+      this.annualEgresadosTotal.set(egrTotal);
+      this.annualLicensesTotal.set(licTotal);
+      this.successConversionRate.set(egrTotal > 0 ? Math.round((licTotal / egrTotal) * 100) : 0);
+
+      this._hasStats = true;
+      this._statsError.set(null);
+      this._statsRefreshFailed.set(false);
+    } catch {
+      if (!this.isStatsCurrent(token, statsToken)) return;
+      if (isSilentRefresh && this._hasStats) {
+        this._statsRefreshFailed.set(true);
+      } else {
+        this._hasStats = false;
+        this.resetStatisticsSignals();
+        this._statsRefreshFailed.set(false);
+        this._statsError.set('No se pudieron cargar las tasas de aprobación.');
       }
-    } catch (e) {
-      console.error('[ExAlumnosFacade] Error loading statistics:', e);
     }
   }
 
-  private async loadSurveys(): Promise<void> {
+  private async loadSurveys(
+    token = -1,
+    isSilentRefresh = false,
+    surveysToken?: number,
+  ): Promise<void> {
     try {
+      // En prod la columna es `comments`. Las migraciones dicen otra cosa: dos crean
+      // student_surveys con CREATE TABLE IF NOT EXISTS y columnas distintas, y en prod quedó la
+      // que tiene `comments`. Pedir `comment` da 42703 y deja las opiniones en error.
       const { data, error } = await this.supabase.client.from('student_surveys').select(`
           id,
           satisfaction_rating,
@@ -347,30 +505,27 @@ export class ExAlumnosFacade {
         `);
 
       if (error) throw error;
-      if (!data) return;
+      if (!this.isSurveysCurrent(token, surveysToken)) return;
 
-      const total = data.length;
-      if (total > 0) {
-        const sumRating = data.reduce((acc, s) => acc + s.satisfaction_rating, 0);
-        const licenseSuccess = data.filter((s) => s.obtained_license).length;
-
-        this.avgSatisfaction.set(Number((sumRating / total).toFixed(1)));
-        this.licenseSuccessRate.set(Math.round((licenseSuccess / total) * 100));
-
-        // Mapear para la UI con tipado seguro
-        const mappedSurveys = (data as any[]).map((s) => {
-          const user = s.enrollments?.students?.users;
-          return {
-            nombre: user ? `${user.first_names} ${user.paternal_last_name}` : 'Alumno Anónimo',
-            rating: s.satisfaction_rating,
-            texto: s.comments || 'Sin comentario',
-            iniciales: user ? user.first_names[0] + user.paternal_last_name[0] : 'AA',
-          };
-        });
-        this._surveys.set(mappedSurveys);
+      const summary = summarizeStudentSurveys((data as any[]) ?? []);
+      this.avgSatisfaction.set(summary.avgSatisfaction);
+      this.licenseSuccessRate.set(summary.licenseSuccessRate);
+      this._surveys.set(summary.surveys);
+      this._hasSurveys = true;
+      this._surveysError.set(null);
+      this._surveysRefreshFailed.set(false);
+    } catch {
+      if (!this.isSurveysCurrent(token, surveysToken)) return;
+      if (isSilentRefresh && this._hasSurveys) {
+        this._surveysRefreshFailed.set(true);
+      } else {
+        this._hasSurveys = false;
+        this._surveys.set([]);
+        this.avgSatisfaction.set(0);
+        this.licenseSuccessRate.set(0);
+        this._surveysRefreshFailed.set(false);
+        this._surveysError.set('No se pudieron cargar las opiniones de egresados.');
       }
-    } catch (e) {
-      console.error('[ExAlumnosFacade] Error loading surveys:', e);
     }
   }
 

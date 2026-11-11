@@ -681,4 +681,261 @@ describe('ExAlumnosFacade', () => {
       expect(racer.isLoading()).toBe(false);
     });
   });
+
+  describe('manejo explícito de lecturas fallidas (spec 0060-b T3.2)', () => {
+    const row = (id: number, branchId = 1) => ({
+      id,
+      number: `EXP-${id}`,
+      pending_balance: 0,
+      completed_at: '2026-09-30T15:00:00Z',
+      license_group: 'class_b',
+      courses: { name: 'Clase B', code: 'B' },
+      branches: { id: branchId, name: `Sede ${branchId}` },
+      students: {
+        id: id + 100,
+        status: 'active',
+        users: {
+          first_names: 'Eva',
+          paternal_last_name: 'Rojas',
+          maternal_last_name: null,
+          rut: `${id}-4`,
+          email: `eva${id}@correo.cl`,
+        },
+      },
+    });
+
+    function setupMockClient(opts: {
+      branchSignal: { value: number | null };
+      listResult?: () => Promise<any>;
+      convalidationResult?: () => Promise<any>;
+      examsResult?: () => Promise<any>;
+      annualCountResult?: () => Promise<any>;
+      licensesCountResult?: () => Promise<any>;
+      surveysResult?: () => Promise<any>;
+    }): ExAlumnosFacade {
+      const fromFn = vi.fn((table: string) => {
+        let isHead = false;
+        let selectedCols = '';
+        const b: any = {
+          select: vi.fn((cols?: string, selOpts?: { head?: boolean }) => {
+            selectedCols = cols ?? '';
+            isHead = !!selOpts?.head;
+            return b;
+          }),
+          eq: vi.fn(() => b),
+          neq: vi.fn(() => b),
+          gte: vi.fn(() => b),
+          in: vi.fn(() => b),
+          order: vi.fn(() => b),
+          then: (resolve: (v: unknown) => void, reject: (e: unknown) => void) => {
+            let p: Promise<any> = Promise.resolve({ data: [], count: 0, error: null });
+            if (table === 'enrollments' && !isHead && opts.listResult) {
+              p = opts.listResult();
+            } else if (table === 'enrollments' && isHead && opts.annualCountResult) {
+              p = opts.annualCountResult();
+            } else if (table === 'license_validations' && opts.convalidationResult) {
+              p = opts.convalidationResult();
+            } else if (table === 'class_b_exam_scores' && opts.examsResult) {
+              p = opts.examsResult();
+            } else if (table === 'student_surveys' && /\bcomment\b/.test(selectedCols)) {
+              p = Promise.resolve({
+                data: null,
+                error: { code: '42703', message: 'column student_surveys.comment does not exist' },
+              });
+            } else if (table === 'student_surveys' && isHead && opts.licensesCountResult) {
+              p = opts.licensesCountResult();
+            } else if (table === 'student_surveys' && !isHead && opts.surveysResult) {
+              p = opts.surveysResult();
+            }
+            return p.then(resolve, reject);
+          },
+        };
+        return b;
+      });
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          ExAlumnosFacade,
+          { provide: SupabaseService, useValue: { client: { from: fromFn } } },
+          { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+          { provide: BranchFacade, useValue: { selectedBranchId: () => opts.branchSignal.value } },
+          {
+            provide: ErrorSanitizerService,
+            useValue: { sanitize: (e: Error) => ({ message: e.message }) },
+          },
+          { provide: ToastService, useValue: toastSpy },
+        ],
+      });
+      return TestBed.inject(ExAlumnosFacade);
+    }
+
+    it('cambio de sede con { error }: limpia egresados previos (Caso A) y expone error', async () => {
+      const branch = { value: 1 as number | null };
+      let listHandler = () => Promise.resolve({ data: [row(1, 1)], error: null });
+      const scoped = setupMockClient({
+        branchSignal: branch,
+        listResult: () => listHandler(),
+      });
+
+      await scoped.loadEgresados();
+      expect(scoped.egresados()).toHaveLength(1);
+
+      branch.value = 2;
+      listHandler = () => Promise.resolve({ data: null, error: new Error('fallo en sede 2') });
+      await scoped.loadEgresados();
+
+      expect(scoped.egresados()).toEqual([]);
+      expect(scoped.totalEgresados()).toBe(0);
+      expect(scoped.error()).toBeTruthy();
+    });
+
+    it('si falla fetchConvalidationMap (license_validations), falla la carga completa de la lista (Regla 1)', async () => {
+      const scoped = setupMockClient({
+        branchSignal: { value: 1 },
+        listResult: () => Promise.resolve({ data: [row(1, 1)], error: null }),
+        convalidationResult: () =>
+          Promise.resolve({ data: null, error: { message: 'convalidation fail' } }),
+      });
+
+      await scoped.loadEgresados();
+
+      expect(scoped.egresados()).toEqual([]);
+      expect(scoped.error()).toBeTruthy();
+    });
+
+    it('refresco silencioso con { error } (Caso B): preserva egresados previos, mantiene error() null y prende refreshFailed()', async () => {
+      const branch = { value: 1 as number | null };
+      let listHandler = () => Promise.resolve({ data: [row(1, 1)], error: null });
+      const scoped = setupMockClient({
+        branchSignal: branch,
+        listResult: () => listHandler(),
+      });
+
+      await scoped.loadEgresados();
+      expect(scoped.egresados()).toHaveLength(1);
+
+      listHandler = () => Promise.resolve({ data: null, error: new Error('sin red') });
+      await scoped.loadEgresados();
+
+      expect(scoped.egresados().map((e) => e.id)).toEqual([1]);
+      expect(scoped.error()).toBeNull();
+      expect(scoped.refreshFailed()).toBe(true);
+      expect(scoped.isLoading()).toBe(false);
+    });
+
+    it('reintentar() en Caso B refresca silenciosamente sin vaciar egresados ni prender isLoading', async () => {
+      const branch = { value: 1 as number | null };
+      let listHandler: () => Promise<any> = () =>
+        Promise.resolve({ data: [row(1, 1)], error: null });
+      const scoped = setupMockClient({
+        branchSignal: branch,
+        listResult: () => listHandler(),
+      });
+      await scoped.loadEgresados();
+
+      listHandler = () => Promise.resolve({ data: null, error: new Error('offline') });
+      await scoped.loadEgresados();
+      expect(scoped.refreshFailed()).toBe(true);
+
+      let resolveRetry!: (v: unknown) => void;
+      const retryResponsePromise = new Promise((res) => {
+        resolveRetry = res;
+      });
+      listHandler = () => retryResponsePromise;
+      const retryPromise = scoped.reintentar();
+      expect(scoped.isLoading()).toBe(false);
+      expect(scoped.egresados().map((e) => e.id)).toEqual([1]);
+
+      resolveRetry({ data: [row(2, 1)], error: null });
+      await retryPromise;
+
+      expect(scoped.refreshFailed()).toBe(false);
+      expect(scoped.error()).toBeNull();
+      expect(scoped.egresados().map((e) => e.id)).toEqual([2]);
+    });
+
+    it('reintentar() en Caso A recarga completo y limpia el error al recuperarse', async () => {
+      const branch = { value: 1 as number | null };
+      let listHandler: () => Promise<any> = () =>
+        Promise.resolve({ data: null, error: new Error('down') });
+      const scoped = setupMockClient({
+        branchSignal: branch,
+        listResult: () => listHandler(),
+      });
+
+      await scoped.loadEgresados();
+      expect(scoped.error()).toBeTruthy();
+
+      listHandler = () => Promise.resolve({ data: [row(5, 1)], error: null });
+      await scoped.reintentar();
+
+      expect(scoped.error()).toBeNull();
+      expect(scoped.egresados().map((e) => e.id)).toEqual([5]);
+    });
+
+    it('loadStatistics: falla parcial (student_surveys count) activa statsError() sin mostrar 0s como válidos', async () => {
+      const branch = { value: 1 as number | null };
+      let licHandler: () => Promise<any> = () =>
+        Promise.resolve({ count: null, error: { message: 'surveys count fail' } });
+      const scoped = setupMockClient({
+        branchSignal: branch,
+        listResult: () => Promise.resolve({ data: [row(1, 1)], error: null }),
+        examsResult: () => Promise.resolve({ data: [{ passed: true }], error: null }),
+        annualCountResult: () => Promise.resolve({ count: 5, error: null }),
+        licensesCountResult: () => licHandler(),
+      });
+
+      await scoped.loadEgresados();
+
+      expect(scoped.statsError()).toBeTruthy();
+      expect(scoped.annualEgresadosTotal()).toBe(0);
+      expect(scoped.municipalApprovalRate()).toBe(0);
+
+      licHandler = () => Promise.resolve({ count: 2, error: null });
+      await scoped.reintentarStats();
+      expect(scoped.statsError()).toBeNull();
+      expect(scoped.annualEgresadosTotal()).toBe(5);
+      expect(scoped.annualLicensesTotal()).toBe(2);
+      expect(scoped.municipalApprovalRate()).toBe(100);
+    });
+
+    it('loadSurveys: falla expone surveysError() y al recuperarse limpia el error', async () => {
+      const branch = { value: 1 as number | null };
+      let surveysHandler: () => Promise<any> = () =>
+        Promise.resolve({ data: null, error: { message: 'surveys down' } });
+      const scoped = setupMockClient({
+        branchSignal: branch,
+        listResult: () => Promise.resolve({ data: [row(1, 1)], error: null }),
+        surveysResult: () => surveysHandler(),
+      });
+
+      await scoped.loadEgresados();
+
+      expect(scoped.surveysError()).toBeTruthy();
+      expect(scoped.surveys()).toEqual([]);
+
+      surveysHandler = () =>
+        Promise.resolve({
+          data: [
+            {
+              id: 1,
+              satisfaction_rating: 5,
+              comments: 'Muy buena escuela',
+              obtained_license: true,
+              enrollments: {
+                students: { users: { first_names: 'Ana', paternal_last_name: 'Soto' } },
+              },
+            },
+          ],
+          error: null,
+        });
+      await scoped.reintentarSurveys();
+
+      expect(scoped.surveysError()).toBeNull();
+      expect(scoped.surveys()).toHaveLength(1);
+      expect(scoped.surveys()[0].texto).toBe('Muy buena escuela');
+      expect(scoped.avgSatisfaction()).toBe(5);
+    });
+  });
 });

@@ -270,4 +270,25 @@ describe('ExAlumnosContentComponent', () => {
       expect((component as any).hasActiveFilters()).toBe(false);
     });
   });
+
+  describe('errores en Hero y Caso B (spec 0060-b T3.2)', () => {
+    it('con error de carga (Caso A), heroChips y heroKpis NO dicen 0 Egresados', () => {
+      setup([]);
+      stubInput('error', 'Error al cargar egresados');
+
+      expect(component.showLoadError()).toBe(true);
+      expect((component as any).heroKpis()).toEqual([]);
+      expect((component as any).heroChips()).toEqual([]);
+    });
+
+    it('en Caso B (refreshFailed con filas en pantalla), conserva heroKpis y heroChips', () => {
+      setup([makeEgresado({ id: 1, saldoPendiente: 5000 })]);
+      stubInput('error', null);
+      stubInput('refreshFailed', true);
+
+      expect(component.showLoadError()).toBe(false);
+      expect((component as any).heroKpis()).toHaveLength(2);
+      expect((component as any).heroChips()[1].label).toBe('1 Egresados');
+    });
+  });
 });

@@ -102,9 +102,14 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
             data-llm-description="dropdown para elegir la tab activa"
           />
         } @else {
-          <div class="flex border-b border-border-default" role="tablist">
+          <div
+            class="flex border-b border-border-default"
+            role="tablist"
+            [attr.aria-label]="ariaLabel()"
+          >
             @for (tab of tabs(); track tab.id) {
               <button
+                type="button"
                 role="tab"
                 class="flex-1 px-4 py-3.5 text-sm font-medium transition-all duration-300 border-b-[3px] cursor-pointer flex items-center justify-center gap-1.5"
                 [class.border-brand]="activeId() === tab.id"
@@ -118,10 +123,15 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
                 [style.border-color]="
                   activeId() === tab.id ? 'var(--ds-brand, var(--color-brand))' : 'transparent'
                 "
+                [attr.id]="tabElementId(tab.id)"
                 [attr.aria-selected]="activeId() === tab.id"
+                [attr.aria-controls]="tabPanelId(tab.id)"
+                [attr.tabindex]="activeId() === tab.id ? 0 : -1"
+                [attr.data-tab-id]="tab.id"
                 [attr.title]="tab.label"
                 [disabled]="tab.disabled"
                 (click)="!tab.disabled && activeIdChange.emit(tab.id)"
+                (keydown)="onTabKeydown($event)"
                 [attr.data-llm-action]="'seleccionar-tab-' + tab.id"
               >
                 @if (tab.icon) {
@@ -155,9 +165,11 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
         [class.overflow-x-auto]="!wrap()"
         [class.custom-scrollbar-hidden]="!wrap()"
         role="tablist"
+        [attr.aria-label]="ariaLabel()"
       >
         @for (tab of tabs(); track tab.id) {
           <button
+            type="button"
             role="tab"
             class="tap-area px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 cursor-pointer border-0 flex items-center justify-center gap-1.5 shrink-0"
             [style.background]="activeId() === tab.id ? 'var(--bg-surface)' : 'transparent'"
@@ -165,9 +177,14 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
             [style.box-shadow]="
               activeId() === tab.id ? 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12))' : 'none'
             "
+            [attr.id]="tabElementId(tab.id)"
             [attr.aria-selected]="activeId() === tab.id"
+            [attr.aria-controls]="tabPanelId(tab.id)"
+            [attr.tabindex]="activeId() === tab.id ? 0 : -1"
+            [attr.data-tab-id]="tab.id"
             [disabled]="tab.disabled"
             (click)="!tab.disabled && activeIdChange.emit(tab.id)"
+            (keydown)="onTabKeydown($event)"
             [attr.data-llm-action]="'seleccionar-tab-' + tab.id"
           >
             @if (tab.icon) {
@@ -194,6 +211,7 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
       <div
         class="tabs-pill-row flex flex-wrap gap-2 overflow-x-auto custom-scrollbar-hidden"
         role="tablist"
+        [attr.aria-label]="ariaLabel()"
       >
         @for (tab of tabs(); track tab.id) {
           <button
@@ -203,9 +221,14 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
             [class.text-brand]="activeId() === tab.id"
             [class.text-text-muted]="activeId() !== tab.id"
             [class.hover:text-text-primary]="activeId() !== tab.id"
+            [attr.id]="tabElementId(tab.id)"
             [attr.aria-selected]="activeId() === tab.id"
+            [attr.aria-controls]="tabPanelId(tab.id)"
+            [attr.tabindex]="activeId() === tab.id ? 0 : -1"
+            [attr.data-tab-id]="tab.id"
             [disabled]="tab.disabled"
             (click)="!tab.disabled && activeIdChange.emit(tab.id)"
+            (keydown)="onTabKeydown($event)"
             [attr.data-llm-action]="'seleccionar-tab-' + tab.id"
           >
             @if (activeId() === tab.id) {
@@ -357,6 +380,10 @@ export class TabsComponent {
   uppercase = input<boolean>(false);
   /** Solo aplica a variant="segmented": true = las tabs bajan de línea; false (default) = scroll horizontal. */
   wrap = input<boolean>(false);
+  /** Etiqueta accesible opcional para el role="tablist". */
+  ariaLabel = input<string | null>(null);
+  /** Prefijo opcional para generar ids (`<prefijo>-tab-<id>`) y `aria-controls` (`<prefijo>-panel-<id>`). */
+  idPrefix = input<string | null>(null);
 
   activeIdChange = output<string>();
 
@@ -382,6 +409,54 @@ export class TabsComponent {
       if (host) this.resizeObserver.observe(host);
       this.destroyRef.onDestroy(() => this.resizeObserver?.disconnect());
     });
+  }
+
+  protected tabElementId(tabId: string): string | null {
+    const prefix = this.idPrefix();
+    return prefix ? `${prefix}-tab-${tabId}` : null;
+  }
+
+  protected tabPanelId(tabId: string): string | null {
+    const prefix = this.idPrefix();
+    return prefix ? `${prefix}-panel-${tabId}` : null;
+  }
+
+  /** Navegación por teclado WAI-ARIA (ArrowLeft/Right, Home, End) saltando tabs deshabilitadas. */
+  protected onTabKeydown(event: KeyboardEvent): void {
+    const enabled = this.tabs().filter((t) => !t.disabled);
+    if (enabled.length === 0) return;
+
+    const current = Math.max(
+      0,
+      enabled.findIndex((t) => t.id === this.activeId()),
+    );
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight':
+        next = (current + 1) % enabled.length;
+        break;
+      case 'ArrowLeft':
+        next = (current - 1 + enabled.length) % enabled.length;
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = enabled.length - 1;
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    const targetId = enabled[next].id;
+    this.activeIdChange.emit(targetId);
+
+    const tablist = (event.currentTarget as HTMLElement | null)?.closest('[role="tablist"]');
+    const nextBtn = Array.from(tablist?.querySelectorAll<HTMLElement>('[role="tab"]') ?? []).find(
+      (el) => el.dataset['tabId'] === targetId,
+    );
+    nextBtn?.focus();
   }
 
   private recomputeLineTier(): void {
