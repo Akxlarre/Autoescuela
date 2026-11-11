@@ -208,10 +208,19 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
   - **AC ref:** AC3
   - **DoD:** DoD-F
   - **Resultado (2026-11-10):** Migrados `instructores.facade.ts`, `flota.facade.ts` y `tasks.facade.ts` junto con sus pantallas (`admin-instructores`, `flota-list-content`, `admin-flota`, `secretaria-observaciones`, `admin-tareas`, `instructor-tareas`). Lecturas con `assertReadOk` o `if (error) throw error`. Manejo de Caso A (empty state con botón Reintentar y sin ceros en KPIs) y Caso B (alert card de datos desactualizados con Reintentar). Fuera de PENDING en `unchecked-reads.guard.spec.ts` y sin knownBug en X01 de `e2e/transversal-shell.spec.ts`. Verde en tests de unidad, test-tz (UTC, Asia/Tokyo, America/Santiago) y E2E X01.
-- [ ] **T3.5** — Portales: `instructor-alumnos`, `instructor-clases`, `student-clases`, `student-home`
+- [x] **T3.5** — Portales: `instructor-alumnos`, `instructor-clases`, `student-clases`, `student-home`
   - **AC ref:** AC3
   - **DoD:** DoD-F
   - **Avance (2026-11-10):** Migrados `instructor-alumnos.facade.ts`, `instructor-clases.facade.ts`, `student-clases.facade.ts` y `student-home.facade.ts` junto con sus pantallas y drawers (`instructor-alumnos`, `instructor-ficha`, `instructor-dashboard`, `instructor-clase`, `instructor-clase-detail`, `instructor-evaluacion`, `alumno-clases`, `alumno-dashboard`, `alumno-pruebas-online`). Fuera de PENDING en `unchecked-reads.guard.spec.ts`. Verde en tests de unidad, componentes y `test-tz.mjs`; sin cuenta E2E de instructor/alumno; prueba manual pendiente.
+  - **Cerrada (2026-11-11):** prueba manual en navegador contra la BD real, con los portales
+    desbloqueados solo en local (están bloqueados en `pilot-phase.config.ts`) y las lecturas
+    cortadas en la pestaña. Instructor (dashboard, Mis Alumnos, ficha, iniciar/clase en curso) y
+    alumno con dos matrículas (dashboard, Mis Clases, Pruebas online): caso A sin KPIs en 0, caso B
+    con datos y aviso, cambio de matrícula como caso A, y "Reintentar" del aviso sin skeleton ni
+    pérdida de datos. La prueba destapó una lectura rota desde abril
+    (`v_professional_attendance.semaphore`, columna inexistente) que con `assertReadOk` dejaba en
+    error permanente el resumen de todo alumno Profesional; se corrigió leyendo `attendance_flag`.
+    X01 no cubre los portales (sin cuentas E2E de esos roles).
 - [ ] **T3.6** — Validación de la etapa
   - **DoD:** igual que T1.6
 
