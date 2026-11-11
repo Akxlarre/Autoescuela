@@ -497,7 +497,7 @@ const X01_SCREENS: X01Screen[] = [
   S('contabilidad/cursos', '0060-b etapa 2'),
   S('certificados', '0060-b etapa 2'),
   // Etapa 3a — Gestión Clase B
-  S('asistencia', '0060-b etapa 3a'),
+  S('asistencia'),
   // Etapa 3b — Clase Profesional (la sede 2 la tiene)
   S('profesional/certificados', '0060-b etapa 3b'),
   S('profesional/archivo', '0060-b etapa 3b'),

@@ -102,6 +102,7 @@ export class AsistenciaClaseBFacade {
   private readonly _alertas = signal<AlertaFaltaConsecutiva[]>([]);
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
+  private readonly _refreshFailed = signal(false);
   private readonly _isSaving = signal(false);
   /**
    * `enrollmentId` de la alerta cuya acción está en vuelo, o `null`.
@@ -115,6 +116,8 @@ export class AsistenciaClaseBFacade {
   // Practical class drawer state
   private readonly _selectedPractica = signal<ClasePracticaRow | null>(null);
   private readonly _vehiclesPorSede = signal<VehicleOption[]>([]);
+  private readonly _vehiclesError = signal<string | null>(null);
+  private readonly _vehicleDocsUnknown = signal(false);
   private readonly _estadoPagoClase = signal<EstadoPagoClase | null>(null);
   /** Un drawer puede cambiar de clase antes de que vuelva la lectura anterior. */
   private readonly estadoPagoGuard = createRequestGuard();
@@ -124,6 +127,7 @@ export class AsistenciaClaseBFacade {
   private _loadedBranchId: number | null | undefined = undefined;
   /** Descarta la respuesta de una carga que quedó obsoleta (facades.md §7). */
   private readonly dataGuard = createRequestGuard();
+  private readonly alertasGuard = createRequestGuard();
 
   // ── 2. Estado público ──────────────────────────────────────────────────────
 
@@ -133,6 +137,7 @@ export class AsistenciaClaseBFacade {
   readonly alertas = this._alertas.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly refreshFailed = this._refreshFailed.asReadonly();
   readonly isSaving = this._isSaving.asReadonly();
   readonly savingAlertaId = this._savingAlertaId.asReadonly();
   /**
@@ -142,6 +147,8 @@ export class AsistenciaClaseBFacade {
   readonly recordatoriosHabilitados = !isBlockedInPilot('alumno');
   readonly selectedPractica = this._selectedPractica.asReadonly();
   readonly vehiclesPorSede = this._vehiclesPorSede.asReadonly();
+  readonly vehiclesError = this._vehiclesError.asReadonly();
+  readonly vehicleDocsUnknown = this._vehicleDocsUnknown.asReadonly();
   /** Spec 0010-i: estado de pago de la clase del drawer de inicio. null = sin leer o lectura fallida. */
   readonly estadoPagoClase = this._estadoPagoClase.asReadonly();
 
@@ -187,18 +194,33 @@ export class AsistenciaClaseBFacade {
   async initialize(): Promise<void> {
     const branchId = this._branchFilter();
     if (this._initialized && branchId === this._loadedBranchId) {
-      void this.refreshSilently();
+      await this.refreshSilently();
       return;
     }
-    this._initialized = true;
-    this._loadedBranchId = branchId;
+    const requestToken = this.dataGuard.next();
+    this._initialized = false;
+    this._loadedBranchId = undefined;
     this._clasesPracticas.set([]);
     this._alertas.set([]);
+    this._kpis.set(null);
+    this._error.set(null);
+    this._refreshFailed.set(false);
     this._isLoading.set(true);
     try {
-      await this.fetchData();
+      const applied = await this.fetchData(requestToken);
+      if (!applied || !this.dataGuard.isCurrent(requestToken)) return;
+      this._initialized = true;
+      this._loadedBranchId = branchId;
+    } catch (err) {
+      if (!this.dataGuard.isCurrent(requestToken)) return;
+      this._clasesPracticas.set([]);
+      this._alertas.set([]);
+      this._kpis.set(null);
+      this._error.set(toFriendlyDbMessage(err, 'No se pudo cargar la asistencia de prácticas'));
     } finally {
-      this._isLoading.set(false);
+      if (this.dataGuard.isCurrent(requestToken)) {
+        this._isLoading.set(false);
+      }
     }
   }
 
@@ -206,6 +228,25 @@ export class AsistenciaClaseBFacade {
   async reload(): Promise<void> {
     this._initialized = false;
     await this.initialize();
+  }
+
+  /** Refresca los datos vigentes (Caso B si ya están cargados; si no, carga con skeleton). */
+  async refrescar(): Promise<void> {
+    const branchId = this._branchFilter();
+    if (this._initialized && branchId === this._loadedBranchId) {
+      await this.refreshSilently();
+      return;
+    }
+    await this.reload();
+  }
+
+  /** Reintenta respetando caso B (refresco sin skeleton) vs caso A (carga inicial). */
+  async reintentar(): Promise<void> {
+    if (this._refreshFailed()) {
+      await this.refreshSilently();
+      return;
+    }
+    await this.reload();
   }
 
   /**
@@ -227,13 +268,14 @@ export class AsistenciaClaseBFacade {
         alumnoName: local.alumnoName,
       };
     }
-    const { data } = await this.supabase.client
+    const { data, error } = await this.supabase.client
       .from('class_b_sessions')
       .select(
         'enrollment_id, scheduled_at, enrollments(students(users(first_names, paternal_last_name)))',
       )
       .eq('id', sessionId)
       .maybeSingle();
+    if (error) throw error;
     if (!data) return null;
     const u = (data as any).enrollments?.students?.users;
     const nombre = u ? `${u.first_names ?? ''} ${u.paternal_last_name ?? ''}`.trim() : '';
@@ -264,11 +306,12 @@ export class AsistenciaClaseBFacade {
       const dbStatus = status === 'presente' ? 'present' : status === 'ausente' ? 'absent' : null;
 
       if (dbStatus) {
-        const { data: enrollment } = await this.supabase.client
+        const { data: enrollment, error: enrollError } = await this.supabase.client
           .from('enrollments')
           .select('student_id')
           .eq('id', row.enrollmentId!)
           .single();
+        if (enrollError) throw enrollError;
 
         // fix-362-m: sin la matrícula no hay a quién registrarle la asistencia; antes se
         // saltaba el upsert y el toast decía "marcada" igual.
@@ -373,11 +416,12 @@ export class AsistenciaClaseBFacade {
     );
     if (Array.isArray(result.data) && result.data.length > 0) return;
 
-    const { data: current } = await this.supabase.client
+    const { data: current, error: currentError } = await this.supabase.client
       .from('class_b_sessions')
       .select('status')
       .eq('id', sessionId)
       .maybeSingle();
+    if (currentError) throw currentError;
     if (!current?.status) throw new NoRowsAffectedError();
     throw new StaleSessionError(action, current.status);
   }
@@ -397,10 +441,11 @@ export class AsistenciaClaseBFacade {
    * cancelación automática apagada en la sede nunca las hay, y mencionarlas confunde).
    */
   async undoAbsence(sessionId: number): Promise<boolean> {
-    const target = await this.resolvePractica(sessionId);
+    let target: { enrollmentId: number; scheduledAt: string; alumnoName: string | null } | null;
     let absence: { id: number; recordedAt: string } | null;
     let canceladas = 0;
     try {
+      target = await this.resolvePractica(sessionId);
       absence = await this.findUndoableAbsence(sessionId);
       if (!absence) return false;
       if (target?.enrollmentId) {
@@ -490,12 +535,13 @@ export class AsistenciaClaseBFacade {
   /** fix-377-m: clases de la matrícula canceladas desde un instante (¿la falta disparó la penalización?). */
   private async countCancelledSince(enrollmentId: number, since: string): Promise<number> {
     if (!since) return 0;
-    const { count } = await this.supabase.client
+    const { count, error } = await this.supabase.client
       .from('class_b_sessions')
       .select('id', { count: 'exact', head: true })
       .eq('enrollment_id', enrollmentId)
       .eq('status', 'cancelled')
       .gte('cancelled_at', since);
+    if (error) throw error;
     return count ?? 0;
   }
 
@@ -504,7 +550,13 @@ export class AsistenciaClaseBFacade {
    * ("Pendiente") sin hora ni km de inicio; desde ahí se marca ausente o se inicia de nuevo.
    */
   async cancelStart(sessionId: number): Promise<boolean> {
-    const target = await this.resolvePractica(sessionId);
+    let target: { enrollmentId: number; scheduledAt: string; alumnoName: string | null } | null;
+    try {
+      target = await this.resolvePractica(sessionId);
+    } catch (err) {
+      this.toast.error(toFriendlyDbMessage(err, 'Error al cancelar el inicio'));
+      return false;
+    }
     const confirmed = await this.confirmModal.confirm({
       title: 'Cancelar inicio',
       message: `La clase de ${target?.alumnoName ?? 'este alumno'} vuelve a quedar pendiente, sin hora ni kilometraje de inicio. Úsalo si la clase se inició por error.`,
@@ -543,11 +595,12 @@ export class AsistenciaClaseBFacade {
       const row = this._clasesPracticas().find((r) => r.id === sessionId);
       if (!row?.enrollmentId) return;
 
-      const { data: enrollment } = await this.supabase.client
+      const { data: enrollment, error: enrollError } = await this.supabase.client
         .from('enrollments')
         .select('student_id')
         .eq('id', row.enrollmentId)
         .single();
+      if (enrollError) throw enrollError;
 
       if (!enrollment) throw new NoRowsAffectedError();
 
@@ -574,19 +627,31 @@ export class AsistenciaClaseBFacade {
 
       // fix-379-m (G05): justificar no devuelve las clases que la falta ya canceló.
       const recordedAt = (result.data as { recorded_at: string | null }[])[0]?.recorded_at ?? '';
-      const canceladas = await this.countCancelledSince(row.enrollmentId, recordedAt);
-      if (canceladas > 0) {
-        this.toast.warning(
-          'Hay clases que siguen canceladas',
-          `${canceladas} clase(s) se cancelaron por esta falta y no se recuperan al justificarla. Agéndalas de nuevo desde la ficha del alumno.`,
-        );
-      }
+      await this.warnIfCancelledClassesSince(row.enrollmentId, recordedAt);
       // fix-379-m (G06): la falta justificada deja de contar en el rail.
       await this.refreshAlertasSilently();
     } catch (err) {
       this.toast.error(toFriendlyDbMessage(err, 'Error al registrar la justificación'));
     } finally {
       this._isSaving.set(false);
+    }
+  }
+
+  /** Revisa si la falta dejó clases canceladas sin revertir una justificación ya guardada. */
+  private async warnIfCancelledClassesSince(
+    enrollmentId: number,
+    recordedAt: string,
+  ): Promise<void> {
+    try {
+      const canceladas = await this.countCancelledSince(enrollmentId, recordedAt);
+      if (canceladas > 0) {
+        this.toast.warning(
+          'Hay clases que siguen canceladas',
+          `${canceladas} clase(s) se cancelaron por esta falta y no se recuperan al justificarla. Agéndalas de nuevo desde la ficha del alumno.`,
+        );
+      }
+    } catch {
+      this.toast.warning('No se pudo revisar si quedaron clases canceladas por esta falta');
     }
   }
 
@@ -890,26 +955,36 @@ export class AsistenciaClaseBFacade {
    * los "Ambas", sin los que están en Mantenimiento o Fuera de servicio (fix-224-b).
    */
   async loadVehiclesByBranch(branchId: number): Promise<void> {
+    this._vehiclesError.set(null);
+    this._vehicleDocsUnknown.set(false);
+
     const { data, error } = await this.supabase.client
       .from('vehicles')
       .select('id, license_plate, brand, model, current_km, status')
       .or(`branch_id.eq.${branchId},both_branches.eq.true`)
       .order('license_plate', { ascending: true });
 
-    if (error) return;
+    if (error) {
+      this._vehiclesPorSede.set([]);
+      this._vehiclesError.set('No se pudieron cargar los vehículos.');
+      return;
+    }
 
     const operativos = (data ?? []).filter((v: any) => isVehicleOperational(v.status));
 
     // fix-247-b: mismo aviso de documentos que la grilla de la Agenda. Si la lectura falla, el
-    // selector igual se muestra, solo que sin aviso.
+    // selector igual se muestra sin aviso y se expone vehicleDocsUnknown() para transparentarlo.
     const ids = operativos.map((v: any) => v.id as number);
-    const { data: docs } = ids.length
+    const { data: docs, error: docsError } = ids.length
       ? await this.supabase.client
           .from('vehicle_documents')
           .select('vehicle_id, type, expiry_date, status')
           .in('vehicle_id', ids)
-      : { data: [] };
-    const avisos = buildVehicleDocWarningMap(docs ?? []);
+      : { data: [], error: null };
+    if (docsError) {
+      this._vehicleDocsUnknown.set(true);
+    }
+    const avisos = buildVehicleDocWarningMap(docsError ? [] : (docs ?? []));
 
     this._vehiclesPorSede.set(
       operativos.map((v: any) => ({
@@ -1191,30 +1266,41 @@ export class AsistenciaClaseBFacade {
   }
 
   private async refreshSilently(): Promise<void> {
+    const requestToken = this.dataGuard.next();
     try {
-      await this.fetchData();
+      const applied = await this.fetchData(requestToken);
+      if (!applied || !this.dataGuard.isCurrent(requestToken)) return;
+      this._refreshFailed.set(false);
+      this._error.set(null);
     } catch {
-      // Datos stale siguen visibles — fallo silencioso
+      if (!this.dataGuard.isCurrent(requestToken)) return;
+      // Datos stale siguen visibles (Caso B)
+      this._refreshFailed.set(true);
     }
   }
 
   /** Re-consulta solo las alertas de faltas (y recalcula KPIs), sin refetch de la tabla del día. */
   private async refreshAlertasSilently(): Promise<void> {
+    const alertasToken = this.alertasGuard.next();
     try {
       const branchMap = new Map<number, string>();
       for (const b of this.branchFacade.branches()) {
         branchMap.set(b.id, b.name);
       }
       const alertas = await this.fetchAlertas(this._branchFilter(), branchMap);
+      if (!this.alertasGuard.isCurrent(alertasToken)) return;
       this._alertas.set(alertas);
       this.computeKpis(this._clasesPracticas(), alertas);
     } catch {
-      // Alertas stale siguen visibles — fallo silencioso
+      if (!this.alertasGuard.isCurrent(alertasToken)) return;
+      // Alertas stale siguen visibles (Caso B)
+      this._refreshFailed.set(true);
     }
   }
 
   /** Carga las clases prácticas del día + alertas + KPIs. */
-  private async fetchData(): Promise<void> {
+  private async fetchData(requestToken = this.dataGuard.next()): Promise<boolean> {
+    this.alertasGuard.next();
     const branchId = this._branchFilter();
     const date = this._selectedDate();
     const { start, endExclusive } = chileDayRange(date);
@@ -1224,16 +1310,16 @@ export class AsistenciaClaseBFacade {
       branchMap.set(b.id, b.name);
     }
 
-    const requestToken = this.dataGuard.next();
-    const practicas = await this.fetchPracticas(branchId, start, endExclusive, branchMap);
-    if (!this.dataGuard.isCurrent(requestToken)) return;
+    const [practicas, alertas] = await Promise.all([
+      this.fetchPracticas(branchId, start, endExclusive, branchMap),
+      this.fetchAlertas(branchId, branchMap),
+    ]);
+    if (!this.dataGuard.isCurrent(requestToken)) return false;
+
     this._clasesPracticas.set(practicas);
-
-    const alertas = await this.fetchAlertas(branchId, branchMap);
-    if (!this.dataGuard.isCurrent(requestToken)) return;
     this._alertas.set(alertas);
-
     this.computeKpis(practicas, alertas);
+    return true;
   }
 
   /** Fetch practice sessions for the given day. */
@@ -1383,7 +1469,7 @@ export class AsistenciaClaseBFacade {
     }
 
     const { data, error } = await query;
-    if (error) return [];
+    if (error) throw error;
 
     const enrollmentAbsences = new Map<
       number,
@@ -1467,7 +1553,7 @@ export class AsistenciaClaseBFacade {
    *
    * fix-365-m: antes se deducía del estado de la clase de la falta, que está en no_show y nunca
    * en cancelled, así que tras recargar la alerta volvía a ofrecer "Eliminar" y "Reactivar"
-   * quedaba inalcanzable. Si la consulta falla se asume horario activo.
+   * quedaba inalcanzable. Lanza si la consulta falla para no asumir horario activo erróneamente.
    */
   private async fetchEnrollmentsWithRemovedSchedule(enrollmentIds: number[]): Promise<Set<number>> {
     if (enrollmentIds.length === 0) return new Set();
@@ -1478,7 +1564,7 @@ export class AsistenciaClaseBFacade {
       .in('enrollment_id', enrollmentIds)
       .in('status', ['scheduled', 'cancelled'])
       .gt('scheduled_at', new Date().toISOString());
-    if (error) return new Set();
+    if (error) throw error;
 
     return enrollmentsWithRemovedSchedule(
       (data ?? []).map((s: { enrollment_id: number; status: string }) => ({
