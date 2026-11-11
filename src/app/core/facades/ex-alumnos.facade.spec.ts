@@ -737,10 +737,10 @@ describe('ExAlumnosFacade', () => {
               p = opts.convalidationResult();
             } else if (table === 'class_b_exam_scores' && opts.examsResult) {
               p = opts.examsResult();
-            } else if (table === 'student_surveys' && /\bcomments\b/.test(selectedCols)) {
+            } else if (table === 'student_surveys' && /\bcomment\b/.test(selectedCols)) {
               p = Promise.resolve({
                 data: null,
-                error: { code: '42703', message: 'column student_surveys.comments does not exist' },
+                error: { code: '42703', message: 'column student_surveys.comment does not exist' },
               });
             } else if (table === 'student_surveys' && isHead && opts.licensesCountResult) {
               p = opts.licensesCountResult();
@@ -921,7 +921,7 @@ describe('ExAlumnosFacade', () => {
             {
               id: 1,
               satisfaction_rating: 5,
-              comment: 'Muy buena escuela',
+              comments: 'Muy buena escuela',
               obtained_license: true,
               enrollments: {
                 students: { users: { first_names: 'Ana', paternal_last_name: 'Soto' } },

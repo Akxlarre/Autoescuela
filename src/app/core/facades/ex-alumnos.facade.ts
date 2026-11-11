@@ -83,7 +83,7 @@ function summarizeStudentSurveys(rows: any[]): StudentSurveysSummary {
     return {
       nombre: user ? `${user.first_names} ${user.paternal_last_name}` : 'Alumno Anónimo',
       rating: s.satisfaction_rating,
-      texto: s.comment || 'Sin comentario',
+      texto: s.comments || 'Sin comentario',
       iniciales: user ? user.first_names[0] + user.paternal_last_name[0] : 'AA',
     };
   });
@@ -489,13 +489,13 @@ export class ExAlumnosFacade {
     surveysToken?: number,
   ): Promise<void> {
     try {
-      // La columna real en BD es `comment` (20260408000000_student_reviews.sql; la migración
-      // 20260408000002 usa `CREATE TABLE IF NOT EXISTS` y no la cambió). Antes pedía `comments`
-      // (inexistente) y por eso las opiniones nunca cargaban.
+      // En prod la columna es `comments`. Las migraciones dicen otra cosa: dos crean
+      // student_surveys con CREATE TABLE IF NOT EXISTS y columnas distintas, y en prod quedó la
+      // que tiene `comments`. Pedir `comment` da 42703 y deja las opiniones en error.
       const { data, error } = await this.supabase.client.from('student_surveys').select(`
           id,
           satisfaction_rating,
-          comment,
+          comments,
           obtained_license,
           enrollments!inner(
             students!inner(
