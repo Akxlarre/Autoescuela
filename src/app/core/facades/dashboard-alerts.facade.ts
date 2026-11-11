@@ -32,21 +32,9 @@ import {
   enrollmentsWithConsecutiveAbsences,
   enrollmentsWithUnpenalizedPair,
 } from '@core/utils/class-b-session.utils';
-import { toFriendlyDbMessage } from '@core/utils/db-error.utils';
+import { assertReadOk, toFriendlyDbMessage } from '@core/utils/db-error.utils';
 import { buildHolidayClassDetails, type HolidayClassRow } from '@core/utils/holiday-classes.utils';
 import type { AlertModel } from '@core/models/ui/dashboard.model';
-
-/**
- * supabase-js no lanza cuando una consulta falla: devuelve { error }. Tratar eso como
- * "0 resultados" hacía ver "Todo en orden" (o una "Caja sin cerrar" falsa) con la red caída.
- * Toda consulta de una revisión de alertas pasa por acá (fix-405-m).
- */
-async function queryOk<T = any>(query: PromiseLike<T>): Promise<T> {
-  const result = await query;
-  const error = (result as { error?: unknown } | null)?.error;
-  if (error) throw error;
-  return result;
-}
 
 /**
  * DashboardAlertsFacade — Capa 3 del sistema de notificaciones.
@@ -90,8 +78,6 @@ export class DashboardAlertsFacade {
   // ── SWR State ────────────────────────────────────────────────────────────
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
-  /** Número de la última carga con skeleton (ver `initialize`). */
-  private _loadTicket = 0;
   /** Usuario para el que se cargaron las alertas guardadas (ver `initialize`). */
   private _loadedUserId: string | null = null;
   /** Descarta respuestas de fetchAlertsData() fuera de orden (facades.md §7, fix-404-m). */
@@ -104,15 +90,17 @@ export class DashboardAlertsFacade {
   private _error = signal<string | null>(null);
   /** Alguna revisión falló en la última carga: la lista puede estar incompleta. */
   private _incomplete = signal(false);
+  private _refreshFailed = signal(false);
 
   // ── 2. ESTADO PÚBLICO (readonly) ───────────────────────────────────────────
   readonly activeAlerts = this._activeAlerts.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly refreshFailed = this._refreshFailed.asReadonly();
   /**
    * Texto para mostrar cuando la lista de alertas no es confiable: la carga falló entera o
    * faltó alguna revisión. `null` = la lista está completa. Quien pinta alertas lo muestra en
-   * vez de "Todo en orden" (fix-405-m).
+   * vez de "Todo en orden" ni "0 alertas" (fix-405-m, spec 0060-b).
    */
   readonly loadProblem = computed(() => {
     if (this._error()) return 'No se pudieron revisar las alertas.';
@@ -133,7 +121,8 @@ export class DashboardAlertsFacade {
   }
 
   /**
-   * SWR: primera llamada muestra skeleton, revisitas refrescan en background.
+   * SWR: primera llamada (o cambio de sede/usuario, Caso A) limpia y muestra skeleton;
+   * revisitas sobre la misma consulta refrescan en background (Caso B).
    */
   async initialize(): Promise<void> {
     const branchId = this.getActiveBranchId();
@@ -144,8 +133,10 @@ export class DashboardAlertsFacade {
     if (userId !== this._loadedUserId) {
       this._loadedUserId = userId;
       this._initialized = false;
+      this._lastBranchId = undefined;
       this._activeAlerts.set([]);
       this._incomplete.set(false);
+      this._refreshFailed.set(false);
     }
 
     if (this._initialized && branchId === this._lastBranchId) {
@@ -153,38 +144,78 @@ export class DashboardAlertsFacade {
       return;
     }
 
-    // Solo la carga más reciente apaga isLoading, registra la sede cargada o muestra su error
-    // (fix-404-m): una carga vieja que termina después no debe dejar la lista como "lista".
-    const ticket = ++this._loadTicket;
+    // Caso A: limpiar datos previos de inmediato para no mostrar alertas de otra sede mientras carga.
+    const requestToken = this.alertsGuard.next();
+    this._initialized = false;
+    this._lastBranchId = undefined;
+    this._activeAlerts.set([]);
     this._isLoading.set(true);
     this._error.set(null);
+    this._incomplete.set(false);
+    this._refreshFailed.set(false);
     try {
-      await this.fetchAlertsData(branchId);
-      if (ticket === this._loadTicket) {
-        this._initialized = true;
-        this._lastBranchId = branchId;
-      }
+      await this.fetchAlertsData(branchId, requestToken);
+      if (!this.alertsGuard.isCurrent(requestToken)) return;
+      this._initialized = true;
+      this._lastBranchId = branchId;
     } catch {
-      if (ticket === this._loadTicket) this._error.set('Error al cargar alertas');
+      if (!this.alertsGuard.isCurrent(requestToken)) return;
+      this._activeAlerts.set([]);
+      this._initialized = false;
+      this._lastBranchId = undefined;
+      this._incomplete.set(false);
+      this._error.set('Error al cargar alertas');
     } finally {
-      if (ticket === this._loadTicket) this._isLoading.set(false);
+      if (this.alertsGuard.isCurrent(requestToken)) {
+        this._isLoading.set(false);
+      }
     }
   }
 
   /**
-   * Recarga sin skeleton. Las alertas no tienen canal Realtime propio: el dashboard de secretaria
-   * llama a esto cuando su canal trae un cambio (`DashboardFacade.liveUpdates`, fix-420-m).
+   * Recarga sin skeleton (Caso B). Las alertas no tienen canal Realtime propio: el dashboard de
+   * secretaria llama a esto cuando su canal trae un cambio (`DashboardFacade.liveUpdates`, fix-420-m).
    */
   async refreshSilently(): Promise<void> {
+    const branchId = this.getActiveBranchId();
+    const requestToken = this.alertsGuard.next();
     try {
-      await this.fetchAlertsData(this.getActiveBranchId());
+      await this.fetchAlertsData(branchId, requestToken);
+      if (!this.alertsGuard.isCurrent(requestToken)) return;
+      this._lastBranchId = branchId;
+      this._refreshFailed.set(false);
+      this._error.set(null);
     } catch {
-      // Fail silencioso — datos stale siguen visibles
+      if (!this.alertsGuard.isCurrent(requestToken)) return;
+      // Caso B: datos stale siguen visibles; se avisa con refreshFailed sin prender error().
+      this._refreshFailed.set(true);
     }
+  }
+
+  /**
+   * Reintenta según el estado (swr-pattern.md):
+   * - Caso B (`refreshFailed`): refresca en silencio manteniendo las alertas visibles.
+   * - Caso A (`error`): carga completa con skeleton.
+   */
+  async reintentar(): Promise<void> {
+    if (this._refreshFailed()) {
+      await this.refreshSilently();
+      return;
+    }
+    this._error.set(null);
+    this._incomplete.set(false);
+    this._refreshFailed.set(false);
+    this._initialized = false;
+    this._lastBranchId = undefined;
+    await this.initialize();
   }
 
   /** Legacy wrapper */
   async loadAlerts(): Promise<void> {
+    this._initialized = false;
+    this._lastBranchId = undefined;
+    this._incomplete.set(false);
+    this._refreshFailed.set(false);
     return this.initialize();
   }
 
@@ -336,8 +367,13 @@ export class DashboardAlertsFacade {
 
   // ── Coordinador de queries ──────────────────────────────────────────────────
 
-  private async fetchAlertsData(branchId: number | null): Promise<void> {
-    const requestToken = this.alertsGuard.next();
+  /**
+   * supabase-js no lanza cuando una consulta falla: devuelve { error }. Tratar eso como
+   * "0 resultados" hacía ver "Todo en orden" (o una "Caja sin cerrar" falsa) con la red caída.
+   * Toda consulta de una revisión de alertas verifica su error con `assertReadOk` o
+   * `if (error) throw error` (fix-405-m, spec 0060-b).
+   */
+  private async fetchAlertsData(branchId: number | null, requestToken: number): Promise<void> {
     // allSettled: una revisión que falla no debe ocultar las alertas de las que sí respondieron.
     const settled = await Promise.allSettled([
       // Fase 1 & 2
@@ -395,8 +431,8 @@ export class DashboardAlertsFacade {
   private async checkExpiredDocuments(branchId: number | null): Promise<AlertModel[]> {
     const alerts: AlertModel[] = [];
 
-    const { data: configs } = await queryOk(
-      this.supabase.client
+    const configs = assertReadOk(
+      await this.supabase.client
         .from('alert_config')
         .select('alert_type, advance_days')
         .eq('active', true),
@@ -419,7 +455,8 @@ export class DashboardAlertsFacade {
       .select('id, vehicles!inner(branch_id, both_branches)', { count: 'exact', head: true })
       .lt('expiry_date', todayStr);
     expiredQuery = bySede(expiredQuery);
-    const { count: expiredCount } = await queryOk(expiredQuery);
+    const { count: expiredCount, error: expiredError } = await expiredQuery;
+    if (expiredError) throw expiredError;
 
     if (expiredCount && expiredCount > 0) {
       alerts.push({
@@ -439,7 +476,8 @@ export class DashboardAlertsFacade {
       .gte('expiry_date', todayStr)
       .lte('expiry_date', futureDateStr);
     soonQuery = bySede(soonQuery);
-    const { count: soonCount } = await queryOk(soonQuery);
+    const { count: soonCount, error: soonError } = await soonQuery;
+    if (soonError) throw soonError;
 
     if (soonCount && soonCount > 0) {
       alerts.push({
@@ -490,7 +528,7 @@ export class DashboardAlertsFacade {
       .gt('pending_balance', 0);
     if (createdBefore) query = query.lt('created_at', createdBefore);
     if (branchId !== null) query = query.eq('branch_id', branchId);
-    const { data } = await queryOk(query);
+    const data = assertReadOk(await query);
     return new Set(((data ?? []) as { student_id: number }[]).map((e) => e.student_id)).size;
   }
 
@@ -507,8 +545,9 @@ export class DashboardAlertsFacade {
       .gt('enrollments.pending_balance', 0);
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
-    const { data, error } = await queryOk(query);
-    if (error || !data) return [];
+    const { data, error } = await query;
+    if (error) throw error;
+    if (!data) return [];
 
     const uniqueEnrollments = new Set<number>(data.map((s: any) => s.enrollment_id));
     const count = uniqueEnrollments.size;
@@ -539,7 +578,8 @@ export class DashboardAlertsFacade {
       .is('certificate_b_pdf_url', null);
     if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { count } = await queryOk(query);
+    const { count, error } = await query;
+    if (error) throw error;
     if (!count || count === 0) return [];
 
     return [
@@ -575,8 +615,9 @@ export class DashboardAlertsFacade {
       query = query.eq('class_b_sessions.enrollments.branch_id', branchId);
     }
 
-    const { data, error } = await queryOk(query);
-    if (error || !data) return [];
+    const { data, error } = await query;
+    if (error) throw error;
+    if (!data) return [];
 
     const rows = (data as any[]).filter((row) => row.class_b_sessions);
     const absences = rows.map((row) => ({
@@ -631,7 +672,7 @@ export class DashboardAlertsFacade {
       );
     if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { data } = await queryOk(query);
+    const data = assertReadOk(await query);
     const rows = (data ?? []) as (HolidayClassRow & { enrollment_id: number })[];
     const count = rows.length;
     if (count === 0) return [];
@@ -670,12 +711,10 @@ export class DashboardAlertsFacade {
       .eq('status', 'closed');
     if (branchId !== null) closingsQuery = closingsQuery.eq('branch_id', branchId);
 
-    const [{ data: branches }, { data: closings }] = await Promise.all([
-      queryOk(branchesQuery),
-      queryOk(closingsQuery),
-    ]);
-    const closed = new Set(((closings ?? []) as { branch_id: number }[]).map((c) => c.branch_id));
-    const allBranches = (branches ?? []) as { id: number; name: string }[];
+    const [branchesRes, closingsRes] = await Promise.all([branchesQuery, closingsQuery]);
+    const allBranches = (assertReadOk(branchesRes) ?? []) as { id: number; name: string }[];
+    const closings = (assertReadOk(closingsRes) ?? []) as { branch_id: number }[];
+    const closed = new Set(closings.map((c) => c.branch_id));
     const missing = allBranches.filter((b) => !closed.has(b.id));
     if (missing.length === 0) return [];
 
@@ -731,8 +770,9 @@ export class DashboardAlertsFacade {
       .eq('payment_date', todayChile);
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
-    const { count, error } = await queryOk(query);
-    if (error || !count || count === 0) return [];
+    const { count, error } = await query;
+    if (error) throw error;
+    if (!count || count === 0) return [];
 
     return [
       {
@@ -764,8 +804,9 @@ export class DashboardAlertsFacade {
       .gt('class_number', 6);
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
-    const { data, error } = await queryOk(query);
-    if (error || !data) return [];
+    const { data, error } = await query;
+    if (error) throw error;
+    if (!data) return [];
 
     const uniqueEnrollments = new Set<number>(data.map((s: any) => s.enrollment_id));
     const count = uniqueEnrollments.size;
@@ -803,18 +844,15 @@ export class DashboardAlertsFacade {
       .gt('practical_sessions', 0);
     if (branchId !== null) hoursQuery = hoursQuery.eq('instructors.users.branch_id', branchId);
 
-    const { data: hoursData, error: hoursError } = await queryOk(hoursQuery);
+    const { data: hoursData, error: hoursError } = await hoursQuery;
+    if (hoursError) throw hoursError;
+    if (!hoursData || hoursData.length === 0) return [];
 
-    if (hoursError || !hoursData || hoursData.length === 0) return [];
-
-    const { data: paidData, error: paidError } = await queryOk(
-      this.supabase.client
-        .from('instructor_monthly_payments')
-        .select('instructor_id')
-        .eq('period', period),
-    );
-
-    if (paidError) return [];
+    const { data: paidData, error: paidError } = await this.supabase.client
+      .from('instructor_monthly_payments')
+      .select('instructor_id')
+      .eq('period', period);
+    if (paidError) throw paidError;
 
     const paidIds = new Set<number>((paidData ?? []).map((p: any) => p.instructor_id));
     const pendingCount = hoursData.filter((h: any) => !paidIds.has(h.instructor_id)).length;
@@ -843,8 +881,9 @@ export class DashboardAlertsFacade {
       .eq('status', 'pending_review');
     if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { count, error } = await queryOk(query);
-    if (error || !count || count === 0) return [];
+    const { count, error } = await query;
+    if (error) throw error;
+    if (!count || count === 0) return [];
 
     return [
       {
@@ -868,8 +907,9 @@ export class DashboardAlertsFacade {
       .is('psych_test_result', null);
     if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { count, error } = await queryOk(query);
-    if (error || !count || count === 0) return [];
+    const { count, error } = await query;
+    if (error) throw error;
+    if (!count || count === 0) return [];
 
     return [
       {
@@ -898,8 +938,9 @@ export class DashboardAlertsFacade {
       .lte('expires_at', sevenDaysFromNow.toISOString());
     if (branchId !== null) query = query.eq('branch_id', branchId);
 
-    const { count, error } = await queryOk(query);
-    if (error || !count || count === 0) return [];
+    const { count, error } = await query;
+    if (error) throw error;
+    if (!count || count === 0) return [];
 
     return [
       {
@@ -912,7 +953,7 @@ export class DashboardAlertsFacade {
     ];
   }
 
-  // ── Queries privadas — Fase 3: Clase Profesional ──────────────────────────
+  // ── Queries privadas — Clase Profesional ──────────────────────────────────
 
   /**
    * Cuántas matrículas Profesional tienen el semáforo de asistencia en el color pedido, dentro
@@ -924,17 +965,16 @@ export class DashboardAlertsFacade {
     branchId: number | null,
   ): Promise<number> {
     if (branchId === null) {
-      const { count } = await queryOk(
-        this.supabase.client
-          .from('v_professional_attendance')
-          .select('enrollment_id', { count: 'exact', head: true })
-          .eq('attendance_flag', flag),
-      );
+      const { count, error } = await this.supabase.client
+        .from('v_professional_attendance')
+        .select('enrollment_id', { count: 'exact', head: true })
+        .eq('attendance_flag', flag);
+      if (error) throw error;
       return count ?? 0;
     }
 
-    const { data } = await queryOk(
-      this.supabase.client
+    const data = assertReadOk(
+      await this.supabase.client
         .from('v_professional_attendance')
         .select('enrollment_id')
         .eq('attendance_flag', flag),
@@ -942,13 +982,12 @@ export class DashboardAlertsFacade {
     const ids = ((data ?? []) as { enrollment_id: number }[]).map((row) => row.enrollment_id);
     if (ids.length === 0) return 0;
 
-    const { count } = await queryOk(
-      this.supabase.client
-        .from('enrollments')
-        .select('id', { count: 'exact', head: true })
-        .in('id', ids)
-        .eq('branch_id', branchId),
-    );
+    const { count, error } = await this.supabase.client
+      .from('enrollments')
+      .select('id', { count: 'exact', head: true })
+      .in('id', ids)
+      .eq('branch_id', branchId);
+    if (error) throw error;
     return count ?? 0;
   }
 
@@ -995,8 +1034,9 @@ export class DashboardAlertsFacade {
       .lt('grade', 75);
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
-    const { count, error } = await queryOk(query);
-    if (error || !count || count === 0) return [];
+    const { count, error } = await query;
+    if (error) throw error;
+    if (!count || count === 0) return [];
 
     return [
       {
@@ -1019,8 +1059,9 @@ export class DashboardAlertsFacade {
       .eq('status', 'draft');
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
-    const { count, error } = await queryOk(query);
-    if (error || !count || count === 0) return [];
+    const { count, error } = await query;
+    if (error) throw error;
+    if (!count || count === 0) return [];
 
     return [
       {

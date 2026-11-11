@@ -85,7 +85,20 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
           >
             <app-icon name="file-question" [size]="24" />
           </div>
-          <p class="text-text-secondary text-sm m-0">No se pudo cargar la vista previa.</p>
+          <p class="text-text-secondary text-sm m-0">
+            {{ facade.previewDocError() ?? 'No se pudo cargar la vista previa.' }}
+          </p>
+          @if (facade.previewDocError()) {
+            <button
+              type="button"
+              class="btn-secondary inline-flex items-center gap-2 mt-4"
+              data-llm-action="reintentar-vista-previa"
+              (click)="facade.retryPreview()"
+            >
+              <app-icon name="refresh-cw" [size]="14" />
+              Reintentar
+            </button>
+          }
         </div>
       </div>
     }

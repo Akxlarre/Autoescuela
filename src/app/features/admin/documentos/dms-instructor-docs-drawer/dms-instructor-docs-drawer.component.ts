@@ -35,7 +35,16 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
           }
         </div>
       } @else {
-        @if (facade.instructorDocs().length === 0) {
+        @if (facade.instructorDocsError(); as error) {
+          <app-empty-state
+            message="No se pudieron cargar los documentos"
+            [subtitle]="error"
+            icon="circle-alert"
+            actionLabel="Reintentar"
+            actionIcon="refresh-cw"
+            (action)="onRetry()"
+          />
+        } @else if (facade.instructorDocs().length === 0) {
           <app-empty-state
             message="Sin documentos"
             subtitle="Este instructor aún no tiene documentos."
@@ -107,6 +116,13 @@ export class DmsInstructorDocsDrawerComponent {
   openUploadDrawer(): void {
     const id = this.facade.instructorDetail()?.instructorId ?? null;
     this.facade.openUpload('instructor', id);
+  }
+
+  onRetry(): void {
+    const instructorId = this.facade.instructorDetail()?.instructorId;
+    if (instructorId) {
+      void this.facade.loadInstructorDocuments(instructorId);
+    }
   }
 
   onSelectDocument(path: string | null, fileName: string): void {

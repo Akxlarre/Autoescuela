@@ -207,10 +207,18 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
     `student_surveys.comments`: el cambio a `comment` de la segunda pasada se basó en las
     migraciones (dos crean la tabla con `CREATE TABLE IF NOT EXISTS` y columnas distintas) y dejaba
     las opiniones en error; se volvió a `comments` y el mock del test ahora rechaza `comment`.
-- [ ] **T3.3** — `dms.facade.ts` y `dashboard-alerts.facade.ts`
+- [x] **T3.3** — `dms.facade.ts` y `dashboard-alerts.facade.ts`
   - **AC ref:** AC3, AC5
   - **DoD:** DoD-F, más:
-    - [ ] Una alerta que no cargó no se muestra como "sin alertas"
+    - [x] Una alerta que no cargó no se muestra como "sin alertas"
+  - **Avance (2026-11-11):** Migrados `dashboard-alerts.facade.ts` y `dms.facade.ts` junto con sus pantallas y drawers (`dashboard`, `secretaria-dashboard`, `alerts-drawer`, `admin-documentos`, `secretaria-documentos`, `dms-list-content`, `dms-student-docs-drawer`, `dms-instructor-docs-drawer`, `dms-doc-preview-drawer`, `dms-upload-drawer`). Lecturas con `assertReadOk` / `if (error) throw error`, guards de solicitud concurrente/cambio de sede (`createRequestGuard`) en todos los subflujos, Caso A limpiando datos previos y Caso B en refresco silencioso y post-mutaciones con aviso `app-alert-card` y `reintentar()` sin skeleton ni pérdida de datos. Fuera de `PENDING` en `unchecked-reads.guard.spec.ts`. Sin discrepancias de columnas respecto a las migraciones SQL. Verificado con tests unitarios, `test-tz.mjs`, `test:ci`, `ngc --noEmit`, `lint:arch` y Playwright X01 (`/app/secretaria/dashboard`, `/app/secretaria/documentos`).
+  - **Cerrada (2026-11-11):** las alertas conservan la carga parcial de fix-405-m
+    (`Promise.allSettled`): si una revisión falla se muestran las demás con el aviso
+    `loadProblem()` ("No se pudieron revisar todas las alertas."), y solo falla la carga entera si
+    fallan todas. Prueba manual en navegador contra la BD real como secretaria: alertas con una
+    revisión cortada, caso B en documentos con datos y aviso, y el drawer de documentos del alumno
+    como caso A (retira los datos y muestra el error). La revisión mutante (facade de alertas
+    anterior) hace fallar 4 tests.
 - [x] **T3.4** — `instructores.facade.ts`, `flota.facade.ts`, `tasks.facade.ts`
   - **AC ref:** AC3
   - **DoD:** DoD-F

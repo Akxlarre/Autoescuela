@@ -264,8 +264,6 @@ describe('Facades: ninguna lectura a Supabase descarta su error', () => {
     'student-enrollment-context.facade.ts': 'etapa 2',
     // Etapa 3a — Gestión Clase B y portales
     'asistencia-clase-b.facade.ts': 'etapa 3a',
-    'dashboard-alerts.facade.ts': 'etapa 3a',
-    'dms.facade.ts': 'etapa 3a',
     // Etapa 3b — Clase Profesional
     'asistencia-profesional.facade.ts': 'etapa 3b',
     'certificacion-profesional.facade.ts': 'etapa 3b',

@@ -483,6 +483,7 @@ describe('DashboardAlertsFacade', () => {
       // Falla una sola revisión de la carga vigente: lista incompleta (fix-405-m).
       cargas[1].reject(new Error('vigente'));
       await vigente;
+      expect(facade.error()).toBeNull();
       expect(facade.loadProblem()).toBe('No se pudieron revisar todas las alertas.');
       expect(facade.isLoading()).toBe(false);
     });
@@ -682,6 +683,7 @@ describe('DashboardAlertsFacade', () => {
       await facade.loadAlerts();
 
       expect(facade.loadProblem()).toBe('No se pudieron revisar todas las alertas.');
+      expect(facade.error()).toBeNull();
     });
   });
 
@@ -1788,6 +1790,233 @@ describe('DashboardAlertsFacade', () => {
       await facade.loadAlerts();
 
       expect(visibles()).toEqual(['alert-pending-payments']);
+    });
+  });
+
+  // ── Spec 0060-b T3.3: Caso A, Caso B y request guard ────────────────────────
+  describe('Lecturas fallidas — Caso A y Caso B (spec 0060-b T3.3)', () => {
+    const fallo = { data: null, count: null, error: { message: 'Failed to fetch' } };
+
+    const mockConPagosYUnFallo = (failPaymentsTable: boolean, count = 4) => {
+      let enrollCall = 0;
+      fromSpy.mockImplementation((table: string) => {
+        if (table === 'alert_config') return buildChain({ data: [] });
+        if (table === 'branches') return buildChain({ data: [{ id: 1, name: 'Sede Uno' }] });
+        if (table === 'cash_closings') return buildChain({ data: [{ branch_id: 1 }] });
+        if (table === 'enrollments') {
+          enrollCall++;
+          if (failPaymentsTable) return buildChain(fallo);
+          return enrollCall === 1 ? buildChain({ count }) : buildChain({ count: 0 });
+        }
+        return buildChain({ data: [], count: 0 });
+      });
+    };
+
+    const mockTodasFallan = () => fromSpy.mockImplementation(() => buildChain(fallo));
+
+    it('cambio de sede (Caso A): limpia alertas previas de inmediato y si falla la nueva sede queda vacía con error', async () => {
+      const auth = TestBed.inject(AuthFacade);
+      const branch = TestBed.inject(BranchFacade);
+      (auth.currentUser as any).mockReturnValue({ id: 'u-1', dbId: 1, role: 'admin' });
+      (branch.selectedBranchId as any).mockReturnValue(1);
+
+      mockConPagosYUnFallo(false, 3);
+      await facade.initialize();
+      expect(facade.activeAlerts().map((a) => a.id)).toEqual(['alert-pending-payments']);
+      expect(facade.alertCount()).toBe(1);
+
+      // Cambiar a sede 2 con todas las consultas pendientes/fallidas
+      (branch.selectedBranchId as any).mockReturnValue(2);
+      let resolvePendiente!: (v: unknown) => void;
+      const pendientePromise = new Promise((r) => (resolvePendiente = r));
+      fromSpy.mockImplementation((table: string) => {
+        if (table === 'enrollments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            not: vi.fn().mockReturnThis(),
+            gt: vi.fn().mockReturnThis(),
+            then: (res: any) => pendientePromise.then(res),
+          };
+        }
+        return buildChain(fallo);
+      });
+
+      const cargaSede2 = facade.initialize();
+      // Caso A: antes de que responda la nueva sede ya vació alertas stale y prendió skeleton.
+      expect(facade.activeAlerts()).toEqual([]);
+      expect(facade.isLoading()).toBe(true);
+
+      resolvePendiente(fallo);
+      await cargaSede2;
+
+      expect(facade.activeAlerts()).toEqual([]);
+      expect(facade.alertCount()).toBe(0);
+      expect(facade.error()).toBe('Error al cargar alertas');
+      expect(facade.loadProblem()).toBe('No se pudieron revisar las alertas.');
+      expect((facade as any).refreshFailed()).toBe(false);
+    });
+
+    it('refresco silencioso fallido (Caso B): mantiene alertas, error es null y enciende refreshFailed', async () => {
+      const auth = TestBed.inject(AuthFacade);
+      (auth.currentUser as any).mockReturnValue({ id: 'u-1', dbId: 1, role: 'admin' });
+      mockConPagosYUnFallo(false, 4);
+      await facade.initialize();
+      expect(facade.alertCount()).toBe(1);
+
+      // En revisita / refresco silencioso, fallan todas las revisiones (sin red / sesión caída)
+      mockTodasFallan();
+      await facade.refreshSilently();
+
+      expect(facade.alertCount()).toBe(1);
+      expect(facade.activeAlerts().map((a) => a.id)).toEqual(['alert-pending-payments']);
+      expect(facade.error()).toBeNull();
+      expect(facade.loadProblem()).toBeNull();
+      expect((facade as any).refreshFailed()).toBe(true);
+      expect(facade.isLoading()).toBe(false);
+    });
+
+    it('si falla solo una revisión en carga inicial, mantiene las alertas de las demás y loadProblem() dice "todas"', async () => {
+      const callCounters: Record<string, number> = {};
+      fromSpy.mockImplementation((table: string) => {
+        callCounters[table] = (callCounters[table] ?? 0) + 1;
+        if (table === 'alert_config') return buildChain({ data: [] });
+        if (table === 'branches') return buildChain({ data: [{ id: 1, name: 'Sede Uno' }] });
+        if (table === 'cash_closings') return buildChain({ data: [{ branch_id: 1 }] });
+        if (table === 'vehicle_documents') return buildChain(fallo);
+        if (table === 'enrollments')
+          return callCounters[table] === 1 ? buildChain({ count: 4 }) : buildChain({ count: 0 });
+        return buildChain({ data: [], count: 0 });
+      });
+
+      await facade.initialize();
+
+      expect(facade.activeAlerts().map((a) => a.id)).toEqual(['alert-pending-payments']);
+      expect(facade.error()).toBeNull();
+      expect(facade.loadProblem()).toBe('No se pudieron revisar todas las alertas.');
+      expect((facade as any).refreshFailed()).toBe(false);
+    });
+
+    it('reintentar() en Caso B refresca en silencio sin vaciar alertas ni encender isLoading', async () => {
+      const auth = TestBed.inject(AuthFacade);
+      (auth.currentUser as any).mockReturnValue({ id: 'u-1', dbId: 1, role: 'admin' });
+      mockConPagosYUnFallo(false, 4);
+      await facade.initialize();
+
+      mockTodasFallan();
+      await facade.refreshSilently();
+      expect((facade as any).refreshFailed()).toBe(true);
+
+      // Primer reintento vuelve a fallar: mantiene datos, NO enciende isLoading y refreshFailed sigue true.
+      const reintentoFallido = (facade as any).reintentar();
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.alertCount()).toBe(1);
+      await reintentoFallido;
+      expect((facade as any).refreshFailed()).toBe(true);
+      expect(facade.alertCount()).toBe(1);
+      expect(facade.error()).toBeNull();
+
+      // Segundo reintento exitoso: limpia refreshFailed y actualiza los datos.
+      mockConPagosYUnFallo(false, 7);
+      await (facade as any).reintentar();
+      expect((facade as any).refreshFailed()).toBe(false);
+      expect(facade.error()).toBeNull();
+      expect(facade.loadProblem()).toBeNull();
+      expect(facade.activeAlerts()[0]?.count).toBe(7);
+    });
+
+    it('reintentar() en Caso A limpia error y recarga con isLoading = true', async () => {
+      mockTodasFallan();
+      await facade.initialize();
+      expect(facade.error()).toBe('Error al cargar alertas');
+
+      mockConPagosYUnFallo(false, 2);
+      const carga = (facade as any).reintentar();
+      expect(facade.isLoading()).toBe(true);
+      expect(facade.error()).toBeNull();
+      await carga;
+
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.error()).toBeNull();
+      expect(facade.loadProblem()).toBeNull();
+      expect(facade.activeAlerts().map((a) => a.id)).toEqual(['alert-pending-payments']);
+    });
+
+    it('refreshSilently() viejo que falla después de cambiar de sede no prende refreshFailed', async () => {
+      const auth = TestBed.inject(AuthFacade);
+      const branch = TestBed.inject(BranchFacade);
+      (auth.currentUser as any).mockReturnValue({ id: 'u-1', dbId: 1, role: 'admin' });
+      (branch.selectedBranchId as any).mockReturnValue(1);
+      mockConPagosYUnFallo(false, 3);
+      await facade.initialize();
+
+      const proto = Object.getPrototypeOf(facade);
+      for (const name of Object.getOwnPropertyNames(proto).filter((n) => n.startsWith('check'))) {
+        vi.spyOn(facade as any, name).mockResolvedValue([]);
+      }
+
+      let rejectOldRefresh!: (e: unknown) => void;
+      let resolveNewLoad!: (v: unknown) => void;
+      const checkSpy = vi.spyOn(facade as any, 'checkPendingPayments');
+      checkSpy.mockImplementationOnce(() => new Promise((_, rej) => (rejectOldRefresh = rej)));
+      checkSpy.mockImplementationOnce(() => new Promise((res) => (resolveNewLoad = res)));
+
+      const oldRefresh = facade.refreshSilently();
+      (branch.selectedBranchId as any).mockReturnValue(2);
+      const newLoad = facade.initialize();
+
+      resolveNewLoad([]);
+      await newLoad;
+      rejectOldRefresh(new Error('stale refresh failure'));
+      await oldRefresh;
+
+      expect((facade as any).refreshFailed()).toBe(false);
+      expect(facade.error()).toBeNull();
+    });
+
+    it('clearSchedules(): si el RPC tuvo éxito y falla refreshSilently() posterior, sigue retornando true (Caso B)', async () => {
+      mockConPagosYUnFallo(false, 2);
+      await facade.initialize();
+
+      let sessionsCall = 0;
+      fromSpy.mockImplementation((table: string) => {
+        if (table === 'class_b_sessions' && sessionsCall++ === 0) {
+          return buildChain({
+            data: [
+              {
+                id: 1,
+                enrollment_id: 301,
+                enrollments: {
+                  students: { users: { first_names: 'Juan', paternal_last_name: 'Pérez' } },
+                },
+              },
+            ],
+            error: null,
+          });
+        }
+        return buildChain(fallo);
+      });
+      rpcSpy.mockResolvedValue({
+        data: [
+          {
+            enrollment_id: 301,
+            removal_id: 1,
+            cancelled_count: 1,
+            first_scheduled_at: '2026-10-20T13:30:00.000Z',
+            student_user_id: 10,
+            instructor_user_ids: [],
+          },
+        ],
+        error: null,
+      });
+
+      const ok = await facade.clearSchedules([301]);
+
+      expect(ok).toBe(true);
+      expect(toast.success).toHaveBeenCalled();
+      await vi.waitFor(() => {
+        expect((facade as any).refreshFailed()).toBe(true);
+      });
     });
   });
 });

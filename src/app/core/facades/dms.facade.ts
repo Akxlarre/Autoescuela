@@ -252,6 +252,7 @@ export class DmsFacade {
   private readonly _error = signal<string | null>(null);
   private _initialized = false;
   private readonly _listsError = signal<string | null>(null);
+  private readonly _refreshFailed = signal(false);
   private _lastBranchId: number | null | undefined = undefined;
   /** Descarta respuestas de fetchAllData() fuera de orden (spec 0005-m). */
   private readonly dmsGuard = createRequestGuard();
@@ -259,6 +260,8 @@ export class DmsFacade {
   private readonly studentDocsGuard = createRequestGuard();
   /** fix-479-m: mismo guard para el drawer de documentos del instructor. */
   private readonly instructorDocsGuard = createRequestGuard();
+  private readonly enrollmentOptionsGuard = createRequestGuard();
+  private readonly previewGuard = createRequestGuard();
 
   // Sub-ruta: detalle de alumno
   private readonly _studentDetail = signal<{
@@ -270,8 +273,10 @@ export class DmsFacade {
   } | null>(null);
   private readonly _studentDocs = signal<DmsStudentDocRow[]>([]);
   private readonly _studentDocsLoading = signal(false);
+  private readonly _studentDocsError = signal<string | null>(null);
   /** Opciones del segundo selector de "Subir documento" (AC-E2) — todas las matrículas del alumno elegido. */
   private readonly _studentEnrollmentOptions = signal<StudentEnrollmentOption[]>([]);
+  private readonly _studentEnrollmentOptionsError = signal<string | null>(null);
 
   // Sub-ruta: detalle de instructor
   private readonly _instructorsWithDocs = signal<InstructorWithDocsRow[]>([]);
@@ -282,6 +287,7 @@ export class DmsFacade {
   } | null>(null);
   private readonly _instructorDocs = signal<DmsInstructorDocRow[]>([]);
   private readonly _instructorDocsLoading = signal(false);
+  private readonly _instructorDocsError = signal<string | null>(null);
 
   // Estado para el Drawer dinámico
   private readonly _currentUploadMode = signal<'student' | 'school' | 'instructor'>('student');
@@ -298,6 +304,8 @@ export class DmsFacade {
     type: 'pdf' | 'image' | 'unknown';
   } | null>(null);
   private readonly _previewDocLoading = signal(false);
+  private readonly _previewDocError = signal<string | null>(null);
+  private lastPreviewTarget: { path: string; fileName: string } | null = null;
 
   // ── Estado Público ───────────────────────────────────────────────────────────
 
@@ -310,15 +318,19 @@ export class DmsFacade {
   readonly error = this._error.asReadonly();
   /** fix-473-m: la primera carga de las listas falló (null si cargaron o si es solo un SWR fallido). */
   readonly listsError = this._listsError.asReadonly();
+  readonly refreshFailed = this._refreshFailed.asReadonly();
   readonly studentDetail = this._studentDetail.asReadonly();
   readonly studentDocs = this._studentDocs.asReadonly();
   readonly studentDocsLoading = this._studentDocsLoading.asReadonly();
+  readonly studentDocsError = this._studentDocsError.asReadonly();
   readonly studentEnrollmentOptions = this._studentEnrollmentOptions.asReadonly();
+  readonly studentEnrollmentOptionsError = this._studentEnrollmentOptionsError.asReadonly();
 
   readonly instructorsWithDocs = this._instructorsWithDocs.asReadonly();
   readonly instructorDetail = this._instructorDetail.asReadonly();
   readonly instructorDocs = this._instructorDocs.asReadonly();
   readonly instructorDocsLoading = this._instructorDocsLoading.asReadonly();
+  readonly instructorDocsError = this._instructorDocsError.asReadonly();
 
   readonly currentUploadMode = this._currentUploadMode.asReadonly();
   readonly preselectedStudentId = this._preselectedStudentId.asReadonly();
@@ -328,6 +340,7 @@ export class DmsFacade {
 
   readonly previewDoc = this._previewDoc.asReadonly();
   readonly previewDocLoading = this._previewDocLoading.asReadonly();
+  readonly previewDocError = this._previewDocError.asReadonly();
 
   readonly kpis = computed(
     (): DmsKpis => ({
@@ -340,8 +353,8 @@ export class DmsFacade {
   // ── Métodos de Acción ────────────────────────────────────────────────────────
 
   /**
-   * Initialize con SWR: primera visita carga con skeleton;
-   * re-visitas revalidan silenciosamente.
+   * Initialize con SWR: primera visita o cambio de sede (Caso A) limpia datos stale y muestra
+   * skeleton; re-visitas sobre la misma sede revalidan silenciosamente (Caso B).
    */
   async initialize(): Promise<void> {
     const branchId = this.getActiveBranchId();
@@ -351,23 +364,66 @@ export class DmsFacade {
       return;
     }
 
-    this._initialized = true;
-    this._lastBranchId = branchId;
+    const requestToken = this.dmsGuard.next();
+    this._initialized = false;
+    this._lastBranchId = undefined;
+    this._studentsWithDocs.set([]);
+    this._uploadableStudents.set([]);
+    this._recentDocs.set([]);
+    this._schoolDocs.set([]);
+    this._instructorsWithDocs.set([]);
     this._isLoading.set(true);
     this._error.set(null);
-    await this.fetchAllData();
-    this._isLoading.set(false);
-    // fix-455-m: solo la primera carga avisa; el refresco silencioso (SWR) deja los datos stale.
-    const loadError = this._error();
-    if (loadError) this.toast.error('Error al cargar documentos', loadError);
-    // fix-473-m: sin datos que mostrar, las listas dicen que falló (no "Sin documentos aún").
-    this._listsError.set(loadError);
+    this._listsError.set(null);
+    this._refreshFailed.set(false);
+    try {
+      await this.fetchAllData(branchId, requestToken);
+      if (!this.dmsGuard.isCurrent(requestToken)) return;
+      this._initialized = true;
+      this._lastBranchId = branchId;
+      this._listsError.set(null);
+      this._refreshFailed.set(false);
+    } catch (err) {
+      if (!this.dmsGuard.isCurrent(requestToken)) return;
+      const loadError = this.sanitizer.sanitize(err).message || 'Error al cargar documentos';
+      this._studentsWithDocs.set([]);
+      this._uploadableStudents.set([]);
+      this._recentDocs.set([]);
+      this._schoolDocs.set([]);
+      this._instructorsWithDocs.set([]);
+      this._error.set(loadError);
+      // fix-473-m: sin datos que mostrar, las listas dicen que falló (no "Sin documentos aún").
+      this._listsError.set(loadError);
+      // fix-455-m: solo la carga Caso A avisa por toast; el refresco silencioso deja los datos stale.
+      this.toast.error('Error al cargar documentos', loadError);
+    } finally {
+      if (this.dmsGuard.isCurrent(requestToken)) {
+        this._isLoading.set(false);
+      }
+    }
+  }
+
+  /**
+   * Reintenta según el estado (swr-pattern.md):
+   * - Caso B (`refreshFailed`): revalida en silencio sin limpiar las listas visibles.
+   * - Caso A (`listsError`): carga completa con skeleton.
+   */
+  async reintentar(): Promise<void> {
+    if (this._refreshFailed()) {
+      await this.refreshSilently();
+      return;
+    }
+    this._error.set(null);
+    this._listsError.set(null);
+    this._refreshFailed.set(false);
+    this._initialized = false;
+    this._lastBranchId = undefined;
+    await this.initialize();
   }
 
   /** fix-473-m: "Reintentar" tras una primera carga fallida — vuelve a cargar con skeleton. */
   async reload(): Promise<void> {
-    this._initialized = false;
-    await this.initialize();
+    await this.reintentar();
   }
 
   private getActiveBranchId(): number | null {
@@ -381,7 +437,20 @@ export class DmsFacade {
   }
 
   async refreshSilently(): Promise<void> {
-    await this.fetchAllData();
+    const branchId = this.getActiveBranchId();
+    const requestToken = this.dmsGuard.next();
+    try {
+      await this.fetchAllData(branchId, requestToken);
+      if (!this.dmsGuard.isCurrent(requestToken)) return;
+      this._lastBranchId = branchId;
+      this._error.set(null);
+      this._listsError.set(null);
+      this._refreshFailed.set(false);
+    } catch {
+      if (!this.dmsGuard.isCurrent(requestToken)) return;
+      // Caso B: conservar los datos visibles, error/listsError siguen null y se enciende refreshFailed.
+      this._refreshFailed.set(true);
+    }
   }
 
   /**
@@ -464,12 +533,21 @@ export class DmsFacade {
     );
   }
 
+  retryPreview(): void {
+    if (!this.lastPreviewTarget) return;
+    void this.previewDocument(this.lastPreviewTarget.path, this.lastPreviewTarget.fileName);
+  }
+
   private async previewDocument(path: string, fileName: string): Promise<void> {
+    const token = this.previewGuard.next();
+    this.lastPreviewTarget = { path, fileName };
     this._previewDoc.set(null);
+    this._previewDocError.set(null);
     this._previewDocLoading.set(true);
     try {
       const signedUrl = await this.getSignedDocumentUrl(path);
       if (!signedUrl) throw new Error('No se pudo obtener URL');
+      if (!this.previewGuard.isCurrent(token)) return;
 
       const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
       let type: 'pdf' | 'image' | 'unknown' = 'unknown';
@@ -481,9 +559,11 @@ export class DmsFacade {
 
       this._previewDoc.set({ url: signedUrl, name: fileName, type });
     } catch {
+      if (!this.previewGuard.isCurrent(token)) return;
+      this._previewDocError.set('No se pudo cargar la vista previa.');
       this.toast.error('No se pudo cargar la vista previa del documento');
     } finally {
-      this._previewDocLoading.set(false);
+      if (this.previewGuard.isCurrent(token)) this._previewDocLoading.set(false);
     }
   }
 
@@ -509,6 +589,7 @@ export class DmsFacade {
   async loadStudentDocuments(studentId: number, enrollmentId?: number): Promise<void> {
     const token = this.studentDocsGuard.next();
     this._studentDocsLoading.set(true);
+    this._studentDocsError.set(null);
     // fix-472-m: el drawer apunta a este alumno y matrícula desde ya. "Subir documento" lee
     // studentDetail; si se fijaba recién al responder, se presionaba mientras cargaba y quedaba
     // sin alumno, o con el del drawer anterior (subida a la matrícula equivocada).
@@ -534,65 +615,37 @@ export class DmsFacade {
       if (error) throw error;
 
       const docs = (data ?? []) as unknown as RawVDmsDoc[];
-      // Obtener info del alumno
-      if (docs.length > 0) {
-        const { data: studentData } = await this.supabase.client
-          .from('students')
-          .select('id, users!inner(id, rut, first_names, paternal_last_name, maternal_last_name)')
-          .eq('id', studentId)
-          .single();
+      const { data: studentData, error: studentError } = await this.supabase.client
+        .from('students')
+        .select('id, users!inner(id, rut, first_names, paternal_last_name, maternal_last_name)')
+        .eq('id', studentId)
+        .single();
+      if (studentError) throw studentError;
 
-        const rawStudent = studentData as unknown as RawStudent | null;
-        const user = rawStudent
-          ? Array.isArray(rawStudent.users)
-            ? rawStudent.users[0]
-            : rawStudent.users
-          : null;
-        if (!this.studentDocsGuard.isCurrent(token)) return;
-        if (user) {
-          this._studentDetail.set({
-            name: buildStudentDisplayName({
-              firstNames: user.first_names,
-              paternalLastName: user.paternal_last_name,
-              maternalLastName: user.maternal_last_name,
-            }),
-            rut: user.rut,
-            studentId,
-            enrollmentId: enrollmentId ?? null,
-          });
-        }
-        this._studentDocs.set(docs.map((d) => this.mapVDocToStudentDocRow(d, user)));
-      } else {
-        // Sin docs: cargar solo info de alumno
-        const { data: studentData } = await this.supabase.client
-          .from('students')
-          .select('id, users!inner(id, rut, first_names, paternal_last_name, maternal_last_name)')
-          .eq('id', studentId)
-          .single();
-        const rawStudent = studentData as unknown as RawStudent | null;
-        const user = rawStudent
-          ? Array.isArray(rawStudent.users)
-            ? rawStudent.users[0]
-            : rawStudent.users
-          : null;
-        if (!this.studentDocsGuard.isCurrent(token)) return;
-        if (user) {
-          this._studentDetail.set({
-            name: buildStudentDisplayName({
-              firstNames: user.first_names,
-              paternalLastName: user.paternal_last_name,
-              maternalLastName: user.maternal_last_name,
-            }),
-            rut: user.rut,
-            studentId,
-            enrollmentId: enrollmentId ?? null,
-          });
-        }
-        this._studentDocs.set([]);
+      const rawStudent = studentData as unknown as RawStudent | null;
+      const user = rawStudent
+        ? Array.isArray(rawStudent.users)
+          ? rawStudent.users[0]
+          : rawStudent.users
+        : null;
+      if (!this.studentDocsGuard.isCurrent(token)) return;
+      if (user) {
+        this._studentDetail.set({
+          name: buildStudentDisplayName({
+            firstNames: user.first_names,
+            paternalLastName: user.paternal_last_name,
+            maternalLastName: user.maternal_last_name,
+          }),
+          rut: user.rut,
+          studentId,
+          enrollmentId: enrollmentId ?? null,
+        });
       }
+      this._studentDocs.set(docs.map((d) => this.mapVDocToStudentDocRow(d, user)));
     } catch (err) {
       if (!this.studentDocsGuard.isCurrent(token)) return;
-      this._error.set(
+      this._studentDocs.set([]);
+      this._studentDocsError.set(
         err instanceof Error
           ? this.sanitizer.sanitize(err).message
           : 'Error al cargar documentos del alumno',
@@ -607,6 +660,9 @@ export class DmsFacade {
    * segundo selector de "Subir documento" desde el dropdown genérico (AC-E2).
    */
   async loadStudentEnrollmentOptions(studentId: number): Promise<void> {
+    const token = this.enrollmentOptionsGuard.next();
+    this._studentEnrollmentOptions.set([]);
+    this._studentEnrollmentOptionsError.set(null);
     try {
       const { data, error } = await this.supabase.client
         .from('enrollments')
@@ -614,6 +670,7 @@ export class DmsFacade {
         .eq('student_id', studentId);
 
       if (error) throw error;
+      if (!this.enrollmentOptionsGuard.isCurrent(token)) return;
 
       const rawEnrollments = (data ?? []) as unknown as RawEnrollmentOption[];
       const options: StudentEnrollmentOption[] = rawEnrollments.map((e) => {
@@ -627,7 +684,9 @@ export class DmsFacade {
       });
       this._studentEnrollmentOptions.set(options);
     } catch (err) {
-      this._error.set(
+      if (!this.enrollmentOptionsGuard.isCurrent(token)) return;
+      this._studentEnrollmentOptions.set([]);
+      this._studentEnrollmentOptionsError.set(
         err instanceof Error
           ? this.sanitizer.sanitize(err).message
           : 'Error al cargar las matrículas del alumno',
@@ -771,6 +830,7 @@ export class DmsFacade {
   async loadInstructorDocuments(instructorId: number): Promise<void> {
     const token = this.instructorDocsGuard.next();
     this._instructorDocsLoading.set(true);
+    this._instructorDocsError.set(null);
     // fix-479-m: el drawer apunta a este instructor desde ya ("Subir documento" lo preselecciona
     // aunque la carga no haya terminado), igual que fix-472-m con el alumno.
     const previous = this._instructorDetail();
@@ -782,13 +842,14 @@ export class DmsFacade {
     });
     if (!sameInstructor) this._instructorDocs.set([]);
     try {
-      const { data: instructorData } = await this.supabase.client
+      const { data: instructorData, error: instructorError } = await this.supabase.client
         .from('instructors')
         .select(
           'id, license_number, users!inner(id, first_names, paternal_last_name, maternal_last_name)',
         )
         .eq('id', instructorId)
         .single();
+      if (instructorError) throw instructorError;
 
       const rawInstructor = instructorData as unknown as RawInstructor | null;
       const user = rawInstructor
@@ -825,7 +886,8 @@ export class DmsFacade {
       this._instructorDocs.set(docs.map((d) => this.mapRawToInstructorDocRow(d, instructorName)));
     } catch (err) {
       if (!this.instructorDocsGuard.isCurrent(token)) return;
-      this._error.set(
+      this._instructorDocs.set([]);
+      this._instructorDocsError.set(
         err instanceof Error
           ? this.sanitizer.sanitize(err).message
           : 'Error al cargar documentos del instructor',
@@ -849,11 +911,15 @@ export class DmsFacade {
 
     let numericUserId: number | null = null;
     if (authUid) {
-      const { data: userData } = await this.supabase.client
+      const { data: userData, error: userError } = await this.supabase.client
         .from('users')
         .select('id')
         .eq('supabase_uid', authUid)
         .single();
+      if (userError) {
+        await this.removeStoredFile(path);
+        throw userError;
+      }
       numericUserId = (userData as { id: number } | null)?.id ?? null;
     }
 
@@ -953,253 +1019,244 @@ export class DmsFacade {
 
   // ── Helpers Privados ─────────────────────────────────────────────────────────
 
-  private async fetchAllData(): Promise<void> {
-    const requestToken = this.dmsGuard.next();
-    const branchId = this.getActiveBranchId();
-
-    try {
-      let schoolDocsQuery: any = this.supabase.client
-        .from('school_documents')
-        .select(
-          `
+  private async fetchAllData(branchId: number | null, requestToken: number): Promise<void> {
+    let schoolDocsQuery: any = this.supabase.client
+      .from('school_documents')
+      .select(
+        `
           id, type, file_name, storage_url, description,
           branch_id, created_at,
           users(first_names, paternal_last_name)
         `,
-        )
-        .order('created_at', { ascending: false });
-      // fix-451-m: branch_id NULL = "ambas sedes" (así se suben todos); `.eq` los excluía.
-      if (branchId !== null) {
-        schoolDocsQuery = schoolDocsQuery.or(`branch_id.is.null,branch_id.eq.${branchId}`);
-      }
+      )
+      .order('created_at', { ascending: false });
+    // fix-451-m: branch_id NULL = "ambas sedes" (así se suben todos); `.eq` los excluía.
+    if (branchId !== null) {
+      schoolDocsQuery = schoolDocsQuery.or(`branch_id.is.null,branch_id.eq.${branchId}`);
+    }
 
-      // fix-456-m: con sede, se filtra por la sede de la MATRÍCULA (spec 0007-m: puede diferir de la
-      // del alumno). `!inner` deja solo alumnos con matrícula en esa sede y solo esas matrículas.
-      const enrollmentsEmbed = branchId !== null ? 'enrollments!inner' : 'enrollments';
-      // fix-457-m: alumnos, documentos de alumno y de instructor se paginan (DG-008: PostgREST
-      // corta en 1.000 sin avisar). Cada página arma su consulta, con `id` como desempate.
-      const studentsPage = (from: number, to: number) => {
-        let q: any = this.supabase.client
-          .from('students')
-          .select(
-            `
+    // fix-456-m: con sede, se filtra por la sede de la MATRÍCULA (spec 0007-m: puede diferir de la
+    // del alumno). `!inner` deja solo alumnos con matrícula en esa sede y solo esas matrículas.
+    const enrollmentsEmbed = branchId !== null ? 'enrollments!inner' : 'enrollments';
+    // fix-457-m: alumnos, documentos de alumno y de instructor se paginan (DG-008: PostgREST
+    // corta en 1.000 sin avisar). Cada página arma su consulta, con `id` como desempate.
+    const studentsPage = (from: number, to: number) => {
+      let q: any = this.supabase.client
+        .from('students')
+        .select(
+          `
           id,
           users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, branch_id, branches(name)),
           ${enrollmentsEmbed}(id, number, created_at, branch_id, branches(name))
         `,
-          )
-          .order('id');
-        if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
-        return q.range(from, to);
-      };
+        )
+        .order('id');
+      if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
+      return q.range(from, to);
+    };
 
-      let instructorsQuery: any = this.supabase.client
-        .from('instructors')
-        .select(
-          'id, license_number, users!inner(id, first_names, paternal_last_name, maternal_last_name, branches(name))',
-        );
-      if (branchId !== null) instructorsQuery = instructorsQuery.eq('users.branch_id', branchId);
-
-      const [vDocsRes, schoolDocsRes, studentsRes, instructorsRes, instructorDocsRes] =
-        await Promise.all([
-          // La vista junta varios orígenes cuyos id pueden repetirse: source + id desempatan.
-          fetchAllPages((from, to) =>
-            this.supabase.client
-              .from('v_dms_student_documents')
-              .select('*')
-              .order('document_at', { ascending: false })
-              .order('source')
-              .order('id')
-              .range(from, to),
-          ),
-
-          schoolDocsQuery,
-
-          fetchAllPages(studentsPage),
-
-          instructorsQuery,
-
-          fetchAllPages((from, to) =>
-            this.supabase.client
-              .from('instructor_documents')
-              .select('id, instructor_id, type, file_name, storage_url, status, created_at')
-              .order('id')
-              .range(from, to),
-          ),
-        ]);
-
-      // fix-455-m: antes una consulta fallida se veía como "Sin documentos aún".
-      const failed = [vDocsRes, schoolDocsRes, studentsRes, instructorsRes, instructorDocsRes].find(
-        (res) => res.error,
+    let instructorsQuery: any = this.supabase.client
+      .from('instructors')
+      .select(
+        'id, license_number, users!inner(id, first_names, paternal_last_name, maternal_last_name, branches(name))',
       );
-      if (failed) throw failed.error;
+    if (branchId !== null) instructorsQuery = instructorsQuery.eq('users.branch_id', branchId);
 
-      // Construir mapa studentId → nombre/rut, y mapa enrollmentId → matrícula/sede DE ESA
-      // matrícula (spec 0007-m: cada matrícula puede tener su propia sede, no la del alumno).
-      const studentUserMap = new Map<number, { name: string; rut: string }>();
-      const enrollmentInfoMap = new Map<
-        number,
-        { studentId: number; matriculaNumber: string; branchName: string | null }
-      >();
-      const rawStudents = (studentsRes.data ?? []) as unknown as RawStudent[];
-      for (const s of rawStudents) {
-        const user = Array.isArray(s.users) ? s.users[0] : s.users;
-        if (!user) continue;
-        studentUserMap.set(s.id, {
-          name: buildStudentDisplayName({
-            firstNames: user.first_names,
-            paternalLastName: user.paternal_last_name,
-            maternalLastName: user.maternal_last_name,
-          }),
-          rut: user.rut,
-        });
-        for (const e of s.enrollments ?? []) {
-          const enrollmentBranch = Array.isArray(e.branches) ? e.branches[0] : e.branches;
-          enrollmentInfoMap.set(e.id, {
-            studentId: s.id,
-            matriculaNumber: e.number ? `#${e.number}` : '—',
-            branchName: enrollmentBranch?.name ?? null,
-          });
-        }
-      }
+    const [vDocsRes, schoolDocsRes, studentsRes, instructorsRes, instructorDocsRes] =
+      await Promise.all([
+        // La vista junta varios orígenes cuyos id pueden repetirse: source + id desempatan.
+        fetchAllPages((from, to) =>
+          this.supabase.client
+            .from('v_dms_student_documents')
+            .select('*')
+            .order('document_at', { ascending: false })
+            .order('source')
+            .order('id')
+            .range(from, to),
+        ),
 
-      // Procesar docs de alumnos — filtrar por sede si aplica
-      const allVDocsRaw = (vDocsRes.data ?? []) as unknown as RawVDmsDoc[];
-      const allVDocs =
-        branchId !== null
-          ? allVDocsRaw.filter((d) => enrollmentInfoMap.has(d.enrollment_id))
-          : allVDocsRaw;
+        schoolDocsQuery,
 
-      const recentDocs = allVDocs.slice(0, 5).map((d) => {
-        const student = studentUserMap.get(d.student_id);
-        return this.mapVDocToStudentDocRow(
-          d,
-          student
-            ? {
-                ...student,
-                id: d.student_id,
-                rut: student.rut,
-                first_names: student.name.split(' ')[0],
-                paternal_last_name: student.name.split(' ').slice(1).join(' '),
-              }
-            : null,
-        );
+        fetchAllPages(studentsPage),
+
+        instructorsQuery,
+
+        fetchAllPages((from, to) =>
+          this.supabase.client
+            .from('instructor_documents')
+            .select('id, instructor_id, type, file_name, storage_url, status, created_at')
+            .order('id')
+            .range(from, to),
+        ),
+      ]);
+
+    // fix-455-m: antes una consulta fallida se veía como "Sin documentos aún".
+    const failed = [vDocsRes, schoolDocsRes, studentsRes, instructorsRes, instructorDocsRes].find(
+      (res) => res.error,
+    );
+    if (failed) throw failed.error;
+
+    // Construir mapa studentId → nombre/rut, y mapa enrollmentId → matrícula/sede DE ESA
+    // matrícula (spec 0007-m: cada matrícula puede tener su propia sede, no la del alumno).
+    const studentUserMap = new Map<number, { name: string; rut: string }>();
+    const enrollmentInfoMap = new Map<
+      number,
+      { studentId: number; matriculaNumber: string; branchName: string | null }
+    >();
+    const rawStudents = (studentsRes.data ?? []) as unknown as RawStudent[];
+    for (const s of rawStudents) {
+      const user = Array.isArray(s.users) ? s.users[0] : s.users;
+      if (!user) continue;
+      studentUserMap.set(s.id, {
+        name: buildStudentDisplayName({
+          firstNames: user.first_names,
+          paternalLastName: user.paternal_last_name,
+          maternalLastName: user.maternal_last_name,
+        }),
+        rut: user.rut,
       });
-
-      // Agrupar por matrícula (spec 0007-m: 1 fila por enrollment, no por alumno) para
-      // studentsWithDocs — un alumno con 2+ matrículas produce 2+ filas.
-      const enrollmentDocCount = new Map<number, number>();
-      for (const d of allVDocs) {
-        enrollmentDocCount.set(d.enrollment_id, (enrollmentDocCount.get(d.enrollment_id) ?? 0) + 1);
-      }
-      const studentsWithDocsUnsorted: StudentWithDocsRow[] = [];
-      for (const [enrollmentId, docCount] of enrollmentDocCount) {
-        const info = enrollmentInfoMap.get(enrollmentId);
-        const user = info ? studentUserMap.get(info.studentId) : undefined;
-        if (info && user) {
-          studentsWithDocsUnsorted.push({
-            studentId: info.studentId,
-            enrollmentId,
-            name: user.name,
-            rut: user.rut,
-            matriculaNumber: info.matriculaNumber,
-            branchName: info.branchName,
-            docCount,
-          });
-        }
-      }
-      // Orden paterno - materno - nombre, igual que Base de Alumnos.
-      const studentsWithDocs = sortByPaternalLastNameAsc(studentsWithDocsUnsorted, (s) => s.name);
-
-      // fix-449-m: el primer documento de un alumno se sube desde acá, así que el selector no
-      // puede depender de que ya tenga documentos. Sin matrícula no hay a qué asociarlo.
-      const uploadableStudents = sortByPaternalLastNameAsc(
-        rawStudents
-          .filter((s) => (s.enrollments ?? []).length > 0 && studentUserMap.has(s.id))
-          .map((s) => ({ studentId: s.id, name: studentUserMap.get(s.id)!.name })),
-        (s) => s.name,
-      );
-
-      // Construir mapa instructorId → info
-      const instructorMap = new Map<
-        number,
-        { name: string; licenseNumber: string; branchName: string | null }
-      >();
-      const rawInstructors = (instructorsRes.data ?? []) as unknown as RawInstructor[];
-      for (const i of rawInstructors) {
-        const user = Array.isArray(i.users) ? i.users[0] : i.users;
-        if (user) {
-          const branch = Array.isArray(user.branches) ? user.branches[0] : user.branches;
-          instructorMap.set(i.id, {
-            // Orden actual del instructor (nombre primero) + apellido materno agregado al final.
-            name: [user.first_names, user.paternal_last_name, user.maternal_last_name]
-              .map((p) => p?.trim() ?? '')
-              .filter(Boolean)
-              .join(' '),
-            licenseNumber: i.license_number ?? '',
-            branchName: branch?.name ?? null,
-          });
-        }
-      }
-
-      // Contar documentos por instructor — filtrar por sede si aplica
-      const allInstructorDocsRaw = (instructorDocsRes.data ?? []) as unknown as RawInstructorDoc[];
-      const allInstructorDocs =
-        branchId !== null
-          ? allInstructorDocsRaw.filter((d) => instructorMap.has(d.instructor_id))
-          : allInstructorDocsRaw;
-      const instructorDocCount = new Map<number, number>();
-      for (const d of allInstructorDocs) {
-        instructorDocCount.set(d.instructor_id, (instructorDocCount.get(d.instructor_id) ?? 0) + 1);
-      }
-
-      // instructorsWithDocs lista TODOS los instructores del scope (con docCount 0 incluido),
-      // a diferencia de studentsWithDocs — necesario para poder subir el primer documento.
-      const instructorsWithDocs: InstructorWithDocsRow[] = [];
-      for (const [instructorId, info] of instructorMap) {
-        instructorsWithDocs.push({
-          instructorId,
-          name: info.name,
-          licenseNumber: info.licenseNumber,
-          branchName: info.branchName,
-          docCount: instructorDocCount.get(instructorId) ?? 0,
+      for (const e of s.enrollments ?? []) {
+        const enrollmentBranch = Array.isArray(e.branches) ? e.branches[0] : e.branches;
+        enrollmentInfoMap.set(e.id, {
+          studentId: s.id,
+          matriculaNumber: e.number ? `#${e.number}` : '—',
+          branchName: enrollmentBranch?.name ?? null,
         });
       }
-      instructorsWithDocs.sort((a, b) => a.name.localeCompare(b.name));
-
-      // Procesar school docs
-      const rawSchoolDocs = (schoolDocsRes.data ?? []) as unknown as RawSchoolDoc[];
-      const schoolDocs: SchoolDocRow[] = rawSchoolDocs.map((d) => {
-        const userRaw = Array.isArray(d.users) ? d.users[0] : d.users;
-        const uploaderName = userRaw
-          ? `${userRaw.first_names} ${userRaw.paternal_last_name}`.trim()
-          : 'Sistema';
-        return {
-          id: d.id,
-          type: d.type,
-          fileName: d.file_name,
-          storageUrl: d.storage_url,
-          description: d.description,
-          branchId: d.branch_id ?? 0,
-          createdAt: d.created_at,
-          uploaderName,
-          typeLabel: LABELS_TIPO_ESCUELA[d.type] ?? d.type,
-        };
-      });
-
-      // Respuesta fuera de orden: ya se disparó una fetch más reciente, descartar (spec 0005-m).
-      if (!this.dmsGuard.isCurrent(requestToken)) return;
-
-      this._listsError.set(null);
-      this._recentDocs.set(recentDocs);
-      this._studentsWithDocs.set(studentsWithDocs);
-      this._uploadableStudents.set(uploadableStudents);
-      this._instructorsWithDocs.set(instructorsWithDocs);
-      this._schoolDocs.set(schoolDocs);
-    } catch (err) {
-      // El error de PostgREST es un objeto plano, no un Error: el sanitizer acepta ambos.
-      this._error.set(this.sanitizer.sanitize(err).message || 'Error al cargar documentos');
     }
+
+    // Procesar docs de alumnos — filtrar por sede si aplica
+    const allVDocsRaw = (vDocsRes.data ?? []) as unknown as RawVDmsDoc[];
+    const allVDocs =
+      branchId !== null
+        ? allVDocsRaw.filter((d) => enrollmentInfoMap.has(d.enrollment_id))
+        : allVDocsRaw;
+
+    const recentDocs = allVDocs.slice(0, 5).map((d) => {
+      const student = studentUserMap.get(d.student_id);
+      return this.mapVDocToStudentDocRow(
+        d,
+        student
+          ? {
+              ...student,
+              id: d.student_id,
+              rut: student.rut,
+              first_names: student.name.split(' ')[0],
+              paternal_last_name: student.name.split(' ').slice(1).join(' '),
+            }
+          : null,
+      );
+    });
+
+    // Agrupar por matrícula (spec 0007-m: 1 fila por enrollment, no por alumno) para
+    // studentsWithDocs — un alumno con 2+ matrículas produce 2+ filas.
+    const enrollmentDocCount = new Map<number, number>();
+    for (const d of allVDocs) {
+      enrollmentDocCount.set(d.enrollment_id, (enrollmentDocCount.get(d.enrollment_id) ?? 0) + 1);
+    }
+    const studentsWithDocsUnsorted: StudentWithDocsRow[] = [];
+    for (const [enrollmentId, docCount] of enrollmentDocCount) {
+      const info = enrollmentInfoMap.get(enrollmentId);
+      const user = info ? studentUserMap.get(info.studentId) : undefined;
+      if (info && user) {
+        studentsWithDocsUnsorted.push({
+          studentId: info.studentId,
+          enrollmentId,
+          name: user.name,
+          rut: user.rut,
+          matriculaNumber: info.matriculaNumber,
+          branchName: info.branchName,
+          docCount,
+        });
+      }
+    }
+    // Orden paterno - materno - nombre, igual que Base de Alumnos.
+    const studentsWithDocs = sortByPaternalLastNameAsc(studentsWithDocsUnsorted, (s) => s.name);
+
+    // fix-449-m: el primer documento de un alumno se sube desde acá, así que el selector no
+    // puede depender de que ya tenga documentos. Sin matrícula no hay a qué asociarlo.
+    const uploadableStudents = sortByPaternalLastNameAsc(
+      rawStudents
+        .filter((s) => (s.enrollments ?? []).length > 0 && studentUserMap.has(s.id))
+        .map((s) => ({ studentId: s.id, name: studentUserMap.get(s.id)!.name })),
+      (s) => s.name,
+    );
+
+    // Construir mapa instructorId → info
+    const instructorMap = new Map<
+      number,
+      { name: string; licenseNumber: string; branchName: string | null }
+    >();
+    const rawInstructors = (instructorsRes.data ?? []) as unknown as RawInstructor[];
+    for (const i of rawInstructors) {
+      const user = Array.isArray(i.users) ? i.users[0] : i.users;
+      if (user) {
+        const branch = Array.isArray(user.branches) ? user.branches[0] : user.branches;
+        instructorMap.set(i.id, {
+          // Orden actual del instructor (nombre primero) + apellido materno agregado al final.
+          name: [user.first_names, user.paternal_last_name, user.maternal_last_name]
+            .map((p) => p?.trim() ?? '')
+            .filter(Boolean)
+            .join(' '),
+          licenseNumber: i.license_number ?? '',
+          branchName: branch?.name ?? null,
+        });
+      }
+    }
+
+    // Contar documentos por instructor — filtrar por sede si aplica
+    const allInstructorDocsRaw = (instructorDocsRes.data ?? []) as unknown as RawInstructorDoc[];
+    const allInstructorDocs =
+      branchId !== null
+        ? allInstructorDocsRaw.filter((d) => instructorMap.has(d.instructor_id))
+        : allInstructorDocsRaw;
+    const instructorDocCount = new Map<number, number>();
+    for (const d of allInstructorDocs) {
+      instructorDocCount.set(d.instructor_id, (instructorDocCount.get(d.instructor_id) ?? 0) + 1);
+    }
+
+    // instructorsWithDocs lista TODOS los instructores del scope (con docCount 0 incluido),
+    // a diferencia de studentsWithDocs — necesario para poder subir el primer documento.
+    const instructorsWithDocs: InstructorWithDocsRow[] = [];
+    for (const [instructorId, info] of instructorMap) {
+      instructorsWithDocs.push({
+        instructorId,
+        name: info.name,
+        licenseNumber: info.licenseNumber,
+        branchName: info.branchName,
+        docCount: instructorDocCount.get(instructorId) ?? 0,
+      });
+    }
+    instructorsWithDocs.sort((a, b) => a.name.localeCompare(b.name));
+
+    // Procesar school docs
+    const rawSchoolDocs = (schoolDocsRes.data ?? []) as unknown as RawSchoolDoc[];
+    const schoolDocs: SchoolDocRow[] = rawSchoolDocs.map((d) => {
+      const userRaw = Array.isArray(d.users) ? d.users[0] : d.users;
+      const uploaderName = userRaw
+        ? `${userRaw.first_names} ${userRaw.paternal_last_name}`.trim()
+        : 'Sistema';
+      return {
+        id: d.id,
+        type: d.type,
+        fileName: d.file_name,
+        storageUrl: d.storage_url,
+        description: d.description,
+        branchId: d.branch_id ?? 0,
+        createdAt: d.created_at,
+        uploaderName,
+        typeLabel: LABELS_TIPO_ESCUELA[d.type] ?? d.type,
+      };
+    });
+
+    // Respuesta fuera de orden: ya se disparó una fetch más reciente, descartar (spec 0005-m).
+    if (!this.dmsGuard.isCurrent(requestToken)) return;
+
+    this._recentDocs.set(recentDocs);
+    this._studentsWithDocs.set(studentsWithDocs);
+    this._uploadableStudents.set(uploadableStudents);
+    this._instructorsWithDocs.set(instructorsWithDocs);
+    this._schoolDocs.set(schoolDocs);
   }
 
   private mapVDocToStudentDocRow(

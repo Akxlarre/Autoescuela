@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { SecretariaDashboardComponent } from './secretaria-dashboard.component';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
@@ -74,9 +74,12 @@ describe('SecretariaDashboardComponent', () => {
           useValue: {
             initialize: vi.fn(),
             refreshSilently: vi.fn(),
+            reintentar: vi.fn(),
             activeAlerts: signal(Array.from({ length: 5 }, (_, i) => buildAlert(i + 1))),
             alertCount: signal(5),
+            isLoading: signal(false),
             loadProblem: signal<string | null>(null),
+            refreshFailed: signal(false),
             dismissAlert: vi.fn(),
           },
         },
@@ -338,6 +341,133 @@ describe('SecretariaDashboardComponent', () => {
       dashboard().liveUpdates.set(5);
       fixture.detectChanges();
       expect(alertas().refreshSilently).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // ─── spec 0060-b T3.3: Caso A, Caso B y skeleton de alertas ──────────────────
+  describe('alertas: Caso A y Caso B (spec 0060-b T3.3)', () => {
+    const alertas = () => TestBed.inject(DashboardAlertsFacade) as any;
+
+    function mountDom() {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [SecretariaDashboardComponent],
+        providers: [
+          {
+            provide: DashboardFacade,
+            useValue: {
+              loading: signal(false),
+              data: signal({
+                hero: undefined,
+                kpis: [],
+                activities: [],
+                quickActions: [],
+                liveClasses: [],
+              }),
+              error: signal<string | null>(null),
+              initialize: vi.fn(),
+              destroyRealtime: vi.fn(),
+              liveUpdates: signal(0),
+            },
+          },
+          {
+            provide: DashboardAlertsFacade,
+            useValue: alertasMock,
+          },
+          { provide: AuthFacade, useValue: { currentUser: signal(null) } },
+          { provide: BranchFacade, useValue: { selectedBranchId: branchSig } },
+          { provide: LayoutDrawerFacadeService, useValue: layoutDrawerSpy },
+          { provide: LayoutService, useValue: { tier: tierSig } },
+          { provide: GsapAnimationsService, useValue: { animateBentoGrid: vi.fn() } },
+          { provide: AgendaFacade, useValue: { setSelectedSlot: vi.fn() } },
+          { provide: AsistenciaClaseBFacade, useValue: { selectPractica: vi.fn() } },
+          { provide: PagosFacade, useValue: pagosFacadeSpy },
+          { provide: CuadraturaFacade, useValue: cuadraturaFacadeSpy },
+        ],
+      }).overrideComponent(SecretariaDashboardComponent, {
+        set: { imports: [], schemas: [NO_ERRORS_SCHEMA] },
+      });
+      const domFixture = TestBed.createComponent(SecretariaDashboardComponent);
+      domFixture.detectChanges();
+      return domFixture;
+    }
+
+    let alertasMock: any;
+
+    beforeEach(() => {
+      alertasMock = {
+        initialize: vi.fn(),
+        refreshSilently: vi.fn(),
+        reintentar: vi.fn(),
+        activeAlerts: signal<any[]>([]),
+        alertCount: signal(0),
+        isLoading: signal(false),
+        loadProblem: signal<string | null>(null),
+        refreshFailed: signal(false),
+        dismissAlert: vi.fn(),
+      };
+    });
+
+    it('retryAlerts() delega en dashboardAlertsFacade.reintentar()', () => {
+      component.retryAlerts();
+      expect(alertas().reintentar).toHaveBeenCalledTimes(1);
+    });
+
+    it('Caso A en DOM: con loadProblem sin alertas no muestra "Todo en orden"', () => {
+      alertasMock.loadProblem.set('No se pudieron revisar las alertas.');
+      const dom = mountDom();
+      const text = dom.nativeElement.textContent as string;
+      const emptyStates = Array.from(
+        dom.nativeElement.querySelectorAll('app-empty-state'),
+      ) as any[];
+      const alertsEmptyEl = emptyStates.find(
+        (el) => el.message === 'No se pudieron revisar las alertas.',
+      );
+
+      expect(alertsEmptyEl).toBeDefined();
+      expect(alertsEmptyEl.getAttribute('actionLabel')).toBe('Reintentar');
+      expect(text).not.toContain('Todo en orden');
+
+      alertsEmptyEl.dispatchEvent(new CustomEvent('action'));
+      expect(alertasMock.reintentar).toHaveBeenCalledTimes(1);
+    });
+
+    it('mientras alertsLoading está activo sin alertas no muestra "Todo en orden"', () => {
+      alertasMock.isLoading.set(true);
+      const dom = mountDom();
+      const text = dom.nativeElement.textContent as string;
+      expect(text).not.toContain('Todo en orden');
+    });
+
+    it('Caso B en DOM: con refreshFailed y alertas visibles muestra app-alert-card con Reintentar', () => {
+      alertasMock.activeAlerts.set([buildAlert(1)]);
+      alertasMock.alertCount.set(1);
+      alertasMock.refreshFailed.set(true);
+      const dom = mountDom();
+      const text = dom.nativeElement.textContent as string;
+      const alertCard = dom.nativeElement.querySelector('app-alert-card');
+      const retryBtn = dom.nativeElement.querySelector(
+        '[data-llm-action="reintentar-alertas-secretaria"]',
+      ) as HTMLButtonElement | null;
+
+      expect(text).toContain('Alerta 1');
+      expect(alertCard).not.toBeNull();
+      expect(retryBtn).not.toBeNull();
+      retryBtn?.click();
+      expect(alertasMock.reintentar).toHaveBeenCalledTimes(1);
+    });
+
+    it('fix-405-m en DOM: con revisiones incompletas y alertas activas muestra las alertas y loadProblem()', () => {
+      alertasMock.activeAlerts.set([buildAlert(1)]);
+      alertasMock.alertCount.set(1);
+      alertasMock.refreshFailed.set(false);
+      alertasMock.loadProblem.set('No se pudieron revisar todas las alertas.');
+      const dom = mountDom();
+      const text = dom.nativeElement.textContent as string;
+
+      expect(text).toContain('Alerta 1');
+      expect(text).toContain('No se pudieron revisar todas las alertas.');
+      expect(text).not.toContain('Todo en orden');
     });
   });
 });
