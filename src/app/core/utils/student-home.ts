@@ -31,6 +31,32 @@ export function computeSemaphore(consecutiveAbsences: number): AttendanceSemapho
   return 'green';
 }
 
+export interface ProfessionalAttendanceFlagRow {
+  attendance_flag: AttendanceSemaphore | string | null;
+  pct_theory: number | null;
+}
+
+/**
+ * Semáforo de asistencia para matrícula Profesional desde `v_professional_attendance`.
+ *
+ * Si no hay fila o `pct_theory` es null (todavía no hay asistencia registrada y el CASE
+ * de la vista cae en `'red'`), devuelve `'green'` (neutral). Con asistencia registrada
+ * devuelve `attendance_flag` tal cual.
+ */
+export function semaphoreFromProfessionalFlag(
+  row: ProfessionalAttendanceFlagRow | null | undefined,
+): AttendanceSemaphore {
+  if (!row || row.pct_theory === null || row.pct_theory === undefined) return 'green';
+  if (
+    row.attendance_flag === 'green' ||
+    row.attendance_flag === 'yellow' ||
+    row.attendance_flag === 'red'
+  ) {
+    return row.attendance_flag;
+  }
+  return 'green';
+}
+
 /** Promedio de módulos profesionales con nota confirmada. null si ninguno tiene nota. */
 export function computeAverageGrade(modules: StudentHomeGrades['modules']): number | null {
   const graded = modules.filter((m) => m.grade !== null && m.status === 'confirmed');

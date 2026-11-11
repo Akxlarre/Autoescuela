@@ -253,6 +253,7 @@ describe('InstructorClasesFacade', () => {
 
         expect(facade.selectedClass()?.sessionId).toBe(77);
         expect(facade.selectedClass()?.studentName).toBe('Luis Rojas');
+        expect(facade.detailLoading()).toBe(false);
         expect(facade.isLoading()).toBe(false);
       });
 
@@ -297,15 +298,16 @@ describe('InstructorClasesFacade', () => {
         expect(facade.selectedClass()).toBeNull();
       });
 
-      it('setea error() si Supabase falla', async () => {
+      it('setea detailError() si Supabase falla sin pisar error() de la lista', async () => {
         supabaseMock.client.from = vi
           .fn()
           .mockReturnValue(makeThenableChain({ data: null, error: { message: 'db down' } }));
 
         await facade.loadClassDetail(1);
 
-        expect(facade.error()).toBeTruthy();
-        expect(facade.isLoading()).toBe(false);
+        expect(facade.detailError()).toBeTruthy();
+        expect(facade.detailLoading()).toBe(false);
+        expect(facade.error()).toBeNull();
       });
 
       it('mapea evaluation_checklist y los booleanos de firma (student_signature/instructor_signature) cuando la clase ya fue evaluada', async () => {
@@ -690,6 +692,398 @@ describe('InstructorClasesFacade', () => {
         await facade.fetchUpcomingDays();
 
         expect(supabaseMock.client.from).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Manejo explícito de errores de lectura (0060-b / DoD-F)', () => {
+      it('Caso A: primera carga con error deja todayClasses vacío y error visible', async () => {
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValue(makeThenableChain({ data: null, error: { message: 'db error' } }));
+
+        await facade.initialize();
+
+        expect(facade.todayClasses()).toEqual([]);
+        expect(facade.upcomingDays()).toEqual([]);
+        expect(facade.error()).toBe('No se pudieron cargar las clases del día.');
+        expect(facade.isLoading()).toBe(false);
+        expect((facade as any)._initialized).toBe(false);
+      });
+
+      it('Caso A: si fetchUpcomingDays falla en initialize, toda la carga falla', async () => {
+        let callCount = 0;
+        supabaseMock.client.from = vi.fn().mockImplementation(() => {
+          callCount++;
+          // Primera llamada (todayClasses) ok, segunda (upcomingDays) error
+          if (callCount === 1) {
+            return makeThenableChain({ data: [], error: null });
+          }
+          return makeThenableChain({ data: null, error: { message: 'upcoming error' } });
+        });
+
+        await facade.initialize();
+
+        expect(facade.todayClasses()).toEqual([]);
+        expect(facade.error()).toBe('No se pudieron cargar las clases del día.');
+      });
+
+      it('Caso B: refresco con error mantiene clases visibles y activa refreshFailed', async () => {
+        // 1. Carga inicial exitosa
+        supabaseMock.client.from = vi.fn().mockReturnValue(
+          makeThenableChain({
+            data: [
+              {
+                id: 1,
+                scheduled_at: '2026-07-29T09:00:00Z',
+                duration_min: 45,
+                status: 'scheduled',
+                class_number: 1,
+                enrollments: {
+                  id: 10,
+                  students: { users: { first_names: 'Pedro', paternal_last_name: 'Gómez' } },
+                },
+              },
+            ],
+            error: null,
+          }),
+        );
+
+        await facade.initialize();
+        expect(facade.todayClasses().length).toBe(1);
+        expect(facade.error()).toBeNull();
+        expect(facade.refreshFailed()).toBe(false);
+
+        // 2. Refresco con error
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValue(
+            makeThenableChain({ data: null, error: { message: 'temporary network failure' } }),
+          );
+
+        await facade.refreshSilently();
+
+        // Clases visibles no se borran (Caso B)
+        expect(facade.todayClasses().length).toBe(1);
+        expect(facade.refreshFailed()).toBe(true);
+        expect(facade.error()).toBeNull();
+      });
+
+      it('reintentar limpia el error y recarga', async () => {
+        // 1. Falla inicial
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValue(makeThenableChain({ data: null, error: { message: 'conn error' } }));
+
+        await facade.initialize();
+        expect(facade.error()).toBe('No se pudieron cargar las clases del día.');
+
+        // 2. Reintento exitoso
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValue(makeThenableChain({ data: [], error: null }));
+
+        await facade.reintentar();
+        expect(facade.error()).toBeNull();
+        expect(facade.refreshFailed()).toBe(false);
+      });
+
+      it('Reintentar en caso B: con refreshFailed y datos visibles, un reintento que falla deja los datos intactos, isLoading nunca pasa a true y no aparece error() de caso A', async () => {
+        supabaseMock.client.from = vi.fn().mockReturnValue(
+          makeThenableChain({
+            data: [
+              {
+                id: 1,
+                scheduled_at: '2026-07-29T09:00:00Z',
+                duration_min: 45,
+                status: 'scheduled',
+                class_number: 1,
+                enrollments: {
+                  id: 10,
+                  students: { users: { first_names: 'Pedro', paternal_last_name: 'Gómez' } },
+                },
+              },
+            ],
+            error: null,
+          }),
+        );
+
+        await facade.initialize();
+        expect(facade.todayClasses().length).toBe(1);
+
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValue(
+            makeThenableChain({ data: null, error: { message: 'temporary network failure' } }),
+          );
+        await facade.refreshSilently();
+        expect(facade.refreshFailed()).toBe(true);
+
+        const observedLoading: boolean[] = [];
+        supabaseMock.client.from = vi.fn().mockImplementation(() => {
+          observedLoading.push(facade.isLoading());
+          return makeThenableChain({ data: null, error: { message: 'retry failed' } });
+        });
+
+        await facade.reintentar();
+
+        expect(observedLoading.length).toBeGreaterThan(0);
+        expect(observedLoading.every((v) => v === false)).toBe(true);
+        expect(facade.isLoading()).toBe(false);
+        expect(facade.todayClasses().length).toBe(1);
+        expect(facade.todayClasses()[0].studentName).toContain('Pedro');
+        expect(facade.refreshFailed()).toBe(true);
+        expect(facade.error()).toBeNull();
+      });
+
+      it('Reintentar en caso B: un reintento que funciona actualiza los datos y limpia refreshFailed', async () => {
+        supabaseMock.client.from = vi.fn().mockReturnValue(
+          makeThenableChain({
+            data: [
+              {
+                id: 1,
+                scheduled_at: '2026-07-29T09:00:00Z',
+                duration_min: 45,
+                status: 'scheduled',
+                class_number: 1,
+                enrollments: {
+                  id: 10,
+                  students: { users: { first_names: 'Pedro', paternal_last_name: 'Gómez' } },
+                },
+              },
+            ],
+            error: null,
+          }),
+        );
+
+        await facade.initialize();
+
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValue(
+            makeThenableChain({ data: null, error: { message: 'temporary network failure' } }),
+          );
+        await facade.refreshSilently();
+        expect(facade.refreshFailed()).toBe(true);
+
+        const observedLoading: boolean[] = [];
+        supabaseMock.client.from = vi.fn().mockImplementation(() => {
+          observedLoading.push(facade.isLoading());
+          return makeThenableChain({
+            data: [
+              {
+                id: 1,
+                scheduled_at: '2026-07-29T09:00:00Z',
+                duration_min: 45,
+                status: 'scheduled',
+                class_number: 1,
+                enrollments: {
+                  id: 10,
+                  students: { users: { first_names: 'Pedro', paternal_last_name: 'Gómez' } },
+                },
+              },
+              {
+                id: 2,
+                scheduled_at: '2026-07-29T11:00:00Z',
+                duration_min: 45,
+                status: 'scheduled',
+                class_number: 2,
+                enrollments: {
+                  id: 11,
+                  students: { users: { first_names: 'Carla', paternal_last_name: 'Díaz' } },
+                },
+              },
+            ],
+            error: null,
+          });
+        });
+
+        await facade.reintentar();
+
+        expect(observedLoading.length).toBeGreaterThan(0);
+        expect(observedLoading.every((v) => v === false)).toBe(true);
+        expect(facade.isLoading()).toBe(false);
+        expect(facade.todayClasses().length).toBe(2);
+        expect(facade.refreshFailed()).toBe(false);
+        expect(facade.error()).toBeNull();
+      });
+
+      it('loadClassDetail: limpia selectedClass al empezar y expone detailError ante fallo sin ensuciar la lista', async () => {
+        (facade as any)._selectedClass.set({ sessionId: 99, studentName: 'Previo' } as any);
+        expect(facade.selectedClass()).not.toBeNull();
+
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValue(makeThenableChain({ data: null, error: { message: 'query failed' } }));
+
+        await facade.loadClassDetail(5);
+
+        expect(facade.selectedClass()).toBeNull();
+        expect(facade.detailError()).toBe('No se pudo cargar el detalle de la clase.');
+        expect(facade.error()).toBeNull();
+      });
+
+      it('loadClassDetail: request guard descarta respuesta vieja', async () => {
+        let resolveFirst: any;
+        const firstPromise = new Promise((resolve) => {
+          resolveFirst = resolve;
+        });
+
+        const firstChain = {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockImplementation(() => firstPromise),
+        };
+
+        const secondChain = makeThenableChain({
+          data: {
+            id: 2,
+            status: 'scheduled',
+            class_number: 2,
+            scheduled_at: '2026-07-29T10:00:00Z',
+            duration_min: 45,
+            enrollments: {
+              id: 20,
+              students: { users: { first_names: 'Segundo', paternal_last_name: 'Alumno' } },
+            },
+          },
+          error: null,
+        });
+
+        let callCount = 0;
+        supabaseMock.client.from = vi.fn().mockImplementation(() => {
+          callCount++;
+          return callCount === 1 ? firstChain : secondChain;
+        });
+
+        const p1 = facade.loadClassDetail(1);
+        const p2 = facade.loadClassDetail(2);
+
+        await p2;
+        expect(facade.selectedClass()?.sessionId).toBe(2);
+
+        // Resuelve primera con error
+        resolveFirst({ data: null, error: { message: 'stale error' } });
+        await p1;
+
+        // No pisa la segunda
+        expect(facade.selectedClass()?.sessionId).toBe(2);
+        expect(facade.detailError()).toBeNull();
+      });
+
+      it('Lección 5: un refresco que pide token nuevo no deja isLoading pegado en true', async () => {
+        let resolveFirst: any;
+        const firstPromise = new Promise((resolve) => {
+          resolveFirst = resolve;
+        });
+
+        let first = true;
+        supabaseMock.client.from = vi.fn().mockImplementation(() => {
+          if (first) {
+            first = false;
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              gte: vi.fn().mockReturnThis(),
+              lt: vi.fn().mockReturnThis(),
+              order: vi.fn().mockImplementation(() => firstPromise),
+            };
+          }
+          return makeThenableChain({ data: [], error: null });
+        });
+
+        const pInit = facade.initialize();
+        const pRefresh = facade.refreshSilently();
+        resolveFirst({ data: [], error: null });
+
+        await Promise.all([pInit, pRefresh]);
+
+        expect(facade.isLoading()).toBe(false);
+      });
+
+      it('finishClass: fallo de lectura inicial de sesión lanza error', async () => {
+        supabaseMock.client.from = vi
+          .fn()
+          .mockReturnValue(
+            makeThenableChain({ data: null, error: { message: 'read session failed' } }),
+          );
+
+        await expect(facade.finishClass(5, 12000)).rejects.toBeTruthy();
+      });
+
+      it('finishClass: fallo en refreshSilently posterior NO hace fallar la mutación (Caso B)', async () => {
+        let updateCalled = false;
+        supabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+          if (table === 'class_b_sessions') {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockImplementation((col: string) => {
+                if (col === 'id') {
+                  return {
+                    maybeSingle: vi.fn().mockResolvedValue({
+                      data: { enrollment_id: 10, enrollments: { student_id: 5 } },
+                      error: null,
+                    }),
+                    select: vi.fn().mockReturnThis(),
+                    gte: vi.fn().mockReturnThis(),
+                    lt: vi.fn().mockReturnThis(),
+                    order: vi
+                      .fn()
+                      .mockResolvedValue({ data: null, error: { message: 'refresh error' } }),
+                  };
+                }
+                return createChainMock();
+              }),
+              update: vi.fn().mockImplementation(() => {
+                updateCalled = true;
+                return {
+                  eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+                };
+              }),
+            };
+          }
+          if (table === 'class_b_practice_attendance') {
+            return {
+              upsert: vi.fn().mockResolvedValue({ data: null, error: null }),
+            };
+          }
+          return createChainMock();
+        });
+
+        // La finalización debe tener éxito aunque el refresco falle
+        await expect(facade.finishClass(5, 12000)).resolves.toBeUndefined();
+        expect(updateCalled).toBe(true);
+        expect(facade.refreshFailed()).toBe(true);
+      });
+
+      it('saveEvaluation y startClass: fallo en refreshSilently posterior NO hace fallar la mutación (Caso B)', async () => {
+        supabaseMock.client.from = vi.fn().mockImplementation(() => ({
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockReturnThis(),
+          lt: vi.fn().mockReturnThis(),
+          in: vi.fn().mockResolvedValue({ data: null, error: { message: 'refresh error' } }),
+          order: vi.fn().mockResolvedValue({ data: null, error: { message: 'refresh error' } }),
+        }));
+
+        await expect(facade.startClass(5, 12000)).resolves.toBeUndefined();
+        expect(facade.refreshFailed()).toBe(true);
+
+        await expect(
+          facade.saveEvaluation({
+            sessionId: 5,
+            grade: 6,
+            checklist: [],
+            observations: 'Ok',
+            kmEnd: 12050,
+            studentSignature: null,
+            instructorSignature: null,
+          } as any),
+        ).resolves.toBeUndefined();
+        expect(facade.evaluationSavedTick()).toBe(1);
+        expect(facade.refreshFailed()).toBe(true);
       });
     });
   });

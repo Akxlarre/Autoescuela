@@ -1194,6 +1194,74 @@ describe('InstructoresFacade', () => {
       expect(facade.instructores().length).toBe(1);
     });
 
+    it('Reintentar en caso B: con refreshFailed y datos visibles, un reintento que falla deja los datos intactos, isLoading nunca pasa a true y no aparece error() de caso A', async () => {
+      supabaseSpy.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'instructors')
+          return queryMock(Promise.resolve({ data: [row(1)], error: null }));
+        return queryMock(Promise.resolve({ data: [], error: null }));
+      });
+      await facade.initialize();
+      expect(facade.instructores().length).toBe(1);
+
+      supabaseSpy.client.from = vi
+        .fn()
+        .mockImplementation(() =>
+          queryMock(Promise.resolve({ data: null, error: { message: 'timeout' } })),
+        );
+      await (facade as any).refreshSilently();
+      expect(facade.refreshFailed()).toBe(true);
+
+      const observedLoading: boolean[] = [];
+      supabaseSpy.client.from = vi.fn().mockImplementation(() => {
+        observedLoading.push(facade.isLoading());
+        return queryMock(Promise.resolve({ data: null, error: { message: 'retry timeout' } }));
+      });
+
+      await facade.reintentar();
+
+      expect(observedLoading.length).toBeGreaterThan(0);
+      expect(observedLoading.every((v) => v === false)).toBe(true);
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.instructores().length).toBe(1);
+      expect(facade.instructores()[0].id).toBe(1);
+      expect(facade.refreshFailed()).toBe(true);
+      expect(facade.error()).toBeNull();
+    });
+
+    it('Reintentar en caso B: un reintento que funciona actualiza los datos y limpia refreshFailed', async () => {
+      supabaseSpy.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'instructors')
+          return queryMock(Promise.resolve({ data: [row(1)], error: null }));
+        return queryMock(Promise.resolve({ data: [], error: null }));
+      });
+      await facade.initialize();
+
+      supabaseSpy.client.from = vi
+        .fn()
+        .mockImplementation(() =>
+          queryMock(Promise.resolve({ data: null, error: { message: 'timeout' } })),
+        );
+      await (facade as any).refreshSilently();
+      expect(facade.refreshFailed()).toBe(true);
+
+      const observedLoading: boolean[] = [];
+      supabaseSpy.client.from = vi.fn().mockImplementation((table: string) => {
+        observedLoading.push(facade.isLoading());
+        if (table === 'instructors')
+          return queryMock(Promise.resolve({ data: [row(1), row(2)], error: null }));
+        return queryMock(Promise.resolve({ data: [], error: null }));
+      });
+
+      await facade.reintentar();
+
+      expect(observedLoading.length).toBeGreaterThan(0);
+      expect(observedLoading.every((v) => v === false)).toBe(true);
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.instructores().length).toBe(2);
+      expect(facade.refreshFailed()).toBe(false);
+      expect(facade.error()).toBeNull();
+    });
+
     it('falla una consulta combinada (both_branches): la carga completa falla (AC7)', async () => {
       branchFacadeSpy.selectedBranchId.mockReturnValue(1);
       let callCount = 0;

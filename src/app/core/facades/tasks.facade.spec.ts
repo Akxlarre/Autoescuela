@@ -850,5 +850,62 @@ describe('TasksFacade', () => {
       expect(facade.refreshFailed()).toBe(false);
       expect(facade.tasks().length).toBe(1);
     });
+
+    it('Reintentar en caso B: con refreshFailed y datos visibles, un reintento que falla deja los datos intactos, isLoading nunca pasa a true y no aparece error() de caso A', async () => {
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([makeRawDbTask()]));
+      await facade.initialize();
+      expect(facade.tasks().length).toBe(1);
+
+      mockSupabase.client.from.mockReturnValue(
+        createMockQueryBuilder(null, { message: 'timeout' }),
+      );
+      await (facade as any).refreshSilently();
+      expect(facade.refreshFailed()).toBe(true);
+
+      const observedLoading: boolean[] = [];
+      mockSupabase.client.from.mockImplementation(() => {
+        observedLoading.push(facade.isLoading());
+        return createMockQueryBuilder(null, { message: 'retry timeout' });
+      });
+
+      await facade.reintentar();
+
+      expect(observedLoading.length).toBeGreaterThan(0);
+      expect(observedLoading.every((v) => v === false)).toBe(true);
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.tasks().length).toBe(1);
+      expect(facade.tasks()[0].id).toBe('uuid-1');
+      expect(facade.refreshFailed()).toBe(true);
+      expect(facade.error()).toBeNull();
+    });
+
+    it('Reintentar en caso B: un reintento que funciona actualiza los datos y limpia refreshFailed', async () => {
+      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder([makeRawDbTask()]));
+      await facade.initialize();
+
+      mockSupabase.client.from.mockReturnValue(
+        createMockQueryBuilder(null, { message: 'timeout' }),
+      );
+      await (facade as any).refreshSilently();
+      expect(facade.refreshFailed()).toBe(true);
+
+      const observedLoading: boolean[] = [];
+      mockSupabase.client.from.mockImplementation(() => {
+        observedLoading.push(facade.isLoading());
+        return createMockQueryBuilder([
+          makeRawDbTask({ id: 'uuid-1' }),
+          makeRawDbTask({ id: 'uuid-2', subject: 'Nueva tarea' }),
+        ]);
+      });
+
+      await facade.reintentar();
+
+      expect(observedLoading.length).toBeGreaterThan(0);
+      expect(observedLoading.every((v) => v === false)).toBe(true);
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.tasks().length).toBe(2);
+      expect(facade.refreshFailed()).toBe(false);
+      expect(facade.error()).toBeNull();
+    });
   });
 });
