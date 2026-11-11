@@ -1,5 +1,7 @@
-import { signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { CurrencyPipe } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { ExAlumnosProfesionalContentComponent } from './ex-alumnos-profesional-content.component';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
 
@@ -64,5 +66,44 @@ describe('ExAlumnosProfesionalContentComponent', () => {
     (component as any).refreshRequested.subscribe(() => count++);
     (component as any).refreshRequested.emit();
     expect(count).toBe(1);
+  });
+});
+
+describe('ExAlumnosProfesionalContentComponent — layout Caso B en fill-screen (spec 0060-b T3.6)', () => {
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('el aviso de Caso B vive dentro de .bento-fill y no como hijo directo de .bento-grid', () => {
+    TestBed.configureTestingModule({
+      imports: [ExAlumnosProfesionalContentComponent],
+      providers: [
+        {
+          provide: GsapAnimationsService,
+          useValue: { animateBentoGrid: vi.fn(), animateHero: vi.fn(), addCardHover: vi.fn() },
+        },
+      ],
+    }).overrideComponent(ExAlumnosProfesionalContentComponent, {
+      set: {
+        imports: [CurrencyPipe],
+        schemas: [NO_ERRORS_SCHEMA],
+      },
+    });
+
+    const fixture = TestBed.createComponent(ExAlumnosProfesionalContentComponent);
+    const component = fixture.componentInstance;
+    Object.defineProperty(component, 'egresados', { value: signal([makeEgresado()]) });
+    Object.defineProperty(component, 'backRoute', {
+      value: signal('/app/admin/clase-profesional/alumnos'),
+    });
+    Object.defineProperty(component, 'basePath', { value: signal('/app/admin') });
+    Object.defineProperty(component, 'refreshFailed', { value: signal(true) });
+    fixture.detectChanges();
+
+    const alertCard = fixture.nativeElement.querySelector('app-alert-card') as HTMLElement | null;
+    expect(alertCard).not.toBeNull();
+    expect(alertCard?.closest('.bento-fill')).not.toBeNull();
+    expect(alertCard?.parentElement?.classList.contains('bento-grid')).toBe(false);
+    expect(fixture.nativeElement.querySelector('.bento-grid > [role="alert"]')).toBeNull();
   });
 });

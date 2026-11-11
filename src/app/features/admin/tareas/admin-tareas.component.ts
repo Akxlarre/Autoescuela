@@ -82,29 +82,6 @@ type Canal = 'tareas' | 'comunicados';
         (activeIdChange)="onCanalChange($event)"
       />
 
-      <!-- Caso B: Aviso de refresco fallido -->
-      @if (canal() === 'tareas' && facade.refreshFailed()) {
-        <div class="bento-banner" role="alert">
-          <app-alert-card severity="error" title="No se pudieron actualizar las tareas">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <span class="text-compact text-text-secondary">
-                Los datos mostrados pueden no estar actualizados.
-              </span>
-              <button
-                type="button"
-                class="btn-secondary flex items-center gap-2 shrink-0"
-                data-llm-action="reintentar-tareas"
-                [disabled]="facade.isLoading()"
-                (click)="facade.reintentar()"
-              >
-                <app-icon name="refresh-cw" [size]="14" />
-                Reintentar
-              </button>
-            </div>
-          </app-alert-card>
-        </div>
-      }
-
       @if (canal() === 'tareas') {
         @if (facade.error() && facade.tasks().length === 0) {
           <div class="bento-banner card p-6 flex-1 flex items-center justify-center bento-fill">
@@ -118,21 +95,48 @@ type Canal = 'tareas' | 'comunicados';
             />
           </div>
         } @else {
-          <!-- Lista de tareas con tabs + densidad adaptativa (spec 0028/0029) -->
-          <app-task-list-content
-            class="bento-banner card p-0 overflow-hidden bento-fill"
+          <div
+            class="bento-banner card p-0 overflow-hidden bento-fill flex flex-col min-h-0"
             appCardHover
-            [tabs]="tabs()"
-            [activeTab]="activeTab()"
-            [tasks]="activeTasks()"
-            [loading]="facade.isLoading()"
-            [maxVisible]="maxVisible()"
-            emptyMessage="Sin tareas en esta sección"
-            emptySubtitle="Las tareas aparecerán aquí cuando sean creadas o asignadas."
-            emptyIcon="clipboard-list"
-            (activeTabChange)="activeTab.set($any($event))"
-            (taskClicked)="openDetail($event)"
-          />
+          >
+            <!-- Caso B: Aviso de refresco fallido -->
+            @if (facade.refreshFailed()) {
+              <div class="p-4 pb-0 shrink-0" role="alert">
+                <app-alert-card severity="error" title="No se pudieron actualizar las tareas">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <span class="text-compact text-text-secondary">
+                      Los datos mostrados pueden no estar actualizados.
+                    </span>
+                    <button
+                      type="button"
+                      class="btn-secondary flex items-center gap-2 shrink-0"
+                      data-llm-action="reintentar-tareas"
+                      [disabled]="facade.isLoading()"
+                      (click)="facade.reintentar()"
+                    >
+                      <app-icon name="refresh-cw" [size]="14" />
+                      Reintentar
+                    </button>
+                  </div>
+                </app-alert-card>
+              </div>
+            }
+
+            <!-- Lista de tareas con tabs + densidad adaptativa (spec 0028/0029) -->
+            <app-task-list-content
+              class="flex-1 min-h-0 h-auto!"
+              [tabs]="tabs()"
+              [activeTab]="activeTab()"
+              [tasks]="activeTasks()"
+              [loading]="facade.isLoading()"
+              [maxVisible]="maxVisible()"
+              emptyMessage="Sin tareas en esta sección"
+              emptySubtitle="Las tareas aparecerán aquí cuando sean creadas o asignadas."
+              emptyIcon="clipboard-list"
+              (activeTabChange)="activeTab.set($any($event))"
+              (taskClicked)="openDetail($event)"
+            />
+          </div>
         }
       } @else {
         <app-announcements-content

@@ -251,6 +251,7 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
     X01 no cubre los portales (sin cuentas E2E de esos roles).
 - [ ] **T3.6** — Validación de la etapa
   - **DoD:** igual que T1.6
+  - **Avance (2026-11-11):** Corregido el layout de Caso B en los 8 componentes con grilla `--fill-screen*` (`alumnos-list-content`, `ex-alumnos-content`, `ex-alumnos-profesional-content`, `flota-list-content`, `admin-instructores`, `admin-tareas`, `secretaria-observaciones`, `instructor-tareas`): `app-alert-card` pasa dentro de `.bento-fill` con `p-4 pb-0 shrink-0` (y contenedor `flex flex-col min-h-0` con `class="flex-1 min-h-0 h-auto!"` sobre `<app-task-list-content>` en tareas/observaciones) en lugar de competir por la fila `1fr` del grid. Documentado en `.claude/rules/swr-pattern.md` (§"En la pantalla") y espejado en `.agents/rules/swr-pattern.md`. Verificado con 8 tests nuevos (86/86 en sus specs), `test-tz.mjs` (`UTC`, `Asia/Tokyo`, `America/Santiago`), `lint:arch` (0 errores, `ARCH-30` al día), `ngc --noEmit`, `test:ci -- --maxWorkers=2` (`331 passed | 1 skipped`, `5064 passed | 5 skipped`) y Playwright X01 en `--workers=1` (`9 passed`: `/app/secretaria/{alumnos,ex-alumnos,flota,instructores,observaciones}` + 4 setups de auth).
 
 ---
 
