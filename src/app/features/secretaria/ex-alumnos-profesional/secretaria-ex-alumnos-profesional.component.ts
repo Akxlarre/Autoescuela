@@ -18,8 +18,11 @@ import { escapeHtml } from '@core/utils/html.utils';
     <app-ex-alumnos-profesional-content
       [egresados]="facade.egresadosProfesionalList()"
       [isLoading]="facade.isLoading()"
+      [error]="facade.error()"
+      [refreshFailed]="facade.refreshFailed()"
       backRoute="/app/secretaria/profesional/alumnos"
       basePath="/app/secretaria"
+      (refreshRequested)="facade.reintentar()"
       (reEnroll)="reEnroll($event)"
       [isExporting]="facade.isExporting()"
       (exportRequested)="facade.exportEgresados($event.format, $event.rows, 'professional')"

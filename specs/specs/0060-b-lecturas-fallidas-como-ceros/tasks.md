@@ -196,10 +196,17 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
 - [ ] **T3.1** — `asistencia-clase-b.facade.ts` + Asistencia
   - **AC ref:** AC3, AC5
   - **DoD:** DoD-F
-- [ ] **T3.2** — `admin-alumnos.facade.ts` y `ex-alumnos.facade.ts`
+- [x] **T3.2** — `admin-alumnos.facade.ts` y `ex-alumnos.facade.ts`
   - **AC ref:** AC3
   - **DoD:** DoD-F, más:
-    - [ ] Los KPIs del hero no dicen 0 cuando la lista muestra error
+    - [x] Los KPIs del hero no dicen 0 cuando la lista muestra error
+  - **Avance (2026-11-11):** Migrados `admin-alumnos.facade.ts`, `ex-alumnos.facade.ts` y `convalidation.utils.ts` junto con `alumnos-list-content`, `admin-alumnos`, `secretaria-alumnos`, `ex-alumnos-content`, `admin-ex-alumnos`, `secretaria-ex-alumnos`, `ex-alumnos-profesional-content`, `admin-ex-alumnos-profesional`, `secretaria-ex-alumnos-profesional` y los drawers `tasas` y `comentarios`. Hero KPIs y chips se ocultan en Caso A; Caso B preserva datos y reintenta silenciosamente. `admin-alumnos.facade.ts` fuera de PENDING en `unchecked-reads.guard.spec.ts`. Verde en `test:ci` (4994 passed / 5 skipped), `test-tz.mjs` (UTC, Asia/Tokyo, America/Santiago), `lint:arch`, `ngc --noEmit` y Playwright X01 en `/app/secretaria/alumnos` y `/app/secretaria/ex-alumnos` (drawers y `/ex-alumnos-profesional` sin X01 directo; validados en Vitest).
+  - **Cerrada (2026-11-11):** prueba manual en navegador contra la BD real como secretaria
+    (alumnos, ex-alumnos, opiniones): carga real, caso B con datos y aviso, "Reintentar" del aviso
+    sin pérdida de datos y recuperación. La prueba mostró que en prod la columna es
+    `student_surveys.comments`: el cambio a `comment` de la segunda pasada se basó en las
+    migraciones (dos crean la tabla con `CREATE TABLE IF NOT EXISTS` y columnas distintas) y dejaba
+    las opiniones en error; se volvió a `comments` y el mock del test ahora rechaza `comment`.
 - [ ] **T3.3** — `dms.facade.ts` y `dashboard-alerts.facade.ts`
   - **AC ref:** AC3, AC5
   - **DoD:** DoD-F, más:

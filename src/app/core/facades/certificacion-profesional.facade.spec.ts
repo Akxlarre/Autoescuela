@@ -397,6 +397,60 @@ describe('CertificacionProfesionalFacade', () => {
       expect(toastSpy.success).toHaveBeenCalled();
     });
 
+    it('enviarEmail mantiene toast de éxito si fetchAlumnos falla por license_validations tras enviar (Caso B)', async () => {
+      const thenableChain = (resolved: any) => {
+        const q: any = {
+          select: vi.fn(() => q),
+          eq: vi.fn(() => q),
+          in: vi.fn(() => q),
+          order: vi.fn(() => q),
+          limit: vi.fn(() => q),
+          then: (res: (v: unknown) => void, rej?: (e: unknown) => void) =>
+            Promise.resolve(resolved).then(res, rej),
+        };
+        return q;
+      };
+      (facade as any)._alumnos.set([makeAlumnoRow({ enrollmentId: 42 })]);
+      (facade as any)._selectedCursoId.set(10);
+      supabaseSpy.client.from.mockImplementation((table: string) => {
+        if (table === 'enrollments') {
+          return thenableChain({
+            data: [
+              {
+                id: 42,
+                number: '0042',
+                branch_id: 1,
+                pending_balance: 0,
+                certificate_professional_pdf_url: null,
+                students: {
+                  id: 5,
+                  users: {
+                    first_names: 'Juan',
+                    paternal_last_name: 'López',
+                    maternal_last_name: null,
+                    rut: '11.111.111-1',
+                    email: 'juan@test.com',
+                  },
+                },
+                courses: { name: 'Clase Profesional A4', license_class: 'A4' },
+                certificates: [],
+              },
+            ],
+            error: null,
+          });
+        }
+        if (table === 'license_validations') {
+          return thenableChain({ data: null, error: { message: 'license_validations failed' } });
+        }
+        return thenableChain({ data: [], error: null });
+      });
+
+      await facade.enviarEmail(42);
+
+      expect(toastSpy.success).toHaveBeenCalledWith('Email enviado correctamente');
+      expect(toastSpy.error).not.toHaveBeenCalled();
+    });
+
     it('hotfix-160-m: si la función rechaza, el toast muestra su motivo', async () => {
       supabaseSpy.client.functions.invoke.mockResolvedValueOnce({
         data: null,

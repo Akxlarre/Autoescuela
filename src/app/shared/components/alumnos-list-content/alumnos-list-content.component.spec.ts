@@ -421,4 +421,25 @@ describe('AlumnosListContentComponent — orden de la lista (spec 0020-m)', () =
       expect(component.sortColumns().map((c) => c.value)).toContain('sede');
     });
   });
+
+  describe('manejo de errores de carga en Hero y banner SWR (spec 0060-b T3.2)', () => {
+    it('cuando hay error de carga sin datos (Caso A), heroChips y alumnosKpis NO muestran 0', () => {
+      create(null, []);
+      stubInput('error', 'Error al cargar alumnos');
+
+      expect(component.showLoadError()).toBe(true);
+      expect(component.alumnosKpis()).toEqual([]);
+      expect(component.heroChips()).toEqual([]);
+    });
+
+    it('en Caso B (refreshFailed con filas visibles), alumnosKpis y heroChips siguen visibles', () => {
+      create(null, ALUMNOS);
+      stubInput('error', null);
+      stubInput('refreshFailed', true);
+
+      expect(component.showLoadError()).toBe(false);
+      expect(component.alumnosKpis()).toHaveLength(3);
+      expect(component.heroChips()[0].label).toBe('3 alumnos');
+    });
+  });
 });
