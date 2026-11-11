@@ -205,7 +205,22 @@ import { formatCLP } from '@core/utils/date.utils';
           [class.hidden]="bloqueada()"
         >
           <!-- Selector de vehículo -->
-          @if (facade.vehiclesPorSede().length > 0) {
+          @if (facade.vehiclesError(); as vehError) {
+            <app-alert-card severity="warning" title="No se pudieron cargar los vehículos">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span class="text-compact text-text-secondary">{{ vehError }}</span>
+                <button
+                  type="button"
+                  class="btn-secondary flex items-center gap-2 shrink-0"
+                  data-llm-action="reintentar-vehiculos-clase"
+                  (click)="loadVehicles(cls)"
+                >
+                  <app-icon name="refresh-cw" [size]="14" />
+                  Reintentar
+                </button>
+              </div>
+            </app-alert-card>
+          } @else if (facade.vehiclesPorSede().length > 0) {
             <div class="flex flex-col gap-2">
               <label class="text-xs font-bold text-text-secondary uppercase tracking-widest">
                 Vehículo
@@ -220,6 +235,15 @@ import { formatCLP } from '@core/utils/date.utils';
                 styleClass="w-full"
                 data-llm-description="Selector de vehículo para la clase práctica"
               />
+              @if (facade.vehicleDocsUnknown()) {
+                <p
+                  class="text-xs text-text-muted m-0"
+                  role="status"
+                  data-llm-description="Aviso de documentación de vehículos no verificada"
+                >
+                  No se pudo revisar la documentación de los vehículos.
+                </p>
+              }
             </div>
           }
           @if (classVehicleUnavailable()) {
@@ -502,16 +526,23 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
       .subscribe((v) => this.kmValue.set(v));
 
     if (cls?.branchId) {
-      this.facade.loadVehiclesByBranch(cls.branchId).then(() => {
-        // Pre-selecciona el vehículo actual de la sesión
-        // fix-224-b: solo si sigue operativo; si está en Mantenimiento o Fuera de servicio
-        // no está en la lista y hay que elegir otro.
-        if (cls.vehicleId && this.facade.vehiclesPorSede().some((v) => v.id === cls.vehicleId)) {
-          this.selectedVehicleId.set(cls.vehicleId);
-        }
-        this.vehiclesLoaded.set(true);
-      });
+      this.loadVehicles(cls);
     }
+  }
+
+  protected loadVehicles(cls: NonNullable<ReturnType<typeof this.facade.selectedPractica>>): void {
+    if (!cls.branchId) return;
+    this.vehiclesLoaded.set(false);
+    void this.facade.loadVehiclesByBranch(cls.branchId).then(() => {
+      if (this.facade.vehiclesError()) return;
+      // Pre-selecciona el vehículo actual de la sesión
+      // fix-224-b: solo si sigue operativo; si está en Mantenimiento o Fuera de servicio
+      // no está en la lista y hay que elegir otro.
+      if (cls.vehicleId && this.facade.vehiclesPorSede().some((v) => v.id === cls.vehicleId)) {
+        this.selectedVehicleId.set(cls.vehicleId);
+      }
+      this.vehiclesLoaded.set(true);
+    });
   }
 
   protected onVehicleSelectChange(id: number): void {

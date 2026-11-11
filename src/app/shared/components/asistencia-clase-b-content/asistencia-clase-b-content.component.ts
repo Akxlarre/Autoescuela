@@ -32,6 +32,7 @@ import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { CiclosTeoricosContentComponent } from '@shared/components/ciclos-teoricos-content/ciclos-teoricos-content.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import type {
   AlertaFaltaConsecutiva,
   AsistenciaClaseBKpis,
@@ -85,6 +86,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
     DateInputComponent,
     CiclosTeoricosContentComponent,
     EmptyStateComponent,
+    AlertCardComponent,
   ],
   template: `
     <!-- Modo dual (spec 0030/0031): fill-screen en AMBOS tabs (3 filas fijas:
@@ -99,6 +101,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
         density="slim"
         [animateOnInit]="false"
         [loading]="isLoading()"
+        [loadingKpiCount]="4"
         title="Control de Asistencia"
         icon="clipboard-check"
         [subtitle]="todayLabel()"
@@ -120,7 +123,9 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
             [attr.aria-selected]="activeTab() === 'practicas'"
             class="flex-1 px-5 py-3 rounded-lg font-semibold transition-colors cursor-pointer border-0 flex items-center justify-center gap-2"
             [style.background]="activeTab() === 'practicas' ? 'var(--bg-surface)' : 'transparent'"
-            [style.color]="activeTab() === 'practicas' ? 'var(--brand-strong)' : 'var(--text-muted)'"
+            [style.color]="
+              activeTab() === 'practicas' ? 'var(--brand-strong)' : 'var(--text-muted)'
+            "
             [style.boxShadow]="
               activeTab() === 'practicas'
                 ? 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12)), inset 0 0 0 1.5px var(--ds-brand)'
@@ -179,244 +184,285 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
           [class.flex-col]="!isDesktopLayout()"
           [class.flex-row]="isDesktopLayout()"
         >
-          <!-- ── Asistencia del Día (Prácticas) — PROTAGONISTA ────────────── -->
-          <section class="card p-5 flex flex-col gap-4 flex-1 min-w-0 min-h-0" appCardHover>
-            <div class="flex flex-wrap items-center justify-between gap-3 shrink-0">
-              <div class="flex items-center gap-2">
-                <app-icon
-                  name="calendar-check"
-                  [size]="18"
-                  [style.color]="'var(--color-primary)'"
+          @if (!isLoading() && error(); as loadErr) {
+            <section
+              class="card p-5 flex-1 min-w-0 min-h-0 flex items-center justify-center"
+              role="alert"
+            >
+              <div class="flex-1 flex items-center justify-center">
+                <app-empty-state
+                  icon="circle-alert"
+                  [message]="loadErr"
+                  subtitle="Revisa tu conexión e inténtalo de nuevo."
+                  actionLabel="Reintentar"
+                  actionIcon="refresh-cw"
+                  (action)="retry.emit()"
                 />
-                <h2 class="item-title">Asistencia del Día — Prácticas</h2>
               </div>
-              <div class="flex items-center gap-2">
-                <!-- Selector de fecha -->
-                <div class="flex items-center gap-1.5">
-                  <app-date-input
-                    [value]="selectedDate()"
-                    data-llm-description="Selector de fecha para clases prácticas"
-                    (valueChange)="onDateChange($event)"
-                  />
-                  @if (isFutureDate()) {
-                    <span
-                      class="text-sm font-semibold px-2 py-2 rounded-full text-warning bg-warning/12"
-                    >
-                      Solo lectura
+            </section>
+          } @else {
+            <!-- ── Asistencia del Día (Prácticas) — PROTAGONISTA ────────────── -->
+            <section class="card p-5 flex flex-col gap-4 flex-1 min-w-0 min-h-0" appCardHover>
+              @if (refreshFailed()) {
+                <app-alert-card severity="warning" title="No se pudo actualizar la asistencia">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <span class="text-compact text-text-secondary">
+                      Los datos mostrados pueden no estar actualizados.
                     </span>
-                  }
-                </div>
-                <button
-                  class="btn-primary btn-sm flex items-center"
-                  data-llm-action="refresh-attendance"
-                  (click)="refreshRequested.emit()"
-                >
-                  <app-icon name="refresh-cw" [size]="14" />
-                  Actualizar
-                </button>
-              </div>
-            </div>
-
-            <!-- Filtros -->
-            <div class="flex flex-wrap items-center gap-2 shrink-0">
-              @for (f of statusFilters; track f.value) {
-                <button
-                  class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
-                  [class.bg-brand]="activeStatusFilter() === f.value"
-                  [class.text-on-brand]="activeStatusFilter() === f.value"
-                  [class.border-brand]="activeStatusFilter() === f.value"
-                  [class.bg-transparent]="activeStatusFilter() !== f.value"
-                  [class.text-text-secondary]="activeStatusFilter() !== f.value"
-                  [class.border-border-subtle]="activeStatusFilter() !== f.value"
-                  (click)="setStatusFilter(f.value)"
-                >
-                  {{ f.label }}
-                  @if (countByStatus(f.value) > 0) {
-                    <span class="ml-1">({{ countByStatus(f.value) }})</span>
-                  }
-                </button>
+                    <button
+                      type="button"
+                      class="btn-secondary flex items-center gap-2 shrink-0"
+                      data-llm-action="reintentar-asistencia"
+                      [disabled]="isLoading()"
+                      (click)="retry.emit()"
+                    >
+                      <app-icon name="refresh-cw" [size]="14" />
+                      Reintentar
+                    </button>
+                  </div>
+                </app-alert-card>
               }
-
-              <!-- Filtro instructor -->
-              <div class="ml-auto flex items-center gap-2">
-                <app-clear-filters-button
-                  llmSubject="attendance"
-                  [active]="hasActiveFilters()"
-                  (clear)="clearFilters()"
-                />
-                <p-select
-                  [options]="instructorSelectOptions()"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="Todos los instructores"
-                  [ngModel]="selectedInstructorId()"
-                  (ngModelChange)="setInstructorFilter($event)"
-                  styleClass="w-auto"
-                  data-llm-description="filter attendance by instructor"
-                />
-              </div>
-            </div>
-
-            <!-- Tabla -->
-            @if (isLoading()) {
-              <!-- Skeleton parecido a tabla (fix-046): header + filas con celdas
-                   tipo columna, en vez de barras genéricas. -->
-              <div class="flex-1 min-h-0 overflow-hidden">
-                <div
-                  class="flex items-center gap-4 pb-2 mb-1 border-b"
-                  [style.border-color]="'var(--border-subtle)'"
-                >
-                  @for (w of skeletonColWidths; track $index) {
-                    <app-skeleton-block variant="text" [width]="w" height="10px" />
-                  }
+              <div class="flex flex-wrap items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-2">
+                  <app-icon
+                    name="calendar-check"
+                    [size]="18"
+                    [style.color]="'var(--color-primary)'"
+                  />
+                  <h2 class="item-title">Asistencia del Día — Prácticas</h2>
                 </div>
-                @for (i of skeletonIndexes(); track i) {
+                <div class="flex items-center gap-2">
+                  <!-- Selector de fecha -->
+                  <div class="flex items-center gap-1.5">
+                    <app-date-input
+                      [value]="selectedDate()"
+                      data-llm-description="Selector de fecha para clases prácticas"
+                      (valueChange)="onDateChange($event)"
+                    />
+                    @if (isFutureDate()) {
+                      <span
+                        class="text-sm font-semibold px-2 py-2 rounded-full text-warning bg-warning/12"
+                      >
+                        Solo lectura
+                      </span>
+                    }
+                  </div>
+                  <button
+                    class="btn-primary btn-sm flex items-center"
+                    data-llm-action="refresh-attendance"
+                    (click)="refreshRequested.emit()"
+                  >
+                    <app-icon name="refresh-cw" [size]="14" />
+                    Actualizar
+                  </button>
+                </div>
+              </div>
+
+              <!-- Filtros -->
+              <div class="flex flex-wrap items-center gap-2 shrink-0">
+                @for (f of statusFilters; track f.value) {
+                  <button
+                    class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
+                    [class.bg-brand]="activeStatusFilter() === f.value"
+                    [class.text-on-brand]="activeStatusFilter() === f.value"
+                    [class.border-brand]="activeStatusFilter() === f.value"
+                    [class.bg-transparent]="activeStatusFilter() !== f.value"
+                    [class.text-text-secondary]="activeStatusFilter() !== f.value"
+                    [class.border-border-subtle]="activeStatusFilter() !== f.value"
+                    (click)="setStatusFilter(f.value)"
+                  >
+                    {{ f.label }}
+                    @if (countByStatus(f.value) > 0) {
+                      <span class="ml-1">({{ countByStatus(f.value) }})</span>
+                    }
+                  </button>
+                }
+
+                <!-- Filtro instructor -->
+                <div class="ml-auto flex items-center gap-2">
+                  <app-clear-filters-button
+                    llmSubject="attendance"
+                    [active]="hasActiveFilters()"
+                    (clear)="clearFilters()"
+                  />
+                  <p-select
+                    [options]="instructorSelectOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Todos los instructores"
+                    [ngModel]="selectedInstructorId()"
+                    (ngModelChange)="setInstructorFilter($event)"
+                    styleClass="w-auto"
+                    data-llm-description="filter attendance by instructor"
+                  />
+                </div>
+              </div>
+
+              <!-- Tabla -->
+              @if (isLoading()) {
+                <!-- Skeleton parecido a tabla (fix-046): header + filas con celdas
+                   tipo columna, en vez de barras genéricas. -->
+                <div class="flex-1 min-h-0 overflow-hidden">
                   <div
-                    class="flex items-center gap-4 py-3 border-b overflow-hidden"
+                    class="flex items-center gap-4 pb-2 mb-1 border-b"
                     [style.border-color]="'var(--border-subtle)'"
                   >
-                    <app-skeleton-block variant="text" width="40px" height="12px" />
-                    <app-skeleton-block variant="text" width="28px" height="12px" />
-                    <app-skeleton-block variant="text" width="28px" height="12px" />
-                    <app-skeleton-block variant="text" width="40px" height="12px" />
-                    <app-skeleton-block variant="text" width="52px" height="12px" />
-                    <app-skeleton-block variant="text" width="60px" height="12px" />
-                    <app-skeleton-block variant="text" width="44px" height="12px" />
-                    <app-skeleton-block variant="rect" width="40px" height="22px" />
-                    <app-skeleton-block variant="rect" width="32px" height="26px" />
+                    @for (w of skeletonColWidths; track $index) {
+                      <app-skeleton-block variant="text" [width]="w" height="10px" />
+                    }
                   </div>
-                }
-              </div>
-            } @else if (filteredPracticas().length === 0) {
-              <app-empty-state
-                icon="calendar-x"
-                message="Sin resultados"
-                subtitle="No hay registros que coincidan con los filtros seleccionados."
-              />
-            } @else {
-              <!-- Único contenedor de scroll (X siempre; Y solo surte efecto en
+                  @for (i of skeletonIndexes(); track i) {
+                    <div
+                      class="flex items-center gap-4 py-3 border-b overflow-hidden"
+                      [style.border-color]="'var(--border-subtle)'"
+                    >
+                      <app-skeleton-block variant="text" width="40px" height="12px" />
+                      <app-skeleton-block variant="text" width="28px" height="12px" />
+                      <app-skeleton-block variant="text" width="28px" height="12px" />
+                      <app-skeleton-block variant="text" width="40px" height="12px" />
+                      <app-skeleton-block variant="text" width="52px" height="12px" />
+                      <app-skeleton-block variant="text" width="60px" height="12px" />
+                      <app-skeleton-block variant="text" width="44px" height="12px" />
+                      <app-skeleton-block variant="rect" width="40px" height="22px" />
+                      <app-skeleton-block variant="rect" width="32px" height="26px" />
+                    </div>
+                  }
+                </div>
+              } @else if (filteredPracticas().length === 0) {
+                <app-empty-state
+                  icon="calendar-x"
+                  message="Sin resultados"
+                  subtitle="No hay registros que coincidan con los filtros seleccionados."
+                />
+              } @else {
+                <!-- Único contenedor de scroll (X siempre; Y solo surte efecto en
                    desktop fill, donde la celda tiene alto fijo). thead sticky
                    se ancla a este scrollport. -->
-              <div class="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
-                <table class="w-full text-sm table-fixed" [style.min-width.px]="tableMinWidthPx()">
-                  <!-- Anchos fijos por columna (fix-159): sin esto, table-layout:auto
+                <div class="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
+                  <table
+                    class="w-full text-sm table-fixed"
+                    [style.min-width.px]="tableMinWidthPx()"
+                  >
+                    <!-- Anchos fijos por columna (fix-159): sin esto, table-layout:auto
                        concentra TODO el ancho sobrante en la última columna sin ancho
                        propio (Acciones), dejando un hueco en blanco entre los botones y
                        el borde de la card — más notorio cuantas menos columnas hay (ej.
                        sin Sede). Dos sets de %, según showBranchColumn(), siempre suman 100. -->
-                  <colgroup>
-                    <col [style.width.%]="columnWidths().agendada" />
-                    <col [style.width.%]="columnWidths().inicio" />
-                    <col [style.width.%]="columnWidths().fin" />
-                    @if (showBranchColumn()) {
-                      <col [style.width.%]="columnWidths().sede" />
-                    }
-                    <col [style.width.%]="columnWidths().instructor" />
-                    <col [style.width.%]="columnWidths().alumno" />
-                    <col [style.width.%]="columnWidths().vehiculo" />
-                    <col [style.width.%]="columnWidths().estado" />
-                    <col [style.width.%]="columnWidths().acciones" />
-                  </colgroup>
-                  <thead class="sticky top-0 z-10 bg-surface">
-                    <tr class="border-b" [style.border-color]="'var(--border-subtle)'">
-                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
-                        Agendada
-                      </th>
-                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
-                        Inicio
-                      </th>
-                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
-                        Fin
-                      </th>
+                    <colgroup>
+                      <col [style.width.%]="columnWidths().agendada" />
+                      <col [style.width.%]="columnWidths().inicio" />
+                      <col [style.width.%]="columnWidths().fin" />
                       @if (showBranchColumn()) {
-                        <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
-                          Sede
-                        </th>
+                        <col [style.width.%]="columnWidths().sede" />
                       }
-                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
-                        Instructor
-                      </th>
-                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
-                        Alumno
-                      </th>
-                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
-                        Vehículo
-                      </th>
-                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
-                        Estado
-                      </th>
-                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pl-4">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (row of visiblePracticas(); track row.id) {
-                      <tr
-                        class="border-b transition-colors list-item-hover"
-                        [style.border-color]="'var(--border-subtle)'"
-                      >
-                        <td class="py-3 pr-4 font-medium text-text-primary whitespace-nowrap">
-                          {{ row.horaInicio }}
-                        </td>
-                        <td class="py-3 pr-4 whitespace-nowrap">
-                          @if (row.horaInicioReal) {
-                            <span class="font-medium text-text-primary">{{
-                              row.horaInicioReal
-                            }}</span>
-                          } @else {
-                            <span class="text-text-muted">—</span>
-                          }
-                        </td>
-                        <td class="py-3 pr-4 whitespace-nowrap">
-                          @if (row.horaFinReal) {
-                            <span class="font-medium text-text-primary">{{ row.horaFinReal }}</span>
-                          } @else {
-                            <span class="text-text-muted">—</span>
-                          }
-                        </td>
+                      <col [style.width.%]="columnWidths().instructor" />
+                      <col [style.width.%]="columnWidths().alumno" />
+                      <col [style.width.%]="columnWidths().vehiculo" />
+                      <col [style.width.%]="columnWidths().estado" />
+                      <col [style.width.%]="columnWidths().acciones" />
+                    </colgroup>
+                    <thead class="sticky top-0 z-10 bg-surface">
+                      <tr class="border-b" [style.border-color]="'var(--border-subtle)'">
+                        <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
+                          Agendada
+                        </th>
+                        <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
+                          Inicio
+                        </th>
+                        <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
+                          Fin
+                        </th>
                         @if (showBranchColumn()) {
-                          <td class="py-3 pr-4 text-text-secondary text-xs">
-                            {{ row.branchName }}
-                          </td>
+                          <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
+                            Sede
+                          </th>
                         }
-                        <td class="py-3 pr-4 text-text-secondary">{{ row.instructorName }}</td>
-                        <td class="py-3 pr-4 wrap-anywhere">
-                          @if (row.alumnoName) {
-                            <span
-                              class="text-text-secondary"
-                              [class.text-brand]="row.status === 'ausente'"
-                            >
-                              {{ row.alumnoName }}
-                            </span>
-                          } @else {
-                            <span class="text-text-muted italic">Sin agendar</span>
-                          }
-                        </td>
-                        <td class="py-3 pr-4">
-                          @if (row.vehiclePlate) {
-                            <div class="flex flex-col">
-                              <span class="text-xs font-medium text-text-primary">{{
-                                row.vehiclePlate
+                        <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
+                          Instructor
+                        </th>
+                        <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
+                          Alumno
+                        </th>
+                        <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
+                          Vehículo
+                        </th>
+                        <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
+                          Estado
+                        </th>
+                        <th class="text-left text-xs font-semibold text-text-secondary pb-2 pl-4">
+                          Acciones
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (row of visiblePracticas(); track row.id) {
+                        <tr
+                          class="border-b transition-colors list-item-hover"
+                          [style.border-color]="'var(--border-subtle)'"
+                        >
+                          <td class="py-3 pr-4 font-medium text-text-primary whitespace-nowrap">
+                            {{ row.horaInicio }}
+                          </td>
+                          <td class="py-3 pr-4 whitespace-nowrap">
+                            @if (row.horaInicioReal) {
+                              <span class="font-medium text-text-primary">{{
+                                row.horaInicioReal
                               }}</span>
-                              @if (row.vehicleBrand || row.vehicleModel) {
-                                <span class="text-xs text-text-muted">
-                                  {{ row.vehicleBrand ?? '' }} {{ row.vehicleModel ?? '' }}
-                                </span>
-                              }
-                            </div>
-                          } @else {
-                            <span class="text-text-muted">—</span>
+                            } @else {
+                              <span class="text-text-muted">—</span>
+                            }
+                          </td>
+                          <td class="py-3 pr-4 whitespace-nowrap">
+                            @if (row.horaFinReal) {
+                              <span class="font-medium text-text-primary">{{
+                                row.horaFinReal
+                              }}</span>
+                            } @else {
+                              <span class="text-text-muted">—</span>
+                            }
+                          </td>
+                          @if (showBranchColumn()) {
+                            <td class="py-3 pr-4 text-text-secondary text-xs">
+                              {{ row.branchName }}
+                            </td>
                           }
-                        </td>
-                        <td class="py-3 pr-4">
-                          <app-badge [variant]="statusBadgeVariant(row)">
-                            <app-icon [name]="statusBadgeIcon(row)" [size]="11" />
-                            {{ statusBadgeLabel(row) }}
-                          </app-badge>
-                        </td>
-                        <td class="py-3 pl-4">
-                          <!-- Alineado a la izquierda (fix-221): con colgroup + table-layout:
+                          <td class="py-3 pr-4 text-text-secondary">{{ row.instructorName }}</td>
+                          <td class="py-3 pr-4 wrap-anywhere">
+                            @if (row.alumnoName) {
+                              <span
+                                class="text-text-secondary"
+                                [class.text-brand]="row.status === 'ausente'"
+                              >
+                                {{ row.alumnoName }}
+                              </span>
+                            } @else {
+                              <span class="text-text-muted italic">Sin agendar</span>
+                            }
+                          </td>
+                          <td class="py-3 pr-4">
+                            @if (row.vehiclePlate) {
+                              <div class="flex flex-col">
+                                <span class="text-xs font-medium text-text-primary">{{
+                                  row.vehiclePlate
+                                }}</span>
+                                @if (row.vehicleBrand || row.vehicleModel) {
+                                  <span class="text-xs text-text-muted">
+                                    {{ row.vehicleBrand ?? '' }} {{ row.vehicleModel ?? '' }}
+                                  </span>
+                                }
+                              </div>
+                            } @else {
+                              <span class="text-text-muted">—</span>
+                            }
+                          </td>
+                          <td class="py-3 pr-4">
+                            <app-badge [variant]="statusBadgeVariant(row)">
+                              <app-icon [name]="statusBadgeIcon(row)" [size]="11" />
+                              {{ statusBadgeLabel(row) }}
+                            </app-badge>
+                          </td>
+                          <td class="py-3 pl-4">
+                            <!-- Alineado a la izquierda (fix-221): con colgroup + table-layout:
                                fixed (fix-159) el ancho de esta columna es fijo, así que alinear
                                a la izquierda no reintroduce el hueco original de fix-159 (ese
                                aparecía por table-layout:auto sin ancho propio, no por la
@@ -424,281 +470,302 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                                vez de flotar lejos de su cabecera, para botones y para el texto
                                "Finalizada" por igual. fix-372-m: flex-wrap, con dos botones
                                (Iniciar + Ausente) bajan a una segunda línea en vez de salirse. -->
-                          <div class="flex flex-wrap items-center gap-2">
-                            @if (row.status === 'pendiente' && row.alumnoName && !isFutureDate()) {
-                              <!-- Iniciar clase -->
-                              <button
-                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-brand border-brand bg-brand/10"
-                                [disabled]="isSaving()"
-                                pTooltip="Iniciar clase"
-                                tooltipPosition="top"
-                                data-llm-action="iniciar-clase-practica"
-                                (click)="iniciarClase.emit(row)"
-                              >
-                                <app-icon name="play" [size]="12" />
-                                Iniciar
-                              </button>
-                              <!-- Marcar inasistencia (solo si ya pasó la hora) -->
-                              @if (isPastStartTime(row.scheduledAt)) {
+                            <div class="flex flex-wrap items-center gap-2">
+                              @if (
+                                row.status === 'pendiente' && row.alumnoName && !isFutureDate()
+                              ) {
+                                <!-- Iniciar clase -->
                                 <button
-                                  class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-error border-error bg-error/10"
-                                  pTooltip="Marcar inasistencia"
-                                  tooltipPosition="top"
+                                  class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-brand border-brand bg-brand/10"
                                   [disabled]="isSaving()"
-                                  data-llm-action="mark-ausente"
-                                  (click)="
-                                    markAttendance.emit({ sessionId: row.id, status: 'ausente' })
-                                  "
+                                  pTooltip="Iniciar clase"
+                                  tooltipPosition="top"
+                                  data-llm-action="iniciar-clase-practica"
+                                  (click)="iniciarClase.emit(row)"
                                 >
-                                  <app-icon name="x-circle" [size]="12" />
-                                  Ausente
+                                  <app-icon name="play" [size]="12" />
+                                  Iniciar
+                                </button>
+                                <!-- Marcar inasistencia (solo si ya pasó la hora) -->
+                                @if (isPastStartTime(row.scheduledAt)) {
+                                  <button
+                                    class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-error border-error bg-error/10"
+                                    pTooltip="Marcar inasistencia"
+                                    tooltipPosition="top"
+                                    [disabled]="isSaving()"
+                                    data-llm-action="mark-ausente"
+                                    (click)="
+                                      markAttendance.emit({ sessionId: row.id, status: 'ausente' })
+                                    "
+                                  >
+                                    <app-icon name="x-circle" [size]="12" />
+                                    Ausente
+                                  </button>
+                                }
+                              }
+                              @if (row.status === 'en_curso') {
+                                <span class="indicator-live text-xs text-text-secondary"
+                                  >En clase</span
+                                >
+                                <!-- Finalizar clase -->
+                                <button
+                                  class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-success border-success bg-success/10"
+                                  [disabled]="isSaving()"
+                                  pTooltip="Finalizar clase"
+                                  tooltipPosition="top"
+                                  data-llm-action="finalizar-clase-practica"
+                                  (click)="finalizarClase.emit(row)"
+                                >
+                                  <app-icon name="flag" [size]="12" />
+                                  Finalizar
                                 </button>
                               }
-                            }
-                            @if (row.status === 'en_curso') {
-                              <span class="indicator-live text-xs text-text-secondary"
-                                >En clase</span
-                              >
-                              <!-- Finalizar clase -->
-                              <button
-                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-success border-success bg-success/10"
-                                [disabled]="isSaving()"
-                                pTooltip="Finalizar clase"
-                                tooltipPosition="top"
-                                data-llm-action="finalizar-clase-practica"
-                                (click)="finalizarClase.emit(row)"
-                              >
-                                <app-icon name="flag" [size]="12" />
-                                Finalizar
-                              </button>
-                            }
-                            @if (row.status === 'ausente' && !row.justificacion) {
-                              <button
-                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-text-secondary border-border-default bg-subtle"
-                                [disabled]="isSaving()"
-                                data-llm-action="justify-absence"
-                                (click)="openJustifyModal(row.id)"
-                              >
-                                Justificar
-                              </button>
-                              <!-- fix-377-m: falta marcada por error -->
-                              <button
-                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-text-secondary border-border-default bg-subtle"
-                                [disabled]="isSaving()"
-                                pTooltip="Deshacer la inasistencia (marcada por error)"
-                                tooltipPosition="top"
-                                data-llm-action="deshacer-inasistencia"
-                                (click)="undoAbsence.emit(row.id)"
-                              >
-                                <app-icon name="rotate-ccw" [size]="12" />
-                                Deshacer
-                              </button>
-                            }
-                            @if (row.justificacion) {
-                              <button
-                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-text-secondary border-border-default bg-subtle"
-                                [pTooltip]="row.justificacion"
-                                tooltipPosition="top"
-                                data-llm-action="view-justification"
-                                (click)="openViewMotivo(row.justificacion)"
-                              >
-                                <app-icon name="info" [size]="12" />
-                                Ver motivo
-                              </button>
-                            }
-                            @if (row.status === 'presente') {
-                              <span class="text-xs font-medium text-success"> Finalizada </span>
-                            }
-                          </div>
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-                @if (hasMorePracticas()) {
-                  <button
-                    type="button"
-                    class="btn-ghost w-full flex items-center justify-center gap-1.5 font-medium transition-colors cursor-pointer mt-2"
-                    data-llm-action="load-more-practicas"
-                    (click)="loadMorePracticas()"
-                  >
-                    <app-icon name="chevron-down" [size]="14" />
-                    Cargar más ({{ remainingPracticas() }} restantes)
-                  </button>
-                }
-              </div>
-            }
-          </section>
+                              @if (row.status === 'ausente' && !row.justificacion) {
+                                <button
+                                  class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-text-secondary border-border-default bg-subtle"
+                                  [disabled]="isSaving()"
+                                  data-llm-action="justify-absence"
+                                  (click)="openJustifyModal(row.id)"
+                                >
+                                  Justificar
+                                </button>
+                                <!-- fix-377-m: falta marcada por error -->
+                                <button
+                                  class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-text-secondary border-border-default bg-subtle"
+                                  [disabled]="isSaving()"
+                                  pTooltip="Deshacer la inasistencia (marcada por error)"
+                                  tooltipPosition="top"
+                                  data-llm-action="deshacer-inasistencia"
+                                  (click)="undoAbsence.emit(row.id)"
+                                >
+                                  <app-icon name="rotate-ccw" [size]="12" />
+                                  Deshacer
+                                </button>
+                              }
+                              @if (row.justificacion) {
+                                <button
+                                  class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-text-secondary border-border-default bg-subtle"
+                                  [pTooltip]="row.justificacion"
+                                  tooltipPosition="top"
+                                  data-llm-action="view-justification"
+                                  (click)="openViewMotivo(row.justificacion)"
+                                >
+                                  <app-icon name="info" [size]="12" />
+                                  Ver motivo
+                                </button>
+                              }
+                              @if (row.status === 'presente') {
+                                <span class="text-xs font-medium text-success"> Finalizada </span>
+                              }
+                            </div>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                  @if (hasMorePracticas()) {
+                    <button
+                      type="button"
+                      class="btn-ghost w-full flex items-center justify-center gap-1.5 font-medium transition-colors cursor-pointer mt-2"
+                      data-llm-action="load-more-practicas"
+                      (click)="loadMorePracticas()"
+                    >
+                      <app-icon name="chevron-down" [size]="14" />
+                      Cargar más ({{ remainingPracticas() }} restantes)
+                    </button>
+                  }
+                </div>
+              }
+            </section>
 
-          <!-- Rail lateral de alertas (contexto, no bloqueo). Filas compactas
+            <!-- Rail lateral de alertas (contexto, no bloqueo). Filas compactas
                de 1 línea; el detalle completo (última falta, política) va en el
                atributo title (tooltip nativo). Va después de la tabla: a la
                derecha en desktop / debajo en móvil. En desktop el rail llena
                el alto de la fila (min-h-0) y el listado scrollea internamente;
                en móvil altura natural y la página scrollea (dual). -->
-          <!-- Skeleton del rail (fix-046): mismas clases/dimensiones que el rail
+            <!-- Skeleton del rail (fix-046): mismas clases/dimensiones que el rail
                real para que la tabla NO cambie de ancho entre carga y datos
                (antes el aside solo existía tras cargar → la tabla saltaba de
                904→568px). Sin appCardHover: es un placeholder, no interactivo. -->
-          @if (isLoading()) {
-            <aside
-              class="card p-3 flex flex-col gap-1.5 min-h-0 overflow-hidden"
-              [class.w-80]="isDesktopLayout()"
-              [class.shrink-0]="isDesktopLayout()"
-            >
-              <div class="flex items-center gap-1.5 px-1 pb-0.5 shrink-0">
-                <app-skeleton-block variant="circle" width="14px" height="14px" />
-                <app-skeleton-block variant="text" width="80px" height="12px" />
-              </div>
-              <div class="flex flex-col gap-1.5 flex-1 min-h-0 overflow-hidden">
-                @for (i of alertSkeletonIndexes; track i) {
-                  <app-skeleton-block variant="rect" width="100%" height="48px" />
-                }
-              </div>
-            </aside>
-          } @else if (alertas().length > 0) {
-            <aside
-              class="card p-3 flex flex-col gap-1.5 min-h-0 overflow-hidden"
-              [class.w-80]="isDesktopLayout()"
-              [class.shrink-0]="isDesktopLayout()"
-              appCardHover
-            >
-              <div class="flex items-center gap-1.5 px-1 pb-0.5 shrink-0">
-                <app-icon
-                  name="alert-triangle"
-                  [size]="14"
-                  [style.color]="'var(--state-warning)'"
-                />
-                <h2 class="text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                  Alertas ({{ alertas().length }})
-                </h2>
-              </div>
+            @if (isLoading()) {
+              <aside
+                class="card p-3 flex flex-col gap-1.5 min-h-0 overflow-hidden"
+                [class.w-80]="isDesktopLayout()"
+                [class.shrink-0]="isDesktopLayout()"
+              >
+                <div class="flex items-center gap-1.5 px-1 pb-0.5 shrink-0">
+                  <app-skeleton-block variant="circle" width="14px" height="14px" />
+                  <app-skeleton-block variant="text" width="80px" height="12px" />
+                </div>
+                <div class="flex flex-col gap-1.5 flex-1 min-h-0 overflow-hidden">
+                  @for (i of alertSkeletonIndexes; track i) {
+                    <app-skeleton-block variant="rect" width="100%" height="48px" />
+                  }
+                </div>
+              </aside>
+            } @else if (alertas().length > 0) {
+              <aside
+                class="card p-3 flex flex-col gap-1.5 min-h-0 overflow-hidden"
+                [class.w-80]="isDesktopLayout()"
+                [class.shrink-0]="isDesktopLayout()"
+                appCardHover
+              >
+                <div class="flex items-center gap-1.5 px-1 pb-0.5 shrink-0">
+                  <app-icon
+                    name="alert-triangle"
+                    [size]="14"
+                    [style.color]="'var(--state-warning)'"
+                  />
+                  <h2 class="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                    Alertas ({{ alertas().length }})
+                  </h2>
+                </div>
 
-              <div class="flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto">
-                @for (alerta of alertas(); track alerta.enrollmentId) {
-                  <!-- Fila de 2 líneas (fix-047): descomprime yendo a lo vertical
+                <div class="flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto">
+                  @for (alerta of alertas(); track alerta.enrollmentId) {
+                    <!-- Fila de 2 líneas (fix-047): descomprime yendo a lo vertical
                        (el rail scrollea). Línea 1 = avatar + nombre completo (sin
                        truncar); línea 2 = conteo + última falta + acción. El title
                        conserva la política como enriquecimiento en hover. -->
-                  <div
-                    class="flex flex-col gap-1 rounded-md pl-3 pr-2 py-2 border-l-[3px] transition-colors list-item-hover"
-                    [style.border-left-color]="
-                      alerta.nivel === 'danger' ? 'var(--state-error)' : 'var(--state-warning)'
-                    "
-                    [pTooltip]="alertaTooltip(alerta)"
-                    tooltipPosition="left"
-                  >
-                    <!-- Línea 1: avatar + nombre completo -->
-                    <div class="flex items-center gap-2">
-                      <div
-                        class="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-2xs font-bold text-surface"
-                        [class.bg-error]="alerta.nivel === 'danger'"
-                        [class.bg-warning]="alerta.nivel !== 'danger'"
-                      >
-                        {{ initials(alerta.alumnoName) }}
+                    <div
+                      class="flex flex-col gap-1 rounded-md pl-3 pr-2 py-2 border-l-[3px] transition-colors list-item-hover"
+                      [style.border-left-color]="
+                        alerta.nivel === 'danger' ? 'var(--state-error)' : 'var(--state-warning)'
+                      "
+                      [pTooltip]="alertaTooltip(alerta)"
+                      tooltipPosition="left"
+                    >
+                      <!-- Línea 1: avatar + nombre completo -->
+                      <div class="flex items-center gap-2">
+                        <div
+                          class="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-2xs font-bold text-surface"
+                          [class.bg-error]="alerta.nivel === 'danger'"
+                          [class.bg-warning]="alerta.nivel !== 'danger'"
+                        >
+                          {{ initials(alerta.alumnoName) }}
+                        </div>
+                        <p
+                          class="text-xs font-semibold leading-tight min-w-0 flex-1"
+                          [class.text-error]="alerta.nivel === 'danger'"
+                          [class.text-warning]="alerta.nivel !== 'danger'"
+                        >
+                          {{ alerta.alumnoName }}
+                        </p>
                       </div>
-                      <p
-                        class="text-xs font-semibold leading-tight min-w-0 flex-1"
-                        [class.text-error]="alerta.nivel === 'danger'"
-                        [class.text-warning]="alerta.nivel !== 'danger'"
-                      >
-                        {{ alerta.alumnoName }}
-                      </p>
-                    </div>
 
-                    <!-- Línea 2: detalle (conteo + última falta) + acción -->
-                    <div class="flex items-center justify-between gap-2 pl-7">
-                      <span class="text-2xs text-text-muted leading-tight">
-                        {{ alerta.faltasConsecutivas }}
-                        {{ alerta.faltasConsecutivas === 1 ? 'falta' : 'faltas' }} · últ.
-                        {{ formatIsoDateShort(alerta.ultimaFechaFalta) }}
-                      </span>
-                      <div class="shrink-0">
-                        <!-- Estado por fila (fix-093-b): solo se deshabilita y muestra
+                      <!-- Línea 2: detalle (conteo + última falta) + acción -->
+                      <div class="flex items-center justify-between gap-2 pl-7">
+                        <span class="text-2xs text-text-muted leading-tight">
+                          {{ alerta.faltasConsecutivas }}
+                          {{ alerta.faltasConsecutivas === 1 ? 'falta' : 'faltas' }} · últ.
+                          {{ formatIsoDateShort(alerta.ultimaFechaFalta) }}
+                        </span>
+                        <div class="shrink-0">
+                          <!-- Estado por fila (fix-093-b): solo se deshabilita y muestra
                              spinner el botón de LA alerta en curso. Antes el booleano
                              global isSaving() bloqueaba las de todos los alumnos y no
                              se veía cuál se estaba procesando. "Eliminar" es la acción
                              destructiva del grupo → btn-ghost, el peso visual más bajo
                              (antes btn-primary, invirtiendo la jerarquía). -->
-                        @if (alerta.nivel === 'danger') {
-                          @if (alerta.horarioActivo && alerta.parPenalizado) {
-                            <!-- fix-391-m: esas faltas ya se penalizaron y al alumno se le
+                          @if (alerta.nivel === 'danger') {
+                            @if (alerta.horarioActivo && alerta.parPenalizado) {
+                              <!-- fix-391-m: esas faltas ya se penalizaron y al alumno se le
                                  reagendaron las clases. No se ofrece Eliminar otra vez. -->
-                            <span class="text-2xs text-text-muted">Ya penalizado</span>
-                          } @else if (alerta.horarioActivo) {
-                            <button
-                              class="btn-danger-ghost btn-sm"
-                              [disabled]="isAlertaBusy(alerta.enrollmentId)"
-                              data-llm-action="remove-schedule"
-                              (click)="removeSchedule.emit(alerta.enrollmentId)"
-                            >
-                              @if (isAlertaBusy(alerta.enrollmentId)) {
-                                <app-icon name="loader-circle" [size]="12" class="animate-spin" />
-                              } @else {
-                                Eliminar
-                              }
-                            </button>
-                          } @else {
+                              <span class="text-2xs text-text-muted">Ya penalizado</span>
+                            } @else if (alerta.horarioActivo) {
+                              <button
+                                class="btn-danger-ghost btn-sm"
+                                [disabled]="isAlertaBusy(alerta.enrollmentId)"
+                                data-llm-action="remove-schedule"
+                                (click)="removeSchedule.emit(alerta.enrollmentId)"
+                              >
+                                @if (isAlertaBusy(alerta.enrollmentId)) {
+                                  <app-icon name="loader-circle" [size]="12" class="animate-spin" />
+                                } @else {
+                                  Eliminar
+                                }
+                              </button>
+                            } @else {
+                              <button
+                                class="btn-secondary btn-sm"
+                                [disabled]="isAlertaBusy(alerta.enrollmentId)"
+                                data-llm-action="reactivate-schedule"
+                                (click)="reactivateSchedule.emit(alerta.enrollmentId)"
+                              >
+                                @if (isAlertaBusy(alerta.enrollmentId)) {
+                                  <app-icon name="loader-circle" [size]="12" class="animate-spin" />
+                                } @else {
+                                  Reactivar
+                                }
+                              </button>
+                            }
+                          } @else if (canRemind()) {
                             <button
                               class="btn-secondary btn-sm"
                               [disabled]="isAlertaBusy(alerta.enrollmentId)"
-                              data-llm-action="reactivate-schedule"
-                              (click)="reactivateSchedule.emit(alerta.enrollmentId)"
+                              data-llm-action="send-reminder"
+                              (click)="sendReminder.emit(alerta.enrollmentId)"
                             >
                               @if (isAlertaBusy(alerta.enrollmentId)) {
                                 <app-icon name="loader-circle" [size]="12" class="animate-spin" />
                               } @else {
-                                Reactivar
+                                Recordar
                               }
                             </button>
                           }
-                        } @else if (canRemind()) {
-                          <button
-                            class="btn-secondary btn-sm"
-                            [disabled]="isAlertaBusy(alerta.enrollmentId)"
-                            data-llm-action="send-reminder"
-                            (click)="sendReminder.emit(alerta.enrollmentId)"
-                          >
-                            @if (isAlertaBusy(alerta.enrollmentId)) {
-                              <app-icon name="loader-circle" [size]="12" class="animate-spin" />
-                            } @else {
-                              Recordar
-                            }
-                          </button>
-                        }
+                        </div>
                       </div>
                     </div>
-                  </div>
-                }
-              </div>
-            </aside>
+                  }
+                </div>
+              </aside>
+            }
           }
         </div>
       }
 
       <!-- ── Pestaña Ciclos Teóricos (Spec 0001) ────────────────────────────── -->
       @if (activeTab() === 'ciclos') {
-        <app-ciclos-teoricos-content
-          class="bento-banner bento-fill flex flex-col min-h-0"
-          [isDesktop]="isDesktopLayout()"
-          [cycles]="cycles()"
-          [selectedCycleId]="selectedCycleId()"
-          [clases]="clasesCiclo()"
-          [roster]="rosterCiclo()"
-          [addableStudents]="addableStudents()"
-          [isLoading]="isLoadingCiclos()"
-          [isLoadingCycle]="isLoadingCycle()"
-          [isLoadingAddable]="isLoadingAddable()"
-          [isSaving]="isSaving()"
-          [sendingClassId]="sendingClassId()"
-          (selectCycle)="selectCycle.emit($event)"
-          (saveZoomLink)="saveCicloZoomLink.emit($event)"
-          (updateTopic)="updateCicloTopic.emit($event)"
-          (sendZoom)="sendCicloZoom.emit($event)"
-          (moveStudent)="moveCicloStudent.emit($event)"
-          (requestAddable)="requestAddable.emit()"
-          (addStudent)="addCicloStudent.emit($event)"
-        />
+        @if (!isLoadingCiclos() && ciclosError(); as cErr) {
+          <section
+            class="bento-banner bento-fill card p-5 flex items-center justify-center min-h-0"
+            role="alert"
+          >
+            <div class="flex-1 flex items-center justify-center">
+              <app-empty-state
+                icon="circle-alert"
+                [message]="cErr"
+                subtitle="Revisa tu conexión e inténtalo de nuevo."
+                actionLabel="Reintentar"
+                actionIcon="refresh-cw"
+                (action)="retryCiclos.emit()"
+              />
+            </div>
+          </section>
+        } @else {
+          <app-ciclos-teoricos-content
+            class="bento-banner bento-fill flex flex-col min-h-0"
+            [isDesktop]="isDesktopLayout()"
+            [cycles]="cycles()"
+            [selectedCycleId]="selectedCycleId()"
+            [clases]="clasesCiclo()"
+            [roster]="rosterCiclo()"
+            [addableStudents]="addableStudents()"
+            [isLoading]="isLoadingCiclos()"
+            [isLoadingCycle]="isLoadingCycle()"
+            [isLoadingAddable]="isLoadingAddable()"
+            [isSaving]="isSaving()"
+            [sendingClassId]="sendingClassId()"
+            (selectCycle)="selectCycle.emit($event)"
+            (saveZoomLink)="saveCicloZoomLink.emit($event)"
+            (updateTopic)="updateCicloTopic.emit($event)"
+            (sendZoom)="sendCicloZoom.emit($event)"
+            (moveStudent)="moveCicloStudent.emit($event)"
+            (requestAddable)="requestAddable.emit()"
+            (addStudent)="addCicloStudent.emit($event)"
+          />
+        }
       }
     </div>
 
@@ -826,6 +893,8 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   readonly alertas = input<AlertaFaltaConsecutiva[]>([]);
   readonly instructores = input<InstructorOption[]>([]);
   readonly isLoading = input(false);
+  readonly error = input<string | null>(null);
+  readonly refreshFailed = input(false);
   readonly isSaving = input(false);
   /**
    * `enrollmentId` de la alerta cuya acción está en vuelo, o `null`.
@@ -848,6 +917,7 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   readonly rosterCiclo = input<CicloAlumno[]>([]);
   readonly addableStudents = input<CicloAlumnoMovible[]>([]);
   readonly isLoadingCiclos = input(false);
+  readonly ciclosError = input<string | null>(null);
   readonly isLoadingCycle = input(false);
   readonly isLoadingAddable = input(false);
   readonly sendingClassId = input<number | null>(null);
@@ -864,6 +934,8 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   readonly sendReminder = output<number>();
   readonly dateChange = output<string>();
   readonly refreshRequested = output<void>();
+  readonly retry = output<void>();
+  readonly retryCiclos = output<void>();
   /** Emite la fila para abrir el drawer de iniciar clase. */
   readonly iniciarClase = output<ClasePracticaRow>();
   /** Emite la fila para abrir el drawer de finalizar clase. */
@@ -944,36 +1016,38 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   ];
 
   protected readonly heroKpis = computed((): SectionHeroKpi[] => {
+    if (this.error()) return [];
     const k = this.kpis();
+    if (!k) return [];
     return [
       {
         id: 'tasa',
         label: 'Tasa Asistencia',
-        value: k?.tasaAsistencia ?? 0,
+        value: k.tasaAsistencia,
         suffix: '%',
         icon: 'trending-up',
-        color: (k?.tasaAsistencia ?? 100) >= 90 ? 'success' : 'warning',
+        color: k.tasaAsistencia >= 90 ? 'success' : 'warning',
       },
       {
         id: 'inasistencias',
         label: 'Inasistencias Hoy',
-        value: k?.inasistenciasHoy ?? 0,
+        value: k.inasistenciasHoy,
         icon: 'calendar-x',
         color: 'error',
       },
       {
         id: 'en-curso',
         label: 'En Curso',
-        value: k?.clasesEnCurso ?? 0,
+        value: k.clasesEnCurso,
         icon: 'play-circle',
         color: 'success',
       },
       {
         id: 'pendientes',
         label: 'Pendientes',
-        value: k?.pendientesPorIniciar ?? 0,
+        value: k.pendientesPorIniciar,
         icon: 'clock-alert',
-        color: (k?.pendientesPorIniciar ?? 0) > 0 ? 'warning' : 'default',
+        color: k.pendientesPorIniciar > 0 ? 'warning' : 'default',
       },
     ];
   });

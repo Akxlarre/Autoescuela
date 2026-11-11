@@ -1639,4 +1639,358 @@ describe('AsistenciaClaseBFacade', () => {
       expect(facade.estadoPagoClase()?.estado).toBe('bloqueada');
     });
   });
+
+  // ── Spec 0060-b T3.1: lecturas fallidas explícitas (Caso A, Caso B, mutaciones, vehículos) ──
+  describe('spec 0060-b T3.1: lecturas fallidas y guard de concurrencia', () => {
+    it('Caso A: si falla class_b_sessions en primera carga, expone error(), deja kpis() en null y no marca _initialized', async () => {
+      mock.setResult('class_b_sessions', null, { message: 'network fail' });
+      mock.setResult('class_b_practice_attendance', []);
+
+      await facade.initialize();
+
+      expect((facade as any).error()).toBeTruthy();
+      expect(facade.clasesPracticas()).toEqual([]);
+      expect(facade.alertas()).toEqual([]);
+      expect(facade.kpis()).toBeNull();
+      expect(facade.isLoading()).toBe(false);
+
+      // Como _initialized quedó en false, un reintento vuelve a mostrar skeleton y carga OK
+      mock.setResult('class_b_sessions', []);
+      const retryPromise = facade.initialize();
+      expect(facade.isLoading()).toBe(true);
+      await retryPromise;
+      expect((facade as any).error()).toBeNull();
+      expect(facade.kpis()).not.toBeNull();
+    });
+
+    it('Caso A: si falla class_b_practice_attendance (alertas) en primera carga, falla toda la carga', async () => {
+      mock.setResult('class_b_sessions', [
+        {
+          id: 1,
+          enrollment_id: 10,
+          scheduled_at: '2026-06-30T13:00:00Z',
+          start_time: null,
+          end_time: null,
+          status: 'scheduled',
+          instructor_id: 3,
+          class_number: 1,
+          km_start: null,
+          vehicles: null,
+          instructors: { id: 3, users: { first_names: 'Ana', paternal_last_name: 'Soto' } },
+          enrollments: {
+            id: 10,
+            branch_id: 1,
+            branches: { name: 'Chillán' },
+            students: { id: 5, users: { first_names: 'Juan', paternal_last_name: 'Pérez' } },
+          },
+          class_b_practice_attendance: [],
+        },
+      ]);
+      mock.setResult('class_b_practice_attendance', null, { message: 'alerts db error' });
+
+      await facade.initialize();
+
+      expect((facade as any).error()).toBeTruthy();
+      expect(facade.clasesPracticas()).toEqual([]);
+      expect(facade.alertas()).toEqual([]);
+      expect(facade.kpis()).toBeNull();
+    });
+
+    it('Caso A: si falla fetchEnrollmentsWithRemovedSchedule, falla toda la carga en vez de asumir horario activo', async () => {
+      let classBSessionsCall = 0;
+      const sessionsBuilder = mock.builderFor('class_b_sessions');
+      sessionsBuilder.then = (resolve: any) => {
+        classBSessionsCall += 1;
+        if (classBSessionsCall === 1) return resolve({ data: [], error: null });
+        return resolve({ data: null, error: { message: 'schedule lookup failed' } });
+      };
+      mock.setResult('class_b_practice_attendance', [
+        {
+          student_id: 5,
+          recorded_at: '2026-06-29T10:00:00Z',
+          class_b_sessions: {
+            class_number: 2,
+            scheduled_at: '2026-06-29T10:00:00Z',
+            status: 'no_show',
+            enrollments: {
+              id: 10,
+              branch_id: 1,
+              absence_penalty_applied_at: null,
+              students: { users: { first_names: 'Juan', paternal_last_name: 'Pérez' } },
+            },
+          },
+        },
+      ]);
+
+      await facade.initialize();
+
+      expect((facade as any).error()).toBeTruthy();
+      expect(facade.alertas()).toEqual([]);
+      expect(facade.kpis()).toBeNull();
+    });
+
+    it('Caso A: setDate a otro día con error retira prácticas, alertas y kpis del día anterior', async () => {
+      mock.setResult('class_b_sessions', []);
+      mock.setResult('class_b_practice_attendance', []);
+      await facade.initialize();
+      (facade as any)._clasesPracticas.set([makeRow({ id: 1 })]);
+      (facade as any)._alertas.set([makeAlerta({ enrollmentId: 10 })]);
+
+      mock.setResult('class_b_sessions', null, { message: 'day fail' });
+      await facade.setDate('2026-07-01');
+
+      expect((facade as any).error()).toBeTruthy();
+      expect(facade.clasesPracticas()).toEqual([]);
+      expect(facade.alertas()).toEqual([]);
+      expect(facade.kpis()).toBeNull();
+    });
+
+    it('Caso A: cambio de sede con error retira los datos previos y kpis quedan en null', async () => {
+      facade.setBranchFilter(1);
+      mock.setResult('class_b_sessions', []);
+      mock.setResult('class_b_practice_attendance', []);
+      await facade.initialize();
+      (facade as any)._clasesPracticas.set([makeRow({ id: 1, branchId: 1 })]);
+      expect(facade.kpis()).not.toBeNull();
+
+      facade.setBranchFilter(2);
+      mock.setResult('class_b_sessions', null, { message: 'branch fail' });
+      await facade.initialize();
+
+      expect((facade as any).error()).toBeTruthy();
+      expect(facade.clasesPracticas()).toEqual([]);
+      expect(facade.alertas()).toEqual([]);
+      expect(facade.kpis()).toBeNull();
+    });
+
+    it('Caso B: refreshSilently fallido mantiene datos visibles, no toca error() y activa refreshFailed()', async () => {
+      facade.setBranchFilter(1);
+      mock.setResult('class_b_sessions', []);
+      mock.setResult('class_b_practice_attendance', []);
+      await facade.initialize();
+      (facade as any)._clasesPracticas.set([makeRow({ id: 42 })]);
+
+      mock.setResult('class_b_sessions', null, { message: 'refresh fail' });
+      await facade.initialize();
+
+      expect(facade.clasesPracticas()).toHaveLength(1);
+      expect(facade.kpis()).not.toBeNull();
+      expect((facade as any).error()).toBeNull();
+      expect((facade as any).refreshFailed()).toBe(true);
+    });
+
+    it('Caso B: refreshAlertasSilently fallido tras justificar mantiene alertas y activa refreshFailed()', async () => {
+      (facade as any)._clasesPracticas.set([
+        makeRow({ id: 1, enrollmentId: 10, status: 'ausente' }),
+      ]);
+      (facade as any)._alertas.set([makeAlerta({ enrollmentId: 10 })]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_practice_attendance', [{ recorded_at: '2026-06-30T09:00:00Z' }]);
+
+      // 2ª lectura sobre class_b_practice_attendance (en refreshAlertasSilently) falla
+      let attendanceCalls = 0;
+      const attBuilder = mock.builderFor('class_b_practice_attendance');
+      attBuilder.then = (resolve: any) => {
+        attendanceCalls += 1;
+        if (attendanceCalls === 1) {
+          return resolve({ data: [{ recorded_at: '2026-06-30T09:00:00Z' }], error: null });
+        }
+        return resolve({ data: null, error: { message: 'alert refresh err' } });
+      };
+
+      await facade.justifyAbsence(1, 'Certificado médico');
+
+      expect(toast.success).toHaveBeenCalled();
+      expect(toast.error).not.toHaveBeenCalled();
+      expect(facade.alertas()).toHaveLength(1);
+      expect((facade as any).refreshFailed()).toBe(true);
+    });
+
+    it('reintentar() en Caso B refresca silenciosamente sin skeleton y limpia refreshFailed al recuperar', async () => {
+      facade.setBranchFilter(1);
+      mock.setResult('class_b_sessions', []);
+      mock.setResult('class_b_practice_attendance', []);
+      await facade.initialize();
+      (facade as any)._clasesPracticas.set([makeRow({ id: 42 })]);
+
+      mock.setResult('class_b_sessions', null, { message: 'refresh fail' });
+      await facade.initialize();
+      expect((facade as any).refreshFailed()).toBe(true);
+
+      mock.setResult('class_b_sessions', []);
+      const retryPromise = (facade as any).reintentar();
+      expect(facade.isLoading()).toBe(false);
+      await retryPromise;
+
+      expect((facade as any).refreshFailed()).toBe(false);
+      expect((facade as any).error()).toBeNull();
+    });
+
+    it('reintentar() en Caso A recarga con skeleton y limpia error() al recuperar', async () => {
+      mock.setResult('class_b_sessions', null, { message: 'initial fail' });
+      mock.setResult('class_b_practice_attendance', []);
+      await facade.initialize();
+      expect((facade as any).error()).toBeTruthy();
+
+      mock.setResult('class_b_sessions', []);
+      const retryPromise = (facade as any).reintentar();
+      expect(facade.isLoading()).toBe(true);
+      await retryPromise;
+
+      expect(facade.isLoading()).toBe(false);
+      expect((facade as any).error()).toBeNull();
+      expect(facade.kpis()).not.toBeNull();
+    });
+
+    it('guard contra respuestas fuera de orden: respuesta tardía (éxito o error) de request viejo no pisa estado nuevo', async () => {
+      let resolveOld!: (v: any) => void;
+      let rejectOld!: (v: any) => void;
+      const oldSessionsPromise = new Promise((res) => (resolveOld = res));
+      const newSessionsPromise = Promise.resolve({ data: [], error: null });
+
+      let call = 0;
+      mock.builderFor('class_b_sessions').then = (resolve: any) => {
+        call += 1;
+        if (call === 1) return oldSessionsPromise.then(resolve);
+        return newSessionsPromise.then(resolve);
+      };
+      mock.setResult('class_b_practice_attendance', []);
+
+      facade.setBranchFilter(1);
+      const oldInit = facade.initialize();
+      facade.setBranchFilter(2);
+      await facade.initialize();
+
+      // Ahora el request viejo vuelve tarde con error: NO debe pisar el éxito de la sede 2
+      resolveOld({ data: null, error: { message: 'stale fail' } });
+      await oldInit;
+
+      expect((facade as any).error()).toBeNull();
+      expect(facade.kpis()).not.toBeNull();
+
+      // También si el request viejo vuelve tarde con datos de otra sede, no pisa los datos nuevos
+      call = 0;
+      const oldPromise2 = new Promise((res) => (rejectOld = res));
+      mock.builderFor('class_b_sessions').then = (resolve: any) => {
+        call += 1;
+        if (call === 1) return oldPromise2.then(resolve);
+        return Promise.resolve({ data: [], error: null }).then(resolve);
+      };
+      facade.setBranchFilter(1);
+      const oldInit2 = facade.initialize();
+      facade.setBranchFilter(2);
+      await facade.initialize();
+
+      rejectOld({
+        data: [
+          {
+            id: 99,
+            enrollment_id: 77,
+            scheduled_at: '2026-06-30T13:00:00Z',
+            start_time: null,
+            end_time: null,
+            status: 'scheduled',
+            instructor_id: 3,
+            class_number: 1,
+            km_start: null,
+            vehicles: null,
+            instructors: { id: 3, users: { first_names: 'Ana', paternal_last_name: 'Soto' } },
+            enrollments: {
+              id: 77,
+              branch_id: 1,
+              branches: { name: 'Chillán' },
+              students: { id: 5, users: { first_names: 'Viejito', paternal_last_name: 'Tarde' } },
+            },
+            class_b_practice_attendance: [],
+          },
+        ],
+        error: null,
+      });
+      await oldInit2;
+
+      expect(facade.clasesPracticas()).toEqual([]);
+    });
+
+    it('justifyAbsence: si falla countCancelledSince tras guardar, muestra success + warning y NO toast.error', async () => {
+      (facade as any)._clasesPracticas.set([
+        makeRow({ id: 1, enrollmentId: 10, status: 'ausente' }),
+      ]);
+      mock.setResult('enrollments:single', { student_id: 5 });
+      mock.setResult('class_b_practice_attendance', [{ recorded_at: '2026-06-30T09:00:00Z' }]);
+      mock.setResult('class_b_sessions', null, { message: 'count err' });
+
+      await facade.justifyAbsence(1, 'Licencia médica');
+
+      expect(toast.success).toHaveBeenCalledWith('Justificación registrada');
+      expect(toast.warning).toHaveBeenCalledWith(
+        'No se pudo revisar si quedaron clases canceladas por esta falta',
+      );
+      expect(toast.error).not.toHaveBeenCalled();
+    });
+
+    it('undoAbsence / cancelStart / markAttendance / moveSession: lecturas con error dentro de mutaciones muestran toast.error', async () => {
+      // 1. undoAbsence con resolvePractica fallido
+      mock.setResult('class_b_sessions:maybeSingle', null, { message: 'resolve err' });
+      const okUndo = await facade.undoAbsence(999);
+      expect(okUndo).toBe(false);
+      expect(toast.error).toHaveBeenCalled();
+
+      toast.error.mockClear();
+
+      // 2. cancelStart con resolvePractica fallido
+      const okCancel = await facade.cancelStart(999);
+      expect(okCancel).toBe(false);
+      expect(toast.error).toHaveBeenCalled();
+
+      toast.error.mockClear();
+
+      // 3. markAttendance cuando falla enrollments.select('student_id').single()
+      (facade as any)._clasesPracticas.set([makeRow({ id: 1, enrollmentId: 10 })]);
+      mock.setResult('class_b_sessions', [{ id: 1 }]);
+      mock.setResult('enrollments:single', null, { message: 'enrollment err' });
+      const okMark = await facade.markAttendance(1, 'presente');
+      expect(okMark).toBe(false);
+      expect(toast.error).toHaveBeenCalled();
+
+      toast.error.mockClear();
+
+      // 4. moveSession cuando update afecta 0 filas y falla la lectura de current status
+      mock.setResult('class_b_sessions', []);
+      mock.setResult('class_b_sessions:maybeSingle', null, { message: 'status read err' });
+      const okMove = await facade.markAttendance(1, 'presente');
+      expect(okMove).toBe(false);
+      expect(toast.error).toHaveBeenCalled();
+    });
+
+    it('loadVehiclesByBranch: si falla vehicles expone vehiclesError() y vacía vehículos; si falla vehicle_documents lista igual con vehicleDocsUnknown()', async () => {
+      mock.setResult('vehicles', null, { message: 'vehicles db err' });
+      await facade.loadVehiclesByBranch(1);
+
+      expect((facade as any).vehiclesError()).toBeTruthy();
+      expect(facade.vehiclesPorSede()).toEqual([]);
+
+      mock.setResult('vehicles', [
+        {
+          id: 7,
+          license_plate: 'ABCD12',
+          brand: 'Suzuki',
+          model: 'Swift',
+          current_km: 1200,
+          status: 'available',
+        },
+      ]);
+      mock.setResult('vehicle_documents', null, { message: 'docs err' });
+      await facade.loadVehiclesByBranch(1);
+
+      expect((facade as any).vehiclesError()).toBeNull();
+      expect(facade.vehiclesPorSede()).toHaveLength(1);
+      expect(facade.vehiclesPorSede()[0].docWarning).toBeNull();
+      expect((facade as any).vehicleDocsUnknown()).toBe(true);
+
+      mock.setResult('vehicle_documents', []);
+      await facade.loadVehiclesByBranch(1);
+
+      expect((facade as any).vehicleDocsUnknown()).toBe(false);
+    });
+  });
 });
