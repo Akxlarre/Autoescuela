@@ -302,5 +302,17 @@ describe('DashboardComponent (dashboard ejecutivo)', () => {
       retryBtn?.click();
       expect(alerts.reintentar).toHaveBeenCalledTimes(1);
     });
+
+    it('fix-405-m: con revisiones incompletas y alertas activas muestra las alertas y loadProblem()', async () => {
+      const { fixture } = await mountDom({
+        alerts: [{ id: 'a1', title: 'Pago vencido', description: 'Detalle', severity: 'warning' }],
+        loadProblem: 'No se pudieron revisar todas las alertas.',
+      });
+      const text = fixture.nativeElement.textContent as string;
+
+      expect(text).toContain('Pago vencido');
+      expect(text).toContain('No se pudieron revisar todas las alertas.');
+      expect(text).not.toContain('Todo en orden');
+    });
   });
 });

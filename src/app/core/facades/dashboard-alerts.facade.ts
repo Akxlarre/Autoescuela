@@ -88,6 +88,8 @@ export class DashboardAlertsFacade {
   private _activeAlerts = signal<AlertModel[]>([]);
   private _isLoading = signal(false);
   private _error = signal<string | null>(null);
+  /** Alguna revisión falló en la última carga: la lista puede estar incompleta. */
+  private _incomplete = signal(false);
   private _refreshFailed = signal(false);
 
   // ── 2. ESTADO PÚBLICO (readonly) ───────────────────────────────────────────
@@ -96,12 +98,14 @@ export class DashboardAlertsFacade {
   readonly error = this._error.asReadonly();
   readonly refreshFailed = this._refreshFailed.asReadonly();
   /**
-   * Texto para mostrar cuando la carga de alertas falló. `null` = sin error de carga inicial/cambio de sede.
-   * Quien pinta alertas lo muestra en vez de "Todo en orden" ni "0 alertas" (fix-405-m, spec 0060-b).
+   * Texto para mostrar cuando la lista de alertas no es confiable: la carga falló entera o
+   * faltó alguna revisión. `null` = la lista está completa. Quien pinta alertas lo muestra en
+   * vez de "Todo en orden" ni "0 alertas" (fix-405-m, spec 0060-b).
    */
-  readonly loadProblem = computed(() =>
-    this._error() ? 'No se pudieron revisar las alertas.' : null,
-  );
+  readonly loadProblem = computed(() => {
+    if (this._error()) return 'No se pudieron revisar las alertas.';
+    return this._incomplete() ? 'No se pudieron revisar todas las alertas.' : null;
+  });
   readonly alertCount = computed(() => this._activeAlerts().length);
 
   // ── 3. MÉTODOS DE ACCIÓN ───────────────────────────────────────────────────
@@ -131,6 +135,7 @@ export class DashboardAlertsFacade {
       this._initialized = false;
       this._lastBranchId = undefined;
       this._activeAlerts.set([]);
+      this._incomplete.set(false);
       this._refreshFailed.set(false);
     }
 
@@ -146,6 +151,7 @@ export class DashboardAlertsFacade {
     this._activeAlerts.set([]);
     this._isLoading.set(true);
     this._error.set(null);
+    this._incomplete.set(false);
     this._refreshFailed.set(false);
     try {
       await this.fetchAlertsData(branchId, requestToken);
@@ -157,6 +163,7 @@ export class DashboardAlertsFacade {
       this._activeAlerts.set([]);
       this._initialized = false;
       this._lastBranchId = undefined;
+      this._incomplete.set(false);
       this._error.set('Error al cargar alertas');
     } finally {
       if (this.alertsGuard.isCurrent(requestToken)) {
@@ -196,6 +203,7 @@ export class DashboardAlertsFacade {
       return;
     }
     this._error.set(null);
+    this._incomplete.set(false);
     this._refreshFailed.set(false);
     this._initialized = false;
     this._lastBranchId = undefined;
@@ -206,6 +214,7 @@ export class DashboardAlertsFacade {
   async loadAlerts(): Promise<void> {
     this._initialized = false;
     this._lastBranchId = undefined;
+    this._incomplete.set(false);
     this._refreshFailed.set(false);
     return this.initialize();
   }
@@ -358,10 +367,15 @@ export class DashboardAlertsFacade {
 
   // ── Coordinador de queries ──────────────────────────────────────────────────
 
+  /**
+   * supabase-js no lanza cuando una consulta falla: devuelve { error }. Tratar eso como
+   * "0 resultados" hacía ver "Todo en orden" (o una "Caja sin cerrar" falsa) con la red caída.
+   * Toda consulta de una revisión de alertas verifica su error con `assertReadOk` o
+   * `if (error) throw error` (fix-405-m, spec 0060-b).
+   */
   private async fetchAlertsData(branchId: number | null, requestToken: number): Promise<void> {
-    // Todas las consultas de alertas forman un único total confiable: si cualquiera falla,
-    // falla la carga entera (spec 0060-b Regla 1).
-    const results = await Promise.all([
+    // allSettled: una revisión que falla no debe ocultar las alertas de las que sí respondieron.
+    const settled = await Promise.allSettled([
       // Fase 1 & 2
       this.checkExpiredDocuments(branchId),
       this.checkPendingPayments(branchId),
@@ -394,7 +408,13 @@ export class DashboardAlertsFacade {
     // Ya se pidió una carga más reciente (otra sede): descartar esta respuesta.
     if (!this.alertsGuard.isCurrent(requestToken)) return;
 
-    this._activeAlerts.set(this.filterSnoozedAlerts(results.flat()));
+    const failed = settled.filter((r) => r.status === 'rejected');
+    // Ninguna revisión respondió (sin red, sesión caída): es un error de carga, no una lista vacía.
+    if (failed.length === settled.length) throw (failed[0] as PromiseRejectedResult).reason;
+
+    const allAlerts = settled.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+    this._activeAlerts.set(this.filterSnoozedAlerts(allAlerts));
+    this._incomplete.set(failed.length > 0);
   }
 
   private filterSnoozedAlerts(alerts: AlertModel[]): AlertModel[] {

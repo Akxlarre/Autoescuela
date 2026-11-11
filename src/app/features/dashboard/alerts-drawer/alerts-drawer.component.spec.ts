@@ -381,5 +381,19 @@ describe('AlertsDrawerComponent', () => {
       retryBtn?.click();
       expect(facadeMock.reintentar).toHaveBeenCalledTimes(1);
     });
+
+    it('fix-405-m: con revisiones incompletas y alertas activas muestra las alertas y loadProblem()', () => {
+      activeAlerts$.set([makeAlert({ id: 'a1', title: 'Documento por vencer' })]);
+      alertCount$.set(1);
+      refreshFailed$.set(false);
+      loadProblem$.set('No se pudieron revisar todas las alertas.');
+
+      const fixture = mountDom();
+      const text = fixture.nativeElement.textContent as string;
+
+      expect(text).toContain('Documento por vencer');
+      expect(text).toContain('No se pudieron revisar todas las alertas.');
+      expect(text).not.toContain('Todo al día');
+    });
   });
 });

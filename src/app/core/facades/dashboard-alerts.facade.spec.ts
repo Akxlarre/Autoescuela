@@ -387,7 +387,7 @@ describe('DashboardAlertsFacade', () => {
       expect(facade.loadProblem()).toBe('No se pudieron revisar las alertas.');
     });
 
-    it('si falla solo una revisión, falla la carga entera sin mostrar alertas ni conteo parcial', async () => {
+    it('si falla solo una revisión, muestra las demás y avisa que la lista está incompleta', async () => {
       const callCounters: Record<string, number> = {};
       fromSpy.mockImplementation((table: string) => {
         callCounters[table] = (callCounters[table] ?? 0) + 1;
@@ -400,10 +400,9 @@ describe('DashboardAlertsFacade', () => {
 
       await facade.loadAlerts();
 
-      expect(facade.activeAlerts()).toEqual([]);
-      expect(facade.alertCount()).toBe(0);
-      expect(facade.error()).toBe('Error al cargar alertas');
-      expect(facade.loadProblem()).toBe('No se pudieron revisar las alertas.');
+      expect(facade.activeAlerts().map((a) => a.id)).toEqual(['alert-pending-payments']);
+      expect(facade.error()).toBeNull();
+      expect(facade.loadProblem()).toBe('No se pudieron revisar todas las alertas.');
     });
 
     it('con todas las revisiones respondidas no hay aviso', async () => {
@@ -481,11 +480,11 @@ describe('DashboardAlertsFacade', () => {
       await vieja;
       expect(facade.loadProblem()).toBeNull();
 
-      // Falla una revisión de la carga vigente: falla la carga entera.
+      // Falla una sola revisión de la carga vigente: lista incompleta (fix-405-m).
       cargas[1].reject(new Error('vigente'));
       await vigente;
-      expect(facade.error()).toBe('Error al cargar alertas');
-      expect(facade.loadProblem()).toBe('No se pudieron revisar las alertas.');
+      expect(facade.error()).toBeNull();
+      expect(facade.loadProblem()).toBe('No se pudieron revisar todas las alertas.');
       expect(facade.isLoading()).toBe(false);
     });
   });
@@ -678,14 +677,13 @@ describe('DashboardAlertsFacade', () => {
       expect(facade.activeAlerts().find((a) => a.id === 'alert-class-b-holiday')).toBeUndefined();
     });
 
-    it('si la consulta falla, falla la carga completa de alertas (Regla 1)', async () => {
+    it('si la consulta falla, la lista queda marcada como incompleta (AC-E1)', async () => {
       mockWithHolidayRows(buildChain({ data: null, error: { message: 'boom' } }));
 
       await facade.loadAlerts();
 
-      expect(facade.loadProblem()).toBe('No se pudieron revisar las alertas.');
-      expect(facade.error()).toBe('Error al cargar alertas');
-      expect(facade.activeAlerts()).toEqual([]);
+      expect(facade.loadProblem()).toBe('No se pudieron revisar todas las alertas.');
+      expect(facade.error()).toBeNull();
     });
   });
 
@@ -1814,6 +1812,8 @@ describe('DashboardAlertsFacade', () => {
       });
     };
 
+    const mockTodasFallan = () => fromSpy.mockImplementation(() => buildChain(fallo));
+
     it('cambio de sede (Caso A): limpia alertas previas de inmediato y si falla la nueva sede queda vacía con error', async () => {
       const auth = TestBed.inject(AuthFacade);
       const branch = TestBed.inject(BranchFacade);
@@ -1825,7 +1825,7 @@ describe('DashboardAlertsFacade', () => {
       expect(facade.activeAlerts().map((a) => a.id)).toEqual(['alert-pending-payments']);
       expect(facade.alertCount()).toBe(1);
 
-      // Cambiar a sede 2 con una consulta pendiente y luego fallida
+      // Cambiar a sede 2 con todas las consultas pendientes/fallidas
       (branch.selectedBranchId as any).mockReturnValue(2);
       let resolvePendiente!: (v: unknown) => void;
       const pendientePromise = new Promise((r) => (resolvePendiente = r));
@@ -1839,7 +1839,7 @@ describe('DashboardAlertsFacade', () => {
             then: (res: any) => pendientePromise.then(res),
           };
         }
-        return buildChain({ data: [], count: 0 });
+        return buildChain(fallo);
       });
 
       const cargaSede2 = facade.initialize();
@@ -1864,8 +1864,8 @@ describe('DashboardAlertsFacade', () => {
       await facade.initialize();
       expect(facade.alertCount()).toBe(1);
 
-      // En revisita / refresco silencioso, falla 1 consulta
-      mockConPagosYUnFallo(true);
+      // En revisita / refresco silencioso, fallan todas las revisiones (sin red / sesión caída)
+      mockTodasFallan();
       await facade.refreshSilently();
 
       expect(facade.alertCount()).toBe(1);
@@ -1876,13 +1876,34 @@ describe('DashboardAlertsFacade', () => {
       expect(facade.isLoading()).toBe(false);
     });
 
+    it('si falla solo una revisión en carga inicial, mantiene las alertas de las demás y loadProblem() dice "todas"', async () => {
+      const callCounters: Record<string, number> = {};
+      fromSpy.mockImplementation((table: string) => {
+        callCounters[table] = (callCounters[table] ?? 0) + 1;
+        if (table === 'alert_config') return buildChain({ data: [] });
+        if (table === 'branches') return buildChain({ data: [{ id: 1, name: 'Sede Uno' }] });
+        if (table === 'cash_closings') return buildChain({ data: [{ branch_id: 1 }] });
+        if (table === 'vehicle_documents') return buildChain(fallo);
+        if (table === 'enrollments')
+          return callCounters[table] === 1 ? buildChain({ count: 4 }) : buildChain({ count: 0 });
+        return buildChain({ data: [], count: 0 });
+      });
+
+      await facade.initialize();
+
+      expect(facade.activeAlerts().map((a) => a.id)).toEqual(['alert-pending-payments']);
+      expect(facade.error()).toBeNull();
+      expect(facade.loadProblem()).toBe('No se pudieron revisar todas las alertas.');
+      expect((facade as any).refreshFailed()).toBe(false);
+    });
+
     it('reintentar() en Caso B refresca en silencio sin vaciar alertas ni encender isLoading', async () => {
       const auth = TestBed.inject(AuthFacade);
       (auth.currentUser as any).mockReturnValue({ id: 'u-1', dbId: 1, role: 'admin' });
       mockConPagosYUnFallo(false, 4);
       await facade.initialize();
 
-      mockConPagosYUnFallo(true);
+      mockTodasFallan();
       await facade.refreshSilently();
       expect((facade as any).refreshFailed()).toBe(true);
 
@@ -1900,11 +1921,12 @@ describe('DashboardAlertsFacade', () => {
       await (facade as any).reintentar();
       expect((facade as any).refreshFailed()).toBe(false);
       expect(facade.error()).toBeNull();
+      expect(facade.loadProblem()).toBeNull();
       expect(facade.activeAlerts()[0]?.count).toBe(7);
     });
 
     it('reintentar() en Caso A limpia error y recarga con isLoading = true', async () => {
-      mockConPagosYUnFallo(true);
+      mockTodasFallan();
       await facade.initialize();
       expect(facade.error()).toBe('Error al cargar alertas');
 
@@ -1916,6 +1938,7 @@ describe('DashboardAlertsFacade', () => {
 
       expect(facade.isLoading()).toBe(false);
       expect(facade.error()).toBeNull();
+      expect(facade.loadProblem()).toBeNull();
       expect(facade.activeAlerts().map((a) => a.id)).toEqual(['alert-pending-payments']);
     });
 

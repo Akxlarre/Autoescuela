@@ -320,6 +320,10 @@ type ExecTab = 'tendencias' | 'instructores' | 'alumnos' | 'hoy';
                         </button>
                       </div>
                     </app-alert-card>
+                  } @else if (alertsProblem() && alerts().length) {
+                    <p class="m-0 mb-2 text-xs text-text-muted" role="status">
+                      {{ alertsProblem() }} Puede faltar alguna.
+                    </p>
                   }
                   @if (alertsLoading() && !alerts().length) {
                     <ul class="m-0 p-0 list-none flex flex-col gap-2" aria-label="Cargando alertas">

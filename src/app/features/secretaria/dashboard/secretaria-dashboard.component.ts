@@ -275,6 +275,10 @@ import {
                   </div>
                 </app-alert-card>
               </div>
+            } @else if (alertsProblem() && alerts().length) {
+              <p class="m-0 mb-2 text-xs text-text-muted shrink-0" role="status">
+                {{ alertsProblem() }} Puede faltar alguna.
+              </p>
             }
             <div class="scroll-fade flex-1 min-h-0">
               <ul

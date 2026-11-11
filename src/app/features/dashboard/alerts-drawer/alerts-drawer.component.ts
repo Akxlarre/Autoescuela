@@ -124,6 +124,10 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
                 </button>
               </div>
             </app-alert-card>
+          } @else if (loadProblem()) {
+            <p class="m-0 text-xs text-text-muted" role="status">
+              {{ loadProblem() }} Puede faltar alguna.
+            </p>
           }
           @for (alert of sortedAlerts(); track alert.id) {
             <div

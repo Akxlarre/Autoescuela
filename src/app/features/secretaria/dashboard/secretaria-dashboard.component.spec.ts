@@ -456,5 +456,18 @@ describe('SecretariaDashboardComponent', () => {
       retryBtn?.click();
       expect(alertasMock.reintentar).toHaveBeenCalledTimes(1);
     });
+
+    it('fix-405-m en DOM: con revisiones incompletas y alertas activas muestra las alertas y loadProblem()', () => {
+      alertasMock.activeAlerts.set([buildAlert(1)]);
+      alertasMock.alertCount.set(1);
+      alertasMock.refreshFailed.set(false);
+      alertasMock.loadProblem.set('No se pudieron revisar todas las alertas.');
+      const dom = mountDom();
+      const text = dom.nativeElement.textContent as string;
+
+      expect(text).toContain('Alerta 1');
+      expect(text).toContain('No se pudieron revisar todas las alertas.');
+      expect(text).not.toContain('Todo en orden');
+    });
   });
 });
