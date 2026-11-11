@@ -213,7 +213,9 @@ export class CertificacionProfesionalFacade {
     // Refresh alumnos first so fetchLog picks up the new cert ID
     const cursoId = this._selectedCursoId();
     if (cursoId !== null) {
-      await this.fetchAlumnos(cursoId);
+      await this.fetchAlumnos(cursoId).catch(() => {
+        // Caso B: el certificado ya se emitió; un fallo al refrescar no oculta el visor (fase 4 de 0060-b).
+      });
       void this.fetchLog();
     }
     this.dmsViewer.openByUrl(result.url, 'Certificado Clase Profesional');
@@ -231,7 +233,9 @@ export class CertificacionProfesionalFacade {
     this.toast.success('Certificado regenerado');
     const cursoId = this._selectedCursoId();
     if (cursoId !== null) {
-      await this.fetchAlumnos(cursoId);
+      await this.fetchAlumnos(cursoId).catch(() => {
+        // Caso B: el certificado ya se reemitió; un fallo al refrescar no oculta el visor (fase 4 de 0060-b).
+      });
       void this.fetchLog();
     }
     this.dmsViewer.openByUrl(result.url, 'Certificado Clase Profesional');
@@ -308,7 +312,11 @@ export class CertificacionProfesionalFacade {
       }
       this.toast.success('Email enviado correctamente');
       const cursoId = this._selectedCursoId();
-      if (cursoId !== null) await this.fetchAlumnos(cursoId);
+      if (cursoId !== null) {
+        await this.fetchAlumnos(cursoId).catch(() => {
+          // Caso B: el email ya se envió; un refresco fallido no cae al catch como error (fase 4 de 0060-b).
+        });
+      }
     } catch {
       this.toast.error('Error al enviar el email del certificado');
     } finally {
@@ -358,7 +366,9 @@ export class CertificacionProfesionalFacade {
 
     const cursoId = this._selectedCursoId();
     if (cursoId !== null) {
-      await this.fetchAlumnos(cursoId);
+      await this.fetchAlumnos(cursoId).catch(() => {
+        // Caso B: los certificados elegibles ya se emitieron; un refresco fallido no revierte el resumen (fase 4 de 0060-b).
+      });
       void this.fetchLog();
     }
   }
@@ -387,7 +397,11 @@ export class CertificacionProfesionalFacade {
       if (failed > 0)
         this.toast.error(`${failed} email${failed > 1 ? 's' : ''} no se pudieron enviar`);
       const cursoId = this._selectedCursoId();
-      if (cursoId !== null) await this.fetchAlumnos(cursoId);
+      if (cursoId !== null) {
+        await this.fetchAlumnos(cursoId).catch(() => {
+          // Caso B: el envío masivo ya terminó; un refresco fallido no deja rechazo sin catch (fase 4 de 0060-b).
+        });
+      }
     } finally {
       this._sendingMasivo.set(false);
     }

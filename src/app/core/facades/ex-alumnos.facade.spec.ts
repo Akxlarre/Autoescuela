@@ -715,8 +715,10 @@ describe('ExAlumnosFacade', () => {
     }): ExAlumnosFacade {
       const fromFn = vi.fn((table: string) => {
         let isHead = false;
+        let selectedCols = '';
         const b: any = {
-          select: vi.fn((_cols?: string, selOpts?: { head?: boolean }) => {
+          select: vi.fn((cols?: string, selOpts?: { head?: boolean }) => {
+            selectedCols = cols ?? '';
             isHead = !!selOpts?.head;
             return b;
           }),
@@ -735,6 +737,11 @@ describe('ExAlumnosFacade', () => {
               p = opts.convalidationResult();
             } else if (table === 'class_b_exam_scores' && opts.examsResult) {
               p = opts.examsResult();
+            } else if (table === 'student_surveys' && /\bcomments\b/.test(selectedCols)) {
+              p = Promise.resolve({
+                data: null,
+                error: { code: '42703', message: 'column student_surveys.comments does not exist' },
+              });
             } else if (table === 'student_surveys' && isHead && opts.licensesCountResult) {
               p = opts.licensesCountResult();
             } else if (table === 'student_surveys' && !isHead && opts.surveysResult) {
@@ -896,7 +903,7 @@ describe('ExAlumnosFacade', () => {
     it('loadSurveys: falla expone surveysError() y al recuperarse limpia el error', async () => {
       const branch = { value: 1 as number | null };
       let surveysHandler: () => Promise<any> = () =>
-        Promise.resolve({ data: null, error: { message: 'column comments does not exist' } });
+        Promise.resolve({ data: null, error: { message: 'surveys down' } });
       const scoped = setupMockClient({
         branchSignal: branch,
         listResult: () => Promise.resolve({ data: [row(1, 1)], error: null }),
@@ -914,7 +921,7 @@ describe('ExAlumnosFacade', () => {
             {
               id: 1,
               satisfaction_rating: 5,
-              comments: 'Muy buena escuela',
+              comment: 'Muy buena escuela',
               obtained_license: true,
               enrollments: {
                 students: { users: { first_names: 'Ana', paternal_last_name: 'Soto' } },
@@ -927,6 +934,7 @@ describe('ExAlumnosFacade', () => {
 
       expect(scoped.surveysError()).toBeNull();
       expect(scoped.surveys()).toHaveLength(1);
+      expect(scoped.surveys()[0].texto).toBe('Muy buena escuela');
       expect(scoped.avgSatisfaction()).toBe(5);
     });
   });

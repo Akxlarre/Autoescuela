@@ -58,6 +58,42 @@ interface EgresadoRow {
   students: StudentRow | null;
 }
 
+interface StudentSurveyItem {
+  nombre: string;
+  rating: number;
+  texto: string;
+  iniciales: string;
+}
+
+interface StudentSurveysSummary {
+  avgSatisfaction: number;
+  licenseSuccessRate: number;
+  surveys: StudentSurveyItem[];
+}
+
+function summarizeStudentSurveys(rows: any[]): StudentSurveysSummary {
+  const total = rows.length;
+  if (total === 0) {
+    return { avgSatisfaction: 0, licenseSuccessRate: 0, surveys: [] };
+  }
+  const sumRating = rows.reduce((acc, s) => acc + s.satisfaction_rating, 0);
+  const licenseSuccess = rows.filter((s) => s.obtained_license).length;
+  const surveys: StudentSurveyItem[] = rows.map((s) => {
+    const user = s.enrollments?.students?.users;
+    return {
+      nombre: user ? `${user.first_names} ${user.paternal_last_name}` : 'Alumno Anónimo',
+      rating: s.satisfaction_rating,
+      texto: s.comment || 'Sin comentario',
+      iniciales: user ? user.first_names[0] + user.paternal_last_name[0] : 'AA',
+    };
+  });
+  return {
+    avgSatisfaction: Number((sumRating / total).toFixed(1)),
+    licenseSuccessRate: Math.round((licenseSuccess / total) * 100),
+    surveys,
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Injectable({ providedIn: 'root' })
@@ -453,10 +489,13 @@ export class ExAlumnosFacade {
     surveysToken?: number,
   ): Promise<void> {
     try {
+      // La columna real en BD es `comment` (20260408000000_student_reviews.sql; la migración
+      // 20260408000002 usa `CREATE TABLE IF NOT EXISTS` y no la cambió). Antes pedía `comments`
+      // (inexistente) y por eso las opiniones nunca cargaban.
       const { data, error } = await this.supabase.client.from('student_surveys').select(`
           id,
           satisfaction_rating,
-          comments,
+          comment,
           obtained_license,
           enrollments!inner(
             students!inner(
@@ -468,32 +507,10 @@ export class ExAlumnosFacade {
       if (error) throw error;
       if (!this.isSurveysCurrent(token, surveysToken)) return;
 
-      const rows = (data as any[]) ?? [];
-      const total = rows.length;
-      if (total > 0) {
-        const sumRating = rows.reduce((acc, s) => acc + s.satisfaction_rating, 0);
-        const licenseSuccess = rows.filter((s) => s.obtained_license).length;
-
-        this.avgSatisfaction.set(Number((sumRating / total).toFixed(1)));
-        this.licenseSuccessRate.set(Math.round((licenseSuccess / total) * 100));
-
-        // Mapear para la UI con tipado seguro
-        const mappedSurveys = rows.map((s) => {
-          const user = s.enrollments?.students?.users;
-          return {
-            nombre: user ? `${user.first_names} ${user.paternal_last_name}` : 'Alumno Anónimo',
-            rating: s.satisfaction_rating,
-            texto: s.comments || 'Sin comentario',
-            iniciales: user ? user.first_names[0] + user.paternal_last_name[0] : 'AA',
-          };
-        });
-        this._surveys.set(mappedSurveys);
-      } else {
-        this.avgSatisfaction.set(0);
-        this.licenseSuccessRate.set(0);
-        this._surveys.set([]);
-      }
-
+      const summary = summarizeStudentSurveys((data as any[]) ?? []);
+      this.avgSatisfaction.set(summary.avgSatisfaction);
+      this.licenseSuccessRate.set(summary.licenseSuccessRate);
+      this._surveys.set(summary.surveys);
       this._hasSurveys = true;
       this._surveysError.set(null);
       this._surveysRefreshFailed.set(false);
