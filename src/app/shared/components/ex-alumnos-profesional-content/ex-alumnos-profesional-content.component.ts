@@ -40,6 +40,7 @@ import { IconComponent } from '../icon/icon.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '../section-hero/section-hero.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
+import { AlertCardComponent } from '../alert-card/alert-card.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -79,6 +80,7 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
     SectionHeroComponent,
     PeriodSelectorComponent,
     EmptyStateComponent,
+    AlertCardComponent,
     EgresadoCardComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
@@ -106,6 +108,29 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
         [kpis]="heroKpis()"
         [actions]="[]"
       />
+
+      <!-- Caso B: Aviso de refresco fallido con datos visibles -->
+      @if (refreshFailed()) {
+        <div class="bento-banner" role="alert">
+          <app-alert-card severity="error" title="No se pudo actualizar la lista de egresados">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span class="text-compact text-text-secondary">
+                Los datos mostrados pueden no estar actualizados.
+              </span>
+              <button
+                type="button"
+                class="btn-secondary flex items-center gap-2 shrink-0"
+                data-llm-action="reintentar-ex-alumnos-profesional"
+                [disabled]="isLoading()"
+                (click)="refreshRequested.emit()"
+              >
+                <app-icon name="refresh-cw" [size]="14" />
+                Reintentar
+              </button>
+            </div>
+          </app-alert-card>
+        </div>
+      }
 
       <div
         class="bento-banner bento-fill card p-0 overflow-hidden shadow-sm dual-viewport-container flex flex-col w-full h-full"
@@ -196,6 +221,17 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
                 <app-skeleton-block variant="rect" width="100%" height="120px" />
               }
             </div>
+          </div>
+        } @else if (showLoadError()) {
+          <div class="flex-1 flex items-center justify-center bg-surface" role="alert">
+            <app-empty-state
+              icon="circle-alert"
+              [message]="error() ?? ''"
+              subtitle="No se pudo obtener la lista. Revisa tu conexión e inténtalo de nuevo."
+              actionLabel="Reintentar"
+              actionIcon="refresh-cw"
+              (action)="refreshRequested.emit()"
+            />
           </div>
         } @else {
           <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
@@ -424,6 +460,10 @@ import { EgresadoCardComponent } from '@shared/components/egresado-card/egresado
 export class ExAlumnosProfesionalContentComponent implements AfterViewInit {
   readonly egresados = input.required<EgresadoTableRow[]>();
   readonly isLoading = input(false);
+  readonly error = input<string | null>(null);
+  readonly refreshFailed = input(false);
+  readonly showLoadError = computed(() => !!this.error() && this.egresados().length === 0);
+  readonly refreshRequested = output<void>();
   /**
    * Ruta del botón "volver" y prefijo de "Ver detalle". Sin default a propósito: un default
    * con segmento de rol se le aplicaba en silencio al otro rol (fix-202-m).
@@ -514,21 +554,24 @@ export class ExAlumnosProfesionalContentComponent implements AfterViewInit {
     );
   }
 
-  readonly heroKpis = computed((): SectionHeroKpi[] => [
-    {
-      id: 'total',
-      label: 'Egresados Profesional',
-      value: this.egresados().length,
-      icon: 'graduation-cap',
-    },
-    {
-      id: 'deuda',
-      label: 'Con deuda',
-      value: this.egresados().filter((e) => e.saldoPendiente > 0).length,
-      icon: 'circle-alert',
-      color: 'warning',
-    },
-  ]);
+  readonly heroKpis = computed((): SectionHeroKpi[] => {
+    if (this.showLoadError()) return [];
+    return [
+      {
+        id: 'total',
+        label: 'Egresados Profesional',
+        value: this.egresados().length,
+        icon: 'graduation-cap',
+      },
+      {
+        id: 'deuda',
+        label: 'Con deuda',
+        value: this.egresados().filter((e) => e.saldoPendiente > 0).length,
+        icon: 'circle-alert',
+        color: 'warning',
+      },
+    ];
+  });
 
   ngAfterViewInit(): void {
     const grid = this.bentoGrid();

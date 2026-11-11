@@ -22,6 +22,7 @@ import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { PeriodSelectorComponent } from '@shared/components/period-selector/period-selector.component';
 import {
@@ -82,6 +83,7 @@ export interface EgresadosExportRequest {
     IconComponent,
     SkeletonBlockComponent,
     EmptyStateComponent,
+    AlertCardComponent,
     SectionHeroComponent,
     EgresadoCardComponent,
     ExportMenuComponent,
@@ -106,6 +108,29 @@ export interface EgresadosExportRequest {
         [kpis]="heroKpis()"
         (actionClick)="handleHeroAction($event)"
       />
+
+      <!-- Caso B: Aviso de refresco fallido con datos visibles -->
+      @if (refreshFailed()) {
+        <div class="bento-banner" role="alert">
+          <app-alert-card severity="error" title="No se pudo actualizar la lista de egresados">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span class="text-compact text-text-secondary">
+                Los datos mostrados pueden no estar actualizados.
+              </span>
+              <button
+                type="button"
+                class="btn-secondary flex items-center gap-2 shrink-0"
+                data-llm-action="reintentar-ex-alumnos"
+                [disabled]="isLoading()"
+                (click)="refreshRequested.emit()"
+              >
+                <app-icon name="refresh-cw" [size]="14" />
+                Reintentar
+              </button>
+            </div>
+          </app-alert-card>
+        </div>
+      }
 
       <!-- Archivo Histórico — mismo patrón visual que app-alumnos-list-content:
            toolbar (buscador + selects) + p-table con paginador + tarjetas mobile. -->
@@ -464,6 +489,8 @@ export class ExAlumnosContentComponent {
   readonly isExporting = input<boolean>(false);
   /** Error de la última carga (signal error del Facade), o null. */
   readonly error = input<string | null>(null);
+  /** Error de refresco en segundo plano con egresados ya visibles (Caso B). */
+  readonly refreshFailed = input<boolean>(false);
 
   /**
    * El estado de error reemplaza a la tabla solo si no hay egresados que mostrar. Si un refresco
@@ -500,26 +527,32 @@ export class ExAlumnosContentComponent {
     }
   }
 
-  protected readonly heroChips = computed<SectionHeroChip[]>(() => [
-    { label: 'Historial Consolidado', style: 'default', icon: 'archive' },
-    { label: `${this.egresados().length} Egresados`, style: 'success', icon: 'circle-check' },
-  ]);
+  protected readonly heroChips = computed<SectionHeroChip[]>(() => {
+    if (this.showLoadError()) return [];
+    return [
+      { label: 'Historial Consolidado', style: 'default', icon: 'archive' },
+      { label: `${this.egresados().length} Egresados`, style: 'success', icon: 'circle-check' },
+    ];
+  });
 
-  protected readonly heroKpis = computed((): SectionHeroKpi[] => [
-    {
-      id: 'total',
-      label: 'Egresados Clase B',
-      value: this.egresados().length,
-      icon: 'graduation-cap',
-    },
-    {
-      id: 'deuda',
-      label: 'Con deuda',
-      value: this.egresados().filter((e) => e.saldoPendiente > 0).length,
-      icon: 'circle-alert',
-      color: 'warning',
-    },
-  ]);
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => {
+    if (this.showLoadError()) return [];
+    return [
+      {
+        id: 'total',
+        label: 'Egresados Clase B',
+        value: this.egresados().length,
+        icon: 'graduation-cap',
+      },
+      {
+        id: 'deuda',
+        label: 'Con deuda',
+        value: this.egresados().filter((e) => e.saldoPendiente > 0).length,
+        icon: 'circle-alert',
+        color: 'warning',
+      },
+    ];
+  });
 
   // ── Filtros locales ──────────────────────────────────────────────────────────
   protected readonly searchTerm = signal('');

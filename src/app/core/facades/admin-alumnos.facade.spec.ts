@@ -1161,4 +1161,294 @@ describe('AdminAlumnosFacade', () => {
       expect(ids()).toEqual(['1', '2']);
     });
   });
+
+  describe('manejo explícito de lecturas fallidas (spec 0060-b T3.2)', () => {
+    function makeStudentRow(id: number, branchId = 1, enrollmentId = id * 10): any {
+      return {
+        id,
+        status: 'active',
+        address: null,
+        users: {
+          id,
+          rut: `${id}-0`,
+          first_names: 'Ana',
+          paternal_last_name: `Sede${branchId}`,
+          maternal_last_name: 'Pérez',
+          email: `a${id}@test.cl`,
+          phone: null,
+          branch_id: branchId,
+          branches: { name: `Sede ${branchId}` },
+        },
+        enrollments: [
+          {
+            id: enrollmentId,
+            number: `${enrollmentId}`,
+            status: 'active',
+            payment_status: 'paid',
+            pending_balance: 0,
+            total_paid: 100000,
+            docs_complete: true,
+            created_at: '2026-01-01T00:00:00Z',
+            license_group: 'class_b',
+            branch_id: branchId,
+            branches: { name: `Sede ${branchId}` },
+            courses: { id: 1, name: 'Clase B' },
+            student_documents: [],
+          },
+        ],
+        standalone_course_enrollments: [],
+      };
+    }
+
+    function mockTables(handlers: {
+      students?: () => Promise<any>;
+      class_b_sessions?: () => Promise<any>;
+      certificates?: () => Promise<any>;
+      certificate_issuance_log?: () => Promise<any>;
+      enrollments?: () => Promise<any>;
+      payments?: () => Promise<any>;
+      studentsUpdate?: () => Promise<any>;
+    }): void {
+      supabaseSpy.client.from = vi.fn((table: string) => {
+        let isHeadFuture = false;
+        let mode: 'select' | 'update' = 'select';
+        const b: any = {
+          select: vi.fn(() => {
+            mode = 'select';
+            return b;
+          }),
+          update: vi.fn(() => {
+            mode = 'update';
+            return b;
+          }),
+          eq: vi.fn(() => b),
+          neq: vi.fn(() => b),
+          in: vi.fn(() => b),
+          not: vi.fn(() => b),
+          gte: vi.fn(() => {
+            isHeadFuture = true;
+            return b;
+          }),
+          order: vi.fn(() => b),
+          then: (resolve: (v: unknown) => void, reject: (e: unknown) => void) => {
+            let p: Promise<any> = Promise.resolve({ data: [], count: 0, error: null });
+            if (table === 'students' && mode === 'update' && handlers.studentsUpdate) {
+              p = handlers.studentsUpdate();
+            } else if (table === 'students' && handlers.students) {
+              p = handlers.students();
+            } else if (table === 'class_b_sessions' && handlers.class_b_sessions) {
+              p = handlers.class_b_sessions();
+            } else if (table === 'certificates' && handlers.certificates) {
+              p = handlers.certificates();
+            } else if (table === 'certificate_issuance_log' && handlers.certificate_issuance_log) {
+              p = handlers.certificate_issuance_log();
+            } else if (table === 'enrollments' && handlers.enrollments) {
+              p = handlers.enrollments();
+            } else if (table === 'payments' && handlers.payments) {
+              p = handlers.payments();
+            } else if (isHeadFuture && handlers.class_b_sessions) {
+              p = handlers.class_b_sessions();
+            }
+            return p.then(resolve, reject);
+          },
+        };
+        return b;
+      });
+    }
+
+    it('primera carga con { data: null, error }: expone error, deja lista vacía y _initialized=false', async () => {
+      mockTables({
+        students: () =>
+          Promise.resolve({ data: null, error: { message: 'timeout', code: '57014' } }),
+      });
+
+      await facade.initialize();
+
+      expect(facade.error()).toBeTruthy();
+      expect(facade.alumnos()).toEqual([]);
+      expect(facade.totalAlumnos()).toBe(0);
+      expect(facade.isLoading()).toBe(false);
+      expect((facade as any)._initialized).toBe(false);
+    });
+
+    it('una consulta secundaria fallida en fetchCursoCompletoPendienteEgresoSet (certificate_issuance_log) aborta toda la carga (Regla 1)', async () => {
+      const completedSessions = Array.from({ length: 12 }, () => ({ enrollment_id: 10 }));
+      mockTables({
+        students: () => Promise.resolve({ data: [makeStudentRow(1, 1, 10)], error: null }),
+        class_b_sessions: () => Promise.resolve({ data: completedSessions, error: null }),
+        certificates: () =>
+          Promise.resolve({ data: [{ id: 500, enrollment_id: 10 }], error: null }),
+        certificate_issuance_log: () =>
+          Promise.resolve({ data: null, error: { message: 'rls denied', code: '42501' } }),
+      });
+
+      await facade.initialize();
+
+      expect(facade.error()).toBeTruthy();
+      expect(facade.alumnos()).toEqual([]);
+    });
+
+    it('cambio de sede con { error }: limpia alumnos previos (Caso A) y expone error', async () => {
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      mockTables({
+        students: () => Promise.resolve({ data: [makeStudentRow(1, 1, 10)], error: null }),
+      });
+      await facade.initialize();
+      expect(facade.alumnos()).toHaveLength(1);
+
+      branchFacadeSpy.selectedBranchId.mockReturnValue(2);
+      mockTables({
+        students: () => Promise.resolve({ data: null, error: { message: 'db error' } }),
+      });
+      await facade.initialize();
+
+      expect(facade.alumnos()).toEqual([]);
+      expect(facade.totalAlumnos()).toBe(0);
+      expect(facade.error()).toBeTruthy();
+      expect(facade.isLoading()).toBe(false);
+    });
+
+    it('cambio a Papelera con { error }: limpia alumnos previos (Caso A) y expone error', async () => {
+      mockTables({
+        students: () => Promise.resolve({ data: [makeStudentRow(1, 1, 10)], error: null }),
+      });
+      await facade.initialize();
+      expect(facade.alumnos()).toHaveLength(1);
+
+      mockTables({
+        students: () => Promise.resolve({ data: null, error: { message: 'trash error' } }),
+      });
+      await facade.setTrashView(true);
+
+      expect(facade.alumnos()).toEqual([]);
+      expect(facade.error()).toBeTruthy();
+    });
+
+    it('refresco silencioso con { error } (Caso B): conserva alumnos previos, no setea error() y activa refreshFailed()', async () => {
+      mockTables({
+        students: () => Promise.resolve({ data: [makeStudentRow(1, 1, 10)], error: null }),
+      });
+      await facade.initialize();
+      expect(facade.alumnos()).toHaveLength(1);
+
+      mockTables({
+        students: () => Promise.resolve({ data: null, error: { message: 'offline' } }),
+      });
+      await facade.initialize();
+
+      expect(facade.alumnos().map((a) => a.id)).toEqual(['1']);
+      expect(facade.error()).toBeNull();
+      expect(facade.refreshFailed()).toBe(true);
+      expect(facade.isLoading()).toBe(false);
+    });
+
+    it('reintentar() en Caso B refresca silenciosamente sin vaciar datos ni prender isLoading', async () => {
+      mockTables({
+        students: () => Promise.resolve({ data: [makeStudentRow(1, 1, 10)], error: null }),
+      });
+      await facade.initialize();
+
+      mockTables({
+        students: () => Promise.resolve({ data: null, error: { message: 'offline' } }),
+      });
+      await facade.initialize();
+      expect(facade.refreshFailed()).toBe(true);
+
+      let resolveRetry!: (v: unknown) => void;
+      const retryResponsePromise = new Promise((res) => {
+        resolveRetry = res;
+      });
+      const loadingDuringRetry: boolean[] = [];
+      mockTables({
+        students: () => retryResponsePromise,
+      });
+      const retryPromise = facade.reintentar();
+      loadingDuringRetry.push(facade.isLoading());
+      expect(facade.alumnos().map((a) => a.id)).toEqual(['1']);
+
+      resolveRetry({ data: [makeStudentRow(2, 1, 20)], error: null });
+      await retryPromise;
+
+      expect(loadingDuringRetry).toEqual([false]);
+      expect(facade.refreshFailed()).toBe(false);
+      expect(facade.error()).toBeNull();
+      expect(facade.alumnos().map((a) => a.id)).toEqual(['2']);
+    });
+
+    it('reintentar() en Caso A vuelve a cargar desde cero y limpia error al recuperarse', async () => {
+      mockTables({
+        students: () => Promise.resolve({ data: null, error: { message: 'down' } }),
+      });
+      await facade.initialize();
+      expect(facade.error()).toBeTruthy();
+
+      mockTables({
+        students: () => Promise.resolve({ data: [makeStudentRow(3, 1, 30)], error: null }),
+      });
+      await facade.reintentar();
+
+      expect(facade.error()).toBeNull();
+      expect(facade.refreshFailed()).toBe(false);
+      expect(facade.alumnos().map((a) => a.id)).toEqual(['3']);
+    });
+
+    it('archivarAlumno: si el UPDATE tiene éxito pero el refresco posterior falla, la mutación sigue siendo exitosa (Caso B)', async () => {
+      const toast = TestBed.inject(ToastService) as any;
+      mockTables({
+        students: () => Promise.resolve({ data: [makeStudentRow(1, 1, 10)], error: null }),
+      });
+      await facade.initialize();
+
+      mockTables({
+        studentsUpdate: () => Promise.resolve({ data: null, error: null }),
+        students: () => Promise.resolve({ data: null, error: { message: 'refresh failed' } }),
+      });
+
+      await expect(facade.archivarAlumno(1)).resolves.toBeUndefined();
+      expect(toast.success).toHaveBeenCalled();
+      expect(toast.error).not.toHaveBeenCalled();
+      expect(facade.refreshFailed()).toBe(true);
+      expect(facade.alumnos()).toHaveLength(1);
+    });
+
+    it('respuesta fallida fuera de orden de sede vieja NO sobreescribe error ni alumnos de sede nueva', async () => {
+      let rejectOld!: (v: unknown) => void;
+      branchFacadeSpy.selectedBranchId.mockReturnValue(1);
+      mockTables({
+        students: () =>
+          new Promise((res) => {
+            rejectOld = res;
+          }),
+      });
+      const callOld = facade.initialize();
+
+      branchFacadeSpy.selectedBranchId.mockReturnValue(2);
+      mockTables({
+        students: () => Promise.resolve({ data: [makeStudentRow(2, 2, 20)], error: null }),
+      });
+      await facade.initialize();
+
+      rejectOld({ data: null, error: { message: 'late error' } });
+      await callOld;
+
+      expect(facade.error()).toBeNull();
+      expect(facade.refreshFailed()).toBe(false);
+      expect(facade.alumnos().map((a) => a.id)).toEqual(['2']);
+    });
+
+    it('checkHistorial: si falla enrollments o payments/sessions en Promise.all, lanza error (y prepararArchivado no habilita borrado sin historial)', async () => {
+      const toast = TestBed.inject(ToastService) as any;
+      mockTables({
+        enrollments: () => Promise.resolve({ data: [{ id: 99 }], error: null }),
+        payments: () => Promise.resolve({ count: null, error: { message: 'payments error' } }),
+        class_b_sessions: () => Promise.resolve({ count: 0, error: null }),
+      });
+
+      await expect(facade.checkHistorial(1)).rejects.toEqual({ message: 'payments error' });
+
+      const prep = await facade.prepararArchivado(1);
+      expect(prep.permitido).toBe(false);
+      expect(toast.error).toHaveBeenCalled();
+    });
+  });
 });

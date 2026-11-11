@@ -200,6 +200,7 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
   - **AC ref:** AC3
   - **DoD:** DoD-F, más:
     - [ ] Los KPIs del hero no dicen 0 cuando la lista muestra error
+  - **Avance (2026-11-11):** Migrados `admin-alumnos.facade.ts`, `ex-alumnos.facade.ts` y `convalidation.utils.ts` junto con `alumnos-list-content`, `admin-alumnos`, `secretaria-alumnos`, `ex-alumnos-content`, `admin-ex-alumnos`, `secretaria-ex-alumnos`, `ex-alumnos-profesional-content`, `admin-ex-alumnos-profesional`, `secretaria-ex-alumnos-profesional` y los drawers `tasas` y `comentarios`. Hero KPIs y chips se ocultan en Caso A; Caso B preserva datos y reintenta silenciosamente. `admin-alumnos.facade.ts` fuera de PENDING en `unchecked-reads.guard.spec.ts`. Hallazgo BD real: `ExAlumnosFacade.loadSurveys` selecciona `student_surveys.comments` pero `20260408000000_student_reviews.sql` definió la columna `comment` (aislado en `surveysError`). Verde en `test:ci` (4994 passed / 5 skipped), `test-tz.mjs` (UTC, Asia/Tokyo, America/Santiago), `lint:arch`, `ngc --noEmit` y Playwright X01 en `/app/secretaria/alumnos` y `/app/secretaria/ex-alumnos` (drawers y `/ex-alumnos-profesional` sin X01 directo; validados en Vitest).
 - [ ] **T3.3** — `dms.facade.ts` y `dashboard-alerts.facade.ts`
   - **AC ref:** AC3, AC5
   - **DoD:** DoD-F, más:

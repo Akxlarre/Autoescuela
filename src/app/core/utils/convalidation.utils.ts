@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { assertReadOk } from '@core/utils/db-error.utils';
 
 /**
  * Trae, para un set de enrollment ids, cuáles tienen convalidación simultánea
@@ -14,10 +15,12 @@ export async function fetchConvalidationMap(
   const map = new Map<number, 'A4' | 'A3'>();
   if (enrollmentIds.length === 0) return map;
 
-  const { data } = await supabase
-    .from('license_validations')
-    .select('enrollment_id, convalidated_license')
-    .in('enrollment_id', enrollmentIds);
+  const data = assertReadOk(
+    await supabase
+      .from('license_validations')
+      .select('enrollment_id, convalidated_license')
+      .in('enrollment_id', enrollmentIds),
+  );
 
   for (const row of (data ?? []) as {
     enrollment_id: number;
