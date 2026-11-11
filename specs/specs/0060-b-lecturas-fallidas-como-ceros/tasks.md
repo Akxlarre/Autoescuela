@@ -193,11 +193,22 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
 
 ## Fase 3 — Gestión Clase B (PR 5)
 
-- [ ] **T3.1** — `asistencia-clase-b.facade.ts` + Asistencia
+- [x] **T3.1** — `asistencia-clase-b.facade.ts` + Asistencia
   - **AC ref:** AC3, AC5
   - **DoD:** DoD-F
   - **Avance (2026-11-11):** Migrado `asistencia-clase-b.facade.ts` junto con `asistencia-clase-b-content.component.ts`, `admin-asistencia.component.ts`, `secretaria-asistencia.component.ts` y el selector de vehículos de `admin-iniciar-clase-drawer.component.ts`. Caso A en carga inicial, `setDate`, `reload` y cambio de sede (retira prácticas, alertas y KPIs a `null`, sin mostrar ceros ni marcar `_initialized` en fallo), `fetchAlertas()` y `fetchEnrollmentsWithRemovedSchedule()` lanzando en error, y guard de concurrencia (`dataGuard` + `alertasGuard`) contra respuestas tardías. Caso B en `refreshSilently()` y `refreshAlertasSilently()` conservando datos y exponiendo `refreshFailed()` + `reintentar()` sin skeleton. Lecturas dentro de mutaciones verificando `.error` (`resolvePractica` dentro de `try` en `undoAbsence`/`cancelStart`, `enrollments`, `moveSession`, `countCancelledSince`), aislando `countCancelledSince` en `justifyAbsence` con `toast.warning` sin revertir el guardado. En el drawer de inicio, error explícito + "Reintentar" para `vehicles` (sin marcar `vehiclesLoaded`) y aviso sutil `vehicleDocsUnknown()` cuando falla `vehicle_documents`. Conectado `ciclos.error()` en el tab Ciclos Teóricos sin modificar `CiclosTeoricosFacade`. Sacado `asistencia-clase-b.facade.ts` de `PENDING` en `unchecked-reads.guard.spec.ts` y quitada la marca `knownBug` de `S('asistencia', '0060-b etapa 3a')` en `e2e/transversal-shell.spec.ts`. Verificado con TDD RED previo (17 fallos), `lint:arch` (0 errores), `ngc --noEmit`, `test-tz.mjs` (158/158 en UTC, Asia/Tokyo y America/Santiago), `test:ci -- --maxWorkers=4` (5054 passed / 5 skipped) y Playwright `X01: /app/secretaria/asistencia` (5 passed); pendiente prueba manual en navegador contra BD real para cerrar `[x]`.
     - Ajustes de revisión PR #406 (2026-11-11): (1) en Caso A (`asistencia-clase-b-content`) se mantiene visible la cabecera con título, `<app-date-input>` y botón `Actualizar`, reemplazando solo filtros, tabla y rail de alertas; (2) `refreshAlertasSilently()` al resolver bien ya no limpia `_refreshFailed` ni `_error` (solo `fetchData()` los limpia); (3) agregado `refrescar()` en `AsistenciaClaseBFacade` (Caso B si ya está inicializado en misma sede/fecha, `reload()` si no) conectado a `onRefresh()` en `admin-asistencia` y `secretaria-asistencia`.
+  - **Cerrada (2026-11-11):** prueba manual en navegador contra la BD real como secretaria, con
+    las lecturas cortadas en la pestaña. Carga real de hoy (sin clases, 64 alertas) y de un día con
+    clases (3 clases y sus KPIs). Caso B (refresco y botón "Actualizar"): la tabla se queda con el
+    aviso, y "Reintentar" no muestra skeleton ni borra datos; un refresco de alertas que sale bien
+    no borra el aviso. Caso A al cambiar de día: se retiran tabla, rail y KPIs sin ceros, quedan el
+    selector de fecha y "Actualizar", y elegir otro día con la red de vuelta sale del error. Drawer
+    de inicio: vehículos caídos muestran error con "Reintentar"; documentos caídos listan los
+    vehículos con el aviso de documentación no revisada. Ciclos teóricos carga normal. Las
+    mutaciones dirigidas (alertas que tragan el error, refresco que no marca `refreshFailed`, conteo
+    de canceladas que hace fallar la justificación, refresco de alertas que borra el aviso,
+    `refrescar()` que recarga con skeleton) hacen fallar los tests.
 - [x] **T3.2** — `admin-alumnos.facade.ts` y `ex-alumnos.facade.ts`
   - **AC ref:** AC3
   - **DoD:** DoD-F, más:
