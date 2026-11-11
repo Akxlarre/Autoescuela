@@ -249,8 +249,23 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
     (`v_professional_attendance.semaphore`, columna inexistente) que con `assertReadOk` dejaba en
     error permanente el resumen de todo alumno Profesional; se corrigió leyendo `attendance_flag`.
     X01 no cubre los portales (sin cuentas E2E de esos roles).
-- [ ] **T3.6** — Validación de la etapa
+- [x] **T3.6** — Validación de la etapa
   - **DoD:** igual que T1.6
+  - **Cerrada (2026-11-11):** sobre main con T3.1–T3.5 integradas: `lint:arch` 0 errores,
+    `test:ci` 5056 en verde, `test-tz.mjs` con los 44 specs tocados por la etapa en verde en las tres
+    zonas, y X01 contra el build de producción (`ng serve --configuration production`) en verde en
+    las 8 pantallas de la etapa (dashboard, alumnos, ex-alumnos, documentos, flota, instructores,
+    observaciones, asistencia). La revisión visual en escritorio (1440×900, claro y oscuro) encontró
+    lo que ningún test veía: en 8 componentes el aviso del caso B era una celda más de la grilla
+    `--fill-screen*` y se quedaba con la fila que crece, dejando la lista en 120px (en Observaciones,
+    2px). Las pruebas manuales de T3.2 y T3.4 se habían hecho con el panel angosto (tier móvil, donde
+    la página scrollea) y no lo mostraron. Corregido en el PR #407 (nota de avance abajo) y medido
+    de nuevo con el aviso visible, en claro y oscuro: alumnos 574px, ex-alumnos 530px, flota 576px,
+    instructores 627px y observaciones 502px de lista, con el aviso dentro de la celda, sin scroll de
+    página y consola limpia. Asistencia y Documentos ya estaban bien. Los portales de instructor y
+    alumno ponen el aviso dentro de la celda (revisado en el código; no se pueden abrir sin cuentas
+    E2E de esos roles).
+  - **Avance (2026-11-11):** Corregido el layout de Caso B en los 8 componentes con grilla `--fill-screen*` (`alumnos-list-content`, `ex-alumnos-content`, `ex-alumnos-profesional-content`, `flota-list-content`, `admin-instructores`, `admin-tareas`, `secretaria-observaciones`, `instructor-tareas`): `app-alert-card` pasa dentro de `.bento-fill` con `p-4 pb-0 shrink-0` (y contenedor `flex flex-col min-h-0` con `class="flex-1 min-h-0 h-auto!"` sobre `<app-task-list-content>` en tareas/observaciones) en lugar de competir por la fila `1fr` del grid. Documentado en `.claude/rules/swr-pattern.md` (§"En la pantalla") y espejado en `.agents/rules/swr-pattern.md`. Verificado con 8 tests nuevos (86/86 en sus specs), `test-tz.mjs` (`UTC`, `Asia/Tokyo`, `America/Santiago`), `lint:arch` (0 errores, `ARCH-30` al día), `ngc --noEmit`, `test:ci -- --maxWorkers=2` (`331 passed | 1 skipped`, `5064 passed | 5 skipped`) y Playwright X01 en `--workers=1` (`9 passed`: `/app/secretaria/{alumnos,ex-alumnos,flota,instructores,observaciones}` + 4 setups de auth).
 
 ---
 

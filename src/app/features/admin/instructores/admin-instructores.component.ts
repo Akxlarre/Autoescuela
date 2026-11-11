@@ -68,29 +68,6 @@ type FilterTab = 'all' | 'active' | 'expiring' | 'expired';
         (actionClick)="handleHeroAction($event)"
       />
 
-      <!-- ── Caso B: Aviso de refresco fallido ─────────────────────────────── -->
-      @if (facade.refreshFailed()) {
-        <div class="bento-banner" role="alert">
-          <app-alert-card severity="error" title="No se pudo actualizar la lista de instructores">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <span class="text-compact text-text-secondary">
-                Los datos mostrados pueden no estar actualizados.
-              </span>
-              <button
-                type="button"
-                class="btn-secondary flex items-center gap-2 shrink-0"
-                data-llm-action="reintentar-instructores"
-                [disabled]="facade.isLoading()"
-                (click)="facade.reintentar()"
-              >
-                <app-icon name="refresh-cw" [size]="14" />
-                Reintentar
-              </button>
-            </div>
-          </app-alert-card>
-        </div>
-      }
-
       <!-- ── Table / Cards (Dual-Viewport) ─────────────────────────────────── -->
       <div
         class="bento-banner bento-fill card p-0 overflow-hidden shadow-sm dual-viewport-container flex flex-col w-full h-full"
@@ -109,6 +86,32 @@ type FilterTab = 'all' | 'active' | 'expiring' | 'expired';
             />
           </div>
         } @else {
+          <!-- ── Caso B: Aviso de refresco fallido ─────────────────────────────── -->
+          @if (facade.refreshFailed()) {
+            <div class="p-4 pb-0 shrink-0" role="alert">
+              <app-alert-card
+                severity="error"
+                title="No se pudo actualizar la lista de instructores"
+              >
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <span class="text-compact text-text-secondary">
+                    Los datos mostrados pueden no estar actualizados.
+                  </span>
+                  <button
+                    type="button"
+                    class="btn-secondary flex items-center gap-2 shrink-0"
+                    data-llm-action="reintentar-instructores"
+                    [disabled]="facade.isLoading()"
+                    (click)="facade.reintentar()"
+                  >
+                    <app-icon name="refresh-cw" [size]="14" />
+                    Reintentar
+                  </button>
+                </div>
+              </app-alert-card>
+            </div>
+          }
+
           <!-- ── Filter Tabs (Toolbar) ──────────────────────────────────────── -->
           <div
             class="p-4 md:px-6 border-b border-border-subtle bg-surface flex flex-wrap items-center gap-2"

@@ -154,29 +154,6 @@ interface AlumnosEmptyState {
         (actionClick)="handleHeroAction($event)"
       />
 
-      <!-- Caso B: Aviso de refresco fallido con datos visibles -->
-      @if (refreshFailed()) {
-        <div class="bento-banner" role="alert">
-          <app-alert-card severity="error" title="No se pudo actualizar la lista de alumnos">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <span class="text-compact text-text-secondary">
-                Los datos mostrados pueden no estar actualizados.
-              </span>
-              <button
-                type="button"
-                class="btn-secondary flex items-center gap-2 shrink-0"
-                data-llm-action="reintentar-alumnos"
-                [disabled]="isLoading()"
-                (click)="refreshRequested.emit()"
-              >
-                <app-icon name="refresh-cw" [size]="14" />
-                Reintentar
-              </button>
-            </div>
-          </app-alert-card>
-        </div>
-      }
-
       <!-- Filtros y Tabla (Dual-Viewport). El modo fill-screen desktop lo da
            .bento-fill (spec 0028); en móvil la card crece con su contenido. -->
       <div
@@ -184,6 +161,29 @@ interface AlumnosEmptyState {
         appCardHover
         #tableCard
       >
+        <!-- Caso B: Aviso de refresco fallido con datos visibles -->
+        @if (refreshFailed()) {
+          <div class="p-4 pb-0 shrink-0" role="alert">
+            <app-alert-card severity="error" title="No se pudo actualizar la lista de alumnos">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span class="text-compact text-text-secondary">
+                  Los datos mostrados pueden no estar actualizados.
+                </span>
+                <button
+                  type="button"
+                  class="btn-secondary flex items-center gap-2 shrink-0"
+                  data-llm-action="reintentar-alumnos"
+                  [disabled]="isLoading()"
+                  (click)="refreshRequested.emit()"
+                >
+                  <app-icon name="refresh-cw" [size]="14" />
+                  Reintentar
+                </button>
+              </div>
+            </app-alert-card>
+          </div>
+        }
+
         <!-- Toolbar de la tabla -->
         <div class="flex flex-wrap items-center gap-3 p-4 border-b border-border-default">
           <!-- Buscador -->

@@ -124,6 +124,11 @@ El resto de las escrituras sigue disponible: la BD las valida.
 
 - `@if` nativo, sin componentes nuevos: `app-empty-state` con "Reintentar" para el caso A (dentro
   de la celda `.bento-fill`, centrado), `app-alert-card` para el caso B.
+- En grillas con `.bento-grid--fill-screen` o `.bento-grid--fill-screen-kpi`, el `app-alert-card`
+  del caso B va **dentro** de la celda `.bento-fill` (como primer hijo con `shrink-0` y padding
+  interno si la card lleva `p-0`), nunca como hijo directo de la grilla: esas variantes definen
+  filas fijas y un hijo extra en el grid se queda con la fila que crece (`1fr`), dejando la lista
+  aplastada debajo.
 - Con la carga fallida los KPIs **no se renderizan en 0**: el estado de error los reemplaza.
 - El botón "Reintentar" lleva `data-llm-action`.
 - Lo verifica el bloque X01 de `e2e/transversal-shell.spec.ts`: corta la red y exige "Reintentar"
