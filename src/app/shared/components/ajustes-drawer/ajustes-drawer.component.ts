@@ -34,6 +34,7 @@ import { PreciosCursosDrawerComponent } from '@features/admin/configuracion-prec
 import { TarifaInstructoresDrawerComponent } from '@features/admin/configuracion-nomina/tarifa-instructores-drawer.component';
 import { PenalizacionInasistenciasDrawerComponent } from '@features/admin/configuracion-inasistencias/penalizacion-inasistencias-drawer.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
+import { TabsComponent, type TabOption } from '@shared/components/tabs/tabs.component';
 
 @Component({
   selector: 'app-ajustes-drawer',
@@ -47,36 +48,21 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     SkeletonBlockComponent,
     DrawerFormComponent,
     PasswordRequirementsComponent,
+    TabsComponent,
   ],
   template: `
     <div class="ajustes-container flex h-full flex-col">
-      <!-- Tabs Navigation -->
-      <!-- hotfix-168-b (V07/V08): patrón tablist de WAI-ARIA, con flechas/Inicio/Fin y
-           tabindex itinerante. -->
-      <div
-        class="flex border-b border-border-subtle shrink-0 mb-4"
-        role="tablist"
-        aria-label="Secciones de ajustes"
-      >
-        @for (tab of tabs(); track tab.id) {
-          <button
-            type="button"
-            role="tab"
-            class="flex-1 py-3 text-sm font-semibold border-b-2 transition-all cursor-pointer"
-            [id]="'ajustes-tab-' + tab.id"
-            [attr.aria-selected]="activeTab() === tab.id"
-            [attr.aria-controls]="'ajustes-panel-' + tab.id"
-            [attr.tabindex]="activeTab() === tab.id ? 0 : -1"
-            [class.border-brand]="activeTab() === tab.id"
-            [class.text-brand]="activeTab() === tab.id"
-            [class.border-transparent]="activeTab() !== tab.id"
-            [class.text-text-secondary]="activeTab() !== tab.id"
-            (click)="setTab(tab.id)"
-            (keydown)="onTabKeydown($event)"
-          >
-            {{ tab.label }}
-          </button>
-        }
+      <!-- Tabs Navigation (hotfix-188-b: segmented sobre bg-base + WAI-ARIA tablist en app-tabs) -->
+      <div class="mb-4 shrink-0">
+        <app-tabs
+          variant="segmented"
+          [tabs]="tabs()"
+          [activeId]="activeTab()"
+          [wrap]="true"
+          ariaLabel="Secciones de ajustes"
+          idPrefix="ajustes"
+          (activeIdChange)="setTab($event)"
+        />
       </div>
 
       <!-- Tab Content Area -->
@@ -678,13 +664,11 @@ export class AjustesDrawerComponent {
   protected readonly currentUser = this.auth.currentUser;
   protected readonly isAdmin = computed(() => this.currentUser()?.role === 'admin');
   protected readonly isAlumno = computed(() => this.currentUser()?.role === 'alumno');
-  protected readonly tabs = computed<{ id: 'perfil' | 'config' | 'seguridad'; label: string }[]>(
-    () => [
-      { id: 'perfil', label: 'Mi Perfil' },
-      { id: 'config', label: 'Ajustes' },
-      ...(this.isAdmin() ? [{ id: 'seguridad' as const, label: 'Seguridad' }] : []),
-    ],
-  );
+  protected readonly tabs = computed<TabOption[]>(() => [
+    { id: 'perfil', label: 'Mi Perfil', icon: 'user' },
+    { id: 'config', label: 'Ajustes', icon: 'settings' },
+    ...(this.isAdmin() ? [{ id: 'seguridad', label: 'Seguridad', icon: 'shield' }] : []),
+  ]);
 
   /**
    * Comunicaciones promocionales (spec 0040-b, Ley 21.719, AC7/AC8). Acotado a
@@ -774,35 +758,10 @@ export class AjustesDrawerComponent {
     });
   }
 
-  setTab(tab: 'perfil' | 'config' | 'seguridad'): void {
-    this.activeTab.set(tab);
-  }
-
-  /** Flechas, Inicio y Fin mueven la pestaña activa y el foco (patrón tablist). */
-  onTabKeydown(event: KeyboardEvent): void {
-    const ids = this.tabs().map((t) => t.id);
-    const current = ids.indexOf(this.activeTab());
-    let next: number;
-    switch (event.key) {
-      case 'ArrowRight':
-        next = (current + 1) % ids.length;
-        break;
-      case 'ArrowLeft':
-        next = (current - 1 + ids.length) % ids.length;
-        break;
-      case 'Home':
-        next = 0;
-        break;
-      case 'End':
-        next = ids.length - 1;
-        break;
-      default:
-        return;
+  setTab(tab: string): void {
+    if (tab === 'perfil' || tab === 'config' || (tab === 'seguridad' && this.isAdmin())) {
+      this.activeTab.set(tab);
     }
-    event.preventDefault();
-    this.setTab(ids[next]);
-    const tablist = (event.currentTarget as HTMLElement).parentElement;
-    tablist?.querySelector<HTMLElement>(`#ajustes-tab-${ids[next]}`)?.focus();
   }
 
   formatConsentDate(iso: string | null): string {
