@@ -521,6 +521,87 @@ describe('StudentHomeFacade — manejo explícito de errores de lectura (0060-b 
     expect(facade.snapshot()?.side.pendingBalance).toBe(80000);
   });
 
+  it('Reintentar en caso B: con refreshFailed y datos visibles, un reintento que falla deja los datos intactos, isLoading nunca pasa a true y no aparece error() de caso A', async () => {
+    const { facade, mockSupabase } = setupErrorCase({
+      responses: {
+        enrollments: { data: mockEnrollmentRow({ id: 42, pending_balance: 150000 }), error: null },
+        v_student_progress_b: { data: { completed_practices: 8 }, error: null },
+        class_b_sessions: { data: [], error: null },
+        class_b_exam_scores: { data: null, error: null },
+        certificates: { data: null, error: null },
+      },
+    });
+
+    await facade.initialize();
+    expect(facade.snapshot()?.side.pendingBalance).toBe(150000);
+
+    mockSupabase.client.from = makeTableMock({
+      enrollments: { data: null, error: { message: 'temp failure' } },
+    }).client.from;
+    await facade.initialize();
+    expect(facade.refreshFailed()).toBe(true);
+
+    const observedLoading: boolean[] = [];
+    const failFrom = makeTableMock({
+      enrollments: { data: null, error: { message: 'retry failure' } },
+    }).client.from;
+    mockSupabase.client.from = vi.fn().mockImplementation((table: string) => {
+      observedLoading.push(facade.isLoading());
+      return failFrom(table);
+    });
+
+    await facade.reintentar();
+
+    expect(observedLoading.length).toBeGreaterThan(0);
+    expect(observedLoading.every((v) => v === false)).toBe(true);
+    expect(facade.isLoading()).toBe(false);
+    expect(facade.snapshot()?.side.pendingBalance).toBe(150000);
+    expect(facade.refreshFailed()).toBe(true);
+    expect(facade.error()).toBeNull();
+  });
+
+  it('Reintentar en caso B: un reintento que funciona actualiza los datos y limpia refreshFailed', async () => {
+    const { facade, mockSupabase } = setupErrorCase({
+      responses: {
+        enrollments: { data: mockEnrollmentRow({ id: 42, pending_balance: 150000 }), error: null },
+        v_student_progress_b: { data: { completed_practices: 8 }, error: null },
+        class_b_sessions: { data: [], error: null },
+        class_b_exam_scores: { data: null, error: null },
+        certificates: { data: null, error: null },
+      },
+    });
+
+    await facade.initialize();
+
+    mockSupabase.client.from = makeTableMock({
+      enrollments: { data: null, error: { message: 'temp failure' } },
+    }).client.from;
+    await facade.initialize();
+    expect(facade.refreshFailed()).toBe(true);
+
+    const observedLoading: boolean[] = [];
+    const okFrom = makeTableMock({
+      enrollments: { data: mockEnrollmentRow({ id: 42, pending_balance: 80000 }), error: null },
+      v_student_progress_b: { data: { completed_practices: 9 }, error: null },
+      class_b_sessions: { data: [], error: null },
+      class_b_exam_scores: { data: null, error: null },
+      certificates: { data: null, error: null },
+    }).client.from;
+    mockSupabase.client.from = vi.fn().mockImplementation((table: string) => {
+      observedLoading.push(facade.isLoading());
+      return okFrom(table);
+    });
+
+    await facade.reintentar();
+
+    expect(observedLoading.length).toBeGreaterThan(0);
+    expect(observedLoading.every((v) => v === false)).toBe(true);
+    expect(facade.isLoading()).toBe(false);
+    expect(facade.snapshot()?.side.pendingBalance).toBe(80000);
+    expect(facade.refreshFailed()).toBe(false);
+    expect(facade.error()).toBeNull();
+  });
+
   it('request guard descarta respuesta vieja fuera de orden', async () => {
     let currentEnrollmentId = 42;
     let resolveFirst: any;

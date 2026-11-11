@@ -110,6 +110,10 @@ export class InstructorAlumnosFacade {
   }
 
   async reintentar(): Promise<void> {
+    if (this._refreshFailed()) {
+      await this.refreshSilently();
+      return;
+    }
     this._error.set(null);
     this._refreshFailed.set(false);
     this._initialized = false;
@@ -241,6 +245,17 @@ export class InstructorAlumnosFacade {
     const requestToken = this.studentDetailGuard.next();
 
     try {
+      // `courses!inner` + el filtro por tipo: la Ficha Técnica del instructor son las 12
+      // clases prácticas de Clase B, así que la pregunta no es "cuál es la matrícula
+      // vigente del alumno" sino "cuál es su matrícula de Clase B" (fix-170-b).
+      //
+      // Sin el filtro tomaba la de id más alto: en un alumno que terminó Clase B y después
+      // tomó Profesional —camino normal, la app tiene "Re-matricular"— agarraba la de
+      // Profesional y pintaba las 12 clases B en blanco. El listado decía 3/12 y la ficha
+      // del mismo alumno, 0%.
+      //
+      // El `order` se mantiene: entre varias matrículas de Clase B sigue ganando la más
+      // reciente, que es el criterio que ya había.
       const enrollmentRes = await this.supabase.client
         .from('enrollments')
         .select(

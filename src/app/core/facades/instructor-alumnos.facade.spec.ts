@@ -269,6 +269,196 @@ describe('InstructorAlumnosFacade', () => {
       expect(facade.students()).toEqual([]);
     });
 
+    it('Reintentar en caso B: con refreshFailed y datos visibles, un reintento que falla deja los datos intactos, isLoading nunca pasa a true y no aparece error() de caso A', async () => {
+      const sessionsChain: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ data: [{ enrollment_id: 10 }], error: null }),
+      };
+      const enrollmentsChain: any = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+      };
+      enrollmentsChain.in = vi.fn().mockImplementation((col: string) => {
+        if (col === 'status') {
+          return Promise.resolve({
+            data: [
+              {
+                id: 10,
+                number: 100,
+                status: 'active',
+                courses: { name: 'Clase B', code: 'B' },
+                students: { id: 5, users: { first_names: 'Ana', paternal_last_name: 'Pérez' } },
+                class_b_sessions: [],
+              },
+            ],
+            error: null,
+          });
+        }
+        return enrollmentsChain;
+      });
+      const progressChain: any = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({
+          data: [{ enrollment_id: 10, completed_practices: 3 }],
+          error: null,
+        }),
+      };
+
+      supabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'class_b_sessions') return sessionsChain;
+        if (table === 'enrollments') return enrollmentsChain;
+        if (table === 'v_student_progress_b') return progressChain;
+        return createChainMock();
+      });
+
+      await facade.initialize();
+      expect(facade.students().length).toBe(1);
+
+      sessionsChain.eq = vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: 'temporary network failure' },
+      });
+      await facade.refreshSilently();
+      expect(facade.refreshFailed()).toBe(true);
+
+      const observedLoading: boolean[] = [];
+      supabaseMock.client.from = vi.fn().mockImplementation(() => {
+        observedLoading.push(facade.isLoading());
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({ data: null, error: { message: 'retry failed' } }),
+        };
+      });
+
+      await facade.reintentar();
+
+      expect(observedLoading.length).toBeGreaterThan(0);
+      expect(observedLoading.every((v) => v === false)).toBe(true);
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.students().length).toBe(1);
+      expect(facade.students()[0].name).toContain('Ana');
+      expect(facade.refreshFailed()).toBe(true);
+      expect(facade.error()).toBeNull();
+    });
+
+    it('Reintentar en caso B: un reintento que funciona actualiza los datos y limpia refreshFailed', async () => {
+      const sessionsChain: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ data: [{ enrollment_id: 10 }], error: null }),
+      };
+      const enrollmentsChain: any = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+      };
+      enrollmentsChain.in = vi.fn().mockImplementation((col: string) => {
+        if (col === 'status') {
+          return Promise.resolve({
+            data: [
+              {
+                id: 10,
+                number: 100,
+                status: 'active',
+                courses: { name: 'Clase B', code: 'B' },
+                students: { id: 5, users: { first_names: 'Ana', paternal_last_name: 'Pérez' } },
+                class_b_sessions: [],
+              },
+            ],
+            error: null,
+          });
+        }
+        return enrollmentsChain;
+      });
+      const progressChain: any = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({
+          data: [{ enrollment_id: 10, completed_practices: 3 }],
+          error: null,
+        }),
+      };
+
+      supabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'class_b_sessions') return sessionsChain;
+        if (table === 'enrollments') return enrollmentsChain;
+        if (table === 'v_student_progress_b') return progressChain;
+        return createChainMock();
+      });
+
+      await facade.initialize();
+
+      sessionsChain.eq = vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: 'temporary network failure' },
+      });
+      await facade.refreshSilently();
+      expect(facade.refreshFailed()).toBe(true);
+
+      const observedLoading: boolean[] = [];
+      const updatedSessionsChain: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
+          data: [{ enrollment_id: 10 }, { enrollment_id: 11 }],
+          error: null,
+        }),
+      };
+      const updatedEnrollmentsChain: any = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+      };
+      updatedEnrollmentsChain.in = vi.fn().mockImplementation((col: string) => {
+        if (col === 'status') {
+          return Promise.resolve({
+            data: [
+              {
+                id: 10,
+                number: 100,
+                status: 'active',
+                courses: { name: 'Clase B', code: 'B' },
+                students: { id: 5, users: { first_names: 'Ana', paternal_last_name: 'Pérez' } },
+                class_b_sessions: [],
+              },
+              {
+                id: 11,
+                number: 101,
+                status: 'active',
+                courses: { name: 'Clase B', code: 'B' },
+                students: { id: 6, users: { first_names: 'Luis', paternal_last_name: 'Soto' } },
+                class_b_sessions: [],
+              },
+            ],
+            error: null,
+          });
+        }
+        return updatedEnrollmentsChain;
+      });
+      const updatedProgressChain: any = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({
+          data: [
+            { enrollment_id: 10, completed_practices: 4 },
+            { enrollment_id: 11, completed_practices: 1 },
+          ],
+          error: null,
+        }),
+      };
+
+      supabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+        observedLoading.push(facade.isLoading());
+        if (table === 'class_b_sessions') return updatedSessionsChain;
+        if (table === 'enrollments') return updatedEnrollmentsChain;
+        if (table === 'v_student_progress_b') return updatedProgressChain;
+        return createChainMock();
+      });
+
+      await facade.reintentar();
+
+      expect(observedLoading.length).toBeGreaterThan(0);
+      expect(observedLoading.every((v) => v === false)).toBe(true);
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.students().length).toBe(2);
+      expect(facade.refreshFailed()).toBe(false);
+      expect(facade.error()).toBeNull();
+    });
+
     it('loadStudentDetail: limpia studentDetail al empezar (Caso A al cambiar de alumno)', async () => {
       // Seteamos un alumno previo
       (facade as any)._studentDetail.set({

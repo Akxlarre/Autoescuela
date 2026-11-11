@@ -493,6 +493,126 @@ describe('StudentClasesFacade', () => {
       expect(facade.kpis()?.completedPractices).toBe(2);
     });
 
+    it('Reintentar en caso B: con refreshFailed y datos visibles, un reintento que falla deja los datos intactos, isLoading nunca pasa a true y no aparece error() de caso A', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: classBTables(
+          [
+            {
+              id: 1,
+              class_number: 1,
+              scheduled_at: FUTURE,
+              duration_min: 45,
+              status: 'scheduled',
+              class_b_practice_attendance: [],
+            },
+          ],
+          1,
+        ),
+      });
+
+      await facade.initialize();
+      expect(facade.practiceSessions().length).toBe(1);
+
+      mockSupabase.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: { message: 'temp err' } }),
+      });
+      await facade.initialize();
+      expect(facade.refreshFailed()).toBe(true);
+
+      const observedLoading: boolean[] = [];
+      mockSupabase.client.from = vi.fn().mockImplementation(() => {
+        observedLoading.push(facade.isLoading());
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: { message: 'retry err' } }),
+        };
+      });
+
+      await facade.reintentar();
+
+      expect(observedLoading.length).toBeGreaterThan(0);
+      expect(observedLoading.every((v) => v === false)).toBe(true);
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.practiceSessions().length).toBe(1);
+      expect(facade.kpis()?.completedPractices).toBe(1);
+      expect(facade.refreshFailed()).toBe(true);
+      expect(facade.error()).toBeNull();
+    });
+
+    it('Reintentar en caso B: un reintento que funciona actualiza los datos y limpia refreshFailed', async () => {
+      const { facade, mockSupabase } = setup({
+        tables: classBTables(
+          [
+            {
+              id: 1,
+              class_number: 1,
+              scheduled_at: FUTURE,
+              duration_min: 45,
+              status: 'scheduled',
+              class_b_practice_attendance: [],
+            },
+          ],
+          1,
+        ),
+      });
+
+      await facade.initialize();
+
+      mockSupabase.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: { message: 'temp err' } }),
+      });
+      await facade.initialize();
+      expect(facade.refreshFailed()).toBe(true);
+
+      const observedLoading: boolean[] = [];
+      const okFrom = createMockSupabase(
+        classBTables(
+          [
+            {
+              id: 1,
+              class_number: 1,
+              scheduled_at: FUTURE,
+              duration_min: 45,
+              status: 'scheduled',
+              class_b_practice_attendance: [],
+            },
+            {
+              id: 2,
+              class_number: 2,
+              scheduled_at: FUTURE,
+              duration_min: 45,
+              status: 'scheduled',
+              class_b_practice_attendance: [],
+            },
+          ],
+          2,
+        ),
+      ).client.from;
+
+      mockSupabase.client.from = vi.fn().mockImplementation((table: string) => {
+        observedLoading.push(facade.isLoading());
+        return okFrom(table);
+      });
+
+      await facade.reintentar();
+
+      expect(observedLoading.length).toBeGreaterThan(0);
+      expect(observedLoading.every((v) => v === false)).toBe(true);
+      expect(facade.isLoading()).toBe(false);
+      expect(facade.practiceSessions().length).toBe(2);
+      expect(facade.kpis()?.completedPractices).toBe(2);
+      expect(facade.refreshFailed()).toBe(false);
+      expect(facade.error()).toBeNull();
+    });
+
     it('request guard descarta respuesta vieja fuera de orden', async () => {
       let currentId = 100;
       let resolveFirst: any;

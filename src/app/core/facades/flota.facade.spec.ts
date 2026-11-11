@@ -879,6 +879,122 @@ describe('FlotaFacade.initialize — combustibleMes (fix-007-i)', () => {
       expect(service.vehicles().length).toBe(1);
     });
 
+    it('Reintentar en caso B: con refreshFailed y datos visibles, un reintento que falla deja los datos intactos, isLoading nunca pasa a true y no aparece error() de caso A', async () => {
+      localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'vehicles') {
+          return {
+            select: vi.fn(() => ({
+              order: vi.fn().mockResolvedValue({ data: [vRow(1)], error: null }),
+            })),
+          };
+        }
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              not: vi.fn(() => ({
+                gte: vi.fn().mockResolvedValue({ data: [], error: null }),
+              })),
+            })),
+          })),
+        };
+      });
+      await service.initialize();
+      expect(service.vehicles().length).toBe(1);
+
+      localSupabaseMock.client.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn(() => ({
+          order: vi.fn().mockResolvedValue({ data: null, error: { message: 'timeout' } }),
+        })),
+      }));
+      await service.refreshSilently();
+      expect(service.refreshFailed()).toBe(true);
+
+      const observedLoading: boolean[] = [];
+      localSupabaseMock.client.from = vi.fn().mockImplementation(() => {
+        observedLoading.push(service.isLoading());
+        return {
+          select: vi.fn(() => ({
+            order: vi.fn().mockResolvedValue({ data: null, error: { message: 'retry timeout' } }),
+            eq: vi.fn(() => ({
+              not: vi.fn(() => ({
+                gte: vi.fn().mockResolvedValue({ data: [], error: null }),
+              })),
+            })),
+          })),
+        };
+      });
+
+      await service.reintentar();
+
+      expect(observedLoading.length).toBeGreaterThan(0);
+      expect(observedLoading.every((v) => v === false)).toBe(true);
+      expect(service.isLoading()).toBe(false);
+      expect(service.vehicles().length).toBe(1);
+      expect(service.vehicles()[0].id).toBe(1);
+      expect(service.refreshFailed()).toBe(true);
+      expect(service.error()).toBeNull();
+    });
+
+    it('Reintentar en caso B: un reintento que funciona actualiza los datos y limpia refreshFailed', async () => {
+      localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'vehicles') {
+          return {
+            select: vi.fn(() => ({
+              order: vi.fn().mockResolvedValue({ data: [vRow(1)], error: null }),
+            })),
+          };
+        }
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              not: vi.fn(() => ({
+                gte: vi.fn().mockResolvedValue({ data: [], error: null }),
+              })),
+            })),
+          })),
+        };
+      });
+      await service.initialize();
+
+      localSupabaseMock.client.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn(() => ({
+          order: vi.fn().mockResolvedValue({ data: null, error: { message: 'timeout' } }),
+        })),
+      }));
+      await service.refreshSilently();
+      expect(service.refreshFailed()).toBe(true);
+
+      const observedLoading: boolean[] = [];
+      localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+        observedLoading.push(service.isLoading());
+        if (table === 'vehicles') {
+          return {
+            select: vi.fn(() => ({
+              order: vi.fn().mockResolvedValue({ data: [vRow(1), vRow(2)], error: null }),
+            })),
+          };
+        }
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              not: vi.fn(() => ({
+                gte: vi.fn().mockResolvedValue({ data: [], error: null }),
+              })),
+            })),
+          })),
+        };
+      });
+
+      await service.reintentar();
+
+      expect(observedLoading.length).toBeGreaterThan(0);
+      expect(observedLoading.every((v) => v === false)).toBe(true);
+      expect(service.isLoading()).toBe(false);
+      expect(service.vehicles().length).toBe(2);
+      expect(service.refreshFailed()).toBe(false);
+      expect(service.error()).toBeNull();
+    });
+
     it('falla la consulta de combustible (expenses): la carga completa de flota falla (AC7)', async () => {
       localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
         if (table === 'vehicles') {

@@ -112,6 +112,10 @@ export class StudentHomeFacade {
   }
 
   async reintentar(): Promise<void> {
+    if (this._refreshFailed()) {
+      await this.refreshSilently();
+      return;
+    }
     this._error.set(null);
     this._refreshFailed.set(false);
     this._initialized = false;
