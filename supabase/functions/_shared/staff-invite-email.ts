@@ -3,8 +3,12 @@
 // Correo de activación de una cuenta de personal (fix-182-b). La cuenta se crea SIN contraseña
 // (generateLink 'invite'); este correo lleva el link con el que la persona crea la suya.
 //
-// Función pura, sin dependencias: el envío SMTP lo hace la Edge Function que la usa.
+// Función pura: el envío SMTP lo hace la Edge Function que la usa (con school-mailer.ts).
+// spec 0061-b: con `sender`, el pie es el común de school-email.ts y lleva la línea del dominio.
 // Tests: deno test supabase/functions/_shared/staff-invite-email.test.ts
+
+import { domainLineHtml, schoolFooterHtml, type SchoolSender } from './school-email.ts';
+import { CONTRACT_EMAIL_THEMES, type ContractEmailTheme } from './contract-email.ts';
 
 export interface StaffInviteEmailInput {
   /** Nombre completo de la persona invitada (texto plano: se escapa). */
@@ -18,6 +22,10 @@ export interface StaffInviteEmailInput {
    * Chillán" fijo, también para la otra sede). Sin sede conocida, marca genérica.
    */
   schoolName?: string | null;
+  /** Escuela a cuyo nombre sale el correo (spec 0061-b). Da el pie y, sin `schoolName`, el encabezado. */
+  sender?: SchoolSender;
+  /** Colores de la escuela de la persona (0061-b); el azul si no tiene tema. */
+  theme?: ContractEmailTheme;
 }
 
 function escapeHtml(value: string): string {
@@ -34,6 +42,8 @@ export function buildStaffInviteEmail({
   roleLabel,
   actionLink,
   schoolName,
+  sender,
+  theme = CONTRACT_EMAIL_THEMES.azul,
 }: StaffInviteEmailInput): {
   subject: string;
   html: string;
@@ -44,7 +54,9 @@ export function buildStaffInviteEmail({
   const safeName = escapeHtml(name);
   const safeRole = escapeHtml(roleLabel);
   const safeLink = escapeHtml(actionLink);
-  const safeSchool = escapeHtml(schoolName?.trim() || 'Autoescuela');
+  const safeSchool = escapeHtml(schoolName?.trim() || sender?.schoolName || 'Autoescuela');
+  const footerExtra = sender ? `<br><br>${schoolFooterHtml(sender)}` : '';
+  const domainLine = sender ? domainLineHtml(sender, 'personal') : '';
 
   const html = `<!DOCTYPE html>
 <html lang="es">
@@ -56,14 +68,14 @@ export function buildStaffInviteEmail({
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background-color: #f1f5f9; line-height: 1.6; }
     .wrapper { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-    .header { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 60%, #8b5cf6 100%); padding: 40px 36px; text-align: center; }
+    .header { background-color: ${theme.brandColor}; background: ${theme.gradientHero}; padding: 40px 36px; text-align: center; }
     .company { color: rgba(255,255,255,0.92); font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
     .body { padding: 40px 36px 32px; }
-    .greeting { font-size: 13px; font-weight: 600; color: #0ea5e9; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
+    .greeting { font-size: 13px; font-weight: 600; color: ${theme.brandColor}; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
     .title { font-size: 26px; font-weight: 800; color: #0f172a; line-height: 1.2; margin-bottom: 12px; }
     .subtitle { font-size: 15px; color: #64748b; margin-bottom: 28px; }
     .cta { text-align: center; margin: 28px 0 20px; }
-    .button { display: inline-block; background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%); color: #ffffff !important; text-decoration: none; padding: 16px 48px; border-radius: 12px; font-weight: 700; font-size: 16px; }
+    .button { display: inline-block; background-color: ${theme.brandColor}; background: ${theme.gradientHero}; color: #ffffff !important; text-decoration: none; padding: 16px 48px; border-radius: 12px; font-weight: 700; font-size: 16px; }
     .note { font-size: 13px; color: #94a3b8; margin-top: 14px; }
     .fallback-label { font-size: 12px; color: #94a3b8; margin: 20px 0 8px; text-align: center; }
     .fallback { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; font-size: 12px; color: #475569; word-break: break-all; }
@@ -83,8 +95,9 @@ export function buildStaffInviteEmail({
     </div>
     <p class="fallback-label">O copia este enlace en tu navegador:</p>
     <p class="fallback">${safeLink}</p>
+    ${domainLine}
   </div>
-  <div class="footer">Este correo se envió automáticamente al crear tu cuenta.<br>Si no esperabas este correo, puedes ignorarlo.</div>
+  <div class="footer">Este correo se envió automáticamente al crear tu cuenta.<br>Si no esperabas este correo, puedes ignorarlo.${footerExtra}</div>
 </div>
 </body>
 </html>`;

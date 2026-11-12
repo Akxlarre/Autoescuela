@@ -50,6 +50,12 @@ export interface RecipientPreview {
   email: string | null;
   included: boolean;
   exclusionReason: RecipientExclusionReason | null;
+  /**
+   * Escuelas a cuyo nombre le llega (spec 0061-b). Un comunicado de todas las escuelas le llega
+   * una vez por cada una en la que cumple el segmento (y, si es promocional, en la que consintió).
+   * Vacío si queda excluido. Opcional: solo lo llena la vista previa del segmento.
+   */
+  branchIds?: number[];
 }
 
 /** Lo que edita el compositor antes de enviar. */

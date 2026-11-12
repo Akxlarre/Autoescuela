@@ -1142,11 +1142,15 @@ describe('EnrollmentFacade', () => {
         pilot.alumnoBloqueado = false;
       });
 
+      // spec 0061-b (AC4): manda la matrícula para que el correo salga a nombre de su escuela.
       it('con el portal habilitado, invita al alumno al confirmar', async () => {
         await facade.confirmEnrollment();
 
         expect(llamadasAInvitar()).toEqual([
-          ['activate-student-account', { body: { userId: 30, email: 'pedro@test.cl' } }],
+          [
+            'activate-student-account',
+            { body: { userId: 30, email: 'pedro@test.cl', enrollmentId: 10 } },
+          ],
         ]);
       });
 

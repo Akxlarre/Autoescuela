@@ -1634,7 +1634,7 @@ export class EnrollmentFacade {
 
       // Crear cuenta Auth del alumno y enviarle correo de invitación.
       // Fire-and-forget: no bloquea la confirmación si el correo falla.
-      this.inviteStudentToAuth(draft.userId, this._personalData()?.email);
+      this.inviteStudentToAuth(draft.userId, this._personalData()?.email, draft.enrollmentId);
       // fix-318-m: copia del contrato firmado al correo del alumno. Va aparte de la invitación,
       // que no admite adjuntos y que un alumno con cuenta ya activa (re-matrícula) no recibe.
       this.sendSignedContractEmail(draft.enrollmentId);
@@ -1699,7 +1699,7 @@ export class EnrollmentFacade {
       const enrollmentNumber = data as string;
 
       // Crear cuenta Auth del alumno y enviarle correo de invitación (fire-and-forget).
-      this.inviteStudentToAuth(draft.userId, this._personalData()?.email);
+      this.inviteStudentToAuth(draft.userId, this._personalData()?.email, draft.enrollmentId);
 
       await this.refreshEnrollment();
       this.updateStepStatus(6, 'completed');
@@ -1723,13 +1723,22 @@ export class EnrollmentFacade {
    *
    * fix-393-m: con el portal del alumno en piloto no se invita. La función es la que crea la
    * cuenta, manda el correo y crea la notificación de bienvenida, así que basta con no llamarla.
+   *
+   * spec 0061-b (AC4): manda la matrícula para que el correo salga a nombre de SU escuela (un
+   * alumno con matrícula en las dos tiene un solo `users.branch_id`).
    */
-  private inviteStudentToAuth(userId: number | null, email: string | undefined): void {
+  private inviteStudentToAuth(
+    userId: number | null,
+    email: string | undefined,
+    enrollmentId: number | null,
+  ): void {
     if (isBlockedInPilot('alumno')) return;
     if (!userId || !email) return;
 
     this.supabase.client.functions
-      .invoke('activate-student-account', { body: { userId, email } })
+      .invoke('activate-student-account', {
+        body: { userId, email, ...(enrollmentId ? { enrollmentId } : {}) },
+      })
       .then(({ error }) => {
         if (error) {
           console.error('activate-student-account error:', error);

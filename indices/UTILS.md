@@ -26,7 +26,7 @@
 | `src/app/core/utils/alumnos-profesional-export.utils.ts` | `buildAlumnosProfesionalExcelTable`, `ALUMNOS_PROFESIONAL_PDF_COLUMN_WEIGHTS`, `buildAlumnosProfesionalPdfTable` |
 | `src/app/core/utils/alumnos-profesional-sort.utils.ts` | `AlumnoProfesionalSortField`, `AlumnoProfesionalListSort`, `ALUMNO_PROFESIONAL_SORT_OPTIONS`, `sortAlumnosProfesional` |
 | `src/app/core/utils/alumnos-sort.utils.ts` | `ALUMNO_SORT_OPTIONS`, `sortAlumnos`, `nextAlumnoSort`, `toggleAlumnoSortDirection` |
-| `src/app/core/utils/announcement-recipients.utils.ts` | `ANNOUNCEMENT_BATCH_SIZE`, `ANNOUNCEMENT_MAX_RECIPIENTS`, `ANNOUNCEMENT_WARN_RECIPIENTS`, `AnnouncementBatch`, `AnnouncementDraftError`, `AnnouncementDraftValidation`, `ExclusionCounts`, `buildBatches`, `validateAnnouncementDraft`, `countExclusions` |
+| `src/app/core/utils/announcement-recipients.utils.ts` | `ANNOUNCEMENT_BATCH_SIZE`, `ANNOUNCEMENT_MAX_RECIPIENTS`, `ANNOUNCEMENT_WARN_RECIPIENTS`, `AnnouncementBatch`, `AnnouncementDraftError`, `AnnouncementDraftValidation`, `ExclusionCounts`, `buildBatches`, `validateAnnouncementDraft`, `countExclusions`, `pairKey`, `PromotionalConsentRow`, `consentedPairKeys`, `PreviewEnrollmentRow`, `groupPreviewRecipients`, `applyPromotionalConsent` (spec 0061-b) |
 | `src/app/core/utils/announcement-template.utils.ts` | `TemplateDraftError`, `TemplateDraftValidation`, `renderTemplate`, `extractUsedVariables`, `isScheduledForValid`, `InsertionResult`, `insertAtCursor`, `validateTemplateDraft` |
 | `src/app/core/utils/anulacion-pago.utils.ts` | `ingresoSeAnula`, `etiquetaAnularIngreso`, `formatAnulacionDetalle`, `resumenConAnulados` |
 | `src/app/core/utils/archive-confirmation.utils.ts` | `ARCHIVE_CONFIRMATION_WORD`, `buildFutureClassesBlockMessage`, `CLASE_B_ARCHIVE_WARNING`, `isArchiveConfirmationText` |
@@ -46,6 +46,8 @@
 | `src/app/core/utils/class-count.utils.ts` | `classCountFromPracticalHours` |
 | `src/app/core/utils/class-schedule-timing.utils.ts` | `isClassStartOverdue` |
 | `src/app/core/utils/consent-builder.utils.ts` | `ConsentBuilderInput`, `buildEnrollmentConsents`, `buildMedicalCertificateConsent`, `buildPsychTestConsent`, `CommunicationsConsentInput`, `buildCommunicationsConsents` |
+| `src/app/core/utils/consent-view.utils.ts` | `latestConsentPerBranch` (spec 0061-b: el consentimiento más reciente de un tipo ante cada escuela) |
+| `src/app/core/utils/branch-email.utils.ts` | `SENDER_DOMAIN`, `senderAddressError`, `replyToError`, `normalizeBranchEmailForm`, `BranchEmailFormErrors`, `validateBranchEmailForm` (spec 0061-b, AC-E6; espejo de `_shared/school-email.ts` → `isAllowedSenderAddress`) |
 | `src/app/core/utils/convalidation-book.utils.ts` | `CONVALIDATION_BOOKS`, `getConvalidationBookName`, `buildConvalidationBookId`, `getConvalidationModuleNames`, `selectConvalidationDates`, `buildBookOptions`, `parseBookKey` |
 | `src/app/core/utils/convalidation.utils.ts` | `fetchConvalidationMap` |
 | `src/app/core/utils/course-colors.ts` | `COURSE_COLORS`, `getCourseColor` |

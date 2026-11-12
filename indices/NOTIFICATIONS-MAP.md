@@ -182,6 +182,14 @@ tabla `notification_templates` (vacía, R7) es exactamente donde vivirían las p
   (los alumnos sembrados tienen dominio inexistente, así que la verificación de la spec
   corrió en `dryRun`) — reasignación temporal de email, envío único, confirmación por
   captura de pantalla del owner, y reversión completa sin dejar rastro en la BD compartida.
+- 🏫 **Correo por escuela (spec 0061-b).** Cada correo sale a nombre de la escuela que lo origina
+  (remitente, dirección de respuesta, asunto y pie: `_shared/school-email.ts`; colores:
+  `_shared/school-theme.ts` → `website_config.brand.theme`; nombre: `branches.name`, el mismo del
+  remitente), desde una sola cuenta SMTP (`cuentas@gestordeautoescuelas.cl`). Los correos al
+  personal dicen "La plataforma de [escuela] funciona en…", no "el portal de alumnos". En el comunicado, un destinatario es un par
+  (alumno, escuela): la marca y el consentimiento promocional son los de la escuela que envía, y un
+  comunicado de todas las escuelas llega una vez por escuela. El correo de recuperar contraseña sale
+  por el Send Email Hook (`send-auth-email`). Operación en `docs/DEPLOY.md` §Correo.
 - 📊 **Deuda de medición.** La adopción del módulo "Comunicación" sigue sin métrica. Cuando haya
   uso real, `select from_role, date_trunc('week', created_at), count(*) from tasks group by 1,2`
   la responde — contra la instancia de la escuela, no contra la BD de prueba (spec `0008-i` la

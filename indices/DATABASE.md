@@ -5,7 +5,7 @@
 | Tabla / Colección | Core / Dominio | Columnas Clave | Relaciones (FKs) | Restricciones RLS (Policies) | Estado |
 |-------------------|----------------|----------------|------------------|------------------------------|--------|
 | `profiles` | Auth | `id`, `household_id` | N/A (id vinculada a `auth.users`) | `SELECT` public, `UPDATE` own id | ✅ Estable |
-| `branches` | M1 - Usuarios | `id`, `slug`, `has_professional` (BOOL, def false) | Ninguna | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida · `20260403110000`: añadida `has_professional`; branch 2 (Conductores Chillán) = true |
+| `branches` | M1 - Usuarios | `id`, `slug`, `has_professional` (BOOL, def false) | Ninguna | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida · `20260403110000`: añadida `has_professional`; branch 2 (Conductores Chillán) = true · `20261112200000` (spec 0061-b): `email_sender_name`, `email_sender_address` (CHECK `branches_email_sender_domain_chk`: solo @gestordeautoescuelas.cl); `email` = correo de respuesta y contacto de los correos, `phone` = pie. Los lee `_shared/school-email.ts` en cada envío |
 | `roles` | M1 - Usuarios | `id`, `name` | Ninguna | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `users` | M1 - Usuarios | `id`, `rut`, `email` | `role_id`, `branch_id` | Admin: CRUD, Sec: R, Inst: R (self), Stu: R (self) | ✅ Definida · `20260612120000`: COMMENT ON COLUMN `users.gender` y `professional_pre_registrations.gender` — valores M/F/X (ley REC Chile 2022). |
 | `students` | M1 - Usuarios | `id`, `user_id`, `address` (sin `region`/`district`), `status` (TEXT: 'active'\|'pending'\|'inactive'\|'graduated'\|**'archived'** — sin CHECK constraint) | `user_id` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida · `20260426000001`: documentado `'archived'` como valor de soft-delete. `AdminAlumnosFacade` excluye `.neq('status','archived')` de la query. · `20260624120000` (spec 0017): SELECT de `secretary` ahora `branch_visible` sobre la sede del user dueño (antes sin filtro). · **`20261018120000` (fix-456-m):** la secretaria también ve a los alumnos con **alguna matrícula en su sede** aunque su `users.branch_id` sea la otra (DG-115). · Realtime habilitado (`20260827160000`, para el canal del dashboard). |
@@ -291,6 +291,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `id` PK | BIGSERIAL | NO | — | — |
 | `announcement_id` | BIGINT | NO | — | → `announcements.id` |
 | `user_id` | INT | NO | — | → `users.id` |
+| `branch_id` | INT | NO | — | → `branches.id` — escuela a cuyo nombre sale esta copia (spec 0061-b, `20261112200000`) |
 | `email` | TEXT | sí | — | — |
 | `email_sent_ok` | BOOLEAN | NO | `false` | — |
 | `send_error` | TEXT | sí | — | — |
@@ -304,6 +305,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | select_announcement_recipients | SELECT | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND announceme…` | — |
 
 **Índices:** `idx_announcement_recipients_user`
+
+**UNIQUE:** `announcement_recipients_unique_per_user_branch (announcement_id, user_id, branch_id)` (spec 0061-b; antes `(announcement_id, user_id)`). Un comunicado de todas las escuelas genera una fila por escuela en la que el alumno cumple el segmento (AC-E5); la materialización hace `upsert` con ese `onConflict`.
 
 ### `announcements` — 🔒 RLS
 

@@ -10,7 +10,15 @@ import {
   canChooseBranch,
   resolveBranchScope,
 } from '@core/utils/branch-scope.utils';
-import { ANNOUNCEMENT_BATCH_SIZE, buildBatches } from '@core/utils/announcement-recipients.utils';
+import {
+  ANNOUNCEMENT_BATCH_SIZE,
+  applyPromotionalConsent,
+  buildBatches,
+  consentedPairKeys,
+  groupPreviewRecipients,
+  type PreviewEnrollmentRow,
+  type PromotionalConsentRow,
+} from '@core/utils/announcement-recipients.utils';
 import { isScheduledForValid } from '@core/utils/announcement-template.utils';
 import type {
   AnnouncementDraft,
@@ -179,30 +187,13 @@ export class AnnouncementsFacade {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Un alumno con dos matrículas es un destinatario, no dos.
-      const byUserId = new Map<number, RecipientPreview>();
-      for (const row of (data ?? []) as any[]) {
-        const u = row.students?.users;
-        if (!u?.active || byUserId.has(u.id)) continue;
-        byUserId.set(u.id, {
-          userId: u.id,
-          name: `${u.first_names} ${u.paternal_last_name}`.trim(),
-          email: u.email?.trim() ? u.email.trim() : null,
-          included: true,
-          exclusionReason: null,
-        });
-      }
+      // Una fila por persona, con las escuelas a cuyo nombre le llega (spec 0061-b).
+      let recipients = groupPreviewRecipients((data ?? []) as PreviewEnrollmentRow[]);
 
-      const recipients = [...byUserId.values()].sort((a, b) => a.name.localeCompare(b.name));
-
+      // AC10 de 0061-b: el promocional le llega solo por las escuelas ante las que consintió.
       if (kind === 'promocional') {
-        const consented = await this.loadPromotionalConsentIds([...byUserId.keys()]);
-        for (const recipient of recipients) {
-          if (!consented.has(recipient.userId)) {
-            recipient.included = false;
-            recipient.exclusionReason = 'sin_consentimiento';
-          }
-        }
+        const consented = await this.loadConsentedPairKeys(recipients.map((r) => r.userId));
+        recipients = applyPromotionalConsent(recipients, consented);
       }
 
       this._preview.set(recipients);
@@ -214,26 +205,21 @@ export class AnnouncementsFacade {
     }
   }
 
-  /** Ids con consentimiento promocional vigente, mirando el registro más reciente de cada uno. */
-  private async loadPromotionalConsentIds(userIds: number[]): Promise<Set<number>> {
+  /**
+   * Pares (alumno, escuela) con consentimiento promocional vigente: el registro más reciente
+   * ANTE CADA ESCUELA (spec 0061-b, AC10). La regla vive en `consentedPairKeys`.
+   */
+  private async loadConsentedPairKeys(userIds: number[]): Promise<Set<string>> {
     if (userIds.length === 0) return new Set();
 
     const { data, error } = await this.supabase.client
       .from('consents')
-      .select('user_id, granted, revoked_at, granted_at')
+      .select('user_id, branch_id, granted, revoked_at, granted_at')
       .eq('consent_type', 'comunicaciones_promocionales')
-      .in('user_id', userIds)
-      .order('granted_at', { ascending: false });
+      .in('user_id', userIds);
     if (error) throw error;
 
-    const vigentes = new Set<number>();
-    const visto = new Set<number>();
-    for (const row of (data ?? []) as any[]) {
-      if (visto.has(row.user_id)) continue;
-      visto.add(row.user_id);
-      if (row.granted && row.revoked_at === null) vigentes.add(row.user_id);
-    }
-    return vigentes;
+    return consentedPairKeys((data ?? []) as PromotionalConsentRow[]);
   }
 
   clearPreview(): void {
@@ -430,7 +416,13 @@ export class AnnouncementsFacade {
         body: {
           previewOnly: true,
           // fix-232-b: con el tipo, la vista previa muestra el pie de baja de los promocionales.
-          preview: { subject: draft.subject, body: draft.body, kind: draft.kind },
+          // spec 0061-b: con la escuela que envía, la vista previa muestra su marca y su pie.
+          preview: {
+            subject: draft.subject,
+            body: draft.body,
+            kind: draft.kind,
+            branchId: this.effectiveBranchId(draft.filters),
+          },
         },
       });
 

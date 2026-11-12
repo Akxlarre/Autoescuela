@@ -28,8 +28,10 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import nodemailer from 'npm:nodemailer@6';
 import { buildStaffInviteEmail } from '../_shared/staff-invite-email.ts';
+import { loadSchoolSender, withSchool } from '../_shared/school-email.ts';
+import { createSmtpTransport, platformAddress, sendSchoolMail } from '../_shared/school-mailer.ts';
+import { loadSchoolTheme } from '../_shared/school-theme.ts';
 import { requireStaff } from '../_shared/staff-auth.ts';
 
 const corsHeaders = {
@@ -185,29 +187,19 @@ Deno.serve(async (req: Request) => {
     // Un fallo acá no deshace la cuenta: puede activarse con "recuperar contraseña".
     let inviteSent = true;
     try {
-      // hotfix-072-b: el encabezado lleva el nombre de SU sede (antes "Conductores Chillán" fijo).
-      const { data: branchRow } = await supabaseAdmin
-        .from('branches')
-        .select('name')
-        .eq('id', branchId)
-        .maybeSingle();
+      // spec 0061-b (AC4): a nombre de SU escuela, con su remitente, su respuesta y su pie
+      // (hotfix-072-b ya había sacado el "Conductores Chillán" fijo del encabezado).
+      const sender = await loadSchoolSender(supabaseAdmin, branchId, platformAddress());
       const { subject, html } = buildStaffInviteEmail({
         name: fullName,
         roleLabel: 'secretaria',
         actionLink: authData.properties.action_link,
-        schoolName: branchRow?.name,
+        sender,
+        theme: await loadSchoolTheme(supabaseAdmin, branchId),
       });
-      const port = Number(Deno.env.get('SMTP_PORT') ?? 465);
-      const transporter = nodemailer.createTransport({
-        host: Deno.env.get('SMTP_HOST'),
-        port,
-        secure: port === 465,
-        auth: { user: Deno.env.get('SMTP_USER'), pass: Deno.env.get('SMTP_PASS') },
-      });
-      await transporter.sendMail({
-        from: Deno.env.get('SMTP_FROM') ?? Deno.env.get('SMTP_USER'),
+      await sendSchoolMail(createSmtpTransport(), sender, {
         to: email,
-        subject,
+        subject: withSchool(subject, sender),
         html,
       });
     } catch (emailError) {

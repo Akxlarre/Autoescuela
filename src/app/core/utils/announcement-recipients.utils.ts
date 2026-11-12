@@ -120,3 +120,99 @@ export function countExclusions(previews: readonly RecipientPreview[]): Exclusio
 
   return counts;
 }
+
+/** Clave de un destinatario por escuela (spec 0061-b): un alumno de las dos escuelas son dos. */
+export function pairKey(userId: number, branchId: number): string {
+  return `${userId}:${branchId}`;
+}
+
+export interface PromotionalConsentRow {
+  user_id: number;
+  branch_id: number;
+  granted: boolean;
+  revoked_at: string | null;
+  granted_at: string;
+}
+
+/**
+ * Pares (alumno, escuela) cuyo consentimiento promocional MÁS RECIENTE ANTE ESA ESCUELA está
+ * otorgado y sin revocar (spec 0061-b, AC10). Cada escuela es un responsable distinto: una
+ * aceptación ante una no habilita las promociones de la otra.
+ *
+ * Espejo de `supabase/functions/_shared/announcement-email.ts` → `consentedPairKeys`, que es la
+ * que decide el envío; esta solo alimenta la vista previa. Mismos vectores de test.
+ */
+export function consentedPairKeys(rows: readonly PromotionalConsentRow[]): Set<string> {
+  const latest = new Map<string, PromotionalConsentRow>();
+  for (const row of rows) {
+    const key = pairKey(row.user_id, row.branch_id);
+    const current = latest.get(key);
+    if (!current || Date.parse(row.granted_at) > Date.parse(current.granted_at)) {
+      latest.set(key, row);
+    }
+  }
+  const keys = new Set<string>();
+  for (const [key, row] of latest) {
+    if (row.granted && row.revoked_at === null) keys.add(key);
+  }
+  return keys;
+}
+
+/** Fila del segmento tal como la lee la vista previa (`enrollments` + alumno + usuario). */
+export interface PreviewEnrollmentRow {
+  branch_id: number;
+  students?: {
+    users?: {
+      id: number;
+      first_names: string;
+      paternal_last_name: string;
+      email: string | null;
+      active: boolean;
+    } | null;
+  } | null;
+}
+
+/**
+ * Una fila por persona (la exclusión manual es por persona), con las escuelas a cuyo nombre le
+ * llega (spec 0061-b): con "todas las escuelas", un alumno de las dos recibe una copia de cada
+ * una; dos matrículas en la misma escuela siguen siendo un destinatario. Ordenado por nombre.
+ */
+export function groupPreviewRecipients(rows: readonly PreviewEnrollmentRow[]): RecipientPreview[] {
+  const byUserId = new Map<number, RecipientPreview & { branchIds: number[] }>();
+  for (const row of rows) {
+    const u = row.students?.users;
+    if (!u?.active) continue;
+    const existing = byUserId.get(u.id);
+    if (existing) {
+      if (!existing.branchIds.includes(row.branch_id)) existing.branchIds.push(row.branch_id);
+      continue;
+    }
+    byUserId.set(u.id, {
+      userId: u.id,
+      name: `${u.first_names} ${u.paternal_last_name}`.trim(),
+      email: u.email?.trim() ? u.email.trim() : null,
+      included: true,
+      exclusionReason: null,
+      branchIds: [row.branch_id],
+    });
+  }
+  return [...byUserId.values()]
+    .map((r) => ({ ...r, branchIds: [...r.branchIds].sort((a, b) => a - b) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * AC10 de 0061-b: un promocional le llega a cada persona solo por las escuelas ante las que
+ * consintió. Sin ninguna, queda excluida con motivo `sin_consentimiento`.
+ */
+export function applyPromotionalConsent(
+  recipients: readonly RecipientPreview[],
+  consented: ReadonlySet<string>,
+): RecipientPreview[] {
+  return recipients.map((r) => {
+    const branchIds = (r.branchIds ?? []).filter((b) => consented.has(pairKey(r.userId, b)));
+    return branchIds.length > 0
+      ? { ...r, branchIds }
+      : { ...r, branchIds, included: false, exclusionReason: 'sin_consentimiento' as const };
+  });
+}

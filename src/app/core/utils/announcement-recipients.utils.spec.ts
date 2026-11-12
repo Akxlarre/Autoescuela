@@ -4,7 +4,9 @@ import {
   ANNOUNCEMENT_MAX_RECIPIENTS,
   ANNOUNCEMENT_WARN_RECIPIENTS,
   buildBatches,
+  consentedPairKeys,
   countExclusions,
+  pairKey,
   validateAnnouncementDraft,
   type AnnouncementDraftValidation,
 } from './announcement-recipients.utils';
@@ -188,5 +190,78 @@ describe('countExclusions()', () => {
     const resultado = countExclusions([preview({ userId: 1, email: null })]);
 
     expect(resultado.included).toBe(1);
+  });
+});
+
+// spec 0061-b (AC10): vale el último consentimiento promocional ANTE CADA ESCUELA.
+// Espejo de supabase/functions/_shared/announcement-email.ts → consentedPairKeys.
+describe('consentedPairKeys — spec 0061-b', () => {
+  it('AC10 · aceptó ante una escuela y revocó ante la otra → solo la primera', () => {
+    const keys = consentedPairKeys([
+      {
+        user_id: 10,
+        branch_id: 1,
+        granted: true,
+        revoked_at: null,
+        granted_at: '2026-10-01T12:00:00Z',
+      },
+      {
+        user_id: 10,
+        branch_id: 2,
+        granted: true,
+        revoked_at: '2026-11-01T12:00:00Z',
+        granted_at: '2026-10-02T12:00:00Z',
+      },
+    ]);
+    expect(keys.has(pairKey(10, 1))).toBe(true);
+    expect(keys.has(pairKey(10, 2))).toBe(false);
+  });
+
+  it('AC10 · vale el último ante esa escuela, no el último en general', () => {
+    const keys = consentedPairKeys([
+      {
+        user_id: 10,
+        branch_id: 1,
+        granted: true,
+        revoked_at: null,
+        granted_at: '2026-09-01T12:00:00Z',
+      },
+      {
+        user_id: 10,
+        branch_id: 1,
+        granted: false,
+        revoked_at: null,
+        granted_at: '2026-10-01T12:00:00Z',
+      },
+      {
+        user_id: 10,
+        branch_id: 2,
+        granted: true,
+        revoked_at: null,
+        granted_at: '2026-11-01T12:00:00Z',
+      },
+    ]);
+    expect(keys.has(pairKey(10, 1))).toBe(false);
+    expect(keys.has(pairKey(10, 2))).toBe(true);
+  });
+
+  it('no depende del orden de las filas', () => {
+    const keys = consentedPairKeys([
+      {
+        user_id: 10,
+        branch_id: 1,
+        granted: false,
+        revoked_at: null,
+        granted_at: '2026-10-01T12:00:00Z',
+      },
+      {
+        user_id: 10,
+        branch_id: 1,
+        granted: true,
+        revoked_at: null,
+        granted_at: '2026-09-01T12:00:00Z',
+      },
+    ]);
+    expect(keys.has(pairKey(10, 1))).toBe(false);
   });
 });

@@ -1,14 +1,14 @@
 # Asignación ASG-b-103 — Correos por escuela: remitente, respuesta y marca
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P1
 > **created:** 2026-11-12
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-11-12
+> **resulting_track:** 0061-b-correos-por-escuela-remitente-respuesta-marca
 
 ---
 
