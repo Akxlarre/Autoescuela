@@ -1,7 +1,8 @@
 # Fix: la puerta de la app muestra la marca del producto y adentro la escuela de cada usuario
 > id: fix-242-b-marca-producto-en-puerta
 > refs: hotfix-174-b (título y favicon de la app) · fix-146-b (`resolveBrandText`)
-> status: in_progress
+> status: done
+> closed: 2026-11-12
 > created: 2026-11-07
 
 ## Root Cause
