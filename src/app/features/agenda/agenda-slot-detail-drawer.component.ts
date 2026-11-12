@@ -7,7 +7,12 @@ import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade'
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { Router } from '@angular/router';
-import { studentFichaUrl } from '@core/utils/agenda-week.utils';
+import { fleetUrl, studentFichaUrl } from '@core/utils/agenda-week.utils';
+import {
+  vehicleDocWarningApplies,
+  vehicleDocWarningLabel,
+} from '@core/utils/vehicle-document-status.utils';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { StatBoxComponent, StatBoxVariant } from '@shared/components/stat-box/stat-box.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
@@ -36,6 +41,7 @@ type StatusConfig = {
     StatBoxComponent,
     DrawerContentLoaderComponent,
     DrawerFormComponent,
+    AlertCardComponent,
   ],
   host: {
     class: 'flex flex-col h-full',
@@ -103,6 +109,29 @@ type StatusConfig = {
                   icon="car"
                 />
               </div>
+
+              <!-- fix-251-b: el aviso del vehículo ya no queda solo en el tooltip de la grilla -->
+              @if (vehicleDocNotice(); as aviso) {
+                <app-alert-card
+                  severity="warning"
+                  [title]="aviso.title"
+                  data-testid="slot-detalle-documentos-vehiculo"
+                  data-llm-description="aviso de documentos del vehículo vencidos o por vencer"
+                >
+                  <div class="flex flex-col gap-3">
+                    <span>{{ aviso.body }}</span>
+                    <button
+                      type="button"
+                      class="btn-secondary flex items-center gap-2 self-start"
+                      (click)="verFlota()"
+                      data-llm-nav="flota-desde-detalle-agenda"
+                    >
+                      Ver en Flota
+                      <app-icon name="arrow-right" [size]="14" />
+                    </button>
+                  </div>
+                </app-alert-card>
+              }
 
               <!-- ── Alumno ────────────────────────────────────────── -->
               @if (s.studentName) {
@@ -238,6 +267,26 @@ export class AgendaSlotDetailDrawerComponent {
   }
 
   readonly slot = this.facade.selectedSlot;
+
+  /** fix-251-b: aviso de documentos del vehículo, solo donde el auto todavía va a salir. */
+  protected readonly vehicleDocNotice = computed<{ title: string; body: string } | null>(() => {
+    const s = this.slot();
+    if (!s || !vehicleDocWarningApplies(s.status)) return null;
+    const title = vehicleDocWarningLabel(s.vehiclePlate, s.vehicleDocWarning);
+    if (!title) return null;
+    const body =
+      s.status === 'available'
+        ? 'El horario se sigue ofreciendo. Regulariza el documento en Flota.'
+        : 'La clase no se bloquea. Regulariza el documento antes de salir con el vehículo.';
+    return { title, body };
+  });
+
+  /** fix-251-b: cierra el detalle (y la Agenda si venía en un drawer) y abre la Flota. */
+  protected verFlota(): void {
+    this.facade.setSelectedSlot(null);
+    this.drawer.close();
+    void this.router.navigateByUrl(fleetUrl(this.router.url));
+  }
 
   readonly distanceRecorrida = computed<number | null>(() => {
     const s = this.slot();

@@ -3,8 +3,10 @@ import { TooltipModule } from 'primeng/tooltip';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import {
   shouldShowVehicleDocWarning,
+  vehicleDocWarningApplies,
   vehicleDocWarningLabel as vehicleDocWarningLabelUtil,
 } from '@core/utils/vehicle-document-status.utils';
+import { agendaSlotAriaLabel, agendaSlotIdentity } from '@core/utils/agenda-week.utils';
 import type { AgendaSlot } from '@core/models/ui/agenda.model';
 
 /**
@@ -56,6 +58,10 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
             <app-icon name="plus" [size]="12" />
             <span class="slot-time">{{ slot().startTime }}</span>
           </div>
+          <!-- fix-251-b: en la vista "Todos", sin esto los libres de una hora son idénticos -->
+          @if (showIdentity()) {
+            <span class="slot-student">{{ slotIdentity() }}</span>
+          }
         }
         @case ('scheduled') {
           <span class="slot-time">{{ slot().startTime }} – {{ slot().endTime }}</span>
@@ -257,10 +263,19 @@ export class AgendaSlotComponent {
   disabled = input(false);
   /** Oculta el badge de advertencia de documentos de vehículo (ej. flujo público de matrícula). */
   showVehicleWarnings = input(true);
+  /** fix-251-b: muestra instructor y patente en un horario libre (vista "Todos los instructores"). */
+  showIdentity = input(false);
   slotClicked = output<AgendaSlot>();
 
-  readonly showVehicleDocWarning = computed(() =>
-    shouldShowVehicleDocWarning(this.slot().vehicleDocWarning, this.showVehicleWarnings()),
+  /** fix-251-b: sin aviso en clases que ya pasaron (el estado del documento es el de hoy). */
+  readonly showVehicleDocWarning = computed(
+    () =>
+      vehicleDocWarningApplies(this.slot().status) &&
+      shouldShowVehicleDocWarning(this.slot().vehicleDocWarning, this.showVehicleWarnings()),
+  );
+
+  readonly slotIdentity = computed(() =>
+    agendaSlotIdentity(this.slot().instructorName, this.slot().vehiclePlate),
   );
 
   readonly vehicleDocWarningLabel = computed(() =>
@@ -276,18 +291,13 @@ export class AgendaSlotComponent {
     return this.disabled() ? `${withCompact} slot-block--disabled` : withCompact;
   });
 
-  readonly ariaLabel = computed(() => {
-    const s = this.slot();
-    if (this.disabled()) {
-      return `${s.startTime} — fuera del rango de visualización configurado.`;
-    }
-    if (s.status === 'available') {
-      // hotfix-060-b: la Agenda es de solo lectura (fix-017); el clic abre el detalle, no agenda.
-      return `Slot disponible ${s.startTime} — ${s.instructorName}. Clic para ver detalle.`;
-    }
-    const who = s.studentName ? `${s.studentName}, ` : '';
-    return `${who}${s.startTime} — ${s.instructorName}. Clic para ver detalle.`;
-  });
+  readonly ariaLabel = computed(() =>
+    agendaSlotAriaLabel(
+      this.slot(),
+      this.disabled(),
+      this.showVehicleDocWarning() ? this.vehicleDocWarningLabel() : '',
+    ),
+  );
 
   handleClick(): void {
     if (this.isInteractive()) {

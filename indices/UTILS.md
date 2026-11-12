@@ -15,7 +15,7 @@
 | Archivo | Exports |
 |---------|---------|
 | `src/app/core/utils/age.utils.ts` | `isInvalidDate`, `getAgeStatus`, `calcAge`, `isMinor` |
-| `src/app/core/utils/agenda-week.utils.ts` | `addDaysToIso`, `isDateBeyondLimit`, `isNextWeekBeyondLimit`, `initialMobileDayIndex`, `formatWeekLabel` (etiqueta "9 nov – 13 nov" desde el lunes, fix-241-b), `agendaShowsLegend` (leyenda también durante la carga, fix-241-b), `studentFichaUrl` |
+| `src/app/core/utils/agenda-week.utils.ts` | `addDaysToIso`, `isDateBeyondLimit`, `isNextWeekBeyondLimit`, `initialMobileDayIndex`, `formatWeekLabel` (etiqueta "9 nov – 13 nov" desde el lunes, fix-241-b), `agendaShowsLegend` (leyenda también durante la carga, fix-241-b), `studentFichaUrl`, `fleetUrl` (Flota del portal actual, fix-251-b), `agendaSlotAriaLabel` (aria del slot con el aviso del vehículo, fix-251-b), `agendaSlotIdentity` ("Juan · RTRE29", fix-251-b) |
 | `src/app/core/utils/alert-snooze.utils.ts` | `ALERT_SNOOZE_MS`, `AlertSnooze`, `AlertSnoozeMap`, `SnoozableAlert`, `snoozeKey`, `snoozeAlert`, `pruneSnoozes`, `filterSnoozedAlerts`, `parseSnoozes` |
 | `src/app/core/utils/holiday-classes.utils.ts` | `HolidayClassRow`, `buildHolidayClassDetails` (filas de `v_class_b_sessions_on_holiday` → `AlertDetail[]` con ruta a la ficha del rol, spec 0056-b) |
 | `src/app/core/utils/alumno-profesional-status.utils.ts` | `SemaforoInfo`, `moduloPct`, `getSemaforo`, `getSemaforoBadgeVariant` |
@@ -153,7 +153,7 @@
 | `src/app/core/utils/theory-cycle.ts` | `cycleStartMonday`, `cycleEnd`, `cycleClassDates`, `formatCycleLabel` |
 | `src/app/core/utils/vehicle-agenda.utils.ts` | `AgendaClassInput`, `AgendaMaintenanceInput`, `buildVehicleAgenda` |
 | `src/app/core/utils/vehicle-doc-types.util.ts` | `VEHICLE_DOC_TYPES` |
-| `src/app/core/utils/vehicle-document-status.utils.ts` | `resolveDocStatus`, `VehicleDocWarningInfo`, `VehicleDocWarning`, `shouldShowVehicleDocWarning`, `vehicleDocWarningLabel`, `vehicleDocWarningLabelGeneric`, `VehicleDocumentRow`, `buildVehicleDocWarningMap` |
+| `src/app/core/utils/vehicle-document-status.utils.ts` | `resolveDocStatus`, `VehicleDocWarningInfo`, `VehicleDocWarning`, `shouldShowVehicleDocWarning`, `vehicleDocWarningLabel`, `vehicleDocWarningLabelGeneric`, `VehicleDocumentRow`, `buildVehicleDocWarningMap`, `vehicleDocWarningApplies` (solo libres/agendadas/en curso: el estado se calcula contra hoy, fix-251-b), `vehicleDocWarningsNotice` (una línea por semana con los vehículos observados, fix-251-b) |
 | `src/app/core/utils/vehicle-form.utils.ts` | `MIN_VEHICLE_YEAR`, `normalizeLicensePlate`, `isValidLicensePlate`, `maxVehicleYear`, `isKmDecrease`, `vehicleSaveErrorMessage`, `bothBranchesRemovalWarning` |
 | `src/app/core/utils/vehicle-permissions.utils.ts` | `VehicleActor`, `VehicleScope`, `canManageVehicle`, `canViewVehicle` |
 | `src/app/core/utils/vehicle-search.utils.ts` | `VehicleSearchable`, `matchesVehicleSearch` |

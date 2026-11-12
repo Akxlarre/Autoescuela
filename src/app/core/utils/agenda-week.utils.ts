@@ -71,15 +71,49 @@ export function initialMobileDayIndex(days: readonly { isToday: boolean }[]): nu
 }
 
 /**
- * Ficha del alumno desde el detalle de una clase de la Agenda (hotfix-095-b). El portal sale de la
- * URL actual: la Agenda también se abre como drawer desde el dashboard de la secretaria.
+ * Portal (admin o secretaria) desde el que se abrió la Agenda. Sale de la URL actual: la Agenda
+ * también se abre como drawer desde el dashboard de la secretaria.
  */
+function agendaPortal(currentUrl: string): 'admin' | 'secretaria' {
+  return currentUrl.startsWith('/app/secretaria') ? 'secretaria' : 'admin';
+}
+
+/**
+ * Texto accesible de un slot de la grilla. fix-251-b: incluye el aviso del vehículo, que antes
+ * existía solo en el tooltip.
+ */
+export function agendaSlotAriaLabel(
+  slot: { status: string; startTime: string; instructorName: string; studentName?: string },
+  disabled: boolean,
+  vehicleWarning: string,
+): string {
+  if (disabled) return `${slot.startTime} — fuera del rango de visualización configurado.`;
+  const aviso = vehicleWarning ? ` ${vehicleWarning}.` : '';
+  // hotfix-060-b: la Agenda es de solo lectura (fix-017); el clic abre el detalle, no agenda.
+  const head =
+    slot.status === 'available'
+      ? `Slot disponible ${slot.startTime}`
+      : `${slot.studentName ? `${slot.studentName}, ` : ''}${slot.startTime}`;
+  return `${head} — ${slot.instructorName}.${aviso} Clic para ver detalle.`;
+}
+
+/** "Juan · RTRE29": identifica un horario libre en la vista "Todos los instructores" (fix-251-b). */
+export function agendaSlotIdentity(instructorName: string, vehiclePlate: string): string {
+  const firstName = instructorName.trim().split(/\s+/)[0] ?? '';
+  return [firstName, vehiclePlate].filter(Boolean).join(' · ');
+}
+
+/** Flota del portal actual, desde el aviso de documentos del vehículo (fix-251-b). */
+export function fleetUrl(currentUrl: string): string {
+  return `/app/${agendaPortal(currentUrl)}/flota`;
+}
+
+/** Ficha del alumno desde el detalle de una clase de la Agenda (hotfix-095-b). */
 export function studentFichaUrl(
   currentUrl: string,
   studentId: number,
   enrollmentId: number | undefined,
 ): string {
-  const portal = currentUrl.startsWith('/app/secretaria') ? 'secretaria' : 'admin';
-  const base = `/app/${portal}/alumnos/${studentId}`;
+  const base = `/app/${agendaPortal(currentUrl)}/alumnos/${studentId}`;
   return enrollmentId ? `${base}?enrollment=${enrollmentId}` : base;
 }

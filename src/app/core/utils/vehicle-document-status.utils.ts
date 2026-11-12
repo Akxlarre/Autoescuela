@@ -64,6 +64,43 @@ export function vehicleDocWarningLabelGeneric(vehicleDocWarning: VehicleDocWarni
   return sentence ? `Vehículo con ${sentence}` : '';
 }
 
+/**
+ * fix-251-b: el aviso solo sirve donde el vehículo todavía va a salir. El estado del documento se
+ * calcula contra hoy, no contra el día de la clase: en una clase que ya pasó diría algo falso.
+ */
+export function vehicleDocWarningApplies(status: string): boolean {
+  return status === 'available' || status === 'scheduled' || status === 'in_progress';
+}
+
+/** Lo mínimo de un slot que necesita el resumen de vehículos observados. */
+export interface VehicleDocWarningSlot {
+  status: string;
+  vehicleId: number;
+  vehiclePlate: string;
+  vehicleDocWarning: VehicleDocWarning;
+}
+
+/**
+ * fix-251-b: una línea sobre la grilla con los vehículos observados de los días visibles. El aviso
+ * es del vehículo, no del horario: se nombra una vez aunque tenga muchos horarios.
+ */
+export function vehicleDocWarningsNotice(slots: readonly VehicleDocWarningSlot[]): string | null {
+  const byVehicle = new Map<number, { plate: string; sentence: string }>();
+  for (const s of slots) {
+    if (byVehicle.has(s.vehicleId) || !vehicleDocWarningApplies(s.status)) continue;
+    const sentence = buildWarningSentence(s.vehicleDocWarning);
+    if (sentence) byVehicle.set(s.vehicleId, { plate: s.vehiclePlate, sentence });
+  }
+  const vehicles = [...byVehicle.values()].sort((a, b) => a.plate.localeCompare(b.plate));
+  if (vehicles.length === 0) return null;
+  const tail = 'Sus horas se siguen ofreciendo.';
+  if (vehicles.length === 1) {
+    return `Vehículo ${vehicles[0].plate}: ${vehicles[0].sentence}. ${tail}`;
+  }
+  const list = vehicles.map((v) => `${v.plate} (${v.sentence})`).join(', ');
+  return `${vehicles.length} vehículos con documentos vencidos o por vencer: ${list}. ${tail}`;
+}
+
 export interface VehicleDocumentRow {
   vehicle_id: number;
   type: string;
