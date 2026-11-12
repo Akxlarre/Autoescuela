@@ -366,9 +366,14 @@ export class ArqueoCierreDrawerComponent {
   }
 
   protected async onCerrarCaja(): Promise<void> {
+    // Sin arqueo el cierre queda como "Sin arqueo" en el historial (fix-074-i): que no sea un
+    // descuido, avisarlo antes de confirmar.
+    const sinArqueo = this.facade.realizarArqueo()
+      ? ''
+      : 'Vas a cerrar sin contar el efectivo: el día quedará como "Sin arqueo". ';
     const confirmed = await this.confirmModal.confirm({
       title: 'Cerrar Caja',
-      message: 'Una vez cerrada, la caja de hoy queda bloqueada y no se puede deshacer.',
+      message: `${sinArqueo}Una vez cerrada, la caja de hoy queda bloqueada y no se puede deshacer.`,
       severity: 'danger',
       confirmLabel: 'Cerrar Caja',
       cancelLabel: 'Cancelar',

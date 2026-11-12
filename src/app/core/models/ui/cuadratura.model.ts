@@ -74,5 +74,9 @@ export interface CierrePayload {
   coin50: number;
   coin10: number;
   notes: string;
-  arqueoTotal: number;
+  /**
+   * Efectivo contado en el arqueo. `null` si se cerró sin arqueo: no hubo conteo y no se inventa
+   * uno igual al saldo esperado (fix-074-i).
+   */
+  arqueoTotal: number | null;
 }

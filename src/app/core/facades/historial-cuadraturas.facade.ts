@@ -55,8 +55,11 @@ export function mapCierreToHistorial(
   row: CashClosing & { users?: { first_names: string; paternal_last_name: string } | null },
 ): HistorialCierre {
   const saldoSistema = row.balance ?? 0;
-  const saldoFisico = row.arqueo_amount ?? 0;
-  const diferencia = row.difference ?? saldoFisico - saldoSistema;
+  // Sin arqueo no hay conteo (fix-074-i): arqueo_amount null no es "se contaron $0" — leerlo
+  // como 0 inventaba un faltante de toda la caja.
+  const sinArqueo = row.arqueo_amount == null;
+  const saldoFisico = sinArqueo ? null : (row.arqueo_amount ?? 0);
+  const diferencia = sinArqueo ? null : (row.difference ?? (saldoFisico ?? 0) - saldoSistema);
 
   // Fondo de apertura real (spec 0012-m). `null` en cierres previos — la UI muestra
   // "No registrado" en vez del `50_000` hardcodeado que enmascaraba el dato (fix-226-m).
@@ -76,7 +79,8 @@ export function mapCierreToHistorial(
     : '—';
 
   let estadoDiferencia: HistorialCierre['estadoDiferencia'];
-  if (diferencia === 0) estadoDiferencia = 'balanced';
+  if (diferencia === null) estadoDiferencia = 'unaudited';
+  else if (diferencia === 0) estadoDiferencia = 'balanced';
   else if (diferencia > 0) estadoDiferencia = 'surplus';
   else estadoDiferencia = 'shortage';
 
@@ -115,6 +119,7 @@ const ESTADO_LABEL: Record<HistorialCierre['estadoDiferencia'], string> = {
   balanced: 'Cuadrado',
   surplus: 'Sobrante',
   shortage: 'Faltante',
+  unaudited: 'Sin arqueo',
 };
 
 function buildMonthlyExcelRows(cierres: HistorialCierre[]): (string | number)[][] {
@@ -140,8 +145,8 @@ function buildMonthlyExcelRows(cierres: HistorialCierre[]): (string | number)[][
     c.cashExpenses,
     c.nonCashExpenses,
     c.saldoSistema,
-    c.saldoFisico,
-    c.diferencia,
+    c.saldoFisico ?? '',
+    c.diferencia ?? '',
     ESTADO_LABEL[c.estadoDiferencia],
   ]);
   return [header, ...rows];
@@ -208,7 +213,8 @@ export class HistorialCuadraturasFacade {
     const cierre = this._cierreSeleccionado();
     if (!cierre) return 0;
     const sumaAjustes = this._ajustesCierre().reduce((acc, a) => acc + a.monto, 0);
-    return cierre.saldoFisico + sumaAjustes;
+    // Sin arqueo no hubo conteo que ajustar: se parte del saldo esperado (fix-074-i).
+    return (cierre.saldoFisico ?? cierre.saldoSistema) + sumaAjustes;
   });
 
   // ── Helpers ──────────────────────────────────────────────────────────────

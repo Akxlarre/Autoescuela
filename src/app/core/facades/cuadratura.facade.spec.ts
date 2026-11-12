@@ -900,6 +900,43 @@ describe('CuadraturaFacade.cerrarCaja — upsert, no duplica fila de borrador (s
     const [, payload] = upsertSpy.mock.calls[0];
     expect(payload).toMatchObject({ total_expenses: 84_000, cash_expenses: 34_000 });
   });
+
+  // fix-074-i: sin arqueo se guardaba arqueo_amount = saldo esperado con los billetes en 0, y
+  // el CHECK chk_arqueo_amount (arqueo_amount = Σ billetes) rechazaba el cierre si había efectivo.
+  it('cerrar sin arqueo guarda arqueo_amount y difference en null, no inventa un conteo (fix-074-i)', async () => {
+    facade.fondoInicial.set(10_000);
+    facade.realizarArqueo.set(false);
+    // Lo tipeado antes de apagar el toggle no cuenta como conteo.
+    facade.cantidades.update((c) => ({ ...c, bill10000: 3 }));
+
+    await facade.cerrarCaja();
+
+    const [, payload] = upsertSpy.mock.calls[0];
+    expect(payload).toMatchObject({
+      arqueo_enabled: false,
+      balance: 10_000,
+      arqueo_amount: null,
+      difference: null,
+      qty_bill_10000: 0,
+    });
+  });
+
+  it('cerrar con arqueo guarda el conteo y la diferencia contra el saldo esperado (fix-074-i)', async () => {
+    facade.fondoInicial.set(10_000);
+    facade.realizarArqueo.set(true);
+    facade.cantidades.update((c) => ({ ...c, bill5000: 1, coin500: 1 }));
+
+    await facade.cerrarCaja();
+
+    const [, payload] = upsertSpy.mock.calls[0];
+    expect(payload).toMatchObject({
+      arqueo_enabled: true,
+      arqueo_amount: 5_500,
+      difference: -4_500,
+      qty_bill_5000: 1,
+      qty_coin_500: 1,
+    });
+  });
 });
 
 // ─── fix-024-i: ventas de Servicios Especiales en Caja Diaria ─────────────────

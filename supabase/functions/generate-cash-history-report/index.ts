@@ -1,4 +1,5 @@
 import { chileParts, chileYear, formatChilePattern, monthDays } from '../_shared/chile-time.ts';
+import { resolveArqueo, type EstadoArqueo } from '../_shared/cash-arqueo.ts';
 // supabase/functions/generate-cash-history-report/index.ts
 //
 // Edge Function: generate-cash-history-report
@@ -114,14 +115,11 @@ Deno.serve(async (req: Request) => {
     if (qErr) throw qErr;
 
     const cierres: CierreRow[] = (rawCierres ?? []).map((r: any) => {
-      const saldoSistema = r.balance ?? 0;
-      const saldoFisico = r.arqueo_amount ?? 0;
-      const diferencia = r.difference ?? saldoFisico - saldoSistema;
+      // fix-074-i: sin arqueo (arqueo_amount null) es "Sin arqueo", no un faltante de toda la caja.
+      const { saldoSistema, saldoFisico, diferencia, estado } = resolveArqueo(r);
       const cajero = r.users
         ? `${r.users.first_names ?? ''} ${r.users.paternal_last_name ?? ''}`.trim()
         : '—';
-      const estado: 'Cuadrado' | 'Sobrante' | 'Faltante' =
-        diferencia === 0 ? 'Cuadrado' : diferencia > 0 ? 'Sobrante' : 'Faltante';
 
       // fix-226-m: fondo de apertura real (opening_amount, spec 0012-m); 0 en cierres previos.
       const totalEgresos = r.total_expenses ?? 0;
@@ -147,6 +145,7 @@ Deno.serve(async (req: Request) => {
     const totalIngresosMes = cierres.reduce((s, c) => s + c.totalIngresos, 0);
     const totalEgresosMes = cierres.reduce((s, c) => s + c.totalEgresos, 0);
     const diasCuadrados = cierres.filter((c) => c.estado === 'Cuadrado').length;
+    const diasSinArqueo = cierres.filter((c) => c.estado === 'Sin arqueo').length;
 
     const reportData: ReportData = {
       month,
@@ -157,6 +156,7 @@ Deno.serve(async (req: Request) => {
       totalIngresosMes,
       totalEgresosMes,
       diasCuadrados,
+      diasSinArqueo,
     };
 
     const pdfBytes = buildPdf(reportData);
@@ -192,9 +192,9 @@ interface CierreRow {
   /** Egreso pagado con tarjeta/transferencia (no afecta arqueo). fix-226-m. */
   nonCashExpenses: number;
   saldoSistema: number;
-  saldoFisico: number;
-  diferencia: number;
-  estado: 'Cuadrado' | 'Sobrante' | 'Faltante';
+  saldoFisico: number | null;
+  diferencia: number | null;
+  estado: EstadoArqueo;
 }
 
 interface ReportData {
@@ -206,6 +206,8 @@ interface ReportData {
   totalIngresosMes: number;
   totalEgresosMes: number;
   diasCuadrados: number;
+  /** Cierres sin conteo físico (fix-074-i): no cuentan como cuadrados. */
+  diasSinArqueo: number;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -314,7 +316,7 @@ function buildPdf(data: ReportData): Uint8Array {
     {
       label: 'Dias Cuadrados',
       value: `${data.diasCuadrados} / ${data.cierres.length}`,
-      sub: 'sin diferencia',
+      sub: data.diasSinArqueo > 0 ? `${data.diasSinArqueo} sin arqueo` : 'sin diferencia',
       accent: [0.18, 0.55, 0.32] as [number, number, number],
     },
     {
@@ -406,7 +408,9 @@ function buildPdf(data: ReportData): Uint8Array {
           ? [0.18, 0.55, 0.32]
           : c.estado === 'Sobrante'
             ? [0.72, 0.4, 0.08]
-            : [0.72, 0.18, 0.18];
+            : c.estado === 'Sin arqueo'
+              ? [0.45, 0.45, 0.45]
+              : [0.72, 0.18, 0.18];
 
       const cells = [
         formatDateCL(c.fecha),
@@ -414,7 +418,7 @@ function buildPdf(data: ReportData): Uint8Array {
         clp(c.totalIngresos),
         clp(c.totalEgresos),
         clp(c.saldoSistema),
-        clp(c.saldoFisico),
+        c.saldoFisico === null ? '—' : clp(c.saldoFisico),
       ];
 
       let xc = M;

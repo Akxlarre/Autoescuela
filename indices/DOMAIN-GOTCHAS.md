@@ -2083,6 +2083,20 @@
   decidida.
 - **Fuente:** `specs/fixes/fix-251-b-agenda-aviso-documentos-vehiculo-visible`.
 
+### DG-125 — `cash_closings.arqueo_amount` NULL es "Sin arqueo", no "se contaron $0"
+
+- **Trampa:** leer el cierre con `arqueo_amount ?? 0` y `difference ?? arqueo − balance`, o
+  guardar un cierre sin conteo con `arqueo_amount = balance` para que "cuadre".
+- **Realidad:** `chk_arqueo_amount` exige `arqueo_amount IS NULL OR arqueo_amount = Σ cantidades
+  × denominación`. Guardar el saldo esperado con los billetes en 0 hace que la BD rechace todo
+  cierre sin arqueo con efectivo; y leer NULL como 0 convierte un día sin conteo en un faltante de
+  toda la caja (así se ven hoy los cierres de prueba de abril y del 6-ago: −$50.000).
+- **Regla de aplicabilidad:** un cierre sin conteo guarda `arqueo_amount` y `difference` NULL, y
+  toda lectura de esas columnas (pantalla, Excel, PDF) trata NULL como estado propio "Sin
+  arqueo", ni cuadrado ni descuadre. En la app, `mapCierreToHistorial()` (estado `unaudited`); en
+  edge functions, `resolveArqueo()` de `supabase/functions/_shared/cash-arqueo.ts`.
+- **Fuente:** `specs/fixes/fix-074-i-cierre-sin-arqueo-falla`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

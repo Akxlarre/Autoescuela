@@ -808,7 +808,11 @@ export class CuadraturaFacade {
       coin50: conArqueo ? c['coin50'] : 0,
       coin10: conArqueo ? c['coin10'] : 0,
       notes: this.notasArqueo(),
-      arqueoTotal: conArqueo ? this.totalArqueo() : this.saldoTeoricoEfectivo(),
+      // Sin arqueo no hay conteo (fix-074-i). Antes se guardaba el saldo esperado como si se
+      // hubiera contado, con los billetes en 0: chk_arqueo_amount (arqueo_amount = Σ billetes)
+      // rechazaba el cierre siempre que hubiera efectivo, y el historial lo habría mostrado
+      // como "Cuadrado" sin que nadie contara la plata.
+      arqueoTotal: conArqueo ? this.totalArqueo() : null,
     };
   }
 
@@ -838,7 +842,8 @@ export class CuadraturaFacade {
       balance: this.saldoTeoricoEfectivo(),
       payments_count: pagos.length,
       arqueo_amount: payload.arqueoTotal,
-      difference: payload.arqueoTotal - this.saldoTeoricoEfectivo(),
+      difference:
+        payload.arqueoTotal === null ? null : payload.arqueoTotal - this.saldoTeoricoEfectivo(),
       qty_bill_20000: payload.bill20000,
       qty_bill_10000: payload.bill10000,
       qty_bill_5000: payload.bill5000,

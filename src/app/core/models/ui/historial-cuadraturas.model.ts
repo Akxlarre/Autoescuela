@@ -14,10 +14,10 @@ export interface HistorialCierre {
   fondoInicial: number | null;
   /** Saldo teórico del sistema (balance = fondoInicial + ingresos - egresos) */
   saldoSistema: number;
-  /** Saldo físico contado en arqueo */
-  saldoFisico: number;
-  /** diferencia = saldoFisico - saldoSistema */
-  diferencia: number;
+  /** Saldo físico contado en arqueo. `null` si se cerró sin arqueo (fix-074-i). */
+  saldoFisico: number | null;
+  /** diferencia = saldoFisico - saldoSistema. `null` si se cerró sin arqueo (fix-074-i). */
+  diferencia: number | null;
   /** Nombre del cajero que cerró la caja */
   cajero: string;
   totalIngresos: number;
@@ -33,8 +33,11 @@ export interface HistorialCierre {
   cashExpenses: number;
   /** Derivado: `totalEgresos − cashExpenses` — egreso pagado con tarjeta/transferencia, no afecta el arqueo. */
   nonCashExpenses: number;
-  /** Derivado: 'balanced' | 'surplus' | 'shortage' */
-  estadoDiferencia: 'balanced' | 'surplus' | 'shortage';
+  /**
+   * Derivado: 'balanced' | 'surplus' | 'shortage', o 'unaudited' si se cerró sin contar el
+   * efectivo — no es ni cuadrado ni descuadre (fix-074-i).
+   */
+  estadoDiferencia: 'balanced' | 'surplus' | 'shortage' | 'unaudited';
 
   // ── Desglose de denominaciones del arqueo ──────────────────────────────────
   qtyBill20000: number;

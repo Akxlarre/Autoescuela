@@ -132,6 +132,18 @@ function formatCLP(value: number): string {
       background: color-mix(in srgb, var(--color-error) 12%, transparent);
       color: var(--color-error);
     }
+    /* fix-074-i: cierre sin conteo físico, ni cuadrado ni descuadre */
+    .badge-sin-arqueo {
+      display: block;
+      width: 100%;
+      text-align: center;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 0;
+      border-radius: 999px;
+      background: var(--bg-subtle);
+      color: var(--text-muted);
+    }
     .day-circle {
       width: 22px;
       height: 22px;
@@ -321,6 +333,8 @@ function formatCLP(value: number): string {
                     <div class="flex flex-col gap-1 my-1">
                       @if (cierre.estadoDiferencia === 'balanced') {
                         <span class="badge-cuadrado">Cuadrado</span>
+                      } @else if (cierre.estadoDiferencia === 'unaudited') {
+                        <span class="badge-sin-arqueo">Sin arqueo</span>
                       } @else {
                         <span class="badge-descuadre">Descuadre</span>
                       }
@@ -331,7 +345,9 @@ function formatCLP(value: number): string {
                             ? 'var(--color-error)'
                             : cierre.estadoDiferencia === 'surplus'
                               ? 'var(--color-warning)'
-                              : 'var(--color-success)'
+                              : cierre.estadoDiferencia === 'unaudited'
+                                ? 'var(--text-muted)'
+                                : 'var(--color-success)'
                         "
                       >
                         {{ formatDiferencia(cierre.diferencia) }}
@@ -414,6 +430,9 @@ function formatCLP(value: number): string {
                           } @else if (cierre.estadoDiferencia === 'surplus') {
                             <div class="w-1.5 h-1.5 rounded-full bg-warning"></div>
                             <span class="text-compact font-bold text-text-primary">Sobrante</span>
+                          } @else if (cierre.estadoDiferencia === 'unaudited') {
+                            <div class="w-1.5 h-1.5 rounded-full bg-text-muted"></div>
+                            <span class="text-compact font-bold text-text-primary">Sin arqueo</span>
                           } @else {
                             <div class="w-1.5 h-1.5 rounded-full bg-error"></div>
                             <span class="text-compact font-bold text-text-primary">Descuadre</span>
@@ -558,7 +577,9 @@ export class HistorialCuadraturasContentComponent implements AfterViewInit {
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
-  protected formatDiferencia(diff: number): string {
+  protected formatDiferencia(diff: number | null): string {
+    // Sin arqueo no hay diferencia que mostrar (fix-074-i).
+    if (diff === null) return '—';
     const formatted = formatCLP(diff);
     if (diff > 0) return `+ ${formatted}`;
     if (diff < 0) return `- ${formatted}`;

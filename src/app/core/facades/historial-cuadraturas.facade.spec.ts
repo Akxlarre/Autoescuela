@@ -351,5 +351,43 @@ describe('HistorialCuadraturasFacade', () => {
       });
       expect((ui.fondoInicial ?? 0) + ui.ingresosEfectivo - ui.cashExpenses).toBe(ui.saldoSistema);
     });
+
+    // fix-074-i: un cierre sin arqueo guarda arqueo_amount/difference null. Antes el mapeo lo
+    // convertía en saldoFisico 0 y diferencia −saldoSistema: un faltante falso de toda la caja.
+    it('sin arqueo (arqueo_amount null) queda "sin arqueo", sin conteo ni diferencia (fix-074-i)', () => {
+      const ui = mapCierreToHistorial({
+        ...baseRow,
+        arqueo_enabled: false,
+        arqueo_amount: null,
+        difference: null,
+      });
+      expect(ui.estadoDiferencia).toBe('unaudited');
+      expect(ui.saldoFisico).toBeNull();
+      expect(ui.diferencia).toBeNull();
+      expect(ui.saldoSistema).toBe(15_000);
+    });
+
+    it('con arqueo mantiene conteo, diferencia y estado (fix-074-i)', () => {
+      const ui = mapCierreToHistorial({ ...baseRow, arqueo_enabled: true });
+      expect(ui.saldoFisico).toBe(14_827);
+      expect(ui.diferencia).toBe(-173);
+      expect(ui.estadoDiferencia).toBe('shortage');
+    });
+  });
+
+  describe('totalVigente — cierre sin arqueo (fix-074-i)', () => {
+    it('parte del saldo esperado porque no hubo conteo', async () => {
+      mockAjustesFetch([mkAdjustmentRow(1, 'gasto_olvidado', '2026-08-01T10:00:00Z')]); // -5000
+      (facade as any)._cierreSeleccionado.set(
+        mkCierre({
+          saldoSistema: 80_000,
+          saldoFisico: null,
+          diferencia: null,
+          estadoDiferencia: 'unaudited',
+        }),
+      );
+      await (facade as any).fetchAjustes(1);
+      expect(facade.totalVigente()).toBe(80_000 - 5000);
+    });
   });
 });

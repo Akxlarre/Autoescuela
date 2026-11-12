@@ -56,6 +56,7 @@ interface DenominacionRow {
                 [class.bg-success]="d.estadoDiferencia === 'balanced'"
                 [class.bg-warning]="d.estadoDiferencia === 'surplus'"
                 [class.bg-error]="d.estadoDiferencia === 'shortage'"
+                [class.bg-text-muted]="d.estadoDiferencia === 'unaudited'"
               ></div>
               <span class="item-title">
                 {{
@@ -63,7 +64,9 @@ interface DenominacionRow {
                     ? 'Cuadrado'
                     : d.estadoDiferencia === 'surplus'
                       ? 'Sobrante'
-                      : 'Descuadre'
+                      : d.estadoDiferencia === 'unaudited'
+                        ? 'Sin arqueo'
+                        : 'Descuadre'
                 }}
               </span>
             </div>
@@ -91,13 +94,21 @@ interface DenominacionRow {
               <span class="item-title text-text-muted">No registrado</span>
             </div>
           }
-          <app-kpi-card-variant
-            label="Saldo Físico"
-            [value]="d.saldoFisico"
-            prefix="$"
-            icon="banknote"
-            color="default"
-          />
+          @if (d.saldoFisico !== null) {
+            <app-kpi-card-variant
+              label="Saldo Físico"
+              [value]="d.saldoFisico"
+              prefix="$"
+              icon="banknote"
+              color="default"
+            />
+          } @else {
+            <!-- fix-074-i: cierre sin arqueo, nadie contó el efectivo -->
+            <div class="card p-3 flex flex-col gap-1 bg-elevated">
+              <span class="micro-label">Saldo Físico</span>
+              <span class="item-title text-text-muted">No se contó</span>
+            </div>
+          }
         </div>
 
         <!-- 3. Arqueo Details (Bento Feature) -->
@@ -160,7 +171,13 @@ interface DenominacionRow {
                     <span class="text-2xs font-bold text-text-muted uppercase tracking-wider"
                       >Saldo físico contado</span
                     >
-                    <span class="font-black text-text-primary">{{ formatAmt(d.saldoFisico) }}</span>
+                    @if (d.saldoFisico !== null) {
+                      <span class="font-black text-text-primary">{{
+                        formatAmt(d.saldoFisico)
+                      }}</span>
+                    } @else {
+                      <span class="text-text-muted">No se contó</span>
+                    }
                   </div>
                   <div
                     class="flex items-center justify-between p-3 rounded-xl bg-surface border border-border-muted/30 shadow-subtle mt-1"
@@ -174,8 +191,12 @@ interface DenominacionRow {
                       [class.text-warning]="d.estadoDiferencia === 'surplus'"
                       [class.text-success]="d.estadoDiferencia === 'balanced'"
                     >
-                      {{ d.diferencia > 0 ? '+ ' : d.diferencia < 0 ? '− ' : ''
-                      }}{{ formatAmt(d.diferencia) }}
+                      @if (d.diferencia !== null) {
+                        {{ d.diferencia > 0 ? '+ ' : d.diferencia < 0 ? '− ' : ''
+                        }}{{ formatAmt(d.diferencia) }}
+                      } @else {
+                        <span class="text-text-muted">—</span>
+                      }
                     </span>
                   </div>
                   @if (facade.ajustesCierre().length > 0) {
@@ -239,8 +260,13 @@ interface DenominacionRow {
                 </span>
               </div>
 
+              @if (d.saldoFisico === null) {
+                <p class="px-4 py-6 text-sm text-text-muted text-center">
+                  No se hizo arqueo este día.
+                </p>
+              }
               <div class="divide-y divide-border-muted/30 max-h-85 overflow-y-auto">
-                @for (den of denominaciones(); track den.label) {
+                @for (den of d.saldoFisico === null ? [] : denominaciones(); track den.label) {
                   <div
                     class="px-4 py-2.5 flex items-center justify-between hover:bg-subtle/50 transition-colors"
                   >
@@ -264,7 +290,7 @@ interface DenominacionRow {
                   >Total Efectivo</span
                 >
                 <span class="text-xl font-black tabular-nums tracking-tighter text-brand">{{
-                  formatAmt(d.saldoFisico)
+                  d.saldoFisico === null ? '—' : formatAmt(d.saldoFisico)
                 }}</span>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import { chileDayRange, chileToday, formatChilePattern } from '../_shared/chile-time.ts';
+import { resolveArqueo } from '../_shared/cash-arqueo.ts';
 // supabase/functions/generate-cash-closing-report/index.ts
 //
 // Edge Function: generate-cash-closing-report
@@ -246,8 +247,9 @@ Deno.serve(async (req: Request) => {
       cierre: cierreData
         ? {
             cerradoEn: cierreData.closed_at ? formatDateTimeCL(cierreData.closed_at) : '—',
-            arqueoTotal: cierreData.arqueo_amount ?? 0,
-            diferencia: cierreData.difference ?? 0,
+            // fix-074-i: sin arqueo quedan null ("Sin arqueo"), no $0 / faltante.
+            arqueoTotal: resolveArqueo(cierreData).saldoFisico,
+            diferencia: resolveArqueo(cierreData).diferencia,
             notas: cierreData.notes ?? '',
             bill20000: cierreData.qty_bill_20000 ?? 0,
             bill10000: cierreData.qty_bill_10000 ?? 0,
@@ -313,8 +315,10 @@ interface EgresoRow {
 
 interface CierreInfo {
   cerradoEn: string;
-  arqueoTotal: number;
-  diferencia: number;
+  /** `null` si se cerró sin arqueo (fix-074-i). */
+  arqueoTotal: number | null;
+  /** `null` si se cerró sin arqueo (fix-074-i). */
+  diferencia: number | null;
   notas: string;
   bill20000: number;
   bill10000: number;
@@ -380,8 +384,8 @@ function buildExcelPayload(d: ReportData): ExcelPayload {
   ]);
   rows.push(['Saldo Teórico en Efectivo', d.saldoTeorico]);
   if (d.cierre) {
-    rows.push(['Total Físico Arqueado', d.cierre.arqueoTotal]);
-    rows.push(['Diferencia', d.cierre.diferencia]);
+    rows.push(['Total Físico Arqueado', d.cierre.arqueoTotal ?? 'Sin arqueo']);
+    rows.push(['Diferencia', d.cierre.diferencia ?? 'Sin arqueo']);
   }
   rows.push([]);
 
@@ -454,8 +458,8 @@ function buildExcelPayload(d: ReportData): ExcelPayload {
     for (const d2 of denomsBilletes) {
       if (d2.qty > 0) rows.push([d2.label, d2.qty, d2.qty * d2.val]);
     }
-    rows.push(['TOTAL FÍSICO ARQUEADO', '', d.cierre.arqueoTotal]);
-    rows.push(['DIFERENCIA', '', d.cierre.diferencia]);
+    rows.push(['TOTAL FÍSICO ARQUEADO', '', d.cierre.arqueoTotal ?? 'Sin arqueo']);
+    rows.push(['DIFERENCIA', '', d.cierre.diferencia ?? 'Sin arqueo']);
     if (d.cierre.notas) rows.push(['Observaciones', d.cierre.notas]);
     rows.push([`Cierre registrado: ${d.cierre.cerradoEn}`]);
   }
@@ -625,20 +629,33 @@ function buildPdf(data: ReportData): Uint8Array {
   if (data.cierre) {
     need(30, 'Cuadratura');
     const dif = data.cierre.diferencia;
+    // fix-074-i: sin arqueo no hay diferencia que informar.
     const difLabel =
-      dif === 0
-        ? 'Cuadrado'
-        : dif > 0
-          ? `Sobrante: ${clp(dif)}`
-          : `Faltante: ${clp(Math.abs(dif))}`;
+      dif === null
+        ? 'Sin arqueo'
+        : dif === 0
+          ? 'Cuadrado'
+          : dif > 0
+            ? `Sobrante: ${clp(dif)}`
+            : `Faltante: ${clp(Math.abs(dif))}`;
     const difColor: [number, number, number] =
-      dif === 0 ? [0.18, 0.55, 0.32] : dif > 0 ? [0.72, 0.4, 0.08] : [0.72, 0.18, 0.18];
+      dif === null
+        ? [0.45, 0.45, 0.45]
+        : dif === 0
+          ? [0.18, 0.55, 0.32]
+          : dif > 0
+            ? [0.72, 0.4, 0.08]
+            : [0.72, 0.18, 0.18];
+    const fisicoLabel =
+      data.cierre.arqueoTotal === null
+        ? 'Físico Arqueado: no se contó'
+        : `Físico Arqueado: ${clp(data.cierre.arqueoTotal)}`;
 
     gray(0.92);
     R(M, y - 22, CW, 24, true);
     black();
     T(M + 4, y - 8, 'RESULTADO DEL ARQUEO:', 7, true);
-    T(M + 130, y - 8, `Físico Arqueado: ${clp(data.cierre.arqueoTotal)}`, 7);
+    T(M + 130, y - 8, fisicoLabel, 7);
     ops.push(`${difColor[0]} ${difColor[1]} ${difColor[2]} rg`);
     T(M + 280, y - 8, difLabel, 7, true);
     black();
@@ -825,15 +842,15 @@ function buildPdf(data: ReportData): Uint8Array {
       L(M, y + 2, M + CW, y + 2);
       y -= 4;
 
-      // Total arqueo y diferencia
-      const dif = data.cierre.diferencia;
+      // Total arqueo y diferencia (solo llega acá con billetes contados, o sea con arqueo)
+      const dif = data.cierre.diferencia ?? 0;
       const difColor: [number, number, number] =
         dif === 0 ? [0.18, 0.55, 0.32] : dif > 0 ? [0.72, 0.4, 0.08] : [0.72, 0.18, 0.18];
       gray(0.92);
       R(M, y - 13, CW, 15, true);
       black();
       rgb(0.13, 0.33, 0.68);
-      T(M + 4, y - 9, `Total Físico Arqueado: ${clp(data.cierre.arqueoTotal)}`, 7.5, true);
+      T(M + 4, y - 9, `Total Físico Arqueado: ${clp(data.cierre.arqueoTotal ?? 0)}`, 7.5, true);
       ops.push(`${difColor[0]} ${difColor[1]} ${difColor[2]} rg`);
       const difStr =
         dif === 0 ? 'Sin diferencia' : dif > 0 ? `Sobrante: +${clp(dif)}` : `Faltante: ${clp(dif)}`;
