@@ -1,6 +1,7 @@
 # Spec 0061-b — Correos por escuela: remitente, respuesta y marca
 
-> **Status:** done (2026-11-12)
+> **Status:** done
+> **Closed:** 2026-11-12
 > **Created:** 2026-11-12
 > **Owner:** Matías (m) — adoptada vía ASG-b-103; autor original Akxlarre
 > **Priority:** P1

@@ -1,6 +1,6 @@
 # Asignación ASG-b-103 — Correos por escuela: remitente, respuesta y marca
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P1
