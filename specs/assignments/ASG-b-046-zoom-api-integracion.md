@@ -62,3 +62,7 @@ es **marcado manual**, RF-078)? Lo segundo es mucho más valioso y mucho más ca
   ¿ambas?). El esfuerzo entre una y otra difiere en un orden de magnitud.
 - Si el objetivo real resulta ser la asistencia automática, eso reemplaza un flujo manual que
   hoy hace secretaría — verificar que no rompa `professional_weekly_signatures`.
+- **Dos escuelas, dos razones sociales (owner, 2026-11-12).** Cada escuela puede tener su propia
+  cuenta de Zoom. Hoy no importa, porque la secretaria pega el enlace de cada clase. Una
+  integración por API necesitaría credenciales por escuela, configuradas por el admin. La spec
+  `0061-b` (correos por escuela) dejó Zoom fuera a propósito.
