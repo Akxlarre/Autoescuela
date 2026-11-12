@@ -21,6 +21,7 @@ import { TooltipModule } from 'primeng/tooltip';
 
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { expiredLicenseNotice } from '@core/utils/license-status.utils';
+import { vehicleDocWarningsNotice } from '@core/utils/vehicle-document-status.utils';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -248,6 +249,19 @@ interface CellSummary {
           </p>
         }
 
+        <!-- fix-251-b: el aviso es del vehículo, no del horario: una sola línea para la semana -->
+        @if (vehicleDocsNotice(); as notice) {
+          <p
+            class="flex items-center gap-1.5 text-xs text-warning m-0 px-4 py-1.5"
+            role="status"
+            data-testid="agenda-aviso-documentos-vehiculos"
+            data-llm-description="aviso de vehículos con documentos vencidos o por vencer"
+          >
+            <app-icon name="alert-triangle" [size]="14" class="text-warning shrink-0" />
+            <span>{{ notice }}</span>
+          </p>
+        }
+
         <!-- Grid del calendario -->
         @if (isLoading()) {
           <div
@@ -380,6 +394,7 @@ interface CellSummary {
                               [compact]="true"
                               [disabled]="isDayBeyondLimit(day)"
                               [showVehicleWarnings]="showVehicleWarnings()"
+                              [showIdentity]="true"
                               (slotClicked)="slotClick.emit($event)"
                             />
                           }
@@ -702,7 +717,11 @@ interface CellSummary {
          semana) conserva la misma altura que una fila llena — la fuente de
          verdad del alto de fila es el propio grid, no el contenido de cada
          celda individual. */
-      grid-auto-rows: minmax(56px, auto);
+      /* fix-251-b: con la grilla de alto fijo (flex-1 en desktop), minmax(56px, auto) dejaba la
+         fila en su mínimo y una celda expandida de la vista Todos se montaba sobre las filas de
+         abajo. max-content mide cada fila por su contenido; el piso de 56px lo sigue poniendo
+         el min-height de cada celda. */
+      grid-auto-rows: max-content;
       border-top: 1px solid var(--color-border);
       /* overflow, max-height y scroll-behavior los maneja ScrollContainerDirective */
     }
@@ -743,6 +762,8 @@ interface CellSummary {
     }
 
     .agenda-day-header {
+      /* fix-251-b: antes el piso de 56px de la fila lo ponía grid-auto-rows. */
+      min-height: 56px;
       padding: 0.625rem 0.5rem;
       background: var(--bg-surface);
       text-align: center;
@@ -927,6 +948,13 @@ interface CellSummary {
       flex-direction: column;
       gap: 3px;
       width: 100%;
+      /* fix-251-b: con muchos instructores a la misma hora, la fila crece hasta 240px y la lista
+         scrollea adentro. El height explícito hace falta: un contenedor con scroll no le aporta
+         alto a una fila auto, y la lista quedaba metida en los 56px de la fila. */
+      height: max-content;
+      max-height: 240px;
+      overflow-y: auto;
+      flex-shrink: 0;
     }
 
     /* ── Pills de disponibilidad ───────────────────────────── */
@@ -1233,6 +1261,13 @@ export class AgendaSemanalComponent implements AfterViewInit {
   /** fix-202-b: aviso de licencias vencidas (elegido o resumen de "Todos"). */
   readonly expiredLicenseNotice = computed(() =>
     expiredLicenseNotice(this.instructors(), this.selectedInstructorId()),
+  );
+
+  /** fix-251-b: vehículos con documentos vencidos o por vencer en los días visibles. */
+  readonly vehicleDocsNotice = computed(() =>
+    this.showVehicleWarnings()
+      ? vehicleDocWarningsNotice(this.filteredDays().flatMap((d) => d.slots))
+      : null,
   );
 
   // ── CSS Grid template ────────────────────────────────────────────────────────

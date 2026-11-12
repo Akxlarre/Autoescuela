@@ -2067,6 +2067,22 @@
   descarta su error), y el bloque X01 de `e2e/transversal-shell.spec.ts` (la pantalla que no lo
   muestra: no es detectable por análisis de texto).
 
+### DG-124 — El aviso de documentos de un vehículo se calcula contra hoy, no contra el día de la clase
+
+- **Trampa:** `slot.vehicleDocWarning` parece un dato de ese horario, así que se muestra en
+  cualquier slot que lo traiga, incluida una clase completada de hace días.
+- **Realidad:** `buildVehicleDocWarningMap()` arma un mapa por `vehicle_id` con
+  `resolveDocStatus()`, que compara contra `chileToday()`. Es el estado del vehículo **hoy**, igual
+  para todos sus horarios de la semana. En una clase pasada puede decir "SOAP vencido" aunque ese
+  día estuviera vigente, y en una clase a 25 días puede decir "por vencer" cuando para esa fecha ya
+  estará vencido.
+- **Regla de aplicabilidad:** mostrar el aviso solo donde el auto todavía va a salir
+  (`vehicleDocWarningApplies(status)`: libre, agendada o en curso). Como es un dato del vehículo y
+  no del horario, un resumen lo nombra una vez por vehículo (`vehicleDocWarningsNotice`), no una
+  vez por slot. Evaluarlo contra la fecha de cada clase sería otra regla de negocio: no está
+  decidida.
+- **Fuente:** `specs/fixes/fix-251-b-agenda-aviso-documentos-vehiculo-visible`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:
