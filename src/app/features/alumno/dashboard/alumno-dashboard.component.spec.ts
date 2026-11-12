@@ -1,9 +1,10 @@
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { signal } from '@angular/core';
 import { AlumnoDashboardComponent } from './alumno-dashboard.component';
 import { StudentHomeFacade } from '@core/facades/student-home.facade';
+import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment-context.facade';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { StudentHomeSnapshot } from '@core/models/ui/student-home.model';
 
@@ -73,23 +74,29 @@ function makeClassBSnapshot(overrides: Partial<StudentHomeSnapshot> = {}): Stude
   };
 }
 
-function makeFacadeMock(snapshot: StudentHomeSnapshot | null = makeClassBSnapshot()) {
+function makeFacadeMock(
+  snapshot: StudentHomeSnapshot | null = makeClassBSnapshot(),
+  opts: { error?: string | null; refreshFailed?: boolean; loading?: boolean } = {},
+) {
   const _snapshot = signal(snapshot);
-  const _loading = signal(false);
-  const _error = signal<string | null>(null);
+  const _loading = signal(opts.loading ?? false);
+  const _error = signal<string | null>(opts.error ?? null);
+  const _refreshFailed = signal<boolean>(opts.refreshFailed ?? false);
 
   return {
     snapshot: _snapshot.asReadonly(),
     isLoading: _loading.asReadonly(),
     error: _error.asReadonly(),
-    hero: vi.fn(() => snapshot?.hero ?? null),
-    progress: vi.fn(() => snapshot?.progress ?? null),
-    attendance: vi.fn(() => snapshot?.attendance ?? null),
-    grades: vi.fn(() => snapshot?.grades ?? null),
-    certificate: vi.fn(() => snapshot?.certificate ?? null),
-    side: vi.fn(() => snapshot?.side ?? null),
-    licenseGroup: vi.fn(() => snapshot?.hero.licenseGroup ?? null),
+    refreshFailed: _refreshFailed.asReadonly(),
+    hero: vi.fn(() => _snapshot()?.hero ?? null),
+    progress: vi.fn(() => _snapshot()?.progress ?? null),
+    attendance: vi.fn(() => _snapshot()?.attendance ?? null),
+    grades: vi.fn(() => _snapshot()?.grades ?? null),
+    certificate: vi.fn(() => _snapshot()?.certificate ?? null),
+    side: vi.fn(() => _snapshot()?.side ?? null),
+    licenseGroup: vi.fn(() => _snapshot()?.hero.licenseGroup ?? null),
     initialize: vi.fn().mockResolvedValue(undefined),
+    reintentar: vi.fn().mockResolvedValue(undefined),
     downloadCertificate: vi.fn().mockResolvedValue(null),
   };
 }
@@ -429,5 +436,98 @@ describe('AlumnoDashboardComponent — journeySteps / "Camino al Certificado" (s
     const component = setup(profSnapshot);
     const steps = component.journeySteps();
     expect(steps[1].done).toBe(true);
+  });
+});
+
+describe('AlumnoDashboardComponent — manejo de errores Caso A / Caso B (0060-b)', () => {
+  function mountWithState(
+    snapshot: StudentHomeSnapshot | null,
+    opts: { error?: string | null; refreshFailed?: boolean; loading?: boolean },
+  ) {
+    TestBed.resetTestingModule();
+    const facadeMock = makeFacadeMock(snapshot, opts);
+    const contextMock = {
+      enrollments: signal([{ id: 10, label: 'Clase B' }]).asReadonly(),
+      activeEnrollmentId: signal(10).asReadonly(),
+      setActive: vi.fn(),
+    };
+
+    TestBed.configureTestingModule({
+      imports: [AlumnoDashboardComponent],
+      providers: [
+        provideRouter([]),
+        { provide: StudentHomeFacade, useValue: facadeMock },
+        { provide: StudentEnrollmentContextFacade, useValue: contextMock },
+        {
+          provide: GsapAnimationsService,
+          useValue: {
+            animateHero: vi.fn(),
+            animateCounter: vi.fn(),
+            addCardHover: vi.fn(),
+            createShimmer: vi.fn(),
+          },
+        },
+      ],
+    }).overrideComponent(AlumnoDashboardComponent, {
+      set: {
+        imports: [],
+        schemas: [NO_ERRORS_SCHEMA],
+      },
+    });
+
+    const fixture = TestBed.createComponent(AlumnoDashboardComponent);
+    fixture.detectChanges();
+    return {
+      fixture,
+      component: fixture.componentInstance,
+      facadeMock,
+    };
+  }
+
+  it('Caso A: con error y sin snapshot, heroKpis está vacío y renderiza app-empty-state con Reintentar', () => {
+    const { fixture, component, facadeMock } = mountWithState(null, {
+      error: 'No se pudo cargar tu resumen.',
+    });
+    const text = fixture.nativeElement.textContent as string;
+    const emptyEl = fixture.nativeElement.querySelector('app-empty-state') as any;
+
+    expect(component.showErrorState()).toBe(true);
+    expect(component.heroKpis()).toEqual([]);
+    expect(emptyEl).not.toBeNull();
+    expect(emptyEl.message).toBe('No se pudo cargar tu resumen.');
+    expect(emptyEl.getAttribute('actionLabel')).toBe('Reintentar');
+    expect(text).not.toContain('Al día');
+    expect(text).not.toContain('$0');
+
+    emptyEl.dispatchEvent(new CustomEvent('action'));
+    expect(facadeMock.reintentar).toHaveBeenCalledTimes(1);
+  });
+
+  it('Caso B: con snapshot cargado y refreshFailed true, mantiene KPIs y muestra app-alert-card con Reintentar', () => {
+    const snap = makeClassBSnapshot({
+      side: {
+        nextClass: null,
+        pendingBalance: 150000,
+        totalPaid: 200000,
+      },
+    });
+    const { fixture, component, facadeMock } = mountWithState(snap, {
+      refreshFailed: true,
+    });
+    const text = fixture.nativeElement.textContent as string;
+    const alertEl = fixture.nativeElement.querySelector('app-alert-card') as any;
+
+    expect(component.showErrorState()).toBe(false);
+    expect(component.heroKpis().length).toBe(4);
+    expect(alertEl).not.toBeNull();
+    expect(alertEl.title).toBe('No se pudo actualizar tu resumen');
+    expect(text).toContain('Los datos mostrados pueden no estar actualizados.');
+
+    const retryBtn = fixture.nativeElement.querySelector(
+      '[data-llm-action="reintentar-resumen-alumno"]',
+    ) as HTMLButtonElement | null;
+    expect(retryBtn).not.toBeNull();
+    retryBtn?.click();
+    expect(facadeMock.reintentar).toHaveBeenCalledTimes(1);
   });
 });

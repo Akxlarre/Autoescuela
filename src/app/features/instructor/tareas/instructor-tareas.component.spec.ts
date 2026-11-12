@@ -1,8 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { InstructorTareasComponent } from './instructor-tareas.component';
 import { TasksFacade } from '@core/facades/tasks.facade';
+import { LayoutService } from '@core/services/ui/layout.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { TaskRow } from '@core/models/ui/task.model';
 
@@ -44,9 +45,13 @@ describe('InstructorTareasComponent — computed filter signals', () => {
   const receivedTasksSignal = signal<TaskRow[]>([]);
 
   const mockFacade = {
+    tasks: signal<TaskRow[]>([]).asReadonly(),
     receivedTasks: receivedTasksSignal.asReadonly(),
     pendingCount: signal(0).asReadonly(),
     isLoading: signal(false).asReadonly(),
+    error: signal<string | null>(null).asReadonly(),
+    refreshFailed: signal(false).asReadonly(),
+    reintentar: vi.fn().mockResolvedValue(undefined),
     initialize: vi.fn().mockResolvedValue(undefined),
     dispose: vi.fn(),
     selectTask: vi.fn(),
@@ -212,5 +217,52 @@ describe('InstructorTareasComponent — computed filter signals', () => {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((component as any).inProgressCount()).toBe(2);
+  });
+});
+
+describe('InstructorTareasComponent — layout Caso B en fill-screen (spec 0060-b T3.6)', () => {
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('el aviso de Caso B vive dentro de .bento-fill y no como hijo directo de .bento-grid', () => {
+    const task = makeTask();
+    TestBed.configureTestingModule({
+      imports: [InstructorTareasComponent],
+      providers: [
+        {
+          provide: TasksFacade,
+          useValue: {
+            tasks: signal([task]).asReadonly(),
+            receivedTasks: signal([task]).asReadonly(),
+            pendingCount: signal(1).asReadonly(),
+            isLoading: signal(false).asReadonly(),
+            error: signal<string | null>(null).asReadonly(),
+            refreshFailed: signal(true).asReadonly(),
+            reintentar: vi.fn().mockResolvedValue(undefined),
+            initialize: vi.fn().mockResolvedValue(undefined),
+            dispose: vi.fn(),
+            selectTask: vi.fn(),
+            selectedTask: signal(null).asReadonly(),
+          },
+        },
+        { provide: LayoutService, useValue: { tier: signal('desktop').asReadonly() } },
+        { provide: LayoutDrawerFacadeService, useValue: { open: vi.fn(), push: vi.fn() } },
+      ],
+    }).overrideComponent(InstructorTareasComponent, {
+      set: {
+        imports: [],
+        schemas: [NO_ERRORS_SCHEMA],
+      },
+    });
+
+    const fixture = TestBed.createComponent(InstructorTareasComponent);
+    fixture.detectChanges();
+
+    const alertCard = fixture.nativeElement.querySelector('app-alert-card') as HTMLElement | null;
+    expect(alertCard).not.toBeNull();
+    expect(alertCard?.closest('.bento-fill')).not.toBeNull();
+    expect(alertCard?.parentElement?.classList.contains('bento-grid')).toBe(false);
+    expect(fixture.nativeElement.querySelector('.bento-grid > [role="alert"]')).toBeNull();
   });
 });

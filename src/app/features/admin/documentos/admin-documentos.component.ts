@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  untracked,
+} from '@angular/core';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -36,7 +43,8 @@ import {
       [isAdmin]="isAdmin()"
       [showSedeColumn]="showSedeColumn()"
       [loadError]="facade.listsError()"
-      (retryRequested)="facade.reload()"
+      [refreshFailed]="facade.refreshFailed()"
+      (retryRequested)="facade.reintentar()"
       [templateBranches]="branchFacade.branches()"
       [templateForm]="templatesFacade.form()"
       [templateIsLoading]="templatesFacade.isLoading()"
@@ -77,7 +85,7 @@ export class AdminDocumentosComponent {
   constructor() {
     effect(() => {
       this.branchFacade.selectedBranchId();
-      void this.facade.initialize();
+      untracked(() => void this.facade.initialize());
     });
   }
 

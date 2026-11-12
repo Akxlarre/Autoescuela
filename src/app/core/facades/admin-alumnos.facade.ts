@@ -1,4 +1,4 @@
-﻿import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -15,6 +15,7 @@ import {
   buildAlumnosPdfTable,
 } from '@core/utils/alumnos-export.utils';
 import { buildFutureClassesBlockMessage } from '@core/utils/archive-confirmation.utils';
+import { assertReadOk } from '@core/utils/db-error.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { EMPTY_ALUMNO_LIST_FILTERS } from '@core/models/ui/alumno-table-row.model';
 import type {
@@ -98,6 +99,7 @@ export class AdminAlumnosFacade {
   /** Matrículas cuya ficha PDF se está generando: pueden ser varias a la vez (fix-316-m). */
   private readonly _generatingFichaIds = signal<ReadonlySet<number>>(new Set());
   private readonly _error = signal<string | null>(null);
+  private readonly _refreshFailed = signal(false);
   private readonly _isArchiving = signal(false);
   private readonly _trashView = signal(false);
 
@@ -115,6 +117,7 @@ export class AdminAlumnosFacade {
   readonly isExporting = this._isExporting.asReadonly();
   readonly generatingFichaIds = this._generatingFichaIds.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly refreshFailed = this._refreshFailed.asReadonly();
   readonly isArchiving = this._isArchiving.asReadonly();
   readonly trashView = this._trashView.asReadonly();
 
@@ -184,30 +187,62 @@ export class AdminAlumnosFacade {
     this.setupRealtime();
 
     if (this._initialized && currentBranchId === this._lastBranchId) {
-      void this.refreshSilently();
+      await this.refreshSilently();
       return;
     }
 
+    const requestToken = this.alumnosGuard.next();
+    this._initialized = false;
+    this._lastBranchId = currentBranchId;
+    // Regla 2 (caso A): al cargar por primera vez o cambiar de sede/vista, limpiar datos previos
+    // para que la UI no conserve filas ni KPIs anteriores mientras carga o tras fallar.
+    this._alumnos.set([]);
     this._isLoading.set(true);
     this._error.set(null);
+    this._refreshFailed.set(false);
     try {
-      await this.fetchAlumnosData(currentBranchId);
+      await this.fetchAlumnosData(requestToken, currentBranchId);
+      if (!this.alumnosGuard.isCurrent(requestToken)) return;
       this._initialized = true;
-      this._lastBranchId = currentBranchId;
     } catch {
+      if (!this.alumnosGuard.isCurrent(requestToken)) return;
+      this._alumnos.set([]);
+      this._initialized = false;
       this._error.set('Error al cargar alumnos');
     } finally {
-      this._isLoading.set(false);
+      if (this.alumnosGuard.isCurrent(requestToken)) {
+        this._isLoading.set(false);
+      }
     }
   }
 
+  async reintentar(): Promise<void> {
+    if (this._refreshFailed()) {
+      await this.refreshSilently();
+      return;
+    }
+    this._error.set(null);
+    this._refreshFailed.set(false);
+    this._initialized = false;
+    await this.initialize();
+  }
+
   private async refreshSilently(): Promise<void> {
+    const requestToken = this.alumnosGuard.next();
+    const currentBranchId = this.getActiveBranchId();
     try {
-      const currentBranchId = this.getActiveBranchId();
-      await this.fetchAlumnosData(currentBranchId);
+      await this.fetchAlumnosData(requestToken, currentBranchId);
+      if (!this.alumnosGuard.isCurrent(requestToken)) return;
       this._lastBranchId = currentBranchId;
+      this._refreshFailed.set(false);
+      this._error.set(null);
     } catch {
-      // Swallowed
+      if (!this.alumnosGuard.isCurrent(requestToken)) return;
+      this._refreshFailed.set(true);
+    } finally {
+      if (this.alumnosGuard.isCurrent(requestToken)) {
+        this._isLoading.set(false);
+      }
     }
   }
 
@@ -345,11 +380,13 @@ export class AdminAlumnosFacade {
    * Se usa para decidir qué modal de confirmación mostrar antes de archivar.
    */
   async checkHistorial(studentId: number): Promise<{ hasHistory: boolean; clasesFuturas: number }> {
-    const { data: enrollmentRows } = await this.supabase.client
-      .from('enrollments')
-      .select('id')
-      .eq('student_id', studentId)
-      .neq('status', 'draft');
+    const enrollmentRows = assertReadOk(
+      await this.supabase.client
+        .from('enrollments')
+        .select('id')
+        .eq('student_id', studentId)
+        .neq('status', 'draft'),
+    );
 
     const enrollmentIds: number[] = (enrollmentRows ?? []).map((e: { id: number }) => e.id);
 
@@ -373,6 +410,10 @@ export class AdminAlumnosFacade {
         .eq('status', 'scheduled')
         .gte('scheduled_at', new Date().toISOString()),
     ]);
+
+    if (paymentsResult.error) throw paymentsResult.error;
+    if (classesResult.error) throw classesResult.error;
+    if (futureClassesResult.error) throw futureClassesResult.error;
 
     return {
       hasHistory: (paymentsResult.count ?? 0) > 0 || (classesResult.count ?? 0) > 0,
@@ -406,12 +447,20 @@ export class AdminAlumnosFacade {
   private async resolverArchivado(
     studentId: number,
   ): Promise<{ permitido: boolean; hasHistory: boolean }> {
-    const { hasHistory, clasesFuturas } = await this.checkHistorial(studentId);
-    if (clasesFuturas > 0) {
-      this.toast.error('No se puede archivar', buildFutureClassesBlockMessage(clasesFuturas));
-      return { permitido: false, hasHistory };
+    try {
+      const { hasHistory, clasesFuturas } = await this.checkHistorial(studentId);
+      if (clasesFuturas > 0) {
+        this.toast.error('No se puede archivar', buildFutureClassesBlockMessage(clasesFuturas));
+        return { permitido: false, hasHistory };
+      }
+      return { permitido: true, hasHistory };
+    } catch {
+      this.toast.error(
+        'No se pudo verificar el historial del alumno',
+        'Revisa tu conexión e inténtalo de nuevo.',
+      );
+      return { permitido: false, hasHistory: false };
     }
-    return { permitido: true, hasHistory };
   }
 
   /**
@@ -437,13 +486,11 @@ export class AdminAlumnosFacade {
     }
   }
 
-  private async fetchAlumnosData(branchId: number | null): Promise<void> {
-    const requestToken = this.alumnosGuard.next();
-    try {
-      let query: any = this.supabase.client
-        .from('students')
-        .select(
-          `
+  private async fetchAlumnosData(requestToken: number, branchId: number | null): Promise<void> {
+    let query: any = this.supabase.client
+      .from('students')
+      .select(
+        `
           id, status, address,
           users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone, branch_id, branches(name)),
           enrollments(id, number, status, payment_status, pending_balance, total_paid, docs_complete, created_at, license_group,
@@ -453,71 +500,67 @@ export class AdminAlumnosFacade {
           ),
           standalone_course_enrollments(id)
         `,
-        )
-        [this._trashView() ? 'eq' : 'neq']('status', 'archived');
+      )
+      [this._trashView() ? 'eq' : 'neq']('status', 'archived');
 
-      const { data, error } = await query.order('id', { ascending: false });
-      if (error) throw error;
-      // Respuesta fuera de orden: ya se disparó una fetch más reciente, descartar (spec 0005-m).
-      if (!this.alumnosGuard.isCurrent(requestToken)) return;
+    const { data, error } = await query.order('id', { ascending: false });
+    if (error) throw error;
+    // Respuesta fuera de orden: ya se disparó una fetch más reciente, descartar (spec 0005-m).
+    if (!this.alumnosGuard.isCurrent(requestToken)) return;
 
-      // fix-458-m (DG-115): la sede se decide por las matrículas, no por `users.branch_id` — un
-      // alumno de la otra sede matriculado en esta también es alumno de esta sede.
-      const rawData = scopeStudentsToBranch((data ?? []) as unknown as RawStudent[], branchId);
+    // fix-458-m (DG-115): la sede se decide por las matrículas, no por `users.branch_id` — un
+    // alumno de la otra sede matriculado en esta también es alumno de esta sede.
+    const rawData = scopeStudentsToBranch((data ?? []) as unknown as RawStudent[], branchId);
 
-      // Filtrar alumnos: la Base B solo muestra alumnos con matrícula Clase B.
-      // (profesional-only y singular-only quedan fuera — tienen sus propias vistas)
-      // 'draft' excluido: son wizards abandonados (aunque sea en el paso 1) que nunca
-      // se confirmaron, no deben listarse como Pre-inscritos (fix-066).
-      const INCOMPLETE_STATUSES = new Set(['cancelled', 'pending_payment', 'draft']);
-      const validStudents = rawData.filter((s) => {
-        const allEnrollments = s.enrollments ?? [];
-        const classBEnrollments = allEnrollments.filter(isClassBEnrollment);
-        const hasAnyEnrollment = allEnrollments.length > 0;
-        const hasRegular = classBEnrollments.length > 0;
-        const hasSingular =
-          s.standalone_course_enrollments && s.standalone_course_enrollments.length > 0;
+    // Filtrar alumnos: la Base B solo muestra alumnos con matrícula Clase B.
+    // (profesional-only y singular-only quedan fuera — tienen sus propias vistas)
+    // 'draft' excluido: son wizards abandonados (aunque sea en el paso 1) que nunca
+    // se confirmaron, no deben listarse como Pre-inscritos (fix-066).
+    const INCOMPLETE_STATUSES = new Set(['cancelled', 'pending_payment', 'draft']);
+    const validStudents = rawData.filter((s) => {
+      const allEnrollments = s.enrollments ?? [];
+      const classBEnrollments = allEnrollments.filter(isClassBEnrollment);
+      const hasAnyEnrollment = allEnrollments.length > 0;
+      const hasRegular = classBEnrollments.length > 0;
+      const hasSingular =
+        s.standalone_course_enrollments && s.standalone_course_enrollments.length > 0;
 
-        // Tiene matrículas pero ninguna Clase B (profesional-only) -> Ocultar de la Base B
-        if (hasAnyEnrollment && !hasRegular) return false;
-        // Si no tiene regular B pero sí singular, es exclusivamente de Curso Singular -> Ocultar
-        if (!hasRegular && hasSingular) return false;
-        // Ocultar alumnos cuyas únicas matrículas B son canceladas o pago pendiente online
-        // (transacciones Webpay abandonadas/fallidas que nunca completaron el proceso)
-        if (hasRegular && !hasSingular) {
-          const hasValidEnrollment = classBEnrollments.some(
-            (e) => !INCOMPLETE_STATUSES.has(e.status ?? ''),
-          );
-          if (!hasValidEnrollment) return false;
-        }
-        return true;
-      });
-
-      // Los alumnos Finalizados (enrollment completed) ya no se listan en la Base:
-      // viven exclusivamente en Ex-Alumnos. La Papelera es la excepción (fix-276-m): un egresado
-      // archivado sale de Ex-Alumnos, así que este es el único lugar donde verlo y restaurarlo.
-      const isTrashView = this._trashView();
-      const rows = validStudents
-        .map((s) => this.mapToAlumnoTableRow(s))
-        .filter((r) => isTrashView || r.status !== 'Finalizado');
-
-      // fix-012-i: marca los alumnos con curso completo (12/12 prácticas + certificado
-      // ya enviado) pero aún activos — todavía no se marcaron como ex-alumno.
-      const pendientesEgreso = await this.fetchCursoCompletoPendienteEgresoSet(
-        rows.map((r) => r.enrollmentId).filter((id): id is number => id !== undefined),
-      );
-      for (const row of rows) {
-        row.cursoCompletoPendienteEgreso =
-          row.enrollmentId !== undefined && pendientesEgreso.has(row.enrollmentId);
+      // Tiene matrículas pero ninguna Clase B (profesional-only) -> Ocultar de la Base B
+      if (hasAnyEnrollment && !hasRegular) return false;
+      // Si no tiene regular B pero sí singular, es exclusivamente de Curso Singular -> Ocultar
+      if (!hasRegular && hasSingular) return false;
+      // Ocultar alumnos cuyas únicas matrículas B son canceladas o pago pendiente online
+      // (transacciones Webpay abandonadas/fallidas que nunca completaron el proceso)
+      if (hasRegular && !hasSingular) {
+        const hasValidEnrollment = classBEnrollments.some(
+          (e) => !INCOMPLETE_STATUSES.has(e.status ?? ''),
+        );
+        if (!hasValidEnrollment) return false;
       }
+      return true;
+    });
 
-      this._alumnos.set(rows);
-    } catch (err) {
-      this._error.set(
-        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar alumnos',
-      );
-      throw err;
+    // Los alumnos Finalizados (enrollment completed) ya no se listan en la Base:
+    // viven exclusivamente en Ex-Alumnos. La Papelera es la excepción (fix-276-m): un egresado
+    // archivado sale de Ex-Alumnos, así que este es el único lugar donde verlo y restaurarlo.
+    const isTrashView = this._trashView();
+    const rows = validStudents
+      .map((s) => this.mapToAlumnoTableRow(s))
+      .filter((r) => isTrashView || r.status !== 'Finalizado');
+
+    // fix-012-i: marca los alumnos con curso completo (12/12 prácticas + certificado
+    // ya enviado) pero aún activos — todavía no se marcaron como ex-alumno.
+    const pendientesEgreso = await this.fetchCursoCompletoPendienteEgresoSet(
+      rows.map((r) => r.enrollmentId).filter((id): id is number => id !== undefined),
+    );
+    if (!this.alumnosGuard.isCurrent(requestToken)) return;
+
+    for (const row of rows) {
+      row.cursoCompletoPendienteEgreso =
+        row.enrollmentId !== undefined && pendientesEgreso.has(row.enrollmentId);
     }
+
+    this._alumnos.set(rows);
   }
 
   private mapToAlumnoTableRow(s: RawStudent): AlumnoTableRow {
@@ -597,11 +640,13 @@ export class AdminAlumnosFacade {
     const result = new Set<number>();
     if (enrollmentIds.length === 0) return result;
 
-    const { data: sessions } = await this.supabase.client
-      .from('class_b_sessions')
-      .select('enrollment_id')
-      .in('enrollment_id', enrollmentIds)
-      .eq('status', 'completed');
+    const sessions = assertReadOk(
+      await this.supabase.client
+        .from('class_b_sessions')
+        .select('enrollment_id')
+        .in('enrollment_id', enrollmentIds)
+        .eq('status', 'completed'),
+    );
 
     const practiceCounts = new Map<number, number>();
     for (const row of (sessions ?? []) as Array<{ enrollment_id: number }>) {
@@ -610,21 +655,25 @@ export class AdminAlumnosFacade {
     const completedIds = enrollmentIds.filter((id) => (practiceCounts.get(id) ?? 0) >= 12);
     if (completedIds.length === 0) return result;
 
-    const { data: certs } = await this.supabase.client
-      .from('certificates')
-      .select('id, enrollment_id')
-      .in('enrollment_id', completedIds)
-      .eq('type', 'class_b');
+    const certs = assertReadOk(
+      await this.supabase.client
+        .from('certificates')
+        .select('id, enrollment_id')
+        .in('enrollment_id', completedIds)
+        .eq('type', 'class_b'),
+    );
 
     const certRows = (certs ?? []) as Array<{ id: number; enrollment_id: number }>;
     if (certRows.length === 0) return result;
 
     const certIds = certRows.map((c) => c.id);
-    const { data: logs } = await this.supabase.client
-      .from('certificate_issuance_log')
-      .select('certificate_id')
-      .in('certificate_id', certIds)
-      .eq('action', 'email_sent');
+    const logs = assertReadOk(
+      await this.supabase.client
+        .from('certificate_issuance_log')
+        .select('certificate_id')
+        .in('certificate_id', certIds)
+        .eq('action', 'email_sent'),
+    );
 
     const sentCertIds = new Set(
       ((logs ?? []) as Array<{ certificate_id: number }>).map((l) => l.certificate_id),

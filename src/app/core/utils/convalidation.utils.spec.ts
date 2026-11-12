@@ -35,4 +35,13 @@ describe('fetchConvalidationMap', () => {
     const result = await fetchConvalidationMap(supabase, [1, 2]);
     expect(result.size).toBe(0);
   });
+
+  it('lanza error cuando la consulta a license_validations falla (spec 0060-b)', async () => {
+    const dbError = { message: 'connection lost', code: '08006' };
+    const inFn = vi.fn().mockResolvedValue({ data: null, error: dbError });
+    const selectFn = vi.fn().mockReturnValue({ in: inFn });
+    const supabase = { from: vi.fn().mockReturnValue({ select: selectFn }) } as any;
+
+    await expect(fetchConvalidationMap(supabase, [1, 2])).rejects.toEqual(dbError);
+  });
 });

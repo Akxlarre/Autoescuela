@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -14,7 +15,7 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
 @Component({
   selector: 'app-alerts-drawer',
   standalone: true,
-  imports: [IconComponent, SkeletonBlockComponent, DrawerFormComponent],
+  imports: [AlertCardComponent, IconComponent, SkeletonBlockComponent, DrawerFormComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-drawer-form [hasFooter]="false">
@@ -30,6 +31,8 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
           <p class="m-0 text-xs text-text-muted mt-0.5">
             @if (isLoading()) {
               Verificando condiciones...
+            } @else if (loadProblem() && sortedAlerts().length === 0) {
+              Error al verificar condiciones
             } @else {
               {{ alertCount() }} alerta{{ alertCount() !== 1 ? 's' : '' }} activa{{
                 alertCount() !== 1 ? 's' : ''
@@ -75,11 +78,12 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
               </p>
             </div>
             <button
-              class="btn-ghost flex items-center gap-1.5 text-xs px-2.5 py-1 rounded cursor-pointer"
+              type="button"
+              class="btn-secondary flex items-center gap-2 cursor-pointer"
               (click)="retry()"
-              data-llm-action="retry-load-alerts"
+              data-llm-action="reintentar-alertas-drawer"
             >
-              <app-icon name="refresh-cw" [size]="12" />
+              <app-icon name="refresh-cw" [size]="14" />
               <span>Reintentar</span>
             </button>
           </div>
@@ -102,7 +106,25 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
 
           <!-- Lista de alertas ordenadas por severidad -->
         } @else {
-          @if (loadProblem()) {
+          @if (refreshFailed()) {
+            <app-alert-card severity="warning" title="No se pudieron actualizar las alertas">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span class="text-compact text-text-secondary">
+                  Los datos mostrados pueden no estar actualizados.
+                </span>
+                <button
+                  type="button"
+                  class="btn-secondary flex items-center gap-2 shrink-0"
+                  data-llm-action="reintentar-alertas-drawer"
+                  [disabled]="isLoading()"
+                  (click)="retry()"
+                >
+                  <app-icon name="refresh-cw" [size]="14" />
+                  Reintentar
+                </button>
+              </div>
+            </app-alert-card>
+          } @else if (loadProblem()) {
             <p class="m-0 text-xs text-text-muted" role="status">
               {{ loadProblem() }} Puede faltar alguna.
             </p>
@@ -262,6 +284,7 @@ export class AlertsDrawerComponent {
   readonly alertCount = this.facade.alertCount;
   /** Aviso cuando la lista no es confiable (carga fallida o incompleta). */
   readonly loadProblem = this.facade.loadProblem;
+  readonly refreshFailed = this.facade.refreshFailed;
   readonly SKELETON_ROWS = [1, 2, 3, 4] as const;
 
   /** Alertas ordenadas: error → warning → info → success */
@@ -301,7 +324,7 @@ export class AlertsDrawerComponent {
   }
 
   retry(): void {
-    void this.facade.initialize();
+    void this.facade.reintentar();
   }
 
   dismiss(id: string): void {

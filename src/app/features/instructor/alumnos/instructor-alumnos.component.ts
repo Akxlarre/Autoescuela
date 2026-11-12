@@ -16,6 +16,7 @@ import { TableModule } from 'primeng/table';
 import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -44,6 +45,7 @@ const PAGE_SIZE = 9;
     TableModule,
     SectionHeroComponent,
     EmptyStateComponent,
+    AlertCardComponent,
     IconComponent,
     SkeletonBlockComponent,
     CardHoverDirective,
@@ -65,340 +67,382 @@ const PAGE_SIZE = 9;
       />
 
       <!-- ══ MAIN CONTENT (Dual-Viewport — mismo canon que alumnos-list-content) ══ -->
-      <div
-        class="bento-banner bento-fill card p-0 overflow-hidden shadow-sm dual-viewport-container flex flex-col w-full h-full"
-        appCardHover
-      >
-        <!-- Toolbar -->
-        <div class="flex flex-wrap items-center gap-3 p-4 border-b border-border-default">
-          <!-- Buscador -->
-          <div class="search-field flex-1 min-w-52 max-w-xs">
-            <app-icon name="search" [size]="18" class="text-text-muted" />
-            <input
-              type="text"
-              class="search-field__input"
-              placeholder="Buscar alumno por nombre o RUT..."
-              [ngModel]="searchTerm()"
-              (ngModelChange)="onSearch($event)"
-            />
-            @if (searchTerm()) {
-              <button
-                class="search-field__clear"
-                aria-label="Limpiar búsqueda"
-                (click)="onSearch('')"
-              >
-                <app-icon name="x" [size]="14" />
-              </button>
-            }
-          </div>
-
-          <!-- Filtro por estado -->
-          <div class="flex gap-2 overflow-x-auto no-scrollbar">
-            @for (f of statusFilters; track f.value) {
-              <button
-                class="filter-pill"
-                [class.filter-pill--active]="filterStatus() === f.value"
-                (click)="setFilter(f.value)"
-              >
-                <span
-                  class="filter-pill__dot"
-                  [class.filter-pill__dot--active]="filterStatus() === f.value"
-                ></span>
-                <span>{{ f.label }}</span>
-                <span class="filter-pill__badge">{{ f.count() }}</span>
-              </button>
-            }
-          </div>
-
-          <!-- Sort -->
-          <p-select
-            [options]="sortOptions"
-            optionLabel="label"
-            optionValue="value"
-            [ngModel]="sortBy()"
-            (ngModelChange)="sortBy.set($event)"
-            styleClass="w-44 ml-auto"
-            data-llm-description="sort student list by field"
-          />
-        </div>
-
-        @if (facade.isLoading()) {
-          <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
-            <!-- VISTA 1: TABLA SKELETON (oculta cuando se comprime) -->
-            <div
-              class="desktop-view hide-on-squeeze p-4 space-y-0 flex flex-col flex-1 min-h-0 h-full w-full"
-            >
-              <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
-                <app-skeleton-block variant="text" width="28%" height="11px" />
-                <app-skeleton-block variant="text" width="20%" height="11px" />
-                <app-skeleton-block variant="text" width="20%" height="11px" />
-                <app-skeleton-block variant="text" width="18%" height="11px" />
-                <app-skeleton-block variant="text" width="14%" height="11px" />
+      <div class="bento-banner bento-fill flex flex-col gap-4 min-h-0 w-full h-full">
+        <!-- ══ Caso B: Aviso de refresco fallido ══ -->
+        @if (facade.refreshFailed()) {
+          <div role="alert" class="shrink-0">
+            <app-alert-card severity="error" title="No se pudo actualizar la lista de alumnos">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span class="text-compact text-text-secondary">
+                  Los datos mostrados pueden no estar actualizados.
+                </span>
+                <button
+                  type="button"
+                  class="btn-secondary flex items-center gap-2 shrink-0"
+                  data-llm-action="reintentar-alumnos"
+                  [disabled]="facade.isLoading()"
+                  (click)="facade.reintentar()"
+                >
+                  <app-icon name="refresh-cw" [size]="14" />
+                  Reintentar
+                </button>
               </div>
-              @for (row of skeletonItems; track row) {
-                <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
-                  <div class="flex items-center gap-3 w-[28%]">
-                    <app-skeleton-block variant="circle" width="36px" height="36px" />
-                    <div class="flex flex-col gap-1.5 flex-1">
-                      <app-skeleton-block variant="text" width="70%" height="12px" />
-                      <app-skeleton-block variant="text" width="45%" height="10px" />
-                    </div>
-                  </div>
-                  <app-skeleton-block variant="text" width="20%" height="12px" />
-                  <app-skeleton-block variant="rect" width="20%" height="6px" />
-                  <app-skeleton-block variant="text" width="18%" height="12px" />
-                  <app-skeleton-block variant="rect" width="64px" height="22px" />
-                </div>
-              }
-            </div>
+            </app-alert-card>
+          </div>
+        }
 
-            <!-- VISTA 2: TARJETAS SKELETON (visible cuando se comprime o en móvil) -->
-            <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
-              <div class="bento-grid">
-                @for (i of skeletonItems; track i) {
-                  <div class="student-card bento-wide" aria-hidden="true" data-col-span="4">
-                    <div class="student-card__accent bg-subtle"></div>
-                    <div class="p-5 flex flex-col gap-4 h-full">
-                      <div class="flex justify-between items-start gap-4">
-                        <div class="flex items-center gap-3 min-w-0 flex-1">
-                          <app-skeleton-block variant="circle" width="42px" height="42px" />
-                          <div class="flex-1 space-y-2">
-                            <app-skeleton-block variant="text" width="65%" />
-                            <app-skeleton-block variant="text" width="40%" />
-                          </div>
-                        </div>
-                        <app-skeleton-block variant="rect" width="64px" height="22px" />
-                      </div>
-                      <app-skeleton-block variant="text" width="75%" />
-                      <div class="space-y-2">
-                        <div class="flex justify-between">
-                          <app-skeleton-block variant="text" width="45%" />
-                          <app-skeleton-block variant="text" width="20%" />
-                        </div>
-                        <app-skeleton-block variant="rect" height="6px" />
-                      </div>
-                      <div class="pt-4 mt-auto border-t border-border-subtle">
-                        <div class="flex items-center justify-between">
-                          <app-skeleton-block variant="text" width="50%" />
-                          <app-skeleton-block variant="rect" width="48px" height="22px" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+        <div
+          class="card p-0 overflow-hidden shadow-sm dual-viewport-container flex flex-col w-full flex-1 min-h-0"
+          appCardHover
+        >
+          @if (!facade.isLoading() && facade.error() && facade.students().length === 0) {
+            <div class="flex-1 flex items-center justify-center p-6">
+              <app-empty-state
+                icon="alert-triangle"
+                [message]="facade.error()!"
+                subtitle="Revisa tu conexión e inténtalo de nuevo."
+                actionLabel="Reintentar"
+                actionIcon="refresh-cw"
+                (action)="facade.reintentar()"
+              />
+            </div>
+          } @else {
+            <!-- Toolbar -->
+            <div class="flex flex-wrap items-center gap-3 p-4 border-b border-border-default">
+              <!-- Buscador -->
+              <div class="search-field flex-1 min-w-52 max-w-xs">
+                <app-icon name="search" [size]="18" class="text-text-muted" />
+                <input
+                  type="text"
+                  class="search-field__input"
+                  placeholder="Buscar alumno por nombre o RUT..."
+                  [ngModel]="searchTerm()"
+                  (ngModelChange)="onSearch($event)"
+                />
+                @if (searchTerm()) {
+                  <button
+                    class="search-field__clear"
+                    aria-label="Limpiar búsqueda"
+                    (click)="onSearch('')"
+                  >
+                    <app-icon name="x" [size]="14" />
+                  </button>
                 }
               </div>
-            </div>
-          </div>
-        } @else {
-          <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
-            <!-- VISTA 1: LA TABLA CLÁSICA (oculta cuando se comprime) -->
-            <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
-              <p-table
-                [value]="filteredStudents()"
-                [rows]="9"
-                [paginator]="true"
-                [scrollable]="true"
-                scrollHeight="flex"
-                responsiveLayout="scroll"
-                styleClass="p-datatable-sm p-datatable-striped h-full flex flex-col"
-                [showCurrentPageReport]="true"
-                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} alumnos"
-              >
-                <ng-template pTemplate="header">
-                  <tr class="micro-label text-left">
-                    <th class="pl-6 py-4">Alumno</th>
-                    <th>N° Matrícula</th>
-                    <th>Progreso Práctico</th>
-                    <th>Próxima Clase</th>
-                    <th class="pr-6">Estado</th>
-                  </tr>
-                </ng-template>
-                <ng-template pTemplate="body" let-s>
-                  <tr
-                    class="list-item-hover transition-colors border-b border-border-subtle cursor-pointer"
-                    (click)="openDetail(s)"
+
+              <!-- Filtro por estado -->
+              <div class="flex gap-2 overflow-x-auto no-scrollbar">
+                @for (f of statusFilters; track f.value) {
+                  <button
+                    class="filter-pill"
+                    [class.filter-pill--active]="filterStatus() === f.value"
+                    (click)="setFilter(f.value)"
                   >
-                    <td class="pl-6 py-4">
-                      <div class="flex items-center gap-3">
-                        <div
-                          class="w-9 h-9 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase shrink-0"
-                        >
-                          {{ initials(s.name) }}
-                        </div>
-                        <div class="flex flex-col min-w-0">
-                          <span class="item-title truncate">{{ s.name }}</span>
-                          <span class="text-xs text-text-muted font-mono">{{ s.rut }}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="text-sm font-bold text-text-primary font-mono">
-                      {{ s.enrollmentNumber ? '#' + s.enrollmentNumber : '—' }}
-                    </td>
-                    <td>
-                      <div class="flex items-center gap-2 min-w-35">
-                        <div class="progress-track flex-1">
-                          <div
-                            class="progress-fill"
-                            [style.width.%]="s.practicePercent"
-                            [style.background]="getPalette(s.name).bg"
-                          ></div>
-                        </div>
-                        <span class="text-xs font-bold text-text-primary whitespace-nowrap"
-                          >{{ s.practiceProgress }}/{{ s.totalSessions }}</span
-                        >
-                      </div>
-                    </td>
-                    <td class="text-xs text-text-secondary">
-                      {{
-                        s.nextClassDate
-                          ? (s.nextClassDate | chileDate: 'dd MMM, HH:mm')
-                          : 'Sin agendar'
-                      }}
-                    </td>
-                    <td class="pr-6">
-                      <p-tag
-                        [value]="s.statusLabel"
-                        [severity]="$any(s.statusColor)"
-                        styleClass="text-xs font-bold px-2 py-0.5"
-                      ></p-tag>
-                    </td>
-                  </tr>
-                </ng-template>
-                <ng-template pTemplate="emptymessage">
-                  <tr>
-                    <td colspan="5" class="p-0">
-                      <app-empty-state
-                        icon="search"
-                        message="No se encontraron alumnos"
-                        subtitle="Refina tus términos de búsqueda o filtros."
-                        actionLabel="Ver todos"
-                        (action)="clearFilters()"
-                      />
-                    </td>
-                  </tr>
-                </ng-template>
-              </p-table>
+                    <span
+                      class="filter-pill__dot"
+                      [class.filter-pill__dot--active]="filterStatus() === f.value"
+                    ></span>
+                    <span>{{ f.label }}</span>
+                    <span class="filter-pill__badge">{{ f.count() }}</span>
+                  </button>
+                }
+              </div>
+
+              <!-- Sort -->
+              <p-select
+                [options]="sortOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="sortBy()"
+                (ngModelChange)="sortBy.set($event)"
+                styleClass="w-44 ml-auto"
+                data-llm-description="sort student list by field"
+              />
             </div>
 
-            <!-- VISTA 2: TARJETAS APILADAS (visible cuando se comprime o en móvil) -->
-            <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
-              <div class="bento-grid">
-                @for (s of visibleStudents(); track s.studentId) {
-                  <div
-                    class="student-card group bento-wide"
-                    appCardHover
-                    (click)="openDetail(s)"
-                    data-col-span="4"
-                  >
-                    <!-- Accent gradient top bar -->
-                    <div
-                      class="student-card__accent"
-                      [style.background]="getPalette(s.name).bg"
-                    ></div>
+            @if (facade.isLoading()) {
+              <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
+                <!-- VISTA 1: TABLA SKELETON (oculta cuando se comprime) -->
+                <div
+                  class="desktop-view hide-on-squeeze p-4 space-y-0 flex flex-col flex-1 min-h-0 h-full w-full"
+                >
+                  <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
+                    <app-skeleton-block variant="text" width="28%" height="11px" />
+                    <app-skeleton-block variant="text" width="20%" height="11px" />
+                    <app-skeleton-block variant="text" width="20%" height="11px" />
+                    <app-skeleton-block variant="text" width="18%" height="11px" />
+                    <app-skeleton-block variant="text" width="14%" height="11px" />
+                  </div>
+                  @for (row of skeletonItems; track row) {
+                    <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
+                      <div class="flex items-center gap-3 w-[28%]">
+                        <app-skeleton-block variant="circle" width="36px" height="36px" />
+                        <div class="flex flex-col gap-1.5 flex-1">
+                          <app-skeleton-block variant="text" width="70%" height="12px" />
+                          <app-skeleton-block variant="text" width="45%" height="10px" />
+                        </div>
+                      </div>
+                      <app-skeleton-block variant="text" width="20%" height="12px" />
+                      <app-skeleton-block variant="rect" width="20%" height="6px" />
+                      <app-skeleton-block variant="text" width="18%" height="12px" />
+                      <app-skeleton-block variant="rect" width="64px" height="22px" />
+                    </div>
+                  }
+                </div>
 
-                    <div class="p-5 flex flex-col gap-4 h-full relative">
-                      <!-- Header -->
-                      <div class="flex justify-between items-start gap-4">
-                        <div class="flex items-center gap-3 min-w-0">
-                          <div class="avatar-ring" [style.background]="getPalette(s.name).bg">
-                            {{ initials(s.name) }}
+                <!-- VISTA 2: TARJETAS SKELETON (visible cuando se comprime o en móvil) -->
+                <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
+                  <div class="bento-grid">
+                    @for (i of skeletonItems; track i) {
+                      <div class="student-card bento-wide" aria-hidden="true" data-col-span="4">
+                        <div class="student-card__accent bg-subtle"></div>
+                        <div class="p-5 flex flex-col gap-4 h-full">
+                          <div class="flex justify-between items-start gap-4">
+                            <div class="flex items-center gap-3 min-w-0 flex-1">
+                              <app-skeleton-block variant="circle" width="42px" height="42px" />
+                              <div class="flex-1 space-y-2">
+                                <app-skeleton-block variant="text" width="65%" />
+                                <app-skeleton-block variant="text" width="40%" />
+                              </div>
+                            </div>
+                            <app-skeleton-block variant="rect" width="64px" height="22px" />
                           </div>
-                          <div class="min-w-0">
-                            <h3
-                              class="text-sm font-bold truncate"
-                              [style.color]="'var(--text-primary)'"
+                          <app-skeleton-block variant="text" width="75%" />
+                          <div class="space-y-2">
+                            <div class="flex justify-between">
+                              <app-skeleton-block variant="text" width="45%" />
+                              <app-skeleton-block variant="text" width="20%" />
+                            </div>
+                            <app-skeleton-block variant="rect" height="6px" />
+                          </div>
+                          <div class="pt-4 mt-auto border-t border-border-subtle">
+                            <div class="flex items-center justify-between">
+                              <app-skeleton-block variant="text" width="50%" />
+                              <app-skeleton-block variant="rect" width="48px" height="22px" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            } @else {
+              <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
+                <!-- VISTA 1: LA TABLA CLÁSICA (oculta cuando se comprime) -->
+                <div
+                  class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full"
+                >
+                  <p-table
+                    [value]="filteredStudents()"
+                    [rows]="9"
+                    [paginator]="true"
+                    [scrollable]="true"
+                    scrollHeight="flex"
+                    responsiveLayout="scroll"
+                    styleClass="p-datatable-sm p-datatable-striped h-full flex flex-col"
+                    [showCurrentPageReport]="true"
+                    currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} alumnos"
+                  >
+                    <ng-template pTemplate="header">
+                      <tr class="micro-label text-left">
+                        <th class="pl-6 py-4">Alumno</th>
+                        <th>N° Matrícula</th>
+                        <th>Progreso Práctico</th>
+                        <th>Próxima Clase</th>
+                        <th class="pr-6">Estado</th>
+                      </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-s>
+                      <tr
+                        class="list-item-hover transition-colors border-b border-border-subtle cursor-pointer"
+                        (click)="openDetail(s)"
+                      >
+                        <td class="pl-6 py-4">
+                          <div class="flex items-center gap-3">
+                            <div
+                              class="w-9 h-9 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase shrink-0"
                             >
-                              {{ s.name }}
-                            </h3>
-                            <p class="text-xs" [style.color]="'var(--text-muted)'">{{ s.rut }}</p>
+                              {{ initials(s.name) }}
+                            </div>
+                            <div class="flex flex-col min-w-0">
+                              <span class="item-title truncate">{{ s.name }}</span>
+                              <span class="text-xs text-text-muted font-mono">{{ s.rut }}</span>
+                            </div>
                           </div>
-                        </div>
-                        <p-tag [value]="s.statusLabel" [severity]="$any(s.statusColor)" />
-                      </div>
-
-                      <!-- N° Matrícula -->
-                      <div
-                        class="flex items-center gap-2 text-xs font-bold font-mono"
-                        [style.color]="'var(--text-secondary)'"
-                      >
-                        <app-icon name="hash" [size]="14" />
-                        <span class="truncate">
+                        </td>
+                        <td class="text-sm font-bold text-text-primary font-mono">
                           {{ s.enrollmentNumber ? '#' + s.enrollmentNumber : '—' }}
-                        </span>
-                      </div>
-
-                      <!-- Progreso -->
-                      <div class="space-y-2">
-                        <div
-                          class="flex justify-between text-xs"
-                          [style.color]="'var(--text-muted)'"
-                        >
-                          <span>Progreso Práctico</span>
-                          <span class="font-bold" [style.color]="'var(--text-primary)'"
-                            >{{ s.practiceProgress }}/{{ s.totalSessions }}</span
-                          >
-                        </div>
-                        <div class="progress-track">
-                          <div
-                            class="progress-fill"
-                            [style.width.%]="s.practicePercent"
-                            [style.background]="getPalette(s.name).bg"
-                          ></div>
-                        </div>
-                      </div>
-
-                      <!-- Footer -->
-                      <div
-                        class="pt-4 mt-auto flex items-center justify-between border-t border-border-subtle"
-                      >
-                        <div
-                          class="flex items-center gap-2 text-xs"
-                          [style.color]="'var(--text-muted)'"
-                        >
-                          <app-icon name="calendar" [size]="14" />
-                          <span>{{
+                        </td>
+                        <td>
+                          <div class="flex items-center gap-2 min-w-35">
+                            <div class="progress-track flex-1">
+                              <div
+                                class="progress-fill"
+                                [style.width.%]="s.practicePercent"
+                                [style.background]="getPalette(s.name).bg"
+                              ></div>
+                            </div>
+                            <span class="text-xs font-bold text-text-primary whitespace-nowrap"
+                              >{{ s.practiceProgress }}/{{ s.totalSessions }}</span
+                            >
+                          </div>
+                        </td>
+                        <td class="text-xs text-text-secondary">
+                          {{
                             s.nextClassDate
                               ? (s.nextClassDate | chileDate: 'dd MMM, HH:mm')
                               : 'Sin agendar'
-                          }}</span>
-                        </div>
-                        <div class="details-link">
-                          <span>Ficha</span>
-                          <app-icon name="chevron-right" [size]="14" />
+                          }}
+                        </td>
+                        <td class="pr-6">
+                          <p-tag
+                            [value]="s.statusLabel"
+                            [severity]="$any(s.statusColor)"
+                            styleClass="text-xs font-bold px-2 py-0.5"
+                          ></p-tag>
+                        </td>
+                      </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                      <tr>
+                        <td colspan="5" class="p-0">
+                          <app-empty-state
+                            icon="search"
+                            message="No se encontraron alumnos"
+                            subtitle="Refina tus términos de búsqueda o filtros."
+                            actionLabel="Ver todos"
+                            (action)="clearFilters()"
+                          />
+                        </td>
+                      </tr>
+                    </ng-template>
+                  </p-table>
+                </div>
+
+                <!-- VISTA 2: TARJETAS APILADAS (visible cuando se comprime o en móvil) -->
+                <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
+                  <div class="bento-grid">
+                    @for (s of visibleStudents(); track s.studentId) {
+                      <div
+                        class="student-card group bento-wide"
+                        appCardHover
+                        (click)="openDetail(s)"
+                        data-col-span="4"
+                      >
+                        <!-- Accent gradient top bar -->
+                        <div
+                          class="student-card__accent"
+                          [style.background]="getPalette(s.name).bg"
+                        ></div>
+
+                        <div class="p-5 flex flex-col gap-4 h-full relative">
+                          <!-- Header -->
+                          <div class="flex justify-between items-start gap-4">
+                            <div class="flex items-center gap-3 min-w-0">
+                              <div class="avatar-ring" [style.background]="getPalette(s.name).bg">
+                                {{ initials(s.name) }}
+                              </div>
+                              <div class="min-w-0">
+                                <h3
+                                  class="text-sm font-bold truncate"
+                                  [style.color]="'var(--text-primary)'"
+                                >
+                                  {{ s.name }}
+                                </h3>
+                                <p class="text-xs" [style.color]="'var(--text-muted)'">
+                                  {{ s.rut }}
+                                </p>
+                              </div>
+                            </div>
+                            <p-tag [value]="s.statusLabel" [severity]="$any(s.statusColor)" />
+                          </div>
+
+                          <!-- N° Matrícula -->
+                          <div
+                            class="flex items-center gap-2 text-xs font-bold font-mono"
+                            [style.color]="'var(--text-secondary)'"
+                          >
+                            <app-icon name="hash" [size]="14" />
+                            <span class="truncate">
+                              {{ s.enrollmentNumber ? '#' + s.enrollmentNumber : '—' }}
+                            </span>
+                          </div>
+
+                          <!-- Progreso -->
+                          <div class="space-y-2">
+                            <div
+                              class="flex justify-between text-xs"
+                              [style.color]="'var(--text-muted)'"
+                            >
+                              <span>Progreso Práctico</span>
+                              <span class="font-bold" [style.color]="'var(--text-primary)'"
+                                >{{ s.practiceProgress }}/{{ s.totalSessions }}</span
+                              >
+                            </div>
+                            <div class="progress-track">
+                              <div
+                                class="progress-fill"
+                                [style.width.%]="s.practicePercent"
+                                [style.background]="getPalette(s.name).bg"
+                              ></div>
+                            </div>
+                          </div>
+
+                          <!-- Footer -->
+                          <div
+                            class="pt-4 mt-auto flex items-center justify-between border-t border-border-subtle"
+                          >
+                            <div
+                              class="flex items-center gap-2 text-xs"
+                              [style.color]="'var(--text-muted)'"
+                            >
+                              <app-icon name="calendar" [size]="14" />
+                              <span>{{
+                                s.nextClassDate
+                                  ? (s.nextClassDate | chileDate: 'dd MMM, HH:mm')
+                                  : 'Sin agendar'
+                              }}</span>
+                            </div>
+                            <div class="details-link">
+                              <span>Ficha</span>
+                              <app-icon name="chevron-right" [size]="14" />
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                } @empty {
-                  <div class="col-span-full py-8">
-                    <app-empty-state
-                      icon="search"
-                      message="No se encontraron alumnos"
-                      subtitle="Refina tus términos de búsqueda o filtros."
-                      actionLabel="Ver todos"
-                      (action)="clearFilters()"
-                    />
-                  </div>
-                }
+                    } @empty {
+                      <div class="col-span-full py-8">
+                        <app-empty-state
+                          icon="search"
+                          message="No se encontraron alumnos"
+                          subtitle="Refina tus términos de búsqueda o filtros."
+                          actionLabel="Ver todos"
+                          (action)="clearFilters()"
+                        />
+                      </div>
+                    }
 
-                <!-- Densidad adaptativa: "Cargar más" solo en tablet/mobile (maxVisible() no-null) -->
-                @if (remainingStudents() > 0) {
-                  <div class="col-span-full pt-1">
-                    <button
-                      type="button"
-                      class="btn-ghost w-full flex items-center justify-center gap-2 font-medium"
-                      (click)="loadMoreStudents()"
-                      data-llm-action="cargar-mas-alumnos"
-                    >
-                      <app-icon name="chevron-down" [size]="16" />
-                      Cargar más ({{ remainingStudents() }} restantes)
-                    </button>
+                    <!-- Densidad adaptativa: "Cargar más" solo en tablet/mobile (maxVisible() no-null) -->
+                    @if (remainingStudents() > 0) {
+                      <div class="col-span-full pt-1">
+                        <button
+                          type="button"
+                          class="btn-ghost w-full flex items-center justify-center gap-2 font-medium"
+                          (click)="loadMoreStudents()"
+                          data-llm-action="cargar-mas-alumnos"
+                        >
+                          <app-icon name="chevron-down" [size]="16" />
+                          Cargar más ({{ remainingStudents() }} restantes)
+                        </button>
+                      </div>
+                    }
                   </div>
-                }
+                </div>
               </div>
-            </div>
-          </div>
-        }
+            }
+          }
+        </div>
       </div>
     </div>
   `,
@@ -591,6 +635,9 @@ export class InstructorAlumnosComponent implements OnInit, AfterViewInit {
    * y no pasa por `animateCounter`, que era quien localizaba a es-CL.
    */
   readonly heroKpis = computed<SectionHeroKpi[]>(() => {
+    if (this.facade.error() && this.facade.students().length === 0) {
+      return [];
+    }
     const k = this.facade.kpis();
     return [
       { id: 'total', label: 'Total Alumnos', value: formatKpiEsCl(k.totalAlumnos) },

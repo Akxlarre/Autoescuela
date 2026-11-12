@@ -692,4 +692,420 @@ describe('FlotaFacade.initialize — combustibleMes (fix-007-i)', () => {
     expect(rows.find((v) => v.id === 1)?.combustibleMes).toBe(25_000);
     expect(rows.find((v) => v.id === 2)?.combustibleMes).toBe(0);
   });
+
+  // ── spec 0060-b (DoD-F): lecturas fallidas, casos A y B ────────────────────
+  describe('spec 0060-b — manejo de lecturas fallidas', () => {
+    let service: FlotaFacade;
+    let branchMock: any;
+    let localSupabaseMock: any;
+
+    const vRow = (id: number) => ({
+      id,
+      license_plate: `ABC-${id}`,
+      brand: 'Toyota',
+      model: 'Yaris',
+      year: 2022,
+      status: 'available',
+      current_km: 1000,
+      last_maintenance: null,
+      branch_id: 1,
+      vehicle_assignments: [],
+      vehicle_documents: [],
+    });
+
+    beforeEach(() => {
+      branchMock = { selectedBranchId: vi.fn().mockReturnValue(null) };
+      localSupabaseMock = {
+        client: {
+          from: vi.fn(),
+          channel: vi.fn().mockReturnValue({
+            on: vi.fn().mockReturnThis(),
+            subscribe: vi.fn().mockReturnThis(),
+          }),
+          removeChannel: vi.fn(),
+        },
+      };
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          FlotaFacade,
+          { provide: SupabaseService, useValue: localSupabaseMock },
+          {
+            provide: AuthFacade,
+            useValue: { currentUser: vi.fn().mockReturnValue({ role: 'admin' }) },
+          },
+          { provide: BranchFacade, useValue: branchMock },
+          { provide: ToastService, useValue: toastMock },
+        ],
+      });
+      service = TestBed.inject(FlotaFacade);
+    });
+
+    it('primera carga con error: deja error() y vehicles vacío', async () => {
+      localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => ({
+        select: vi.fn(() => ({
+          order: vi.fn().mockResolvedValue({ data: null, error: { message: 'db down' } }),
+          eq: vi.fn(() => ({
+            not: vi.fn(() => ({
+              gte: vi.fn().mockResolvedValue({ data: [], error: null }),
+            })),
+          })),
+        })),
+      }));
+
+      await service.initialize();
+
+      expect(service.error()).toBe('Error al cargar la flota vehicular.');
+      expect(service.vehicles()).toEqual([]);
+      expect(service.refreshFailed()).toBe(false);
+    });
+
+    it('cambio de sede con error: retira los vehículos anteriores (caso A)', async () => {
+      // 1. Carga inicial en sede 1 exitosa
+      branchMock.selectedBranchId.mockReturnValue(1);
+      const vehicleBuilder: any = {
+        order: vi.fn(() => vehicleBuilder),
+        or: vi.fn(() => vehicleBuilder),
+        then: (r: any) => Promise.resolve({ data: [vRow(1)], error: null }).then(r),
+      };
+      const expenseBuilder: any = {
+        eq: vi.fn(() => expenseBuilder),
+        not: vi.fn(() => expenseBuilder),
+        gte: vi.fn(() => expenseBuilder),
+        then: (r: any) => Promise.resolve({ data: [], error: null }).then(r),
+      };
+      localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'vehicles') {
+          return {
+            select: vi.fn(() => vehicleBuilder),
+          };
+        }
+        return {
+          select: vi.fn(() => expenseBuilder),
+        };
+      });
+
+      await service.initialize();
+      expect(service.vehicles().length).toBe(1);
+
+      // 2. Cambio a sede 2 falla
+      branchMock.selectedBranchId.mockReturnValue(2);
+      const vehicleErrorBuilder: any = {
+        order: vi.fn(() => vehicleErrorBuilder),
+        or: vi.fn(() => vehicleErrorBuilder),
+        then: (r: any) =>
+          Promise.resolve({ data: null, error: { message: 'sede 2 down' } }).then(r),
+      };
+      localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => ({
+        select: vi.fn(() => vehicleErrorBuilder),
+      }));
+
+      await service.initialize();
+
+      expect(service.error()).toBe('Error al cargar la flota vehicular.');
+      expect(service.vehicles()).toEqual([]); // no deben quedar los de la sede 1
+    });
+
+    it('refresco silencioso con error: datos visibles se quedan y activa refreshFailed (caso B)', async () => {
+      // 1. Carga inicial exitosa
+      localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'vehicles') {
+          return {
+            select: vi.fn(() => ({
+              order: vi.fn().mockResolvedValue({ data: [vRow(1)], error: null }),
+            })),
+          };
+        }
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              not: vi.fn(() => ({
+                gte: vi.fn().mockResolvedValue({ data: [], error: null }),
+              })),
+            })),
+          })),
+        };
+      });
+      await service.initialize();
+      expect(service.vehicles().length).toBe(1);
+
+      // 2. Refresco en background falla
+      localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => ({
+        select: vi.fn(() => ({
+          order: vi.fn().mockResolvedValue({ data: null, error: { message: 'timeout' } }),
+        })),
+      }));
+
+      await service.refreshSilently();
+
+      expect(service.vehicles().length).toBe(1); // datos visibles se mantienen
+      expect(service.refreshFailed()).toBe(true);
+    });
+
+    it('reintento exitoso: limpia error() y refreshFailed()', async () => {
+      // 1. Fallo inicial
+      localSupabaseMock.client.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn(() => ({
+          order: vi.fn().mockResolvedValue({ data: null, error: { message: 'fail' } }),
+        })),
+      }));
+      await service.initialize();
+      expect(service.error()).toBeTruthy();
+
+      // 2. Reintento exitoso
+      localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'vehicles') {
+          return {
+            select: vi.fn(() => ({
+              order: vi.fn().mockResolvedValue({ data: [vRow(1)], error: null }),
+            })),
+          };
+        }
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              not: vi.fn(() => ({
+                gte: vi.fn().mockResolvedValue({ data: [], error: null }),
+              })),
+            })),
+          })),
+        };
+      });
+
+      await service.reintentar();
+
+      expect(service.error()).toBeNull();
+      expect(service.refreshFailed()).toBe(false);
+      expect(service.vehicles().length).toBe(1);
+    });
+
+    it('Reintentar en caso B: con refreshFailed y datos visibles, un reintento que falla deja los datos intactos, isLoading nunca pasa a true y no aparece error() de caso A', async () => {
+      localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'vehicles') {
+          return {
+            select: vi.fn(() => ({
+              order: vi.fn().mockResolvedValue({ data: [vRow(1)], error: null }),
+            })),
+          };
+        }
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              not: vi.fn(() => ({
+                gte: vi.fn().mockResolvedValue({ data: [], error: null }),
+              })),
+            })),
+          })),
+        };
+      });
+      await service.initialize();
+      expect(service.vehicles().length).toBe(1);
+
+      localSupabaseMock.client.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn(() => ({
+          order: vi.fn().mockResolvedValue({ data: null, error: { message: 'timeout' } }),
+        })),
+      }));
+      await service.refreshSilently();
+      expect(service.refreshFailed()).toBe(true);
+
+      const observedLoading: boolean[] = [];
+      localSupabaseMock.client.from = vi.fn().mockImplementation(() => {
+        observedLoading.push(service.isLoading());
+        return {
+          select: vi.fn(() => ({
+            order: vi.fn().mockResolvedValue({ data: null, error: { message: 'retry timeout' } }),
+            eq: vi.fn(() => ({
+              not: vi.fn(() => ({
+                gte: vi.fn().mockResolvedValue({ data: [], error: null }),
+              })),
+            })),
+          })),
+        };
+      });
+
+      await service.reintentar();
+
+      expect(observedLoading.length).toBeGreaterThan(0);
+      expect(observedLoading.every((v) => v === false)).toBe(true);
+      expect(service.isLoading()).toBe(false);
+      expect(service.vehicles().length).toBe(1);
+      expect(service.vehicles()[0].id).toBe(1);
+      expect(service.refreshFailed()).toBe(true);
+      expect(service.error()).toBeNull();
+    });
+
+    it('Reintentar en caso B: un reintento que funciona actualiza los datos y limpia refreshFailed', async () => {
+      localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'vehicles') {
+          return {
+            select: vi.fn(() => ({
+              order: vi.fn().mockResolvedValue({ data: [vRow(1)], error: null }),
+            })),
+          };
+        }
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              not: vi.fn(() => ({
+                gte: vi.fn().mockResolvedValue({ data: [], error: null }),
+              })),
+            })),
+          })),
+        };
+      });
+      await service.initialize();
+
+      localSupabaseMock.client.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn(() => ({
+          order: vi.fn().mockResolvedValue({ data: null, error: { message: 'timeout' } }),
+        })),
+      }));
+      await service.refreshSilently();
+      expect(service.refreshFailed()).toBe(true);
+
+      const observedLoading: boolean[] = [];
+      localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+        observedLoading.push(service.isLoading());
+        if (table === 'vehicles') {
+          return {
+            select: vi.fn(() => ({
+              order: vi.fn().mockResolvedValue({ data: [vRow(1), vRow(2)], error: null }),
+            })),
+          };
+        }
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              not: vi.fn(() => ({
+                gte: vi.fn().mockResolvedValue({ data: [], error: null }),
+              })),
+            })),
+          })),
+        };
+      });
+
+      await service.reintentar();
+
+      expect(observedLoading.length).toBeGreaterThan(0);
+      expect(observedLoading.every((v) => v === false)).toBe(true);
+      expect(service.isLoading()).toBe(false);
+      expect(service.vehicles().length).toBe(2);
+      expect(service.refreshFailed()).toBe(false);
+      expect(service.error()).toBeNull();
+    });
+
+    it('falla la consulta de combustible (expenses): la carga completa de flota falla (AC7)', async () => {
+      localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'vehicles') {
+          return {
+            select: vi.fn(() => ({
+              order: vi.fn().mockResolvedValue({ data: [vRow(1)], error: null }),
+            })),
+          };
+        }
+        if (table === 'expenses') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                not: vi.fn(() => ({
+                  gte: vi
+                    .fn()
+                    .mockResolvedValue({ data: null, error: { message: 'expenses error' } }),
+                })),
+              })),
+            })),
+          };
+        }
+        throw new Error(`tabla inesperada: ${table}`);
+      });
+
+      await service.initialize();
+
+      expect(service.error()).toBe('Error al cargar la flota vehicular.');
+      expect(service.vehicles()).toEqual([]);
+    });
+
+    it('loadVehicleAgenda: con error limpia agenda previa y expone vehicleAgendaError (Caso A)', async () => {
+      // 1. Simular agenda previa de otro vehículo
+      (service as any)._vehicleAgenda.set([
+        {
+          hour: '09:00',
+          minute: 0,
+          endHour: '09:50',
+          type: 'class',
+          studentName: 'Alumno Previo',
+          classNumber: 1,
+          status: 'completed',
+        },
+      ]);
+      expect(service.vehicleAgenda().length).toBe(1);
+
+      localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'class_b_sessions') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                gte: vi.fn(() => ({
+                  lt: vi.fn(() => ({
+                    order: vi.fn().mockResolvedValue({ data: [], error: null }),
+                  })),
+                })),
+              })),
+            })),
+          };
+        }
+        if (table === 'maintenance_records') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                eq: vi
+                  .fn()
+                  .mockResolvedValue({ data: null, error: { message: 'maintenance error' } }),
+              })),
+            })),
+          };
+        }
+        throw new Error(`tabla inesperada: ${table}`);
+      });
+
+      // No lanza hacia el drawer: captura el error
+      await service.loadVehicleAgenda(1, '2026-11-10');
+
+      // 2. Limpia la agenda previa y expone el error
+      expect(service.vehicleAgenda()).toEqual([]);
+      expect(service.vehicleAgendaError()).toBe('No se pudo cargar la agenda del vehículo.');
+      expect(service.isLoadingAgenda()).toBe(false);
+
+      // 3. Carga exitosa posterior limpia el error
+      localSupabaseMock.client.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'class_b_sessions') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                gte: vi.fn(() => ({
+                  lt: vi.fn(() => ({
+                    order: vi.fn().mockResolvedValue({ data: [], error: null }),
+                  })),
+                })),
+              })),
+            })),
+          };
+        }
+        if (table === 'maintenance_records') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+              })),
+            })),
+          };
+        }
+        throw new Error(`tabla inesperada: ${table}`);
+      });
+
+      await service.loadVehicleAgenda(1, '2026-11-10');
+      expect(service.vehicleAgendaError()).toBeNull();
+    });
+  });
 });

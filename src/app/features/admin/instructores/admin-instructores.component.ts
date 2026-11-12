@@ -30,6 +30,8 @@ import { AdminInstructorEditarDrawerComponent } from './admin-instructor-editar-
 import { AdminInstructorHorasDrawerComponent } from './admin-instructor-horas-drawer.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 
 type FilterTab = 'all' | 'active' | 'expiring' | 'expired';
 
@@ -43,6 +45,8 @@ type FilterTab = 'all' | 'active' | 'expiring' | 'expired';
     IconComponent,
     SkeletonBlockComponent,
     InstructorCardComponent,
+    EmptyStateComponent,
+    AlertCardComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
   ],
@@ -70,287 +74,310 @@ type FilterTab = 'all' | 'active' | 'expiring' | 'expired';
         #listCard
         appCardHover
       >
-        <!-- ── Filter Tabs (Toolbar) ──────────────────────────────────────── -->
-        <div
-          class="p-4 md:px-6 border-b border-border-subtle bg-surface flex flex-wrap items-center gap-2"
-        >
-          <span class="text-sm font-medium text-text-secondary">Filtros:</span>
-          <button
-            class="filter-pill whitespace-nowrap"
-            [class.filter-pill--active]="activeFilter() === 'all'"
-            (click)="setFilter('all')"
-            data-llm-action="filtro-todos"
+        @if (facade.error() && facade.instructores().length === 0) {
+          <div class="flex-1 flex items-center justify-center p-6">
+            <app-empty-state
+              icon="alert-triangle"
+              [message]="facade.error()!"
+              subtitle="Revisa tu conexión e inténtalo de nuevo."
+              actionLabel="Reintentar"
+              actionIcon="refresh-cw"
+              (action)="facade.reintentar()"
+            />
+          </div>
+        } @else {
+          <!-- ── Caso B: Aviso de refresco fallido ─────────────────────────────── -->
+          @if (facade.refreshFailed()) {
+            <div class="p-4 pb-0 shrink-0" role="alert">
+              <app-alert-card
+                severity="error"
+                title="No se pudo actualizar la lista de instructores"
+              >
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <span class="text-compact text-text-secondary">
+                    Los datos mostrados pueden no estar actualizados.
+                  </span>
+                  <button
+                    type="button"
+                    class="btn-secondary flex items-center gap-2 shrink-0"
+                    data-llm-action="reintentar-instructores"
+                    [disabled]="facade.isLoading()"
+                    (click)="facade.reintentar()"
+                  >
+                    <app-icon name="refresh-cw" [size]="14" />
+                    Reintentar
+                  </button>
+                </div>
+              </app-alert-card>
+            </div>
+          }
+
+          <!-- ── Filter Tabs (Toolbar) ──────────────────────────────────────── -->
+          <div
+            class="p-4 md:px-6 border-b border-border-subtle bg-surface flex flex-wrap items-center gap-2"
           >
-            Todos ({{ facade.totalInstructores() }})
-          </button>
-          <button
-            class="filter-pill whitespace-nowrap"
-            [class.filter-pill--active]="activeFilter() === 'active'"
-            (click)="setFilter('active')"
-            data-llm-action="filtro-activos"
-          >
-            Activos ({{ facade.activos() }})
-          </button>
-          <button
-            class="filter-pill whitespace-nowrap"
-            [class.filter-pill--warning]="
-              facade.licenciasPorVencer() > 0 && activeFilter() === 'expiring'
-            "
-            [class.filter-pill--warning-idle]="
-              facade.licenciasPorVencer() > 0 && activeFilter() !== 'expiring'
-            "
-            [class.filter-pill--active]="
-              activeFilter() === 'expiring' && facade.licenciasPorVencer() === 0
-            "
-            (click)="setFilter('expiring')"
-            data-llm-action="filtro-licencia-por-vencer"
-          >
-            <app-icon name="alert-triangle" [size]="13" />
-            Licencia por vencer ({{ facade.licenciasPorVencer() }})
-          </button>
-          <!-- hotfix-069-b (B06): las vencidas, aparte de "por vencer". -->
-          <button
-            class="filter-pill whitespace-nowrap"
-            [class.filter-pill--error]="
-              facade.licenciasVencidas() > 0 && activeFilter() === 'expired'
-            "
-            [class.filter-pill--error-idle]="
-              facade.licenciasVencidas() > 0 && activeFilter() !== 'expired'
-            "
-            [class.filter-pill--active]="
-              activeFilter() === 'expired' && facade.licenciasVencidas() === 0
-            "
-            (click)="setFilter('expired')"
-            data-llm-action="filtro-licencia-vencida"
-          >
-            <app-icon name="circle-x" [size]="13" />
-            Licencia vencida ({{ facade.licenciasVencidas() }})
-          </button>
-        </div>
-        <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
-          <!-- VISTA Desktop: Tabla clásica -->
-          <div class="desktop-view hide-on-squeeze flex-1 min-h-0 overflow-auto">
-            <table class="instructor-table">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>RUT</th>
-                  <th>Licencia</th>
-                  <th>Vehículo</th>
-                  @if (showSedeColumn()) {
-                    <th>Sede</th>
-                  }
-                  <th class="text-center">Clases activas</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                @if (facade.isLoading()) {
-                  @for (_ of skeletonRows; track $index) {
+            <span class="text-sm font-medium text-text-secondary">Filtros:</span>
+            <button
+              class="filter-pill whitespace-nowrap"
+              [class.filter-pill--active]="activeFilter() === 'all'"
+              (click)="setFilter('all')"
+              data-llm-action="filtro-todos"
+            >
+              Todos ({{ facade.totalInstructores() }})
+            </button>
+            <button
+              class="filter-pill whitespace-nowrap"
+              [class.filter-pill--active]="activeFilter() === 'active'"
+              (click)="setFilter('active')"
+              data-llm-action="filtro-activos"
+            >
+              Activos ({{ facade.activos() }})
+            </button>
+            <button
+              class="filter-pill whitespace-nowrap"
+              [class.filter-pill--warning]="
+                facade.licenciasPorVencer() > 0 && activeFilter() === 'expiring'
+              "
+              [class.filter-pill--warning-idle]="
+                facade.licenciasPorVencer() > 0 && activeFilter() !== 'expiring'
+              "
+              [class.filter-pill--active]="
+                activeFilter() === 'expiring' && facade.licenciasPorVencer() === 0
+              "
+              (click)="setFilter('expiring')"
+              data-llm-action="filtro-licencia-por-vencer"
+            >
+              <app-icon name="alert-triangle" [size]="13" />
+              Licencia por vencer ({{ facade.licenciasPorVencer() }})
+            </button>
+            <!-- hotfix-069-b (B06): las vencidas, aparte de "por vencer". -->
+            <button
+              class="filter-pill whitespace-nowrap"
+              [class.filter-pill--error]="
+                facade.licenciasVencidas() > 0 && activeFilter() === 'expired'
+              "
+              [class.filter-pill--error-idle]="
+                facade.licenciasVencidas() > 0 && activeFilter() !== 'expired'
+              "
+              [class.filter-pill--active]="
+                activeFilter() === 'expired' && facade.licenciasVencidas() === 0
+              "
+              (click)="setFilter('expired')"
+              data-llm-action="filtro-licencia-vencida"
+            >
+              <app-icon name="circle-x" [size]="13" />
+              Licencia vencida ({{ facade.licenciasVencidas() }})
+            </button>
+          </div>
+          <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
+            <!-- VISTA Desktop: Tabla clásica -->
+            <div class="desktop-view hide-on-squeeze flex-1 min-h-0 overflow-auto">
+              <table class="instructor-table">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>RUT</th>
+                    <th>Licencia</th>
+                    <th>Vehículo</th>
+                    @if (showSedeColumn()) {
+                      <th>Sede</th>
+                    }
+                    <th class="text-center">Clases activas</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (facade.isLoading()) {
+                    @for (_ of skeletonRows; track $index) {
+                      <tr>
+                        <td>
+                          <div class="flex flex-col gap-1.5">
+                            <app-skeleton-block variant="text" width="140px" height="14px" />
+                            <app-skeleton-block variant="text" width="180px" height="11px" />
+                          </div>
+                        </td>
+                        <td><app-skeleton-block variant="text" width="100px" height="14px" /></td>
+                        <td>
+                          <div class="flex flex-col gap-1.5">
+                            <app-skeleton-block variant="rect" width="70px" height="22px" />
+                            <app-skeleton-block variant="text" width="110px" height="11px" />
+                          </div>
+                        </td>
+                        <td>
+                          <div class="flex flex-col gap-1.5">
+                            <app-skeleton-block variant="text" width="80px" height="14px" />
+                            <app-skeleton-block variant="text" width="120px" height="11px" />
+                          </div>
+                        </td>
+                        @if (showSedeColumn()) {
+                          <td><app-skeleton-block variant="text" width="70px" height="14px" /></td>
+                        }
+                        <td class="text-center">
+                          <app-skeleton-block variant="circle" width="32px" height="32px" />
+                        </td>
+                        <td><app-skeleton-block variant="text" width="60px" height="14px" /></td>
+                        <td><app-skeleton-block variant="rect" width="60px" height="28px" /></td>
+                      </tr>
+                    }
+                  } @else if (filteredInstructores().length === 0) {
                     <tr>
-                      <td>
-                        <div class="flex flex-col gap-1.5">
-                          <app-skeleton-block variant="text" width="140px" height="14px" />
-                          <app-skeleton-block variant="text" width="180px" height="11px" />
+                      <td [attr.colspan]="showSedeColumn() ? 8 : 7">
+                        <div class="py-14 text-center">
+                          <div class="flex flex-col items-center gap-2">
+                            <app-icon name="user-check" [size]="36" color="var(--text-muted)" />
+                            <p class="text-sm mt-1 text-text-muted">
+                              No hay instructores que coincidan con los filtros.
+                            </p>
+                          </div>
                         </div>
                       </td>
-                      <td><app-skeleton-block variant="text" width="100px" height="14px" /></td>
-                      <td>
-                        <div class="flex flex-col gap-1.5">
-                          <app-skeleton-block variant="rect" width="70px" height="22px" />
-                          <app-skeleton-block variant="text" width="110px" height="11px" />
-                        </div>
-                      </td>
-                      <td>
-                        <div class="flex flex-col gap-1.5">
-                          <app-skeleton-block variant="text" width="80px" height="14px" />
-                          <app-skeleton-block variant="text" width="120px" height="11px" />
-                        </div>
-                      </td>
-                      @if (showSedeColumn()) {
-                        <td><app-skeleton-block variant="text" width="70px" height="14px" /></td>
-                      }
-                      <td class="text-center">
-                        <app-skeleton-block variant="circle" width="32px" height="32px" />
-                      </td>
-                      <td><app-skeleton-block variant="text" width="60px" height="14px" /></td>
-                      <td><app-skeleton-block variant="rect" width="60px" height="28px" /></td>
                     </tr>
-                  }
-                } @else if (facade.error() && facade.instructores().length === 0) {
-                  <!-- fix-209-b (S19): un error no se disfraza de "sin resultados". -->
-                  <tr>
-                    <td [attr.colspan]="showSedeColumn() ? 8 : 7">
-                      <div
-                        class="py-14 flex flex-col items-center gap-2 text-center"
-                        data-llm-description="error al cargar la lista de instructores"
-                      >
-                        <app-icon name="alert-triangle" [size]="36" color="var(--state-error)" />
-                        <p class="text-sm mt-1 text-error">
-                          No se pudo cargar la lista de instructores. Recarga la página para
-                          reintentar.
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                } @else if (filteredInstructores().length === 0) {
-                  <tr>
-                    <td [attr.colspan]="showSedeColumn() ? 8 : 7">
-                      <div class="py-14 text-center">
-                        <div class="flex flex-col items-center gap-2">
-                          <app-icon name="user-check" [size]="36" color="var(--text-muted)" />
-                          <p class="text-sm mt-1 text-text-muted">
-                            No hay instructores que coincidan con los filtros.
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                } @else {
-                  @for (inst of filteredInstructores(); track inst.id) {
-                    <tr class="instructor-row">
-                      <!-- Nombre + email -->
-                      <td>
-                        <div class="flex flex-col">
-                          <span class="item-title">
-                            {{ inst.nombre }}
-                          </span>
-                          <a
-                            class="text-xs text-text-muted no-underline"
-                            [href]="'mailto:' + inst.email"
-                          >
-                            {{ inst.email }}
-                          </a>
-                        </div>
-                      </td>
-
-                      <!-- RUT -->
-                      <td>
-                        <span class="text-sm text-text-primary">{{ inst.rut }}</span>
-                      </td>
-
-                      <!-- Licencia -->
-                      <td>
-                        <div class="flex flex-col gap-1">
-                          <span
-                            class="license-badge"
-                            [class]="'license-badge license-badge--' + inst.licenseStatus"
-                          >
-                            {{ inst.licenseStatusLabel }}
-                          </span>
-                          @if (inst.licenseExpiry) {
-                            <span class="text-xs text-text-muted">
-                              Vence: {{ inst.licenseExpiry }}
-                            </span>
-                          }
-                        </div>
-                      </td>
-
-                      <!-- Vehículo -->
-                      <td>
-                        @if (inst.vehiclePlate) {
+                  } @else {
+                    @for (inst of filteredInstructores(); track inst.id) {
+                      <tr class="instructor-row">
+                        <!-- Nombre + email -->
+                        <td>
                           <div class="flex flex-col">
                             <span class="item-title">
-                              {{ inst.vehiclePlate }}
+                              {{ inst.nombre }}
                             </span>
-                            <span class="text-xs text-text-muted">
-                              {{ inst.vehicleModel }}
-                            </span>
+                            <a
+                              class="text-xs text-text-muted no-underline"
+                              [href]="'mailto:' + inst.email"
+                            >
+                              {{ inst.email }}
+                            </a>
                           </div>
-                        } @else {
-                          <span class="text-sm italic text-text-muted"> Sin asignar </span>
-                        }
-                      </td>
+                        </td>
 
-                      <!-- Sede -->
-                      @if (showSedeColumn()) {
+                        <!-- RUT -->
                         <td>
-                          <span class="text-sm text-text-primary">
-                            {{ sedeLabel(inst.branchId, inst.bothBranches) }}
+                          <span class="text-sm text-text-primary">{{ inst.rut }}</span>
+                        </td>
+
+                        <!-- Licencia -->
+                        <td>
+                          <div class="flex flex-col gap-1">
+                            <span
+                              class="license-badge"
+                              [class]="'license-badge license-badge--' + inst.licenseStatus"
+                            >
+                              {{ inst.licenseStatusLabel }}
+                            </span>
+                            @if (inst.licenseExpiry) {
+                              <span class="text-xs text-text-muted">
+                                Vence: {{ inst.licenseExpiry }}
+                              </span>
+                            }
+                          </div>
+                        </td>
+
+                        <!-- Vehículo -->
+                        <td>
+                          @if (inst.vehiclePlate) {
+                            <div class="flex flex-col">
+                              <span class="item-title">
+                                {{ inst.vehiclePlate }}
+                              </span>
+                              <span class="text-xs text-text-muted">
+                                {{ inst.vehicleModel }}
+                              </span>
+                            </div>
+                          } @else {
+                            <span class="text-sm italic text-text-muted"> Sin asignar </span>
+                          }
+                        </td>
+
+                        <!-- Sede -->
+                        @if (showSedeColumn()) {
+                          <td>
+                            <span class="text-sm text-text-primary">
+                              {{ sedeLabel(inst.branchId, inst.bothBranches) }}
+                            </span>
+                          </td>
+                        }
+
+                        <!-- Clases activas -->
+                        <td class="text-center">
+                          <span class="classes-badge">
+                            {{ inst.activeClassesCount }}
                           </span>
                         </td>
-                      }
 
-                      <!-- Clases activas -->
-                      <td class="text-center">
-                        <span class="classes-badge">
-                          {{ inst.activeClassesCount }}
-                        </span>
-                      </td>
+                        <!-- Estado -->
+                        <td>
+                          @if (inst.estado === 'activo') {
+                            <span class="status-text status-text--active">Activo</span>
+                          } @else {
+                            <span class="status-text status-text--inactive">Inactivo</span>
+                          }
+                        </td>
 
-                      <!-- Estado -->
-                      <td>
-                        @if (inst.estado === 'activo') {
-                          <span class="status-text status-text--active">Activo</span>
-                        } @else {
-                          <span class="status-text status-text--inactive">Inactivo</span>
-                        }
-                      </td>
-
-                      <!-- Acciones -->
-                      <td>
-                        <div class="flex items-center gap-1">
-                          <button
-                            aria-label="Ver detalle"
-                            class="action-btn"
-                            title="Ver detalle"
-                            (click)="openVerDrawer(inst)"
-                            data-llm-action="ver-instructor"
-                          >
-                            <app-icon name="eye" [size]="16" />
-                          </button>
-                          <button
-                            aria-label="Editar instructor"
-                            class="action-btn"
-                            title="Editar instructor"
-                            (click)="openEditarDrawer(inst)"
-                            data-llm-action="editar-instructor"
-                          >
-                            <app-icon name="edit" [size]="16" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        <!-- Acciones -->
+                        <td>
+                          <div class="flex items-center gap-1">
+                            <button
+                              aria-label="Ver detalle"
+                              class="action-btn"
+                              title="Ver detalle"
+                              (click)="openVerDrawer(inst)"
+                              data-llm-action="ver-instructor"
+                            >
+                              <app-icon name="eye" [size]="16" />
+                            </button>
+                            <button
+                              aria-label="Editar instructor"
+                              class="action-btn"
+                              title="Editar instructor"
+                              (click)="openEditarDrawer(inst)"
+                              data-llm-action="editar-instructor"
+                            >
+                              <app-icon name="edit" [size]="16" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    }
                   }
+                </tbody>
+              </table>
+            </div>
+
+            <!-- VISTA Mobile: Tarjetas apiladas -->
+            <div class="mobile-view show-on-squeeze p-4 space-y-4">
+              @if (facade.isLoading()) {
+                @for (card of [1, 2, 3]; track card) {
+                  <app-instructor-card [loading]="true" [instructor]="skeletonInstructor" />
                 }
-              </tbody>
-            </table>
-          </div>
+              } @else {
+                @for (inst of visibleCards(); track inst.id) {
+                  <app-instructor-card
+                    [instructor]="inst"
+                    [sedeLabel]="
+                      showSedeColumn() ? sedeLabel(inst.branchId, inst.bothBranches) : null
+                    "
+                    (verRequested)="openVerDrawer($event)"
+                    (editarRequested)="openEditarDrawer($event)"
+                  />
+                }
 
-          <!-- VISTA Mobile: Tarjetas apiladas -->
-          <div class="mobile-view show-on-squeeze p-4 space-y-4">
-            @if (facade.isLoading()) {
-              @for (card of [1, 2, 3]; track card) {
-                <app-instructor-card [loading]="true" [instructor]="skeletonInstructor" />
+                <!-- Cargar más: densidad incremental de la vista tarjetas -->
+                @if (remainingCards() > 0) {
+                  <button
+                    type="button"
+                    class="btn-ghost w-full flex items-center justify-center gap-2 font-medium transition-colors cursor-pointer"
+                    (click)="loadMoreCards()"
+                    data-llm-action="load-more-instructores"
+                  >
+                    <app-icon name="chevron-down" [size]="16" />
+                    Cargar más ({{ remainingCards() }} restantes)
+                  </button>
+                }
               }
-            } @else {
-              @for (inst of visibleCards(); track inst.id) {
-                <app-instructor-card
-                  [instructor]="inst"
-                  [sedeLabel]="
-                    showSedeColumn() ? sedeLabel(inst.branchId, inst.bothBranches) : null
-                  "
-                  (verRequested)="openVerDrawer($event)"
-                  (editarRequested)="openEditarDrawer($event)"
-                />
-              }
-
-              <!-- Cargar más: densidad incremental de la vista tarjetas -->
-              @if (remainingCards() > 0) {
-                <button
-                  type="button"
-                  class="btn-ghost w-full flex items-center justify-center gap-2 font-medium transition-colors cursor-pointer"
-                  (click)="loadMoreCards()"
-                  data-llm-action="load-more-instructores"
-                >
-                  <app-icon name="chevron-down" [size]="16" />
-                  Cargar más ({{ remainingCards() }} restantes)
-                </button>
-              }
-            }
+            </div>
           </div>
-        </div>
+        }
       </div>
     </div>
   `,
@@ -658,13 +685,13 @@ export class AdminInstructoresComponent implements OnInit, AfterViewInit {
 
   protected openVerDrawer(inst: InstructorTableRow): void {
     this.facade.selectInstructor(inst);
-    this.facade.loadAssignmentHistory(inst.id);
+    void this.facade.loadAssignmentHistory(inst.id);
     this.layoutDrawer.open(AdminInstructorVerDrawerComponent, 'Detalle de Instructor', 'eye');
   }
 
   protected openEditarDrawer(inst: InstructorTableRow): void {
     this.facade.selectInstructor(inst);
-    this.facade.loadAssignmentHistory(inst.id);
+    void this.facade.loadAssignmentHistory(inst.id);
     this.layoutDrawer.open(AdminInstructorEditarDrawerComponent, 'Editar instructor', 'edit');
   }
 }

@@ -3,7 +3,55 @@ import {
   formatWeekLabel,
   initialMobileDayIndex,
   studentFichaUrl,
+  fleetUrl,
+  agendaSlotAriaLabel,
+  agendaSlotIdentity,
 } from './agenda-week.utils';
+
+// fix-251-b: el aviso del vehículo existía solo para quien pasaba el mouse, y los libres de la
+// vista "Todos" no decían de qué instructor ni vehículo eran.
+describe('agendaSlotAriaLabel (fix-251-b)', () => {
+  const libre = { status: 'available', startTime: '08:30', instructorName: 'Juan Pérez' };
+
+  it('incluye el aviso del vehículo cuando lo hay', () => {
+    expect(agendaSlotAriaLabel(libre, false, 'Vehículo RTRE29: SOAP vencido')).toBe(
+      'Slot disponible 08:30 — Juan Pérez. Vehículo RTRE29: SOAP vencido. Clic para ver detalle.',
+    );
+  });
+
+  it('sin aviso, el texto de siempre', () => {
+    expect(agendaSlotAriaLabel(libre, false, '')).toBe(
+      'Slot disponible 08:30 — Juan Pérez. Clic para ver detalle.',
+    );
+    expect(
+      agendaSlotAriaLabel({ ...libre, status: 'scheduled', studentName: 'Ana Soto' }, false, ''),
+    ).toBe('Ana Soto, 08:30 — Juan Pérez. Clic para ver detalle.');
+  });
+
+  it('fuera del rango configurado manda el bloqueo', () => {
+    expect(agendaSlotAriaLabel(libre, true, 'Vehículo RTRE29: SOAP vencido')).toBe(
+      '08:30 — fuera del rango de visualización configurado.',
+    );
+  });
+});
+
+describe('agendaSlotIdentity (fix-251-b)', () => {
+  it('primer nombre del instructor y patente', () => {
+    expect(agendaSlotIdentity('Juan Pérez', 'RTRE29')).toBe('Juan · RTRE29');
+  });
+
+  it('sin patente, solo el nombre', () => {
+    expect(agendaSlotIdentity('  Juan  Pérez ', '')).toBe('Juan');
+  });
+});
+
+describe('fleetUrl (fix-251-b)', () => {
+  it('lleva a la Flota del portal actual', () => {
+    expect(fleetUrl('/app/secretaria/agenda')).toBe('/app/secretaria/flota');
+    expect(fleetUrl('/app/secretaria/dashboard')).toBe('/app/secretaria/flota');
+    expect(fleetUrl('/app/admin/agenda')).toBe('/app/admin/flota');
+  });
+});
 
 describe('agendaShowsLegend (fix-241-b, P08)', () => {
   const base = { isLoading: false, error: null, hasWeekData: true, timeRowCount: 13 };

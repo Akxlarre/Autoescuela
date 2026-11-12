@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { signal, type WritableSignal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal, type WritableSignal } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -420,5 +421,63 @@ describe('AlumnosListContentComponent — orden de la lista (spec 0020-m)', () =
 
       expect(component.sortColumns().map((c) => c.value)).toContain('sede');
     });
+  });
+
+  describe('manejo de errores de carga en Hero y banner SWR (spec 0060-b T3.2)', () => {
+    it('cuando hay error de carga sin datos (Caso A), heroChips y alumnosKpis NO muestran 0', () => {
+      create(null, []);
+      stubInput('error', 'Error al cargar alumnos');
+
+      expect(component.showLoadError()).toBe(true);
+      expect(component.alumnosKpis()).toEqual([]);
+      expect(component.heroChips()).toEqual([]);
+    });
+
+    it('en Caso B (refreshFailed con filas visibles), alumnosKpis y heroChips siguen visibles', () => {
+      create(null, ALUMNOS);
+      stubInput('error', null);
+      stubInput('refreshFailed', true);
+
+      expect(component.showLoadError()).toBe(false);
+      expect(component.alumnosKpis()).toHaveLength(3);
+      expect(component.heroChips()[0].label).toBe('3 alumnos');
+    });
+  });
+});
+
+describe('AlumnosListContentComponent — layout Caso B en fill-screen (spec 0060-b T3.6)', () => {
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('el aviso de Caso B vive dentro de .bento-fill y no como hijo directo de .bento-grid', () => {
+    TestBed.configureTestingModule({
+      imports: [AlumnosListContentComponent],
+      providers: [
+        { provide: LayoutDrawerFacadeService, useValue: { isOpen: signal(false), open: vi.fn() } },
+        {
+          provide: GsapAnimationsService,
+          useValue: { animateBentoGrid: vi.fn(), animateHero: vi.fn(), addCardHover: vi.fn() },
+        },
+      ],
+    }).overrideComponent(AlumnosListContentComponent, {
+      set: {
+        imports: [CommonModule],
+        schemas: [NO_ERRORS_SCHEMA],
+      },
+    });
+
+    const fixture = TestBed.createComponent(AlumnosListContentComponent);
+    const component = fixture.componentInstance;
+    Object.defineProperty(component, 'alumnos', { value: signal(ALUMNOS) });
+    Object.defineProperty(component, 'refreshFailed', { value: signal(true) });
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const alertCard = fixture.nativeElement.querySelector('app-alert-card') as HTMLElement | null;
+    expect(alertCard).not.toBeNull();
+    expect(alertCard?.closest('.bento-fill')).not.toBeNull();
+    expect(alertCard?.parentElement?.classList.contains('bento-grid')).toBe(false);
+    expect(fixture.nativeElement.querySelector('.bento-grid > [role="alert"]')).toBeNull();
   });
 });

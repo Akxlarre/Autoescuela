@@ -42,6 +42,8 @@ import type {
       [instructores]="facade.instructores()"
       [selectedDate]="facade.selectedDate()"
       [isLoading]="facade.isLoading()"
+      [error]="facade.error()"
+      [refreshFailed]="facade.refreshFailed()"
       [isSaving]="facade.isSaving() || ciclos.isSaving()"
       [savingAlertaId]="facade.savingAlertaId()"
       [maxVisible]="maxVisible()"
@@ -53,6 +55,7 @@ import type {
       [rosterCiclo]="ciclos.roster()"
       [addableStudents]="ciclos.addableStudents()"
       [isLoadingCiclos]="ciclos.isLoading()"
+      [ciclosError]="ciclos.error()"
       [isLoadingCycle]="ciclos.isLoadingCycle()"
       [isLoadingAddable]="ciclos.isLoadingAddable()"
       [sendingClassId]="ciclos.sendingClassId()"
@@ -64,6 +67,8 @@ import type {
       (sendReminder)="facade.sendReminder($event)"
       (dateChange)="facade.setDate($event)"
       (refreshRequested)="onRefresh()"
+      (retry)="facade.reintentar()"
+      (retryCiclos)="ciclos.loadCycles()"
       (iniciarClase)="openIniciarClaseDrawer($event)"
       (finalizarClase)="openFinalizarClaseDrawer($event)"
       (selectCycle)="ciclos.selectCycle($event)"
@@ -141,7 +146,7 @@ export class SecretariaAsistenciaComponent {
   }
 
   protected async onRefresh(): Promise<void> {
-    await Promise.all([this.facade.reload(), this.ciclos.loadCycles()]);
+    await Promise.all([this.facade.refrescar(), this.ciclos.loadCycles()]);
   }
 
   protected async onMarkAttendance(event: {

@@ -16,6 +16,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "start", "--", "--port", "4210"],
       "port": 4210
+    },
+    {
+      "name": "landing-gestor",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "C:/Users/cjent/OneDrive/Desktop/gestor-landing", "run", "dev", "--", "--port", "4321"],
+      "port": 4321
     }
   ]
 }

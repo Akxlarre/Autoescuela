@@ -50,8 +50,40 @@ const VB_H = 300;
     </div>
 
     @if (loading()) {
-      <div class="flex-1 min-h-0 flex flex-col gap-2 justify-end">
-        <app-skeleton-block variant="rect" width="100%" height="100%" />
+      <div class="chart-body" aria-hidden="true">
+        <!-- Eje Y simulado -->
+        <div class="y-axis flex flex-col justify-between py-1">
+          <app-skeleton-block variant="text" width="32px" height="10px" />
+          <app-skeleton-block variant="text" width="28px" height="10px" />
+          <app-skeleton-block variant="text" width="36px" height="10px" />
+          <app-skeleton-block variant="text" width="24px" height="10px" />
+        </div>
+
+        <!-- Área de trazado con guías simuladas y bloque de shimmer -->
+        <div class="plot flex flex-col justify-between py-2 relative">
+          <div class="w-full border-b border-border-subtle opacity-40"></div>
+          <div class="w-full border-b border-border-subtle opacity-40"></div>
+          <div class="w-full border-b border-border-subtle opacity-40"></div>
+          <div class="w-full border-b border-border-subtle opacity-40"></div>
+          <div class="absolute inset-x-0 bottom-0 h-3/4 flex items-end px-2">
+            <app-skeleton-block
+              variant="rect"
+              width="100%"
+              height="80%"
+              borderRadius="var(--radius-md)"
+            />
+          </div>
+        </div>
+
+        <!-- Espaciador columna eje Y -->
+        <div></div>
+
+        <!-- Eje X simulado -->
+        <div class="flex justify-between items-center pt-2">
+          @for (m of skeletonMonths; track m) {
+            <app-skeleton-block variant="text" width="24px" height="10px" />
+          }
+        </div>
       </div>
     } @else {
       <div
@@ -155,6 +187,8 @@ export class LineComparisonChartComponent {
   /** Formatea los valores como montos CLP (`$`). */
   readonly money = input<boolean>(false);
   readonly loading = input<boolean>(false);
+
+  protected readonly skeletonMonths = ['Ene', 'Mar', 'May', 'Jul', 'Sep', 'Nov'];
 
   protected readonly vbW = VB_W;
   protected readonly vbH = VB_H;

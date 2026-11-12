@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import type { AlertaFaltaConsecutiva } from '@core/models/ui/asistencia-clase-b.model';
 import { TestBed } from '@angular/core/testing';
 import { AsistenciaClaseBContentComponent } from './asistencia-clase-b-content.component';
@@ -356,5 +356,144 @@ describe('AsistenciaClaseBContentComponent — presupuesto de densidad (spec 003
     expect((component as any).activeStatusFilter()).toBe('todos');
     expect((component as any).selectedInstructorId()).toBeNull();
     expect((component as any).hasActiveFilters()).toBe(false);
+  });
+});
+
+describe('AsistenciaClaseBContentComponent — errores de carga (spec 0060-b T3.1)', () => {
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  function mount(
+    inputs: {
+      clasesPracticas?: ClasePracticaRow[];
+      kpis?: any;
+      error?: string | null;
+      refreshFailed?: boolean;
+      ciclosError?: string | null;
+      isLoading?: boolean;
+      isLoadingCiclos?: boolean;
+      activeTab?: 'practicas' | 'ciclos';
+    } = {},
+  ) {
+    TestBed.configureTestingModule({
+      imports: [AsistenciaClaseBContentComponent],
+      providers: [
+        {
+          provide: GsapAnimationsService,
+          useValue: {
+            animateBentoGrid: vi.fn(),
+            animateHero: vi.fn(),
+            addCardHover: vi.fn(),
+          },
+        },
+      ],
+    }).overrideComponent(AsistenciaClaseBContentComponent, {
+      set: {
+        imports: [],
+        schemas: [NO_ERRORS_SCHEMA],
+      },
+    });
+
+    const fixture = TestBed.createComponent(AsistenciaClaseBContentComponent);
+    const component = fixture.componentInstance;
+    Object.defineProperty(component, 'clasesPracticas', {
+      value: signal(inputs.clasesPracticas ?? []),
+    });
+    Object.defineProperty(component, 'kpis', { value: signal(inputs.kpis ?? null) });
+    Object.defineProperty(component, 'isLoading', { value: signal(inputs.isLoading ?? false) });
+    Object.defineProperty(component, 'isLoadingCiclos', {
+      value: signal(inputs.isLoadingCiclos ?? false),
+    });
+    Object.defineProperty(component, 'selectedDate', { value: signal('2026-07-12') });
+    if (inputs.error !== undefined) {
+      Object.defineProperty(component, 'error', { value: signal(inputs.error) });
+    }
+    if (inputs.refreshFailed !== undefined) {
+      Object.defineProperty(component, 'refreshFailed', { value: signal(inputs.refreshFailed) });
+    }
+    if (inputs.ciclosError !== undefined) {
+      Object.defineProperty(component, 'ciclosError', { value: signal(inputs.ciclosError) });
+    }
+    if (inputs.activeTab) {
+      (component as any).selectTab(inputs.activeTab);
+    }
+    fixture.detectChanges();
+    return { fixture, component };
+  }
+
+  it('Caso A: con error en prácticas oculta heroKpis (sin ceros), mantiene app-date-input, oculta la tabla y muestra app-empty-state en wrapper centrado', () => {
+    const { fixture, component } = mount({
+      error: 'No se pudo cargar la asistencia de prácticas',
+      kpis: null,
+    });
+    const retrySpy = vi.fn();
+    (component as any).retry?.subscribe(retrySpy);
+
+    expect((component as any).heroKpis()).toEqual([]);
+    expect(fixture.nativeElement.querySelector('app-date-input')).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('[data-llm-action="refresh-attendance"]'),
+    ).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('table')).toBeNull();
+
+    const bentoFill = fixture.nativeElement.querySelector('.bento-fill');
+    const centerWrapper = bentoFill?.querySelector('.flex-1.flex.items-center.justify-center');
+    expect(centerWrapper).not.toBeNull();
+
+    const emptyState = centerWrapper?.querySelector('app-empty-state') as any;
+    expect(emptyState).not.toBeNull();
+    expect(emptyState.actionLabel ?? emptyState.getAttribute('actionLabel')).toBe('Reintentar');
+    emptyState?.dispatchEvent(new CustomEvent('action'));
+    expect(retrySpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('Caso B: con refreshFailed true mantiene la tabla y heroKpis, y muestra app-alert-card con botón Reintentar (data-llm-action)', () => {
+    const { fixture, component } = mount({
+      clasesPracticas: [makeRow({ id: 1 })],
+      kpis: {
+        tasaAsistencia: 100,
+        inasistenciasHoy: 0,
+        clasesEnCurso: 0,
+        pendientesPorIniciar: 1,
+        totalClasesHoy: 1,
+      },
+      refreshFailed: true,
+    });
+    const retrySpy = vi.fn();
+    (component as any).retry?.subscribe(retrySpy);
+
+    expect((component as any).heroKpis()).toHaveLength(4);
+    expect(fixture.nativeElement.querySelector('table')).not.toBeNull();
+    const alertCard = fixture.nativeElement.querySelector('app-alert-card');
+    expect(alertCard).not.toBeNull();
+
+    const retryBtn = fixture.nativeElement.querySelector(
+      '[data-llm-action="reintentar-asistencia"]',
+    ) as HTMLButtonElement | null;
+    expect(retryBtn).not.toBeNull();
+    expect(retryBtn?.textContent).toContain('Reintentar');
+    retryBtn?.click();
+    expect(retrySpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('Ciclos Teóricos: cuando ciclosError tiene error y no está cargando muestra app-empty-state con Reintentar', () => {
+    const { fixture, component } = mount({
+      activeTab: 'ciclos',
+      ciclosError: 'Error al cargar los ciclos teóricos',
+      isLoadingCiclos: false,
+    });
+    const retryCiclosSpy = vi.fn();
+    (component as any).retryCiclos?.subscribe(retryCiclosSpy);
+
+    expect(fixture.nativeElement.querySelector('app-ciclos-teoricos-content')).toBeNull();
+    const emptyState = fixture.nativeElement.querySelector('app-empty-state') as any;
+    expect(emptyState).not.toBeNull();
+    expect(emptyState.message ?? emptyState.getAttribute('message')).toBe(
+      'Error al cargar los ciclos teóricos',
+    );
+    expect(emptyState.actionLabel ?? emptyState.getAttribute('actionLabel')).toBe('Reintentar');
+    emptyState?.dispatchEvent(new CustomEvent('action'));
+    expect(retryCiclosSpy).toHaveBeenCalledTimes(1);
   });
 });

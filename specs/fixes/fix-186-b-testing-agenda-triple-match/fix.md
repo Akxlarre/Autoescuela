@@ -1,7 +1,8 @@
 # Fix: Testing — Agenda Clase B y Triple Match
 > id: fix-186-b-testing-agenda-triple-match
 > refs: ASG-i-026
-> status: in_progress
+> status: done
+> closed: 2026-11-10
 > created: 2026-10-06
 
 ## Root Cause
@@ -83,13 +84,19 @@ verificado después que no quedó nada) + regresión `supabase/tests/rls/0047-b-
 | H3 | S11: la Agenda nunca muestra errores de carga | 🟠 | track propio (pendiente) |
 | H4 | S6 + S19: horarios "ambas sedes" (falso libre para secretaria, filas duplicadas) | 🟡 hoy sin datos que lo gatillen | track propio (pendiente) |
 | H5 | S18: "Clic para agendar" + pastilla sin color | 🟡 | hotfix (pendiente) |
-| H6 | S16 (corregido en hotfix-171-b), S17 (confirmada en G04 y G05) | 🟡 | S17: track propio (pendiente) |
+| H6 | S16 (corregido en hotfix-171-b), S17 (confirmada en G04 y G05) | ✅ | S17 → `fix-239-b` (cerrado) |
 
 ## Casos manuales pendientes
 
-| Casos | Estado |
+> **Superado en parte (2026-11-10):** la tabla de abajo es el estado del 2026-10-06. Se
+> resolvieron en las tandas siguientes: A–F y P (tercera y quinta), G (tercera y quinta), I, J y N
+> (sexta), K (séptima), M (cuarta) y L (tercera). De H, siete casos pasaron a `fix-058-i`
+> (tercera tanda); los 11 restantes, en la octava tanda. Solo queda la spec `0059-b` (K14), que
+> sigue su propio track.
+
+| Casos | Estado (2026-10-06) |
 |---|---|
-| G01–G07, H*, I*, J*, K02/K03/K05–K08/K11–K18, L (matriz por flujo), M*, N* | Pendientes — necesitan 2 navegadores, hora real (cron de las 22:00) o decisiones de §5 del checklist |
+| G01–G07, H*, I*, J*, K, L (matriz por flujo), M*, N* | Pendientes — necesitaban 2 navegadores, hora real (cron de las 22:00) o decisiones de §5 del checklist |
 | A05, A07, A09, B03–B16, C07–C13, D04/D05/D07/D08, E05–E08/E10/E11, F02/F03/F05–F08, P01/P03/P05–P08 | Pendientes (visuales/manuales) |
 
 ## Estado al 2026-10-16 (revisión contra `main` y producción)
@@ -352,3 +359,71 @@ confirmar y el aviso nombra la clase, su día y hora, y con qué choca.
     Recomendación: **B**, como spec (lleva migración).
   - **Preguntas al owner:** ¿reactivar es un perdón o un deshacer? ¿se limpia el sello de
     penalización? ¿quién puede hacerlo? ¿se avisa al alumno y al instructor?
+
+## Séptima tanda (2026-11-10) — grupo 3 (iniciar y finalizar la clase)
+
+El grupo tiene **18 casos** (K01–K18). La mayoría ya los probó el testing de Asistencia B
+(`fix-366-m`, checklist 027), que usa los mismos drawers de "Iniciar" y "Finalizar". Lo que faltaba
+va en `e2e/agenda-6.spec.ts`: **2 tests en verde, 3 corridas seguidas** (`--repeat-each=3`,
+`--workers=1`). Verificado por SQL al terminar: 0 usuarios, clases ni avisos E2E- nuevos (quedan 5
+avisos E2E- de octubre, de otros tracks).
+
+| Casos | Resultado |
+|---|---|
+| K01, K04, K09, K10 | ✅ quinta tanda y `asistencia-clase-b.spec.ts` C01 · C07 |
+| K02, K15 | ✅ cubiertos: `dashboards.spec.ts` M14 · M16 (finalizar desde "Clases Actuales"; un corte de red no cierra el drawer) |
+| K03 | ✅ cubierto: "Agenda de Hoy" del admin abre los mismos drawers (`dashboards.spec.ts`, detalle desde "Agenda de Hoy") |
+| K05 | ✅ cubierto: `fix-366-m` C03 (vacío, negativo y > 999.999 deshabilitan) |
+| **K06** | ✅ `agenda-6.spec.ts`: iniciar la clase del instructor 2 eligiendo el vehículo que el instructor 1 tiene en curso a esa hora se rechaza con un mensaje sobre el vehículo; la clase sigue "Pendiente" y con su vehículo. Lo bloquean los triggers de `fix-187-b` (solape) y `fix-376-m` (vehículo en curso) |
+| **K07** | ⚠️→✅ el selector incluía los vehículos "Ambas" (`fix-224-b`) y sacaba los de Mantenimiento o Fuera de servicio, pero **no advertía SOAP ni revisión técnica vencidos** (la grilla de la Agenda sí, I12). Decisión del owner: avisar. Corregido en **fix-247-b**: "Vehículo X: SOAP vencido" bajo el selector, sin bloquear "Comenzar Clase" (`agenda-6.spec.ts` K07) |
+| K08 | ✅ cubierto: `fix-388-m` (`asistencia-clase-b.spec.ts` N03) |
+| K11 | ✅ cubierto: `fix-366-m` B16 — la colgada se ve en el Dashboard ("Día anterior · Cierre atrasado") y en Asistencia mirando su día, y se cierra desde ahí |
+| K13 | ✅ decidido: `fix-366-m` C08 — se permite iniciar antes de la hora |
+| K16 | ✅ decidido: la nota no es requisito del certificado (`fix-262-m`) y la evaluación es del instructor (`fix-115-m`); en el piloto las clases quedan sin nota |
+| K17 | ✅ cubierto: `supabase/tests/rls/fix-460-m-certificate-enabled.sql` |
+| **K18** | ❌→✅ **hotfix-186-b**: un doble clic en "Comenzar Clase" o "Cerrar Clase" hacía una sola acción en la BD (guard de `fix-388-m`), pero **a veces** (1 de 2 corridas) el segundo clic mostraba "La clase cambió — Esta clase ya fue iniciada, en otra pestaña o por otra persona", sin que nadie la tocara. Corregido con un guard de reentrada en los dos drawers; unit test que lo prueba sin depender del timing |
+| K12 | ✅ decidido: queda la hora del clic (abajo) |
+| K14 | decidido: guardar la imagen de la firma → spec **`0059-b-firmas-clase-practica-se-guardan`** (borrador) |
+
+**Hallazgo operativo (no es bug del código):** al correr el grupo había **2 clases reales "En curso"
+de días anteriores** en producción: la 15581 (05-11, instructor 222) y la 16305 (08-11, instructor
+8). Mientras sigan abiertas, esos instructores no pueden iniciar otra clase (K10) y sus vehículos
+tampoco (K06). Las ve el Dashboard como "Cierre atrasado"; hay que cerrarlas desde ahí. Los tests
+evitan esos instructores.
+
+### Respuestas del owner (2026-11-10)
+
+| Caso | Pregunta | Decisión |
+|---|---|---|
+| K07 | ¿El selector de vehículo de "Iniciar" debe avisar (o bloquear) un SOAP o revisión técnica vencidos? | **Avisar, no bloquear** → `fix-247-b` (cerrado) |
+| K12 | Si la secretaria inicia tarde, ¿la hora de inicio es la del clic o la agendada? | **La del clic** (`chileTimeOfDay()`), como hoy: es la hora real en que salió el auto. Sin cambios |
+| K14 | ¿Se guarda la imagen de la firma o basta saber que se firmó? | **Guardar la imagen**, "por si acaso" (respaldo de que la clase se hizo). Hoy solo se guarda `true/false` (`student_signature`, `instructor_signature`) y el dibujo se descarta (S15 del checklist 027). Lleva almacenamiento y datos personales → spec `0059-b` |
+
+**Grupo 3 cerrado.** Queda abierta solo la spec `0059-b` (K14).
+
+## Octava tanda (2026-11-10) — §H (paso 2 de la matrícula presencial)
+
+Los 11 casos H que seguían sin resultado, en `e2e/matricula-paso2.spec.ts`. Como secretaria de la
+sede 1, cada test siembra un alumno E2E- con un borrador ya en el paso 2 y lo retoma desde
+"Matrículas en progreso". **4 tests en verde, 2 corridas seguidas** (`--repeat-each=2`,
+`--workers=1`). Los que pasan al paso 3 reservan 12 clases reales de un instructor y las borran al
+terminar. Verificado por SQL: 0 matrículas E2E- y 0 clases reservadas sin matrícula (los 7
+usuarios E2E- que quedan en la base son de octubre, de otros tracks).
+
+| Casos | Resultado |
+|---|---|
+| H01 | ✅ instructores activos con vehículo, cada uno con "marca modelo · patente" |
+| **H02** | ❌→✅ **S7 confirmada**: Carlos Muñoz (sede 2, "ambas sedes", vehículo AB1234 también de ambas, 1088 horarios libres para la sede 1) no aparecía al matricular en la sede 1. La Agenda y la ficha del alumno sí lo mostraban (fix-028-i, spec 0004-m); la matrícula no. Corregido en **fix-248-b**. La matrícula online ya lo resolvía en su función del servidor (`public-enrollment`) |
+| H03 | ✅ no aparecen ni el instructor sin vehículo (Paulina Silva) ni uno de la otra sede que no es "ambas" (Roberto Araya). En el piloto no hay instructores solo teóricos (`type = 'theory'`) |
+| H04 | ✅ al elegir instructor y modalidad: grilla con "Semana 1 de N" y el contador "0 / 12" |
+| H07 | ✅ con 2 horarios elegidos en un día, el resto de ese día queda deshabilitado ("Puedes seleccionar hasta 2 clases por día") |
+| H12 | ✅ los horarios ocupados por otra clase del instructor (Gabriel Molina, el único de la sede 1 con clases futuras) están deshabilitados en todas las semanas |
+| H15 | ✅ cambiar de instructor con 2 horarios elegidos deja "0 / 12" y la grilla nueva sin selección |
+| H17 | ✅ continuar (12 clases reservadas en la BD) y volver: las 12 siguen elegidas, ninguna "ocupada", y se puede continuar |
+| **H18** | ❌→✅ **S15 de `fix-058-i` confirmada**: al retomar un borrador con sus clases ya reservadas, las 12 se veían elegidas pero **grises y deshabilitadas** ("ocupadas"); se podía seguir, pero no cambiar ninguna. Corregido en **fix-249-b**. (H18 no estaba en la lista; se probó porque usa el mismo flujo de H17) |
+| H19 | ✅ cubierto: `fix-058-i` (matrícula 8495 confirmada con sus 12 clases "Agendada" en la Agenda) |
+| H20 | ✅ descartar el borrador borra sus 12 clases reservadas (y la matrícula, el alumno y el usuario sin otras matrículas) |
+| H22 | ✅ "Refuerzo Clase B" pide 6 clases ("0 / 6") y no ofrece pago parcial |
+
+**§H cerrado.** Con esto el checklist queda completo salvo la spec `0059-b` (K14), que sigue su
+propio track.

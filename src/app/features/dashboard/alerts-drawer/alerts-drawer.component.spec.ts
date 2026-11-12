@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AlertsDrawerComponent } from './alerts-drawer.component';
@@ -33,13 +33,18 @@ describe('AlertsDrawerComponent', () => {
   const activeAlerts$ = signal<AlertModel[]>([]);
   const isLoading$ = signal(false);
   const alertCount$ = signal(0);
+  const loadProblem$ = signal<string | null>(null);
+  const refreshFailed$ = signal(false);
 
   const facadeMock = {
     isLoading: isLoading$.asReadonly(),
     alertCount: alertCount$.asReadonly(),
     activeAlerts: activeAlerts$.asReadonly(),
+    loadProblem: loadProblem$.asReadonly(),
+    refreshFailed: refreshFailed$.asReadonly(),
     dismissAlert: vi.fn(),
     clearSchedules: vi.fn().mockResolvedValue(true),
+    reintentar: vi.fn().mockResolvedValue(undefined),
   };
 
   const routerMock = {
@@ -54,6 +59,8 @@ describe('AlertsDrawerComponent', () => {
     activeAlerts$.set([]);
     isLoading$.set(false);
     alertCount$.set(0);
+    loadProblem$.set(null);
+    refreshFailed$.set(false);
     currentUser$.set({ role: 'admin' });
 
     TestBed.configureTestingModule({
@@ -313,6 +320,80 @@ describe('AlertsDrawerComponent', () => {
       expect(component.getActionIcon('navigate')).toBe('arrow-right');
       expect(component.getActionIcon('close-cash')).toBe('lock');
       expect(component.getActionIcon('unknown')).toBe('arrow-right');
+    });
+  });
+
+  describe('Lecturas fallidas — Caso A y Caso B (spec 0060-b T3.3)', () => {
+    function mountDom() {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [AlertsDrawerComponent],
+        providers: [
+          { provide: DashboardAlertsFacade, useValue: facadeMock },
+          { provide: Router, useValue: routerMock },
+          { provide: GsapAnimationsService, useValue: gsapMock },
+          { provide: AuthFacade, useValue: { currentUser: currentUser$ } },
+          { provide: LayoutDrawerFacadeService, useValue: drawerMock },
+        ],
+      }).overrideComponent(AlertsDrawerComponent, {
+        set: { imports: [], schemas: [NO_ERRORS_SCHEMA] },
+      });
+      const fixture = TestBed.createComponent(AlertsDrawerComponent);
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    it('Caso A: cuando falla la carga inicial, no muestra "0 alertas activas" ni "Todo en orden" y ofrece Reintentar', () => {
+      loadProblem$.set('No se pudieron revisar las alertas.');
+      activeAlerts$.set([]);
+      alertCount$.set(0);
+
+      const fixture = mountDom();
+      const text = fixture.nativeElement.textContent as string;
+      const retryBtn = fixture.nativeElement.querySelector(
+        '[data-llm-action="reintentar-alertas-drawer"]',
+      ) as HTMLButtonElement | null;
+
+      expect(text).not.toContain('0 alertas activas');
+      expect(text).not.toContain('Todo en orden');
+      expect(text).toContain('No se pudieron revisar las alertas.');
+      expect(retryBtn).not.toBeNull();
+      retryBtn?.click();
+      expect(facadeMock.reintentar).toHaveBeenCalledTimes(1);
+    });
+
+    it('Caso B: si falla el refresco con alertas ya visibles, conserva las alertas y muestra app-alert-card con Reintentar', () => {
+      activeAlerts$.set([makeAlert({ id: 'a1', title: 'Documento por vencer' })]);
+      alertCount$.set(1);
+      refreshFailed$.set(true);
+      loadProblem$.set(null);
+
+      const fixture = mountDom();
+      const text = fixture.nativeElement.textContent as string;
+      const alertCard = fixture.nativeElement.querySelector('app-alert-card');
+      const retryBtn = fixture.nativeElement.querySelector(
+        '[data-llm-action="reintentar-alertas-drawer"]',
+      ) as HTMLButtonElement | null;
+
+      expect(text).toContain('Documento por vencer');
+      expect(alertCard).not.toBeNull();
+      expect(retryBtn).not.toBeNull();
+      retryBtn?.click();
+      expect(facadeMock.reintentar).toHaveBeenCalledTimes(1);
+    });
+
+    it('fix-405-m: con revisiones incompletas y alertas activas muestra las alertas y loadProblem()', () => {
+      activeAlerts$.set([makeAlert({ id: 'a1', title: 'Documento por vencer' })]);
+      alertCount$.set(1);
+      refreshFailed$.set(false);
+      loadProblem$.set('No se pudieron revisar todas las alertas.');
+
+      const fixture = mountDom();
+      const text = fixture.nativeElement.textContent as string;
+
+      expect(text).toContain('Documento por vencer');
+      expect(text).toContain('No se pudieron revisar todas las alertas.');
+      expect(text).not.toContain('Todo al día');
     });
   });
 });

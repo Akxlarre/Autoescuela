@@ -18,14 +18,15 @@ const LESSONS_PATH = path.join(TEMP_DIR, 'LESSONS_LEARNED.md');
 const ARCHITECT_PATH = path.join(PROJECT_ROOT, 'scripts', 'architect.js');
 const DATE_DISCIPLINE_PATH = path.join(PROJECT_ROOT, 'scripts', 'check-date-discipline.mjs');
 const THEME_NAME_COLLISIONS_PATH = path.join(PROJECT_ROOT, 'scripts', 'check-theme-name-collisions.mjs');
+const AGENTS_MIRROR_PATH = path.join(PROJECT_ROOT, 'scripts', 'check-agents-mirror.mjs');
 
 function ensureTempDir() {
   fs.mkdirSync(TEMP_DIR, { recursive: true });
 }
 
-function runScript(scriptPath) {
+function runScript(scriptPath, args = process.argv.slice(2)) {
   return new Promise((resolve) => {
-    const proc = spawn(process.execPath, [scriptPath, ...process.argv.slice(2)], {
+    const proc = spawn(process.execPath, [scriptPath, ...args], {
       stdio: ['ignore', 'pipe', 'pipe'],
       shell: false,
     });
@@ -90,6 +91,14 @@ async function main() {
   result.stdout = `${result.stdout}${themeNames.stdout}`;
   result.stderr = `${result.stderr}${themeNames.stderr}`;
   result.code = result.code === 0 ? themeNames.code : result.code;
+
+  // ARCH-30 (.agents/ desfasado de .claude/): Antigravity lee sus reglas y skills de copias en
+  // .agents/. Sin este paso, cambiar una regla en .claude/ deja a ese agente con la vieja.
+  // Sin argumentos a propósito: el --fix de este runner no debe activarse desde lint:arch.
+  const agentsMirror = await runScript(AGENTS_MIRROR_PATH, []);
+  result.stdout = `${result.stdout}${agentsMirror.stdout}`;
+  result.stderr = `${result.stderr}${agentsMirror.stderr}`;
+  result.code = result.code === 0 ? agentsMirror.code : result.code;
 
   // Reimprimir salidas del linter (conserva UX)
   if (result.stdout) process.stdout.write(result.stdout);

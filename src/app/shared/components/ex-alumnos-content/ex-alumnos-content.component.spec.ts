@@ -1,5 +1,7 @@
-import { signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { CurrencyPipe } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { ExAlumnosContentComponent } from './ex-alumnos-content.component';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
 
@@ -269,5 +271,61 @@ describe('ExAlumnosContentComponent', () => {
       (component as any).clearFilters();
       expect((component as any).hasActiveFilters()).toBe(false);
     });
+  });
+
+  describe('errores en Hero y Caso B (spec 0060-b T3.2)', () => {
+    it('con error de carga (Caso A), heroChips y heroKpis NO dicen 0 Egresados', () => {
+      setup([]);
+      stubInput('error', 'Error al cargar egresados');
+
+      expect(component.showLoadError()).toBe(true);
+      expect((component as any).heroKpis()).toEqual([]);
+      expect((component as any).heroChips()).toEqual([]);
+    });
+
+    it('en Caso B (refreshFailed con filas en pantalla), conserva heroKpis y heroChips', () => {
+      setup([makeEgresado({ id: 1, saldoPendiente: 5000 })]);
+      stubInput('error', null);
+      stubInput('refreshFailed', true);
+
+      expect(component.showLoadError()).toBe(false);
+      expect((component as any).heroKpis()).toHaveLength(2);
+      expect((component as any).heroChips()[1].label).toBe('1 Egresados');
+    });
+  });
+});
+
+describe('ExAlumnosContentComponent — layout Caso B en fill-screen (spec 0060-b T3.6)', () => {
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('el aviso de Caso B vive dentro de .bento-fill y no como hijo directo de .bento-grid', () => {
+    TestBed.configureTestingModule({
+      imports: [ExAlumnosContentComponent],
+      providers: [
+        {
+          provide: GsapAnimationsService,
+          useValue: { animateBentoGrid: vi.fn(), animateHero: vi.fn(), addCardHover: vi.fn() },
+        },
+      ],
+    }).overrideComponent(ExAlumnosContentComponent, {
+      set: {
+        imports: [CurrencyPipe],
+        schemas: [NO_ERRORS_SCHEMA],
+      },
+    });
+
+    const fixture = TestBed.createComponent(ExAlumnosContentComponent);
+    const component = fixture.componentInstance;
+    Object.defineProperty(component, 'egresados', { value: signal([makeEgresado()]) });
+    Object.defineProperty(component, 'refreshFailed', { value: signal(true) });
+    fixture.detectChanges();
+
+    const alertCard = fixture.nativeElement.querySelector('app-alert-card') as HTMLElement | null;
+    expect(alertCard).not.toBeNull();
+    expect(alertCard?.closest('.bento-fill')).not.toBeNull();
+    expect(alertCard?.parentElement?.classList.contains('bento-grid')).toBe(false);
+    expect(fixture.nativeElement.querySelector('.bento-grid > [role="alert"]')).toBeNull();
   });
 });

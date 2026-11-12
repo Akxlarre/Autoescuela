@@ -49,15 +49,19 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
         </p>
       </div>
 
-      @if (clasesFacade.isLoading()) {
+      @if (clasesFacade.detailLoading()) {
         <div class="flex justify-center p-12">
           <app-icon name="loader-2" [size]="32" class="animate-spin text-brand" />
         </div>
-      } @else if (clasesFacade.error()) {
-        <div class="card p-4 flex items-start gap-3 bg-error-subtle text-error">
-          <app-icon name="alert-circle" [size]="20" class="mt-0.5 shrink-0" />
-          <p class="text-sm">{{ clasesFacade.error() }}</p>
-        </div>
+      } @else if (clasesFacade.detailError()) {
+        <app-empty-state
+          icon="alert-triangle"
+          [message]="clasesFacade.detailError()!"
+          subtitle="Revisa tu conexión e inténtalo de nuevo."
+          actionLabel="Reintentar"
+          actionIcon="refresh-cw"
+          (action)="clasesFacade.reintentarDetail()"
+        />
       } @else if (accessibleClass(); as cls) {
         <div class="flex flex-col gap-6">
           <!-- Sidebar Info -->

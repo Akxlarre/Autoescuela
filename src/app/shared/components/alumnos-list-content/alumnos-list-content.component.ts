@@ -48,6 +48,7 @@ import { TooltipModule } from 'primeng/tooltip';
 // Shared Components
 import { IconComponent } from '../icon/icon.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
+import { AlertCardComponent } from '../alert-card/alert-card.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
 import { BadgeComponent } from '../badge/badge.component';
 import { AlumnoCardComponent } from '../alumno-card/alumno-card.component';
@@ -117,6 +118,7 @@ interface AlumnosEmptyState {
     TooltipModule,
     IconComponent,
     EmptyStateComponent,
+    AlertCardComponent,
     SkeletonBlockComponent,
     BadgeComponent,
     AlumnoCardComponent,
@@ -159,6 +161,29 @@ interface AlumnosEmptyState {
         appCardHover
         #tableCard
       >
+        <!-- Caso B: Aviso de refresco fallido con datos visibles -->
+        @if (refreshFailed()) {
+          <div class="p-4 pb-0 shrink-0" role="alert">
+            <app-alert-card severity="error" title="No se pudo actualizar la lista de alumnos">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span class="text-compact text-text-secondary">
+                  Los datos mostrados pueden no estar actualizados.
+                </span>
+                <button
+                  type="button"
+                  class="btn-secondary flex items-center gap-2 shrink-0"
+                  data-llm-action="reintentar-alumnos"
+                  [disabled]="isLoading()"
+                  (click)="refreshRequested.emit()"
+                >
+                  <app-icon name="refresh-cw" [size]="14" />
+                  Reintentar
+                </button>
+              </div>
+            </app-alert-card>
+          </div>
+        }
+
         <!-- Toolbar de la tabla -->
         <div class="flex flex-wrap items-center gap-3 p-4 border-b border-border-default">
           <!-- Buscador -->
@@ -630,6 +655,8 @@ export class AlumnosListContentComponent implements OnInit, AfterViewInit {
   readonly showSedeColumn = input(false);
   /** Error de la última carga (signal `error` del facade), o null. */
   readonly error = input<string | null>(null);
+  /** Error de refresco en segundo plano con filas ya visibles (Caso B). */
+  readonly refreshFailed = input(false);
   /**
    * Búsqueda y filtros con los que arranca la lista (fix-275-m). Se leen una sola vez, al crear
    * el componente: después manda lo que el usuario escribe, que se avisa por `filtersChanged`.
@@ -678,37 +705,41 @@ export class AlumnosListContentComponent implements OnInit, AfterViewInit {
     this.trashView() ? 'Papelera — Alumnos archivados' : 'Listado de alumnos de la escuela',
   );
 
-  readonly heroChips = computed((): SectionHeroChip[] => [
-    { label: `${this.totalAlumnos()} alumnos`, icon: 'users', style: 'default' },
-  ]);
+  readonly heroChips = computed((): SectionHeroChip[] => {
+    if (this.showLoadError()) return [];
+    return [{ label: `${this.totalAlumnos()} alumnos`, icon: 'users', style: 'default' }];
+  });
 
   readonly heroActions = computed((): SectionHeroAction[] =>
     buildAlumnosHeroActions(this.trashView()),
   );
 
-  readonly alumnosKpis = computed((): SectionHeroKpi[] => [
-    {
-      id: 'total',
-      label: 'Total Alumnos',
-      value: this.totalAlumnos(),
-      icon: 'users',
-      color: 'default',
-    },
-    {
-      id: 'activos',
-      label: 'Activos',
-      value: this.activos(),
-      icon: 'user-check',
-      color: 'success',
-    },
-    {
-      id: 'deuda',
-      label: 'Con deuda',
-      value: this.conDeuda(),
-      icon: 'circle-alert',
-      color: 'warning',
-    },
-  ]);
+  readonly alumnosKpis = computed((): SectionHeroKpi[] => {
+    if (this.showLoadError()) return [];
+    return [
+      {
+        id: 'total',
+        label: 'Total Alumnos',
+        value: this.totalAlumnos(),
+        icon: 'users',
+        color: 'default',
+      },
+      {
+        id: 'activos',
+        label: 'Activos',
+        value: this.activos(),
+        icon: 'user-check',
+        color: 'success',
+      },
+      {
+        id: 'deuda',
+        label: 'Con deuda',
+        value: this.conDeuda(),
+        icon: 'circle-alert',
+        color: 'warning',
+      },
+    ];
+  });
 
   readonly searchTerm = signal('');
   readonly selectedCurso = signal('');

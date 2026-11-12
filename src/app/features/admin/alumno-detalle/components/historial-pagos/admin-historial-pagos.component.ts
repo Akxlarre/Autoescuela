@@ -40,9 +40,9 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
       </div>
 
       <!-- Content -->
-      <div class="flex flex-col gap-5 p-5 ficha-pagos-grow">
+      <div class="flex flex-col gap-3.5 p-4 ficha-pagos-grow">
         <!-- Totals Section -->
-        <div class="grid grid-cols-1 gap-4">
+        <div class="grid grid-cols-1 gap-2.5">
           <app-stat-box
             label="TOTAL PAGADO"
             [value]="'$' + totalPagado().toLocaleString('es-CL')"
@@ -56,7 +56,7 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
           />
         </div>
 
-        <div class="h-px bg-border-subtle w-full my-1"></div>
+        <div class="h-px bg-border-subtle w-full"></div>
 
         <!-- History List -->
         <div
@@ -178,6 +178,19 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
       .ficha-pagos-scroll {
         min-height: 0;
         overflow-y: auto;
+      }
+
+      :host-context(.force-compact) .ficha-pagos-h100 {
+        height: auto;
+      }
+      :host-context(.force-compact) .ficha-pagos-grow {
+        flex-grow: 0;
+        flex-basis: auto;
+        min-height: auto;
+      }
+      :host-context(.force-compact) .ficha-pagos-scroll {
+        min-height: auto;
+        overflow-y: visible;
       }
     }
 

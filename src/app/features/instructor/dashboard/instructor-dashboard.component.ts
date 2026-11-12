@@ -60,7 +60,31 @@ import { isClassStartOverdue } from '@core/utils/class-schedule-timing.utils';
         [loadingKpiCount]="4"
       />
       <!-- Main grid: clases + sidebar -->
-      <div class="bento-banner bento-fill flex flex-col h-full overflow-y-auto" appScrollReveal>
+      <div
+        class="bento-banner bento-fill flex flex-col gap-4 h-full overflow-y-auto"
+        appScrollReveal
+      >
+        @if (clasesFacade.refreshFailed()) {
+          <div role="alert" class="shrink-0">
+            <app-alert-card severity="error" title="No se pudieron actualizar tus clases">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span class="text-compact text-text-secondary">
+                  Los datos mostrados pueden no estar actualizados.
+                </span>
+                <button
+                  type="button"
+                  class="btn-secondary flex items-center gap-2 shrink-0"
+                  data-llm-action="reintentar-clases"
+                  [disabled]="isDataLoading()"
+                  (click)="clasesFacade.reintentar()"
+                >
+                  <app-icon name="refresh-cw" [size]="14" />
+                  Reintentar
+                </button>
+              </div>
+            </app-alert-card>
+          </div>
+        }
         <div class="grid lg:grid-cols-3 gap-6">
           <!-- Lista de clases del día (col-span-2) -->
           <div class="lg:col-span-2">
@@ -128,11 +152,16 @@ import { isClassStartOverdue } from '@core/utils/class-schedule-timing.utils';
                     </div>
                   }
                 </div>
-              } @else if (clasesFacade.error()) {
+              } @else if (clasesFacade.error() && clasesFacade.todayClasses().length === 0) {
                 <div class="p-6">
-                  <app-alert-card title="Error al cargar clases" severity="error">{{
-                    clasesFacade.error()
-                  }}</app-alert-card>
+                  <app-empty-state
+                    icon="alert-triangle"
+                    [message]="clasesFacade.error()!"
+                    subtitle="Revisa tu conexión e inténtalo de nuevo."
+                    actionLabel="Reintentar"
+                    actionIcon="refresh-cw"
+                    (action)="clasesFacade.reintentar()"
+                  />
                 </div>
               } @else if (clasesFacade.todayClasses().length === 0) {
                 <app-empty-state
@@ -278,6 +307,15 @@ import { isClassStartOverdue } from '@core/utils/class-schedule-timing.utils';
                     </div>
                   }
                 </div>
+              } @else if (
+                clasesFacade.upcomingDaysError() ||
+                (clasesFacade.error() && clasesFacade.upcomingDays().length === 0)
+              ) {
+                <p class="text-sm text-error">
+                  {{
+                    clasesFacade.upcomingDaysError() || 'No se pudieron cargar los próximos días.'
+                  }}
+                </p>
               } @else if (clasesFacade.upcomingDays().length === 0) {
                 <p class="text-sm text-text-muted">Sin clases programadas los próximos días</p>
               } @else {
@@ -336,40 +374,45 @@ export class InstructorDashboardComponent implements OnInit {
   );
 
   /** KPIs del strip del hero slim (antes: 4 celdas `bento-square` sueltas). */
-  readonly heroKpis = computed<SectionHeroKpi[]>(() => [
-    {
-      id: 'clases-hoy',
-      label: 'Clases de Hoy',
-      value: this.clasesFacade.kpis().clasesHoy,
-      icon: 'calendar',
-    },
-    {
-      id: 'proxima',
-      label: 'Próxima',
-      value: this.proximaHora(),
-      icon: 'clock',
-      subValue: this.clasesFacade.nextClass()?.studentName,
-    },
-    {
-      id: 'completadas-mes',
-      label: 'Completadas (Mes)',
-      value: this.completadasMes(),
-      icon: 'check-circle',
-      color: 'success',
-    },
-    {
-      id: 'horas-mes',
-      // El strip del hero renderiza `{{ kpi.value }}` crudo, sin DecimalPipe —
-      // a diferencia de `app-kpi-card-variant`. Se formatea acá para no perder
-      // la coma decimal de es-CL al migrar a slim.
-      label: 'Horas Este Mes',
-      value: this.horasFacade
-        .liquidacionKpis()
-        .totalHorasMes.toLocaleString('es-CL', { maximumFractionDigits: 1 }),
-      suffix: ' hrs',
-      icon: 'clock',
-    },
-  ]);
+  readonly heroKpis = computed<SectionHeroKpi[]>(() => {
+    if (this.clasesFacade.error() && this.clasesFacade.todayClasses().length === 0) {
+      return [];
+    }
+    return [
+      {
+        id: 'clases-hoy',
+        label: 'Clases de Hoy',
+        value: this.clasesFacade.kpis().clasesHoy,
+        icon: 'calendar',
+      },
+      {
+        id: 'proxima',
+        label: 'Próxima',
+        value: this.proximaHora(),
+        icon: 'clock',
+        subValue: this.clasesFacade.nextClass()?.studentName,
+      },
+      {
+        id: 'completadas-mes',
+        label: 'Completadas (Mes)',
+        value: this.completadasMes(),
+        icon: 'check-circle',
+        color: 'success',
+      },
+      {
+        id: 'horas-mes',
+        // El strip del hero renderiza `{{ kpi.value }}` crudo, sin DecimalPipe —
+        // a diferencia de `app-kpi-card-variant`. Se formatea acá para no perder
+        // la coma decimal de es-CL al migrar a slim.
+        label: 'Horas Este Mes',
+        value: this.horasFacade
+          .liquidacionKpis()
+          .totalHorasMes.toLocaleString('es-CL', { maximumFractionDigits: 1 }),
+        suffix: ' hrs',
+        icon: 'clock',
+      },
+    ];
+  });
 
   readonly heroActions: SectionHeroAction[] = [
     {
@@ -396,16 +439,13 @@ export class InstructorDashboardComponent implements OnInit {
   ];
 
   async ngOnInit() {
+    this.destroyRef.onDestroy(() => this.clasesFacade.dispose());
     try {
       await this.profile.initialize();
       await this.clasesFacade.initialize();
-      await Promise.all([
-        this.horasFacade.fetchMonthlyHours(),
-        this.clasesFacade.fetchUpcomingDays(),
-      ]);
+      await this.horasFacade.fetchMonthlyHours();
     } finally {
       this._localLoading.set(false);
     }
-    this.destroyRef.onDestroy(() => this.clasesFacade.dispose());
   }
 }

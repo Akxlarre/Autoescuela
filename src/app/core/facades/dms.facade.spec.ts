@@ -1366,7 +1366,7 @@ describe('DmsFacade — request guard (spec 0005-m, AC1, AC4, AC-E1)', () => {
         { provide: SupabaseService, useValue: mock },
         { provide: LayoutDrawerService, useValue: {} },
         { provide: ConfirmModalService, useValue: {} },
-        { provide: ToastService, useValue: {} },
+        { provide: ToastService, useValue: { error: vi.fn() } },
         { provide: DmsViewerService, useValue: {} },
         { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ role: 'admin' })) } },
         { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
@@ -1396,7 +1396,7 @@ describe('DmsFacade — request guard (spec 0005-m, AC1, AC4, AC-E1)', () => {
         { provide: SupabaseService, useValue: mock },
         { provide: LayoutDrawerService, useValue: {} },
         { provide: ConfirmModalService, useValue: {} },
-        { provide: ToastService, useValue: {} },
+        { provide: ToastService, useValue: { error: vi.fn() } },
         { provide: DmsViewerService, useValue: {} },
         { provide: AuthFacade, useValue: { currentUser: vi.fn(() => ({ role: 'admin' })) } },
         { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
@@ -1405,11 +1405,7 @@ describe('DmsFacade — request guard (spec 0005-m, AC1, AC4, AC-E1)', () => {
     const facade = TestBed.inject(DmsFacade);
 
     const oldCall = facade.initialize(); // batch 0 (vieja)
-    // DmsFacade marca `_initialized = true` de forma SÍNCRONA antes del await (a diferencia
-    // de los otros 3 Facades), así que un segundo initialize() concurrente toma el camino SWR
-    // (refreshSilently, fire-and-forget). Llamamos refreshSilently() directo para tener una
-    // promesa awaitable y determinista para la fetch "vigente".
-    const newCall = (facade as any).refreshSilently(); // batch 1 (vigente)
+    const newCall = facade.initialize(); // batch 1 (vigente, misma carga inicial porque aún no terminó)
 
     mock.resolveBatch(0, [{ id: 100, type: 'contrato', file_name: 'old.pdf', storage_url: 'x' }]);
     await oldCall;
@@ -1417,5 +1413,390 @@ describe('DmsFacade — request guard (spec 0005-m, AC1, AC4, AC-E1)', () => {
     await newCall;
 
     expect(facade.error()).toBeTruthy();
+  });
+});
+
+describe('DmsFacade — Lecturas fallidas (Caso A, Caso B y lecturas secundarias — spec 0060-b T3.3)', () => {
+  function setupDms(
+    opts: {
+      role?: string;
+      branchId?: number | null;
+      selectedBranchId?: number | null;
+      dbId?: number;
+    } = {},
+  ) {
+    TestBed.resetTestingModule();
+    const toast = { success: vi.fn(), error: vi.fn() };
+    const branchSig = vi.fn(() => opts.selectedBranchId ?? null);
+    const storageBucket = {
+      upload: vi.fn().mockResolvedValue({ error: null }),
+      remove: vi.fn().mockResolvedValue({ data: [], error: null }),
+      createSignedUrl: vi.fn().mockResolvedValue({
+        data: { signedUrl: 'https://example.com/signed' },
+        error: null,
+      }),
+    };
+    const supabase: any = {
+      client: {
+        from: vi.fn(() => makeBuilder({ data: [], error: null })),
+        storage: { from: vi.fn(() => storageBucket) },
+        auth: {
+          getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'auth-uid-1' } }, error: null }),
+        },
+        rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+      },
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        DmsFacade,
+        { provide: SupabaseService, useValue: supabase },
+        {
+          provide: LayoutDrawerService,
+          useValue: { open: vi.fn(), close: vi.fn(), push: vi.fn() },
+        },
+        { provide: ConfirmModalService, useValue: { confirm: vi.fn().mockResolvedValue(true) } },
+        { provide: ToastService, useValue: toast },
+        { provide: DmsViewerService, useValue: { openByUrl: vi.fn() } },
+        {
+          provide: AuthFacade,
+          useValue: {
+            currentUser: vi.fn(() => ({
+              role: opts.role ?? 'admin',
+              dbId: opts.dbId ?? 1,
+              branchId: opts.branchId ?? null,
+              canAccessBothBranches: false,
+            })),
+          },
+        },
+        { provide: BranchFacade, useValue: { selectedBranchId: branchSig } },
+      ],
+    });
+
+    return {
+      facade: TestBed.inject(DmsFacade),
+      supabase,
+      toast,
+      branchSig,
+      storageBucket,
+    };
+  }
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  const mockConDatosIniciales = (supabase: any, schoolDocName = 'reglamento.pdf') => {
+    supabase.client.from = vi.fn((table: string) => {
+      if (table === 'school_documents') {
+        return makeBuilder({
+          data: [
+            {
+              id: 1,
+              type: 'decreto',
+              file_name: schoolDocName,
+              storage_url: `school/${schoolDocName}`,
+              description: null,
+              branch_id: null,
+              created_at: '2026-10-01T12:00:00Z',
+              users: null,
+            },
+          ],
+          error: null,
+        });
+      }
+      if (table === 'students') {
+        return makeBuilder({
+          data: [
+            {
+              id: 10,
+              users: {
+                id: 100,
+                rut: '11.111.111-1',
+                first_names: 'Ana',
+                paternal_last_name: 'Soto',
+                maternal_last_name: '',
+                branch_id: 1,
+                branches: { name: 'Centro' },
+              },
+              enrollments: [
+                {
+                  id: 200,
+                  number: '001',
+                  created_at: '2026-10-01',
+                  branch_id: 1,
+                  branches: { name: 'Centro' },
+                },
+              ],
+            },
+          ],
+          error: null,
+        });
+      }
+      if (table === 'v_dms_student_documents') {
+        return makeBuilder({
+          data: [
+            {
+              id: 'doc-1',
+              source: 'student_document',
+              student_id: 10,
+              enrollment_id: 200,
+              type: 'id_photo',
+              file_name: 'foto.jpg',
+              file_url: 'students/200/foto.jpg',
+              status: 'approved',
+              document_at: '2026-10-01T12:00:00Z',
+              managed_by: null,
+            },
+          ],
+          error: null,
+        });
+      }
+      return makeBuilder({ data: [], error: null });
+    });
+  };
+
+  it('cambio de sede (Caso A): limpia listas previas al instante y si la nueva sede falla deja todo vacío con error', async () => {
+    const { facade, supabase, branchSig } = setupDms({ selectedBranchId: 1 });
+    mockConDatosIniciales(supabase, 'sede-1.pdf');
+    await facade.initialize();
+    expect(facade.schoolDocs()).toHaveLength(1);
+    expect(facade.studentsWithDocs()).toHaveLength(1);
+
+    // Cambiar a sede 2: dejar school_documents pendiente
+    branchSig.mockReturnValue(2);
+    let resolvePending!: (v: any) => void;
+    supabase.client.from = vi.fn((table: string) => {
+      if (table === 'school_documents') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
+          or: vi.fn().mockReturnThis(),
+          then: (res: any) => new Promise((r) => (resolvePending = r)).then(res),
+        };
+      }
+      return makeBuilder({ data: [], error: null });
+    });
+
+    const cambioSede = facade.initialize();
+    expect(facade.isLoading()).toBe(true);
+    expect(facade.schoolDocs()).toEqual([]);
+    expect(facade.studentsWithDocs()).toEqual([]);
+    expect(facade.recentDocs()).toEqual([]);
+    expect(facade.kpis()).toEqual({ totalStudentDocs: 0, totalSchoolDocs: 0, recentUploads: 0 });
+
+    resolvePending({ data: null, error: { message: 'timeout' } });
+    await cambioSede;
+
+    expect(facade.isLoading()).toBe(false);
+    expect(facade.listsError()).toBeTruthy();
+    expect(facade.error()).toBeTruthy();
+    expect((facade as any).refreshFailed()).toBe(false);
+    expect(facade.schoolDocs()).toEqual([]);
+  });
+
+  it('refresco silencioso fallido (Caso B): conserva las listas y KPIs, error/listsError siguen null y enciende refreshFailed', async () => {
+    const { facade, supabase, toast } = setupDms({ selectedBranchId: 1 });
+    mockConDatosIniciales(supabase, 'ok.pdf');
+    await facade.initialize();
+    toast.error.mockClear();
+
+    supabase.client.from = vi.fn(() =>
+      makeBuilder({ data: null, error: { message: 'DB timeout' } }),
+    );
+    await facade.refreshSilently();
+
+    expect(facade.schoolDocs()).toHaveLength(1);
+    expect(facade.studentsWithDocs()).toHaveLength(1);
+    expect(facade.error()).toBeNull();
+    expect(facade.listsError()).toBeNull();
+    expect((facade as any).refreshFailed()).toBe(true);
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it('reintentar() en Caso B refresca en silencio sin limpiar listas ni prender isLoading', async () => {
+    const { facade, supabase } = setupDms({ selectedBranchId: 1 });
+    mockConDatosIniciales(supabase, 'inicial.pdf');
+    await facade.initialize();
+
+    supabase.client.from = vi.fn(() => makeBuilder({ data: null, error: { message: 'timeout' } }));
+    await facade.refreshSilently();
+    expect((facade as any).refreshFailed()).toBe(true);
+
+    // Reintento que vuelve a fallar
+    const p1 = (facade as any).reintentar();
+    expect(facade.isLoading()).toBe(false);
+    expect(facade.schoolDocs()).toHaveLength(1);
+    await p1;
+    expect((facade as any).refreshFailed()).toBe(true);
+    expect(facade.error()).toBeNull();
+
+    // Reintento exitoso
+    mockConDatosIniciales(supabase, 'actualizado.pdf');
+    await (facade as any).reintentar();
+    expect((facade as any).refreshFailed()).toBe(false);
+    expect(facade.schoolDocs()[0].fileName).toBe('actualizado.pdf');
+  });
+
+  it('reintentar() en Caso A tras error inicial limpia listasError y recarga con isLoading = true', async () => {
+    const { facade, supabase } = setupDms({ selectedBranchId: 1 });
+    supabase.client.from = vi.fn(() => makeBuilder({ data: null, error: { message: 'offline' } }));
+    await facade.initialize();
+    expect(facade.listsError()).toBeTruthy();
+
+    mockConDatosIniciales(supabase, 'recuperado.pdf');
+    const p = (facade as any).reintentar();
+    expect(facade.isLoading()).toBe(true);
+    await p;
+
+    expect(facade.isLoading()).toBe(false);
+    expect(facade.listsError()).toBeNull();
+    expect(facade.error()).toBeNull();
+    expect(facade.schoolDocs()).toHaveLength(1);
+  });
+
+  it('mutaciones post-guardado: si upload/delete guardan bien y falla el refresco posterior, NO fallan la mutación (Caso B)', async () => {
+    const { facade, supabase, storageBucket } = setupDms({ selectedBranchId: 1 });
+    mockConDatosIniciales(supabase, 'prev.pdf');
+    await facade.initialize();
+
+    supabase.client.from = vi.fn((table: string) => {
+      if (table === 'school_documents') {
+        const b = makeBuilder({ data: null, error: { message: 'refresh timeout' } });
+        b.insert = vi.fn().mockResolvedValue({ error: null });
+        b.delete = vi.fn(() => ({
+          eq: vi.fn(() => ({
+            select: vi
+              .fn()
+              .mockResolvedValue({ data: [{ storage_url: 'school/prev.pdf' }], error: null }),
+          })),
+        }));
+        return b;
+      }
+      return makeBuilder({ data: null, error: { message: 'refresh timeout' } });
+    });
+
+    await expect(
+      facade.uploadSchoolDocument({
+        file: new File(['x'], 'nuevo.pdf', { type: 'application/pdf' }),
+        type: 'decreto',
+      }),
+    ).resolves.toBeUndefined();
+    expect(storageBucket.upload).toHaveBeenCalled();
+    expect((facade as any).refreshFailed()).toBe(true);
+    expect(facade.listsError()).toBeNull();
+
+    await expect(facade.deleteSchoolDocument(1)).resolves.toBeUndefined();
+    expect((facade as any).refreshFailed()).toBe(true);
+  });
+
+  it('loadStudentDocuments(): si la consulta a students falla, no ignora el error y lo aísla en studentDocsError', async () => {
+    const { facade, supabase } = setupDms();
+    supabase.client.from = vi.fn((table: string) => {
+      if (table === 'v_dms_student_documents') {
+        return makeBuilder({ data: [], error: null });
+      }
+      if (table === 'students') {
+        return makeBuilder({ data: null, error: { message: 'students error' } });
+      }
+      return makeBuilder({ data: [], error: null });
+    });
+
+    await facade.loadStudentDocuments(10, 200);
+
+    expect(facade.studentDocs()).toEqual([]);
+    expect((facade as any).studentDocsError()).toBeTruthy();
+    expect(facade.error()).toBeNull();
+  });
+
+  it('loadInstructorDocuments(): si la consulta a instructors falla, limpia instructorDocs y expone instructorDocsError', async () => {
+    const { facade, supabase } = setupDms();
+    supabase.client.from = vi.fn((table: string) => {
+      if (table === 'instructors') {
+        return makeBuilder({ data: null, error: { message: 'instructors error' } });
+      }
+      return makeBuilder({ data: [], error: null });
+    });
+
+    await facade.loadInstructorDocuments(5);
+
+    expect(facade.instructorDocs()).toEqual([]);
+    expect((facade as any).instructorDocsError()).toBeTruthy();
+    expect(facade.error()).toBeNull();
+  });
+
+  it('uploadInstructorDocument(): si la lectura de users falla, limpia el archivo en Storage y lanza error', async () => {
+    const { facade, supabase, storageBucket } = setupDms();
+    const instructorDocsBuilder = makeBuilder({ data: null, error: null });
+    supabase.client.from = vi.fn((table: string) => {
+      if (table === 'users') {
+        return makeBuilder({ data: null, error: { message: 'users read denied' } });
+      }
+      if (table === 'instructor_documents') return instructorDocsBuilder;
+      return makeBuilder({ data: [], error: null });
+    });
+
+    await expect(
+      facade.uploadInstructorDocument({
+        file: new File(['pdf'], 'hvc.pdf', { type: 'application/pdf' }),
+        type: 'hoja_vida_conductor',
+        instructorId: 5,
+      }),
+    ).rejects.toBeTruthy();
+
+    expect(storageBucket.remove).toHaveBeenCalledTimes(1);
+    expect(instructorDocsBuilder.insert).not.toHaveBeenCalled();
+  });
+
+  it('loadStudentEnrollmentOptions(): limpia opciones anteriores, maneja error en studentEnrollmentOptionsError y descarta respuestas fuera de orden', async () => {
+    const { facade, supabase } = setupDms();
+    supabase.client.from = vi.fn(() =>
+      makeBuilder({
+        data: [{ id: 100, number: '1', branch_id: 1, branches: null, courses: null }],
+        error: null,
+      }),
+    );
+    await facade.loadStudentEnrollmentOptions(1);
+    expect(facade.studentEnrollmentOptions()).toHaveLength(1);
+
+    // Segundo alumno falla -> limpia la matrícula del alumno 1 y expone su propio error
+    supabase.client.from = vi.fn(() =>
+      makeBuilder({ data: null, error: { message: 'enrollment read error' } }),
+    );
+    await facade.loadStudentEnrollmentOptions(2);
+
+    expect(facade.studentEnrollmentOptions()).toEqual([]);
+    expect((facade as any).studentEnrollmentOptionsError()).toBeTruthy();
+    expect(facade.error()).toBeNull();
+
+    // Carrera: alumno A lento, alumno B rápido
+    let resA!: (v: any) => void;
+    let resB!: (v: any) => void;
+    const promA = new Promise((r) => (resA = r));
+    const promB = new Promise((r) => (resB = r));
+    let call = 0;
+    supabase.client.from = vi.fn(() => {
+      const idx = call++;
+      const prom = idx === 0 ? promA : promB;
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        then: (res: any) => prom.then(res),
+      };
+    });
+    const pA = facade.loadStudentEnrollmentOptions(10);
+    const pB = facade.loadStudentEnrollmentOptions(20);
+    resB({
+      data: [{ id: 222, number: '22', branch_id: 1, branches: null, courses: null }],
+      error: null,
+    });
+    await pB;
+    resA({
+      data: [{ id: 111, number: '11', branch_id: 1, branches: null, courses: null }],
+      error: null,
+    });
+    await pA;
+
+    expect(facade.studentEnrollmentOptions().map((o) => o.enrollmentId)).toEqual([222]);
   });
 });

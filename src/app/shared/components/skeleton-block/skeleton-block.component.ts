@@ -16,14 +16,14 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '[style.width]': 'width()',
+    '[style.height]': "variant() === 'text' ? '1em' : height()",
   },
   template: `
     <div
       #block
-      class="relative overflow-hidden rounded-md bg-subtle w-full"
+      class="relative overflow-hidden rounded-md bg-subtle w-full h-full"
       [class.!rounded-full]="variant() === 'circle'"
       [class.!rounded-sm]="variant() === 'text'"
-      [style.height]="variant() === 'text' ? '1em' : height()"
       [style.border-radius]="borderRadius()"
       [style.background-color]="'var(--bg-subtle)'"
       aria-hidden="true"

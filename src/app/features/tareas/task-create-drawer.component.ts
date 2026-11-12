@@ -71,6 +71,8 @@ const ROLE_LABEL: Record<string, string> = {
             >
               {{ tarea.recipientName }}
             </p>
+          } @else if (tasksFacade.recipientsError()) {
+            <p class="field-hint text-error">{{ tasksFacade.recipientsError() }}</p>
           } @else if (recipientOptions().length === 0) {
             <p class="field-hint">No hay destinatarios disponibles.</p>
           } @else {
@@ -226,7 +228,7 @@ export class TaskCreateDrawerComponent {
       this.form.get('type')!.disable({ emitEvent: false });
       this.selectedType.set(tarea.type);
     } else {
-      void this.tasksFacade.loadRecipients();
+      void this.tasksFacade.loadRecipients().catch(() => undefined);
       const initialType = this.taskContext.initialType();
       if (initialType !== 'task') {
         this.form.patchValue({ type: initialType }, { emitEvent: false });

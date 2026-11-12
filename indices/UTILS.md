@@ -15,7 +15,7 @@
 | Archivo | Exports |
 |---------|---------|
 | `src/app/core/utils/age.utils.ts` | `isInvalidDate`, `getAgeStatus`, `calcAge`, `isMinor` |
-| `src/app/core/utils/agenda-week.utils.ts` | `addDaysToIso`, `isDateBeyondLimit`, `isNextWeekBeyondLimit`, `initialMobileDayIndex`, `formatWeekLabel` (etiqueta "9 nov – 13 nov" desde el lunes, fix-241-b), `agendaShowsLegend` (leyenda también durante la carga, fix-241-b), `studentFichaUrl` |
+| `src/app/core/utils/agenda-week.utils.ts` | `addDaysToIso`, `isDateBeyondLimit`, `isNextWeekBeyondLimit`, `initialMobileDayIndex`, `formatWeekLabel` (etiqueta "9 nov – 13 nov" desde el lunes, fix-241-b), `agendaShowsLegend` (leyenda también durante la carga, fix-241-b), `studentFichaUrl`, `fleetUrl` (Flota del portal actual, fix-251-b), `agendaSlotAriaLabel` (aria del slot con el aviso del vehículo, fix-251-b), `agendaSlotIdentity` ("Juan · RTRE29", fix-251-b) |
 | `src/app/core/utils/alert-snooze.utils.ts` | `ALERT_SNOOZE_MS`, `AlertSnooze`, `AlertSnoozeMap`, `SnoozableAlert`, `snoozeKey`, `snoozeAlert`, `pruneSnoozes`, `filterSnoozedAlerts`, `parseSnoozes` |
 | `src/app/core/utils/holiday-classes.utils.ts` | `HolidayClassRow`, `buildHolidayClassDetails` (filas de `v_class_b_sessions_on_holiday` → `AlertDetail[]` con ruta a la ficha del rol, spec 0056-b) |
 | `src/app/core/utils/alumno-profesional-status.utils.ts` | `SemaforoInfo`, `moduloPct`, `getSemaforo`, `getSemaforoBadgeVariant` |
@@ -55,7 +55,7 @@
 | `src/app/core/utils/cuadratura-medio-pago.utils.ts` | `medioDePagoLabel` |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
 | `src/app/core/utils/date.utils.ts` | `todayIso`, `notAfterTodayValidator`, `monthsAgoIso`, `formatDayMonthYear`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP` |
-| `src/app/core/utils/db-error.utils.ts` | `MENSAJE_PAGO_PENDIENTE_CLASE_7`, `NoRowsAffectedError`, `assertWriteOk`, `toFriendlyDbMessage` |
+| `src/app/core/utils/db-error.utils.ts` | `MENSAJE_PAGO_PENDIENTE_CLASE_7`, `NoRowsAffectedError`, `assertWriteOk`, `assertReadOk` (lanza el `error` de una lectura y devuelve `data`; una lista queda sin `null`, un `maybeSingle()` conserva el suyo — spec 0060-b), `toFriendlyDbMessage` |
 | `src/app/core/utils/deudor-label.utils.ts` | `describeMatriculaDeudor` |
 | `src/app/core/utils/document-clause-limits.util.ts` | `ClauseCharacterStatus`, `getClauseCharacterStatus` |
 | `src/app/core/utils/document-clause-tokens.util.ts` | `getTokenDescription` |
@@ -144,7 +144,7 @@
 | `src/app/core/utils/sede-theme.utils.ts` | `SedeTheme`, `DEFAULT_SEDE_THEME`, `branchIdToTheme` |
 | `src/app/core/utils/servicios-especiales.utils.ts` | `buscarServicioDuplicado`, `mensajeServicioDuplicado`, `noSoloEspacios`, `montoEntero` |
 | `src/app/core/utils/sparkline.utils.ts` | `getSparklinePoints` |
-| `src/app/core/utils/student-home.ts` | `computeOverallProgress`, `computeSemaphore`, `computeAverageGrade`, `computeCertificateBlockingReason`, `deriveCertificateState` |
+| `src/app/core/utils/student-home.ts` | `computeOverallProgress`, `computeSemaphore`, `ProfessionalAttendanceFlagRow`, `semaphoreFromProfessionalFlag`, `computeAverageGrade`, `computeCertificateBlockingReason`, `deriveCertificateState` |
 | `src/app/core/utils/student-name.util.ts` | `StudentNameParts`, `buildStudentDisplayName`, `sortByPaternalLastNameAsc` |
 | `src/app/core/utils/subnav-tier.utils.ts` | `SubnavTier`, `pickSubnavTier`, `canUseIconTier`, `fitsEqualColumns` (hotfix-170-m: con pestañas `flex-1` manda la más ancha × n, no el total) |
 | `src/app/core/utils/website-config.utils.ts` | Configuración web (fix-491/492/493-m): `whyUsToPublish`/`DEFAULT_WHY_US` (publicar conserva "Por qué elegirnos"), `configTabsWithErrors` (pestañas con campos inválidos), `courseCardControls` (controles de una card de curso; sin precio propio desde fix-501-m), `promoTextValidator`; fix-500-m: `domainValidator`, `httpUrlValidator`, `whatsappValidator`, `googleMapsEmbedValidator` (la landing ponía URLs editables en un iframe y en enlaces: un `javascript:` se ejecutaba); fix-502-m: `contactPolicyMismatch` (contacto de la web vs política de privacidad de la sede) |
@@ -153,7 +153,7 @@
 | `src/app/core/utils/theory-cycle.ts` | `cycleStartMonday`, `cycleEnd`, `cycleClassDates`, `formatCycleLabel` |
 | `src/app/core/utils/vehicle-agenda.utils.ts` | `AgendaClassInput`, `AgendaMaintenanceInput`, `buildVehicleAgenda` |
 | `src/app/core/utils/vehicle-doc-types.util.ts` | `VEHICLE_DOC_TYPES` |
-| `src/app/core/utils/vehicle-document-status.utils.ts` | `resolveDocStatus`, `VehicleDocWarningInfo`, `VehicleDocWarning`, `shouldShowVehicleDocWarning`, `vehicleDocWarningLabel`, `vehicleDocWarningLabelGeneric`, `VehicleDocumentRow`, `buildVehicleDocWarningMap` |
+| `src/app/core/utils/vehicle-document-status.utils.ts` | `resolveDocStatus`, `VehicleDocWarningInfo`, `VehicleDocWarning`, `shouldShowVehicleDocWarning`, `vehicleDocWarningLabel`, `vehicleDocWarningLabelGeneric`, `VehicleDocumentRow`, `buildVehicleDocWarningMap`, `vehicleDocWarningApplies` (solo libres/agendadas/en curso: el estado se calcula contra hoy, fix-251-b), `vehicleDocWarningsNotice` (una línea por semana con los vehículos observados, fix-251-b) |
 | `src/app/core/utils/vehicle-form.utils.ts` | `MIN_VEHICLE_YEAR`, `normalizeLicensePlate`, `isValidLicensePlate`, `maxVehicleYear`, `isKmDecrease`, `vehicleSaveErrorMessage`, `bothBranchesRemovalWarning` |
 | `src/app/core/utils/vehicle-permissions.utils.ts` | `VehicleActor`, `VehicleScope`, `canManageVehicle`, `canViewVehicle` |
 | `src/app/core/utils/vehicle-search.utils.ts` | `VehicleSearchable`, `matchesVehicleSearch` |

@@ -48,12 +48,28 @@ export class EjemploFacade {
   // Accionan la Base de Datos y actualizan los signals privados.
   async cargarDatos(): Promise<void> {
     this._isLoading.set(true);
-    // ... llamada a supabase ...
-    this._datos.set(data);
-    this._isLoading.set(false);
+    this._error.set(null);
+    try {
+      const rows = assertReadOk(
+        await this.supabase.client.from('tabla').select('...'),
+      ); // supabase-js no lanza: sin esto, una lectura fallida llega como data = null
+      this._datos.set(rows);
+    } catch {
+      this._datos.set([]);
+      this._error.set('No se pudieron cargar los datos.');
+    } finally {
+      this._isLoading.set(false);
+    }
   }
 }
 ```
+
+**Toda lectura revisa su `error`** — `assertReadOk(...)` o `if (error) throw error` — antes de
+usar `data`; nunca `const { data } = await ...` seguido de `data ?? []`. Una lectura que falla y se
+ve como "no hay nada" deja al usuario decidiendo con un $0 o una lista vacía que no son reales. Los
+dos casos de falla (primera carga vs. refresco) y qué hace la pantalla en cada uno están en
+`swr-pattern.md` §"Errores de carga". Lo verifica `unchecked-reads.guard.spec.ts`, par del de
+escrituras (`unchecked-writes.guard.spec.ts`, con `assertWriteOk`).
 
 ## 5. El Flujo de Trabajo (Mente-Máquina)
 1. **Pregunta:** "¿Necesito traer datos de la Tabla X para mostrarlos o editarlos?"

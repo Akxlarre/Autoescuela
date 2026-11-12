@@ -12,6 +12,8 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
@@ -40,6 +42,8 @@ interface SimulatorLink {
     BentoGridLayoutDirective,
     BentoRevealDirective,
     CardHoverDirective,
+    AlertCardComponent,
+    EmptyStateComponent,
     SectionHeroComponent,
     IconComponent,
     BadgeComponent,
@@ -55,9 +59,11 @@ interface SimulatorLink {
         [animateOnInit]="false"
         title="Pruebas Online"
         [subtitle]="
-          isProfessional()
-            ? 'Practica para tu examen teórico de Licencia Profesional'
-            : 'Practica con simuladores del examen teórico y llega preparado a tu prueba municipal'
+          showErrorState()
+            ? 'Practica con simuladores del examen teórico'
+            : isProfessional()
+              ? 'Practica para tu examen teórico de Licencia Profesional'
+              : 'Practica con simuladores del examen teórico y llega preparado a tu prueba municipal'
         "
         icon="graduation-cap"
         backRoute="/app/alumno/inicio"
@@ -74,8 +80,30 @@ interface SimulatorLink {
            contain:size los colapsaría a 0 (mismo mecanismo que fix-127-b y fix-133-b).
            --rows-fit evita que el wrapper vacío herede el piso --bento-row-min en
            móvil, donde no hay grid-template-rows explícito. -->
-      <div class="bento-banner">
-        @if (!isProfessional()) {
+      <div class="bento-banner flex flex-col gap-3">
+        @if (homeFacade.refreshFailed()) {
+          <div role="alert">
+            <app-alert-card severity="error" title="No se pudo actualizar tu información">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span class="text-compact text-text-secondary">
+                  Los datos mostrados pueden no estar actualizados.
+                </span>
+                <button
+                  type="button"
+                  class="btn-secondary flex items-center gap-2 shrink-0"
+                  data-llm-action="reintentar-pruebas-online"
+                  [disabled]="homeFacade.isLoading()"
+                  (click)="homeFacade.reintentar()"
+                >
+                  <app-icon name="refresh-cw" [size]="14" />
+                  Reintentar
+                </button>
+              </div>
+            </app-alert-card>
+          </div>
+        }
+
+        @if (!showErrorState() && !isProfessional()) {
           <div class="card p-6">
             <p class="micro-label mb-4">Formato del Examen — Licencia Clase B</p>
             <div class="bento-grid">
@@ -98,60 +126,78 @@ interface SimulatorLink {
 
       <!-- ── SIMULADORES — celda protagonista (fila fill, scroll interno) ─────── -->
       <div class="bento-banner bento-fill flex flex-col">
-        <div class="flex flex-col gap-4 flex-1 min-h-0">
-          <div class="shrink-0">
-            <h3 class="text-lg font-bold text-text-primary">Simuladores Recomendados</h3>
-            <p class="text-sm text-text-muted mt-0.5">
-              @if (isProfessional()) {
-                Practica en estas plataformas con preguntas para tu categoría de licencia
-                profesional
-              } @else {
-                Practica en estas plataformas con preguntas similares al examen oficial
-              }
-            </p>
+        @if (showErrorState()) {
+          <div class="card flex-1 flex items-center justify-center p-6">
+            <app-empty-state
+              icon="alert-triangle"
+              [message]="homeFacade.error()!"
+              subtitle="Revisa tu conexión e inténtalo de nuevo."
+              actionLabel="Reintentar"
+              actionIcon="refresh-cw"
+              (action)="homeFacade.reintentar()"
+            />
           </div>
+        } @else {
+          <div class="flex flex-col gap-4 flex-1 min-h-0">
+            <div class="shrink-0">
+              <h3 class="text-lg font-bold text-text-primary">Simuladores Recomendados</h3>
+              <p class="text-sm text-text-muted mt-0.5">
+                @if (isProfessional()) {
+                  Practica en estas plataformas con preguntas para tu categoría de licencia
+                  profesional
+                } @else {
+                  Practica en estas plataformas con preguntas similares al examen oficial
+                }
+              </p>
+            </div>
 
-          <div class="bento-grid flex-1 min-h-0 overflow-y-auto">
-            @for (sim of activeSimulators(); track sim.name) {
-              <a
-                [href]="sim.url"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="card p-5 flex flex-col gap-3 no-underline bento-wide"
-                appCardHover
-                [attr.data-llm-nav]="'external-simulator-' + sim.name"
-              >
-                <div class="flex items-start justify-between gap-2">
-                  <div
-                    class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-elevated"
-                  >
-                    <app-icon [name]="sim.icon" [size]="18" />
-                  </div>
-                  <app-badge [variant]="sim.tagVariant" class="shrink-0">{{ sim.tag }}</app-badge>
-                </div>
-
-                <div class="flex flex-col gap-1 flex-1">
-                  <span class="font-semibold text-text-primary">{{ sim.name }}</span>
-                  <span class="text-sm text-text-muted leading-relaxed">{{ sim.description }}</span>
-                </div>
-
-                <div
-                  class="flex items-center gap-1.5 text-xs font-semibold mt-auto pt-2 border-t border-border-subtle text-brand"
+            <div class="bento-grid flex-1 min-h-0 overflow-y-auto">
+              @for (sim of activeSimulators(); track sim.name) {
+                <a
+                  [href]="sim.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="card p-5 flex flex-col gap-3 no-underline bento-wide"
+                  appCardHover
+                  [attr.data-llm-nav]="'external-simulator-' + sim.name"
                 >
-                  <span>Ir al simulador</span>
-                  <app-icon name="external-link" [size]="12" />
-                </div>
-              </a>
-            }
+                  <div class="flex items-start justify-between gap-2">
+                    <div
+                      class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-elevated"
+                    >
+                      <app-icon [name]="sim.icon" [size]="18" />
+                    </div>
+                    <app-badge [variant]="sim.tagVariant" class="shrink-0">{{ sim.tag }}</app-badge>
+                  </div>
+
+                  <div class="flex flex-col gap-1 flex-1">
+                    <span class="font-semibold text-text-primary">{{ sim.name }}</span>
+                    <span class="text-sm text-text-muted leading-relaxed">{{
+                      sim.description
+                    }}</span>
+                  </div>
+
+                  <div
+                    class="flex items-center gap-1.5 text-xs font-semibold mt-auto pt-2 border-t border-border-subtle text-brand"
+                  >
+                    <span>Ir al simulador</span>
+                    <app-icon name="external-link" [size]="12" />
+                  </div>
+                </a>
+              }
+            </div>
           </div>
-        </div>
+        }
       </div>
     </div>
   `,
 })
 export class AlumnoPruebasOnlineComponent implements OnInit, AfterViewInit {
-  private readonly homeFacade = inject(StudentHomeFacade);
+  readonly homeFacade = inject(StudentHomeFacade);
   readonly isProfessional = computed(() => this.homeFacade.licenseGroup() === 'professional');
+  readonly showErrorState = computed(
+    () => !this.homeFacade.isLoading() && !!this.homeFacade.error() && !this.homeFacade.snapshot(),
+  );
 
   readonly activeSimulators = computed(() =>
     this.isProfessional() ? this.professionalSimulators : this.classBSimulators,

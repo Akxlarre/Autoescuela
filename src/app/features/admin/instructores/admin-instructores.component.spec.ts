@@ -1,8 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { AdminInstructoresComponent } from './admin-instructores.component';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { InstructorTableRow } from '@core/models/ui/instructor-table.model';
@@ -122,5 +123,95 @@ describe('AdminInstructoresComponent — densidad app-like (fix-125-b)', () => {
     (layoutDrawerSpy.isOpen as ReturnType<typeof signal>).set(true);
 
     expect((component as any).layoutDrawer.isOpen()).toBe(true);
+  });
+});
+
+describe('AdminInstructoresComponent — layout Caso B en fill-screen (spec 0060-b T3.6)', () => {
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('el aviso de Caso B vive dentro de .bento-fill y no como hijo directo de .bento-grid', () => {
+    const inst = {
+      id: 1,
+      userId: 1,
+      nombre: 'Instructor 1',
+      initials: 'IN',
+      email: 'inst1@test.com',
+      rut: '11-1',
+      phone: '',
+      tipo: 'practice',
+      tipoLabel: 'Práctica',
+      licenseNumber: '',
+      licenseClass: '',
+      licenseExpiry: null,
+      licenseStatus: 'valid',
+      licenseStatusLabel: 'Vigente',
+      activeClassesCount: 0,
+      estado: 'activo',
+      registrationDate: null,
+      vehiclePlate: null,
+      vehicleModel: null,
+      vehicleId: null,
+      vehicleAssignmentDate: null,
+      firstName: '',
+      paternalLastName: '',
+      maternalLastName: '',
+      branchId: 1,
+      bothBranches: false,
+    } as InstructorTableRow;
+
+    TestBed.configureTestingModule({
+      imports: [AdminInstructoresComponent],
+      providers: [
+        {
+          provide: InstructoresFacade,
+          useValue: {
+            instructores: signal([inst]),
+            isLoading: signal(false),
+            error: signal<string | null>(null),
+            refreshFailed: signal(true),
+            totalInstructores: () => 1,
+            activos: () => 1,
+            licenciasPorVencer: () => 0,
+            licenciasVencidas: () => 0,
+            selectInstructor: vi.fn(),
+            loadAssignmentHistory: vi.fn(),
+            initialize: vi.fn(),
+            reintentar: vi.fn(),
+          },
+        },
+        {
+          provide: BranchFacade,
+          useValue: { selectedBranchId: signal(null), branches: signal([]) },
+        },
+        {
+          provide: AuthFacade,
+          useValue: { currentUser: signal({ role: 'admin', dbId: 1 }) },
+        },
+        {
+          provide: LayoutDrawerFacadeService,
+          useValue: { open: vi.fn(), close: vi.fn(), isOpen: signal(false) },
+        },
+        {
+          provide: GsapAnimationsService,
+          useValue: { animateBentoGrid: vi.fn(), animateHero: vi.fn(), addCardHover: vi.fn() },
+        },
+      ],
+    }).overrideComponent(AdminInstructoresComponent, {
+      set: {
+        imports: [],
+        schemas: [NO_ERRORS_SCHEMA],
+      },
+    });
+
+    const fixture = TestBed.createComponent(AdminInstructoresComponent);
+    fixture.detectChanges();
+
+    const alertCard = fixture.nativeElement.querySelector('app-alert-card') as HTMLElement | null;
+    expect(alertCard).not.toBeNull();
+    expect(alertCard?.closest('.bento-fill')).not.toBeNull();
+    expect(alertCard?.parentElement?.classList.contains('bento-grid')).toBe(false);
+    expect(fixture.nativeElement.querySelector('.bento-grid > [role="alert"]')).toBeNull();
   });
 });

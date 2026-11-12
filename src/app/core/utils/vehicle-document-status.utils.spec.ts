@@ -5,7 +5,60 @@ import {
   vehicleDocWarningLabel,
   vehicleDocWarningLabelGeneric,
   buildVehicleDocWarningMap,
+  vehicleDocWarningApplies,
+  vehicleDocWarningsNotice,
 } from './vehicle-document-status.utils';
+
+// fix-251-b: el aviso salía solo en un tooltip y también en clases que ya pasaron.
+describe('vehicleDocWarningApplies (fix-251-b)', () => {
+  it('aplica a horarios libres, agendados y en curso', () => {
+    expect(vehicleDocWarningApplies('available')).toBe(true);
+    expect(vehicleDocWarningApplies('scheduled')).toBe(true);
+    expect(vehicleDocWarningApplies('in_progress')).toBe(true);
+  });
+
+  it('no aplica a clases que ya pasaron: el estado se calcula contra hoy, no contra ese día', () => {
+    expect(vehicleDocWarningApplies('completed')).toBe(false);
+    expect(vehicleDocWarningApplies('no_show')).toBe(false);
+    expect(vehicleDocWarningApplies('cancelled')).toBe(false);
+  });
+});
+
+describe('vehicleDocWarningsNotice (fix-251-b)', () => {
+  const soap = { expiredDocs: ['SOAP'], expiringSoonDocs: [] };
+  const rt = { expiredDocs: [], expiringSoonDocs: ['Revisión Técnica'] };
+  const slot = (
+    vehicleId: number,
+    vehiclePlate: string,
+    vehicleDocWarning: typeof soap | null,
+    status = 'available',
+  ) => ({ vehicleId, vehiclePlate, vehicleDocWarning, status });
+
+  it('un vehículo, aunque tenga muchos horarios → se nombra una sola vez', () => {
+    expect(
+      vehicleDocWarningsNotice([
+        slot(7, 'RTRE29', soap),
+        slot(7, 'RTRE29', soap),
+        slot(8, 'AB1234', null),
+      ]),
+    ).toBe('Vehículo RTRE29: SOAP vencido. Sus horas se siguen ofreciendo.');
+  });
+
+  it('varios vehículos → cuántos y cuáles, ordenados por patente', () => {
+    expect(vehicleDocWarningsNotice([slot(7, 'RTRE29', soap), slot(9, 'BBCL10', rt)])).toBe(
+      '2 vehículos con documentos vencidos o por vencer: BBCL10 (Revisión Técnica por vencer), RTRE29 (SOAP vencido). Sus horas se siguen ofreciendo.',
+    );
+  });
+
+  it('ignora clases que ya pasaron', () => {
+    expect(vehicleDocWarningsNotice([slot(7, 'RTRE29', soap, 'completed')])).toBeNull();
+  });
+
+  it('sin documentos observados no hay aviso', () => {
+    expect(vehicleDocWarningsNotice([slot(8, 'AB1234', null)])).toBeNull();
+    expect(vehicleDocWarningsNotice([])).toBeNull();
+  });
+});
 
 describe('resolveDocStatus', () => {
   afterEach(() => {

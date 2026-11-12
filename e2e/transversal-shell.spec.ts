@@ -8,7 +8,7 @@
  * cierre de sesión es local (fix-184-b) con la llamada al servidor interceptada.
  */
 import { expect, knownBug, test } from './support/fixtures';
-import { ACCOUNTS, storageStatePath } from './support/accounts';
+import { ACCOUNTS, storageStatePath, type E2eRole } from './support/accounts';
 import { getAdminClient } from './support/supabase-admin';
 import type { Browser, Page } from '@playwright/test';
 
@@ -436,6 +436,105 @@ async function anticipoProponeHoy(browser: Browser, hora: string): Promise<void>
   await expect(fecha).toHaveValue('06/10/2026');
   await context.close();
 }
+
+// ── X01. Pantallas sin red ────────────────────────────────────────────────────
+
+/**
+ * X01 (fix-190-b, spec 0060-b AC8): con el shell ya cargado se cortan `rest/v1` y `functions/v1` y
+ * se navega por el menú (SPA, sin recargar). Cada pantalla debe decir que no pudo cargar y ofrecer
+ * "Reintentar"; mostrar $0, 0 o "sin datos" es el bug (el usuario no distingue "no hay nada" de
+ * "no cargó").
+ *
+ * Es la red de la forma F3 del plan de la spec: un facade que sí captura el error y una pantalla
+ * que no lo muestra. El guard `unchecked-reads.guard.spec.ts` no ve eso.
+ *
+ * `bug`: etapa de la spec 0060-b que corrige la pantalla. Cada etapa quita la marca de las suyas.
+ * Las que no la llevan ya muestran el error: Agenda y Caja Diaria (las referencias) y las que se
+ * corrigieron en otros tracks después de X01 (Documentos con fix-473-m, entre otras).
+ *
+ * Fuera de esta lista: los portales de instructor y alumno (no hay cuentas E2E para esos roles) y
+ * Relatores y Asistencia Prof. (ocultos en el menú mientras dure el recorte del piloto).
+ * Ver tasks.md T0.4.
+ */
+interface X01Screen {
+  /** `routerLink` del ítem del menú (`data-llm-nav`). */
+  nav: string;
+  rol: E2eRole;
+  bug?: string;
+}
+
+const S = (nav: string, bug?: string): X01Screen => ({
+  nav: `/app/secretaria/${nav}`,
+  rol: 'secretariaB',
+  bug,
+});
+const A = (nav: string, bug?: string): X01Screen => ({
+  nav: `/app/admin/${nav}`,
+  rol: 'admin',
+  bug,
+});
+
+const X01_SCREENS: X01Screen[] = [
+  // Ya muestran el error (2026-11-10).
+  S('agenda'),
+  S('contabilidad/cuadratura'),
+  S('dashboard'),
+  S('servicios-especiales'),
+  S('alumnos'),
+  S('ex-alumnos'),
+  S('documentos'),
+  S('flota'),
+  S('instructores'),
+  S('observaciones'),
+  S('profesional/promociones'),
+  S('profesional/alumnos'),
+  // Etapa 1 — Dinero
+  S('pagos', '0060-b etapa 1'),
+  S('contabilidad/reportes', '0060-b etapa 1'),
+  S('contabilidad/liquidaciones', '0060-b etapa 1'),
+  A('contabilidad/anticipos', '0060-b etapa 1'),
+  // Etapa 2 — Lecturas que alimentan una escritura o una decisión
+  S('contabilidad/cursos', '0060-b etapa 2'),
+  S('certificados', '0060-b etapa 2'),
+  // Etapa 3a — Gestión Clase B
+  S('asistencia'),
+  // Etapa 3b — Clase Profesional (la sede 2 la tiene)
+  S('profesional/certificados', '0060-b etapa 3b'),
+  S('profesional/archivo', '0060-b etapa 3b'),
+  S('libro-de-clases', '0060-b etapa 3b'),
+];
+
+test.describe('X01. Pantallas sin red', () => {
+  for (const { nav, rol, bug } of X01_SCREENS) {
+    test(`X01: ${nav} sin red avisa que no cargó y ofrece Reintentar`, async ({ pageAs }) => {
+      if (bug) knownBug(bug);
+      const page = await pageAs(rol);
+      // Se arranca en otra pantalla del mismo rol y se llega a la del test por el menú.
+      const inicio = nav.endsWith('/dashboard')
+        ? nav.replace('/dashboard', '/agenda')
+        : ACCOUNTS[rol].home;
+      await page.goto(inicio);
+      await shellReady(page);
+      // Los ítems de Clase Profesional aparecen después de una consulta (¿la sede la tiene?):
+      // la red se corta recién cuando el ítem del menú ya está, o nunca aparecería.
+      const item = page.locator(`[data-llm-nav="${nav}"]`);
+      await expect(item).toBeVisible({ timeout: 30_000 });
+
+      await page.route('**/rest/v1/**', (route) => route.abort('internetdisconnected'));
+      await page.route('**/functions/v1/**', (route) => route.abort('internetdisconnected'));
+      await item.click();
+      await expect(page).toHaveURL(new RegExp(`${nav.replace(/\//g, '\\/')}$`));
+
+      await expect(
+        page
+          .locator('main')
+          .getByRole('button', { name: /reintentar/i })
+          .first(),
+        'la pantalla debe decir que no cargó y ofrecer Reintentar, no mostrar ceros',
+      ).toBeVisible({ timeout: 20_000 });
+    });
+  }
+});
 
 // ── V. Tema y alto de ventana ─────────────────────────────────────────────────
 
