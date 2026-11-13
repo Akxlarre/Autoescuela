@@ -71,6 +71,21 @@ describe('toFriendlyDbMessage', () => {
     expect(result).not.toContain('CAJA_CERRADA');
   });
 
+  // fix-075-i: los triggers de caja cerrada de pagos, ventas y cursos singulares mandan un mensaje
+  // nuestro en español con la fecha ("La caja del DD-MM-YYYY ya está cerrada: …"). Se muestra tal
+  // cual; antes caía al mensaje genérico y la secretaria no sabía por qué no se guardaba.
+  it('fix-075-i: el mensaje propio "La caja del … ya está cerrada" se muestra tal cual', () => {
+    const msg =
+      'La caja del 12-11-2026 ya está cerrada: no se puede registrar un cobro con esa fecha.';
+    expect(toFriendlyDbMessage({ code: 'P0001', message: msg }, FALLBACK)).toBe(msg);
+  });
+
+  it('fix-075-i: un P0001 cualquiera que no es nuestro sigue cayendo al mensaje genérico', () => {
+    expect(
+      toFriendlyDbMessage({ code: 'P0001', message: 'relation "x" does not exist' }, FALLBACK),
+    ).toBe(FALLBACK);
+  });
+
   it.each([
     ['PAGO_YA_ANULADO', 'ya estaba anulado'],
     ['ANULAR_SOLO_ADMIN', 'Solo un administrador'],

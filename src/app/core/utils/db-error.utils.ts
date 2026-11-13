@@ -103,6 +103,15 @@ export function toFriendlyDbMessage(err: unknown, fallback: string): string {
   if (err.message?.includes('CAJA_CERRADA')) {
     return 'La caja de ese día ya está cerrada. Registra la corrección como ajuste en Historial de Cuadraturas.';
   }
+  // fix-075-i: mensaje propio de los triggers de caja cerrada (pagos, ventas, cursos singulares),
+  // escrito en español para el usuario con la fecha del día. Es texto nuestro, no esquema: se
+  // muestra tal cual.
+  if (
+    err.code === 'P0001' &&
+    /^La caja del \d{2}-\d{2}-\d{4} ya está cerrada:/.test(err.message ?? '')
+  ) {
+    return err.message as string;
+  }
   // spec 0010-i: la clase 7+ no se inicia sin el segundo pago (o una habilitación sin pago).
   if (err.message?.includes('PAGO_PENDIENTE_CLASE_7')) {
     return MENSAJE_PAGO_PENDIENTE_CLASE_7;

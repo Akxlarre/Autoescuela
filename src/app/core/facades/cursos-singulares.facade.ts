@@ -18,6 +18,7 @@ import type {
   InscriptoCursoSingular,
   NuevoCursoSingularFormData,
   SingularPaymentForm,
+  SingularPaymentMethod,
   SingularPersonalDataForm,
   SingularStudentSearch,
   TipoCursoSingular,
@@ -312,7 +313,16 @@ export class CursosSingularesFacade {
     }
   }
 
-  async marcarEnrollmentPagado(enrollmentId: number): Promise<boolean> {
+  /**
+   * Registra el cobro de una inscripción pendiente. `metodo` es con qué pagó: sin él la Caja
+   * Diaria sumaba el cobro al total pero a ninguna columna, y el efectivo no entraba al saldo
+   * esperado (fix-075-i). Con la caja del día cerrada lo rechaza la BD
+   * (`trg_standalone_course_enrollments_caja_cerrada`) y `error()` muestra el motivo.
+   */
+  async marcarEnrollmentPagado(
+    enrollmentId: number,
+    metodo: Exclude<SingularPaymentMethod, 'pendiente'> = 'efectivo',
+  ): Promise<boolean> {
     this._isSaving.set(true);
     this._error.set(null);
     try {
@@ -334,6 +344,7 @@ export class CursosSingularesFacade {
         .update({
           payment_status: 'paid',
           amount_paid: montoACobrar,
+          payment_method: metodo,
           paid_at: new Date().toISOString(),
         })
         .eq('id', enrollmentId);

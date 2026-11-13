@@ -410,6 +410,48 @@ describe('CursosSingularesFacade', () => {
     });
   });
 
+  // ── fix-075-i (S9): el cobro posterior guarda con qué se pagó ─────────────
+  describe('marcarEnrollmentPagado — medio de pago (fix-075-i)', () => {
+    beforeEach(() => {
+      (facade as any)._selectedCurso.set({ id: 1, precio: 220000 } as any);
+    });
+
+    it('guarda el medio de pago elegido junto con el cobro', async () => {
+      queue.push({ data: { discount_amount: 0 }, error: null }); // select discount_amount
+      queue.push({ data: null, error: null }); // update del cobro
+
+      const ok = await facade.marcarEnrollmentPagado(10, 'transferencia');
+
+      expect(ok).toBe(true);
+      const update = fromCalls.find((c) => c.chain.update.mock.calls.length > 0);
+      expect(update?.chain.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payment_status: 'paid',
+          amount_paid: 220000,
+          payment_method: 'transferencia',
+        }),
+      );
+    });
+
+    it('si la caja del día está cerrada no queda cobrado y muestra el motivo', async () => {
+      queue.push({ data: { discount_amount: 0 }, error: null });
+      queue.push({
+        data: null,
+        error: {
+          code: 'P0001',
+          message:
+            'La caja del 12-11-2026 ya está cerrada: no se puede registrar un cobro con esa fecha.',
+        },
+      });
+
+      const ok = await facade.marcarEnrollmentPagado(10, 'efectivo');
+
+      expect(ok).toBe(false);
+      expect(facade.error()).toContain('ya está cerrada');
+      expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+    });
+  });
+
   // ── fix-016 AC2: finanzas reales en mapCursoDto (Functional Core) ──────────
 
   describe('mapCursoDto', () => {

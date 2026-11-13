@@ -1,6 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CursosSingularesFacade } from '@core/facades/cursos-singulares.facade';
-import type { InscriptoCursoSingular } from '@core/models/ui/cursos-singulares.model';
+import type {
+  InscriptoCursoSingular,
+  SingularPaymentMethod,
+} from '@core/models/ui/cursos-singulares.model';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
+
+type MetodoCobro = Exclude<SingularPaymentMethod, 'pendiente'>;
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -29,6 +35,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     StatBoxComponent,
     DrawerContentLoaderComponent,
     DrawerFormComponent,
+    AlertCardComponent,
   ],
   template: `
     <app-drawer-form [hasFooter]="false">
@@ -63,6 +70,13 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
         <ng-template #content>
           @if (facade.selectedCurso(); as curso) {
             <div class="flex flex-col gap-4">
+              <!-- fix-075-i: un cobro rechazado (p. ej. la caja del día ya está cerrada) dice por qué -->
+              @if (facade.error(); as error) {
+                <app-alert-card severity="error" title="No se registró el cobro">
+                  <span class="text-compact text-text-secondary">{{ error }}</span>
+                </app-alert-card>
+              }
+
               <!-- ── Resumen del curso ─────────────────────────────────────────────── -->
               <div
                 class="card card-tinted rounded-xl px-4 py-3 flex items-center justify-between gap-4"
@@ -133,57 +147,113 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                   </div>
                 } @else {
                   @for (alumno of facade.inscriptos(); track alumno.enrollmentId) {
-                    <div
-                      class="px-4 py-3 flex items-center justify-between gap-3 border-b last:border-b-0 border-border-muted"
-                    >
-                      <!-- Datos alumno -->
-                      <div class="min-w-0">
-                        <p class="text-sm font-medium truncate text-text-primary">
-                          {{ alumno.nombreAlumno }}
-                        </p>
-                        <p class="text-xs text-text-muted">
-                          {{ alumno.rutAlumno }}
-                          ·
-                          {{
-                            alumno.paymentStatus === 'paid'
-                              ? formatCLP(alumno.montoPagado)
-                              : 'A cobrar: ' + formatCLP(alumno.montoAPagar)
-                          }}
-                        </p>
-                        @if (alumno.descuento > 0) {
-                          <p class="text-xs text-success">
-                            Descuento {{ formatCLP(alumno.descuento) }}
-                            @if (alumno.descuentoMotivo) {
-                              · {{ alumno.descuentoMotivo }}
-                            }
+                    <div class="border-b last:border-b-0 border-border-muted">
+                      <div class="px-4 py-3 flex items-center justify-between gap-3">
+                        <!-- Datos alumno -->
+                        <div class="min-w-0">
+                          <p class="text-sm font-medium truncate text-text-primary">
+                            {{ alumno.nombreAlumno }}
                           </p>
-                        }
-                      </div>
+                          <p class="text-xs text-text-muted">
+                            {{ alumno.rutAlumno }}
+                            ·
+                            {{
+                              alumno.paymentStatus === 'paid'
+                                ? formatCLP(alumno.montoPagado)
+                                : 'A cobrar: ' + formatCLP(alumno.montoAPagar)
+                            }}
+                          </p>
+                          @if (alumno.descuento > 0) {
+                            <p class="text-xs text-success">
+                              Descuento {{ formatCLP(alumno.descuento) }}
+                              @if (alumno.descuentoMotivo) {
+                                · {{ alumno.descuentoMotivo }}
+                              }
+                            </p>
+                          }
+                        </div>
 
-                      <!-- Estado + acción -->
-                      <div class="shrink-0 flex items-center gap-2">
-                        @if (alumno.paymentStatus === 'paid') {
-                          <app-badge variant="success">
-                            <app-icon name="check-circle" [size]="12" />
-                            Cobrado
-                          </app-badge>
-                        } @else {
-                          <button
-                            class="btn-primary text-xs"
-                            [disabled]="facade.isSaving()"
-                            data-llm-action="marcar-cobrado-inscripto"
-                            (click)="onMarcarPagado(alumno)"
-                          >
-                            @if (guardandoId() === alumno.enrollmentId) {
-                              <app-icon name="loader-2" [size]="12" />
-                              Guardando…
-                            } @else {
+                        <!-- Estado + acción -->
+                        <div class="shrink-0 flex items-center gap-2">
+                          @if (alumno.paymentStatus === 'paid') {
+                            <app-badge variant="success">
+                              <app-icon name="check-circle" [size]="12" />
+                              Cobrado
+                            </app-badge>
+                          } @else if (cobrandoId() !== alumno.enrollmentId) {
+                            <button
+                              class="btn-primary text-xs"
+                              [disabled]="facade.isSaving()"
+                              data-llm-action="marcar-cobrado-inscripto"
+                              (click)="onIniciarCobro(alumno)"
+                            >
                               <app-icon name="dollar-sign" [size]="12" />
                               Marcar cobrado
-                            }
-                          </button>
-                        }
+                            </button>
+                          }
+                        </div>
                       </div>
+
+                      <!-- fix-075-i: con qué se pagó, para que la Caja Diaria lo sume en su columna -->
+                      @if (cobrandoId() === alumno.enrollmentId) {
+                        <div class="px-4 pb-3 flex flex-col gap-2">
+                          <span class="micro-label">¿Con qué pagó?</span>
+                          <div
+                            class="flex flex-wrap gap-2"
+                            role="radiogroup"
+                            aria-label="Medio de pago del cobro"
+                          >
+                            @for (m of metodosCobro; track m.value) {
+                              <button
+                                type="button"
+                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 text-xs font-semibold text-text-primary cursor-pointer transition-colors"
+                                role="radio"
+                                [attr.aria-checked]="metodo() === m.value"
+                                [style.border-color]="
+                                  metodo() === m.value ? 'var(--ds-brand)' : 'var(--border-muted)'
+                                "
+                                [style.background]="
+                                  metodo() === m.value
+                                    ? 'color-mix(in srgb, var(--ds-brand) 8%, transparent)'
+                                    : 'var(--bg-surface)'
+                                "
+                                [attr.data-llm-action]="'seleccionar-medio-cobro-' + m.value"
+                                (click)="metodo.set(m.value)"
+                              >
+                                @if (metodo() === m.value) {
+                                  <app-icon name="check" [size]="12" />
+                                }
+                                {{ m.label }}
+                              </button>
+                            }
+                          </div>
+                          <div class="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              class="btn-secondary"
+                              data-llm-action="cancelar-cobro-inscripto"
+                              [disabled]="facade.isSaving()"
+                              (click)="onCancelarCobro()"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              class="btn-primary"
+                              data-llm-action="confirmar-cobro-inscripto"
+                              [disabled]="facade.isSaving()"
+                              (click)="onConfirmarCobro(alumno)"
+                            >
+                              @if (guardandoId() === alumno.enrollmentId) {
+                                <app-icon name="loader-circle" [size]="12" class="animate-spin" />
+                                Guardando…
+                              } @else {
+                                Confirmar cobro de {{ formatCLP(alumno.montoAPagar) }}
+                              }
+                            </button>
+                          </div>
+                        </div>
+                      }
                     </div>
                   }
                 }
@@ -233,10 +303,37 @@ export class AdminCursoSingularCobroDrawerComponent {
     this.facade.inscriptos().reduce((s, i) => s + i.montoPagado, 0),
   );
 
-  protected async onMarcarPagado(alumno: InscriptoCursoSingular): Promise<void> {
+  /** Medios con que se puede cobrar (sin "pendiente": esto ES el cobro). */
+  protected readonly metodosCobro: { value: MetodoCobro; label: string }[] = [
+    { value: 'efectivo', label: 'Efectivo' },
+    { value: 'transferencia', label: 'Transferencia' },
+    { value: 'tarjeta', label: 'Tarjeta' },
+  ];
+
+  /**
+   * Inscripción cuyo cobro se está confirmando (fix-075-i): "Marcar cobrado" ya no registra al
+   * tiro, primero pregunta con qué se pagó para que la Caja Diaria lo ponga en su columna.
+   */
+  private readonly _cobrandoId = signal<number | null>(null);
+  protected readonly cobrandoId = this._cobrandoId.asReadonly();
+  protected readonly metodo = signal<MetodoCobro>('efectivo');
+
+  protected onIniciarCobro(alumno: InscriptoCursoSingular): void {
+    this.metodo.set('efectivo');
+    this._cobrandoId.set(alumno.enrollmentId);
+  }
+
+  protected onCancelarCobro(): void {
+    this._cobrandoId.set(null);
+  }
+
+  protected async onConfirmarCobro(alumno: InscriptoCursoSingular): Promise<void> {
     this._guardandoId.set(alumno.enrollmentId);
-    await this.facade.marcarEnrollmentPagado(alumno.enrollmentId);
+    const ok = await this.facade.marcarEnrollmentPagado(alumno.enrollmentId, this.metodo());
     this._guardandoId.set(null);
+    // Si falló (p. ej. la caja del día ya está cerrada) la elección queda abierta y el motivo
+    // se ve en el aviso de error de arriba.
+    if (ok) this._cobrandoId.set(null);
   }
 
   protected billingLabel(bt: string): string {
