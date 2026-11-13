@@ -42,9 +42,12 @@ import {
   buildEmailHtml,
   finalizeAnnouncement,
   loadAnnouncement,
+  loadSchoolTheme,
   renderTemplate,
   sendAnnouncementBatch,
 } from '../_shared/announcement-send.ts';
+import { loadSchoolSender, withSchool } from '../_shared/school-email.ts';
+import { platformAddress } from '../_shared/school-mailer.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -103,16 +106,42 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ error: 'Falta asunto o mensaje para previsualizar' }, 400);
       }
 
+      // spec 0061-b: la marca y el pie son los de la escuela que ENVÍA. La secretaria envía
+      // siempre desde la suya; el admin, desde la que eligió (`preview.branchId`). Un comunicado
+      // de todas las escuelas sale una vez por escuela: el preview muestra la primera.
+      const requested = Number(preview?.branchId);
+      let previewBranchId =
+        callerRole === 'secretary'
+          ? access.branchId
+          : Number.isInteger(requested) && requested > 0
+            ? requested
+            : null;
+      if (previewBranchId === null) {
+        const { data: first, error: firstError } = await service
+          .from('branches')
+          .select('id')
+          .eq('active', true)
+          .order('id', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (firstError) throw firstError;
+        previewBranchId = first?.id ?? null;
+      }
+      const sender = await loadSchoolSender(service, previewBranchId, platformAddress());
+
       // Datos de ejemplo: el preview muestra cómo lo lee UN alumno, con las variables
       // resueltas. Ver `{{nombre}}` literal no diría nada sobre el resultado real.
-      const ejemplo = { nombre: 'Ana Pérez', sede: 'Autoescuela Chillán' };
+      const ejemplo = { nombre: 'Ana Pérez', sede: sender.schoolName };
+      const previewSubject = renderTemplate(subject, ejemplo);
       return jsonResponse({
-        html: buildEmailHtml(renderTemplate(subject, ejemplo), renderTemplate(body, ejemplo), {
-          sede: ejemplo.sede,
-          correoSede: 'correo de la sede',
-          promocional: preview?.kind === 'promocional',
-        }),
-        subject: renderTemplate(subject, ejemplo),
+        html: buildEmailHtml(
+          previewSubject,
+          renderTemplate(body, ejemplo),
+          sender,
+          preview?.kind === 'promocional',
+          await loadSchoolTheme(service, previewBranchId),
+        ),
+        subject: withSchool(previewSubject, sender),
       });
     }
 

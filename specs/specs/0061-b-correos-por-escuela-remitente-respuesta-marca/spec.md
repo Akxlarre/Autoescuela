@@ -1,8 +1,9 @@
 # Spec 0061-b — Correos por escuela: remitente, respuesta y marca
 
-> **Status:** approved (owner, 2026-11-12)
+> **Status:** done
+> **Closed:** 2026-11-12
 > **Created:** 2026-11-12
-> **Owner:** Akxlarre
+> **Owner:** Matías (m) — adoptada vía ASG-b-103; autor original Akxlarre
 > **Priority:** P1
 > **refs:** `docs/DEPLOY.md` §Cambiar de dominio · `fix-181-b` (recuperar contraseña de punta a
 > punta) · `0040-b` (consentimiento de comunicaciones) · `0045-b` (archivos en comunicados,
@@ -139,8 +140,9 @@ caen en spam.
   pulsa "Enviar correo de prueba", Then le llega a su propio correo un mensaje con el remitente, la
   respuesta y el pie de esa escuela, o la pantalla le muestra el error del servidor de correo.
 - **AC13 — Un solo correo de contacto**: Given un admin que cambia el correo de respuesta de una
-  escuela (AC11), When la web pública de esa escuela muestra su contacto, Then muestra ese mismo
-  correo, salvo que en Configuración web se haya escrito otro a propósito para la web.
+  escuela (AC11), When cualquier correo de la app se envía a nombre de esa escuela (respuesta, pie,
+  pie de baja de un comunicado), Then usa ese mismo correo, leído de un solo lugar
+  (`branches.email`). *(Reducido el 2026-11-12: la web pública ya no es nuestra; ver §9.)*
 
 ### Edge cases obligatorios
 
@@ -273,20 +275,61 @@ caen en spam.
       dos (`branches.email`, no editable, y `website_config.contact.email`, editable también por
       secretaria). El correo de respuesta de AC11 pasa a ser la fuente, y la web pública lo
       muestra salvo que en Configuración web se escriba otro (AC13).
+      **Reducido el 2026-11-12 (Matías):** las webs Astro de `webs/` no se usan (decisión del
+      owner del 2026-10-28, hotfix-109-b) y las webs públicas actuales las hizo otra persona,
+      fuera de este repo y sin leer nuestra BD. `website_config.contact.email` solo alimenta, en
+      la app, el aviso de Configuración web contra la política de privacidad. AC13 queda acotado
+      a los correos: `branches.email` es la única fuente; la migración lo llena con el contacto
+      actual si está vacío. Configuración web y `webs/` no se tocan.
 - [x] **Nombres de las direcciones** (aprobado por el owner, 2026-11-12): `autoescuela-chillan@`,
       `conductores-chillan@` y `cuentas@` (neutra) en `gestordeautoescuelas.cl`.
 
-### Abiertas (requieren una prueba o un dato del owner)
+- [x] **¿El hosting deja enviar con varias direcciones de remitente usando una sola cuenta
+      autenticada?** Sí (prueba de Matías, 2026-11-12). Casillas `cuentas@`,
+      `autoescuela-chillan@` y `conductores-chillan@` creadas en cPanel (SMTP
+      `mail.gestordeautoescuelas.cl:465`, SSL). Autenticado solo como `cuentas@`, se enviaron 3
+      correos a Gmail con `From` de cada casilla: el servidor aceptó los 3, los 3 salieron por
+      MailChannels con `spf=pass`, `dkim=pass` (`d=gestordeautoescuelas.cl`) y `dmarc=pass`, y
+      llegaron a la bandeja principal. El nombre con tilde ("Autoescuela Chillán") se codificó
+      bien (RFC 2047). **Consecuencia:** un solo juego de secrets SMTP (`cuentas@`); AC11 puede
+      aceptar cualquier dirección `@gestordeautoescuelas.cl` sin credencial propia. Ojo: MailChannels
+      marcó los 3 con `X-MC-Relay: Junk` aunque los entregó; revisar ese encabezado con los correos
+      reales en la verificación de AC9.
 
-- [ ] **¿El hosting deja enviar con varias direcciones de remitente usando una sola cuenta
-      autenticada?** Se prueba después de crear las casillas: enviar desde una cuenta con el
-      remitente de la otra y ver si llega y pasa DKIM/DMARC. El hosting sale por MailChannels,
-      que puede rechazarlo. Si no deja, hace falta una cuenta SMTP por dirección (un secret por
-      escuela), y AC11 solo permite elegir entre las direcciones que tienen credencial.
-- [ ] **Configuración actual:** valor real de `SMTP_FROM` (se ve en el remitente de cualquier
-      correo que el sistema ya envió) y si Supabase Auth ya tiene SMTP propio. Sin SMTP propio,
-      Supabase usa su servicio de prueba, con su propio remitente y un límite muy bajo de correos
-      por hora.
+- [x] **Configuración actual** (verificada 2026-11-12):
+      - Secrets de Edge Functions: `SMTP_HOST=mail.autoescuelachillan.cl`, `SMTP_PORT=465`,
+        `SMTP_USER=SMTP_FROM=no-reply@autoescuelachillan.cl` (comprobado comparando el SHA-256 de
+        cada valor con el digest de `supabase secrets list`). Es decir, hoy **todo correo, incluidos
+        los de Conductores Chillán, sale desde el dominio de Autoescuela Chillán**.
+      - Supabase Auth: SMTP propio activado con la misma cuenta (`no-reply@autoescuelachillan.cl`,
+        host `mail.autoescuelachillan.cl:465`) y remitente visible "Escuela de Conductores
+        Chillán". Para AC7 hay que cambiarlo a `cuentas@gestordeautoescuelas.cl` / "Gestor de
+        Autoescuelas".
+      - **Cambiado el 2026-11-12 (Matías), antes de implementar** (la app aún no está en uso por
+        las escuelas): los 4 secrets `SMTP_*` apuntan a `mail.gestordeautoescuelas.cl:465` con
+        `cuentas@gestordeautoescuelas.cl` (también `SMTP_FROM`), y Supabase Auth usa la misma cuenta
+        con remitente "Gestor de Autoescuelas". Vuelta atrás: la cuenta
+        `no-reply@autoescuelachillan.cl` sigue existiendo. El remitente por escuela lo arma el
+        módulo compartido desde la configuración de AC11.
+      - **Prueba de Supabase Auth con la cuenta nueva** (invitación desde el panel a un correo de
+        Matías, 2026-11-12): llegó desde "Gestor de Autoescuelas" <cuentas@>, con `spf=pass` y
+        `dmarc=pass` (alineado por SPF) pero **`dkim=fail`**, a diferencia de los correos enviados
+        con nodemailer, que pasan DKIM por la misma ruta. El cuerpo llega modificado después de la
+        firma; sospecha: saltos de línea del mailer de Supabase. Sin DKIM, DMARC depende solo de SPF,
+        que se rompe si el correo se reenvía, y AC9 exige `dkim=pass` también para el correo de AC7.
+        Además, la plantilla Magic Link de Supabase Auth sigue en inglés por defecto ("Your Magic
+        Link"). Las dos cosas se resuelven en el plan.
+      - **Qué plantillas de Supabase Auth se usan de verdad** (código, 2026-11-12):
+        - **Reset password** (personalizada en el panel, origen no registrado en el repo): la usan
+          "¿Olvidaste tu contraseña?" del login (`AuthFacade.resetPasswordForEmail`) y el admin al
+          restablecer la clave de una secretaria (`SecretariasFacade.enviarRestablecimientoClave`,
+          fix-217-b). Firma "Escuela de Conductores Chillán": incumple AC7, hay que dejarla neutra.
+        - **Invite user** (personalizada con la marca de la escuela): la siguen usando **dos**
+          caminos, no uno: `activate-student-account` (primera activación, desde la matrícula y la
+          ficha del alumno) y `public-enrollment` (matrícula online). AC6 cubre los dos; la lista
+          de §5 omitía `public-enrollment`.
+        - **Magic link**: ninguna función la dispara (`generateLink` no envía correo); el correo en
+          inglés salió solo por la invitación de prueba desde el panel.
 
 ---
 
@@ -301,3 +344,6 @@ caen en spam.
 - 2026-11-12 — aprobada por el owner. Las 2 abiertas de §9 son técnicas y se resuelven en el plan.
 - 2026-11-12 — asignada a `m` vía Asignación ASG-b-103
   (`specs/assignments/ASG-b-103-correos-por-escuela-remitente-respuesta-marca.md`).
+- 2026-11-12 — reclamada por Matías. Resueltas las 2 abiertas de §9 (una cuenta SMTP alcanza;
+  configuración actual). Secrets y SMTP de Auth cambiados a `cuentas@`. AC6 cubre también
+  `public-enrollment`. AC13 reducido a los correos (la web pública no es nuestra).

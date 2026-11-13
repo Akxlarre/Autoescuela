@@ -19,6 +19,8 @@ describe('AdminConsentimientosDrawerComponent (AC6)', () => {
   const row: ConsentRow = {
     id: 7,
     consentType: 'matricula_datos',
+    branchId: 1,
+    branchName: 'Autoescuela Chillán',
     typeLabel: 'Tratamiento de datos de matrícula',
     status: 'otorgado',
     grantedAt: '2026-08-17T12:00:00Z',

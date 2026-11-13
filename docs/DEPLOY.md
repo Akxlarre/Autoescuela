@@ -133,6 +133,37 @@ impreso en los contratos). Al cambiarlo:
 - [ ] **Código**: `APP_BASE_URL` en `supabase/functions/_shared/contract-pdf.ts`, y redesplegar las
       Edge Functions que generan contratos.
 - [ ] Publicar un tag y verificar `https://<dominio>/version.json`.
+- [ ] **Correos (spec 0061-b)**: `APP_HOST` en `supabase/functions/_shared/school-email.ts` (la
+      línea "El portal de alumnos de [escuela] funciona en …"). Si cambia también el dominio de
+      **envío**, ver la sección siguiente.
+
+## Correo: remitente por escuela y correos de cuenta (spec 0061-b)
+
+Todos los correos salen por SMTP desde **una sola cuenta**, `cuentas@gestordeautoescuelas.cl`
+(hosting cPanel, relay MailChannels). Una cuenta alcanza para enviar como cualquier dirección del
+dominio: probado el 2026-11-12 con SPF, DKIM y DMARC en `pass`.
+
+- **Secrets de Edge Functions**: `SMTP_HOST=mail.gestordeautoescuelas.cl`, `SMTP_PORT=465`,
+  `SMTP_USER=SMTP_FROM=cuentas@gestordeautoescuelas.cl`, `SMTP_PASS`. `SMTP_FROM` es la dirección
+  neutra: la de los correos de cuenta y la de respaldo de una escuela sin dirección propia. El
+  transporte vive en `_shared/school-mailer.ts`; quién firma cada correo, en `_shared/school-email.ts`.
+- **Remitente de cada escuela**: lo edita el admin en *Ajustes → Correo de las Escuelas*
+  (`branches.email_sender_name`, `email_sender_address`, `email` = correo de respuesta, `phone` =
+  pie). Vale desde el correo siguiente, sin redesplegar. La dirección de envío solo puede ser
+  `@gestordeautoescuelas.cl` (CHECK `branches_email_sender_domain_chk`); para otra escuela, crear
+  primero la casilla en cPanel.
+- **Correos de Supabase Auth (recuperar contraseña)**: los manda la función `send-auth-email`
+  vía *Authentication → Hooks → Send Email* (HTTPS, secret `SEND_EMAIL_HOOK_SECRET`). Motivo: los
+  que mandaba Supabase llegaban con `dkim=fail` y con una plantilla sin versionar. **Vuelta atrás:**
+  desactivar el hook en el panel; Supabase vuelve a su SMTP (`cuentas@`, "Gestor de Autoescuelas")
+  y a la plantilla *Reset password* del panel, que debe quedar neutra.
+- **Rotar la contraseña de `cuentas@`**: cPanel → *Email Accounts* → *Manage*, y cargarla en los dos
+  lugares: `npx supabase secrets set "SMTP_PASS=…"` y *Authentication → Emails → SMTP Settings*.
+- **Cambiar el dominio de envío**: `SENDER_DOMAIN` en `_shared/school-email.ts` y en
+  `core/utils/branch-email.utils.ts`, el CHECK de `branches` (migración nueva), las casillas en
+  cPanel, SPF/DKIM/DMARC del dominio nuevo y los secrets `SMTP_*`.
+- **DMARC**: está en `p=none`. Subirlo a `p=quarantine` cuando los encabezados de los correos reales
+  muestren `dkim=pass` y `dmarc=pass` (AC9 de 0061-b).
 
 ## Problemas conocidos
 

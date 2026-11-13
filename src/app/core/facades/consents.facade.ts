@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { ToastService } from '@core/services/ui/toast.service';
@@ -11,6 +11,7 @@ import {
 } from '@core/models/ui/consent.model';
 import type { Consent } from '@core/models/dto/consent.model';
 import { buildMedicalCertificateConsent } from '@core/utils/consent-builder.utils';
+import { latestConsentPerBranch } from '@core/utils/consent-view.utils';
 import { PRIVACY_POLICY_VERSION } from '@core/models/ui/privacy-policy.model';
 
 /**
@@ -48,6 +49,14 @@ export class ConsentsFacade {
   readonly isLoading = this._isLoading.asReadonly();
   readonly isSaving = this._isSaving.asReadonly();
   readonly error = this._error.asReadonly();
+
+  /**
+   * Consentimiento promocional vigente ante cada escuela, el más reciente de cada una (spec
+   * 0061-b, AC10). El portal del alumno muestra uno por escuela y cada uno se revoca por separado.
+   */
+  readonly promotionalByBranch = computed(() =>
+    latestConsentPerBranch(this._consents(), 'comunicaciones_promocionales'),
+  );
 
   // ── Acciones ──────────────────────────────────────────────────────────────
 
@@ -125,8 +134,9 @@ export class ConsentsFacade {
 
       if (error) throw error;
 
-      const studentRel = (data as { students?: { user_id?: number } | { user_id?: number }[] } | null)
-        ?.students;
+      const studentRel = (
+        data as { students?: { user_id?: number } | { user_id?: number }[] } | null
+      )?.students;
       const student = Array.isArray(studentRel) ? studentRel[0] : studentRel;
       const branchId = (data as { branch_id?: number } | null)?.branch_id ?? null;
 
@@ -163,7 +173,7 @@ export class ConsentsFacade {
       const { data, error } = await this.supabase.client
         .from('consents')
         .select(
-          'id, consent_type, granted, granted_at, revoked_at, policy_version, source, ip, granted_by_representative',
+          'id, consent_type, branch_id, branches(name), granted, granted_at, revoked_at, policy_version, source, ip, granted_by_representative',
         )
         .eq('user_id', userId)
         .order('granted_at', { ascending: false });
@@ -227,6 +237,7 @@ type ConsentSelectRow = Pick<
   Consent,
   | 'id'
   | 'consent_type'
+  | 'branch_id'
   | 'granted'
   | 'granted_at'
   | 'revoked_at'
@@ -234,12 +245,18 @@ type ConsentSelectRow = Pick<
   | 'source'
   | 'ip'
   | 'granted_by_representative'
->;
+> & {
+  /** Embed `branches(name)`: PostgREST lo devuelve como objeto (FK a uno). */
+  branches?: { name: string | null } | { name: string | null }[] | null;
+};
 
 function mapConsentRow(row: ConsentSelectRow): ConsentRow {
+  const branch = Array.isArray(row.branches) ? row.branches[0] : row.branches;
   return {
     id: row.id,
     consentType: row.consent_type,
+    branchId: row.branch_id,
+    branchName: branch?.name ?? '',
     typeLabel: CONSENT_TYPE_LABELS[row.consent_type] ?? row.consent_type,
     status: deriveStatus(row),
     grantedAt: row.granted_at,

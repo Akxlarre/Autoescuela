@@ -12,174 +12,70 @@
 // de `send-announcement`; el dispatcher no la necesita porque la autorización ya se
 // decidió cuando la persona programó el comunicado (quedó en `sent_by` y `branch_id`).
 //
+// spec 0061-b: un destinatario es un par (alumno, escuela) — `announcement_recipients.branch_id`.
+// La marca, el remitente, el pie y el consentimiento promocional son los de ESA escuela, la que
+// envía. La parte pura (plantilla, pares, consentimiento) vive en `announcement-email.ts`.
+//
 // @ts-nocheck
 
-import nodemailer from 'npm:nodemailer@6';
 import {
   CONSENT_REVOKED_MARK,
   DRY_RUN_MARK,
   summarizeRecipients,
 } from './announcement-progress.ts';
-import { chileYear } from './chile-time.ts';
+import {
+  buildEmailHtml,
+  consentedPairKeys,
+  pairKey,
+  recipientPairs,
+  renderTemplate,
+  type RecipientPair,
+} from './announcement-email.ts';
+import { loadSchoolSender, withSchool } from './school-email.ts';
+import type { ContractEmailTheme } from './contract-email.ts';
+import { loadSchoolTheme } from './school-theme.ts';
+import { createSmtpTransport, platformAddress, sendSchoolMail } from './school-mailer.ts';
 
-/** `{{variable}}` con espacios opcionales. Espeja `core/utils/announcement-template.utils.ts`. */
-const PLACEHOLDER = /\{\{\s*([a-zA-Z_]+)\s*\}\}/g;
-
-/**
- * El cuerpo es texto plano escrito por una secretaria y termina dentro de un HTML que
- * sale por correo. Sin escapar, cualquier `<` que escriba rompe el mail — y peor, un
- * cuerpo con markup se envía tal cual a cientos de personas.
- */
-export function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-/**
- * Resuelve los marcadores de plantilla con los datos de UN destinatario (spec 0042-b).
- * Un marcador desconocido se vacía y no lanza: un envío a cientos de personas no se cae
- * por un typo en la plantilla (AC-E1).
- */
-export function renderTemplate(text: string, values: Record<string, string>): string {
-  return text.replace(PLACEHOLDER, (_m, key: string) => values[key] ?? '');
-}
-
-/** Marca del correo: la sede del destinatario (fix-232-b). */
-export interface EmailBrand {
-  /** Nombre de la sede; vacío si no se conoce. */
-  sede: string;
-  /** Correo de contacto de la sede; vacío si no se conoce. */
-  correoSede: string;
-  /** Promocional: lleva el pie para darse de baja (Ley 21.719, Art. 12). */
-  promocional: boolean;
-}
-
-const GENERIC_BRAND = 'Escuela de conductores';
-
-/** Iniciales para el logo del correo: "Autoescuela Chillán" → "AC". */
-export function brandInitials(name: string): string {
-  const letters = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join('');
-  return letters || 'AE';
-}
-
-/**
- * Pie de baja de un comunicado promocional (fix-232-b, S5). En el piloto el alumno no puede
- * entrar a su portal para revocar el consentimiento: se le dice cómo pedirlo. La revocación la
- * registra admin/secretaría desde la ficha del alumno.
- */
-function unsubscribeFooter(correoSede: string): string {
-  const canal = correoSede
-    ? `avísanos en la escuela o escríbenos a ${escapeHtml(correoSede)}`
-    : 'avísanos en la escuela';
-  return `<p class="footer-text footer-unsubscribe">Si no quieres recibir más promociones, ${canal} y dejamos de enviártelas.</p>`;
-}
-
-export function buildEmailHtml(subject: string, body: string, brand: EmailBrand): string {
-  const safeBody = escapeHtml(body).replace(/\n/g, '<br>');
-  // fix-232-b (S6): antes el logo, el nombre y el pie decían "Conductores Chillán" para todas
-  // las sedes.
-  const brandName = escapeHtml(brand.sede || GENERIC_BRAND);
-  const initials = escapeHtml(brandInitials(brand.sede));
-  const year = chileYear();
-
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(subject)}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, sans-serif; background-color: #f1f5f9; line-height: 1.6; }
-    .email-wrapper { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-    .email-header { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 60%, #8b5cf6 100%); padding: 40px 36px; text-align: center; }
-    .logo-badge { width: 60px; height: 60px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px; }
-    .logo-badge span { color: #fff; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
-    .company-name { color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
-    .email-body { padding: 40px 36px 36px; }
-    .greeting { font-size: 13px; font-weight: 600; color: #0ea5e9; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
-    .title { font-size: 26px; font-weight: 800; color: #0f172a; line-height: 1.25; margin-bottom: 20px; }
-    .divider { height: 1px; background: linear-gradient(to right, transparent, #e2e8f0, transparent); margin: 24px 0; }
-    .message { font-size: 15px; color: #334155; line-height: 1.75; }
-    .email-footer { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 28px 36px; text-align: center; }
-    .footer-divider { width: 40px; height: 2px; background: linear-gradient(to right, #0ea5e9, #6366f1); border-radius: 2px; margin: 0 auto 14px; }
-    .footer-brand { font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 6px; }
-    .footer-text { font-size: 12px; color: #94a3b8; line-height: 1.6; }
-    .footer-unsubscribe { color: #64748b; margin-bottom: 8px; }
-  </style>
-</head>
-<body>
-<div class="email-wrapper">
-  <div class="email-header">
-    <div class="logo-badge"><span>${initials}</span></div>
-    <p class="company-name">${brandName}</p>
-  </div>
-  <div class="email-body">
-    <p class="greeting">Comunicado</p>
-    <h1 class="title">${escapeHtml(subject)}</h1>
-    <div class="divider"></div>
-    <p class="message">${safeBody}</p>
-  </div>
-  <div class="email-footer">
-    <div class="footer-divider"></div>
-    <p class="footer-brand">${brandName}</p>
-    ${brand.promocional ? unsubscribeFooter(brand.correoSede) : ''}
-    <p class="footer-text">Este correo fue enviado automáticamente. Por favor no responder.<br>© ${year} ${brandName}. Todos los derechos reservados.</p>
-  </div>
-</div>
-</body>
-</html>`;
-}
+// Los bordes HTTP importan la plantilla desde acá (preview de send-announcement).
+export { buildEmailHtml, escapeHtml, renderTemplate } from './announcement-email.ts';
+// Colores de la escuela que envía (AC5 de 0061-b).
+export { loadSchoolTheme } from './school-theme.ts';
 
 /** Carga el comunicado con todo lo que el envío necesita. */
 export async function loadAnnouncement(service, announcementId: number) {
-  const { data } = await service
+  const { data, error } = await service
     .from('announcements')
     .select('id, subject, body, kind, branch_id, segment_filters, recipients_total, status')
     .eq('id', announcementId)
     .maybeSingle();
+  if (error) throw error;
   return data ?? null;
 }
 
 /**
- * Deja solo los usuarios cuyo consentimiento promocional MÁS RECIENTE está otorgado y
- * sin revocar. Se mira el más reciente y no "alguno otorgado" porque un alumno con dos
- * matrículas tiene una fila por matrícula (spec 0040-b): vale su última expresión de
- * voluntad, no la más conveniente.
+ * Deja solo los pares (alumno, escuela) cuyo consentimiento promocional MÁS RECIENTE ANTE ESA
+ * ESCUELA está otorgado y sin revocar (AC10 de 0061-b; regla en `consentedPairKeys`).
  */
-export async function filterByPromotionalConsent(service, userIds: number[]): Promise<number[]> {
-  if (userIds.length === 0) return [];
+export async function filterByPromotionalConsent(
+  service,
+  pairs: RecipientPair[],
+): Promise<RecipientPair[]> {
+  if (pairs.length === 0) return [];
 
+  const userIds = [...new Set(pairs.map((p) => p.userId))];
   const { data, error } = await service
     .from('consents')
-    .select('user_id, granted, revoked_at, granted_at')
+    .select('user_id, branch_id, granted, revoked_at, granted_at')
     .eq('consent_type', 'comunicaciones_promocionales')
-    .in('user_id', userIds)
-    .order('granted_at', { ascending: false });
+    .in('user_id', userIds);
   if (error) throw error;
 
-  const latestByUser = new Map<number, { granted: boolean; revoked_at: string | null }>();
-  for (const row of data ?? []) {
-    if (!latestByUser.has(row.user_id)) latestByUser.set(row.user_id, row);
-  }
-
-  return userIds.filter((id) => {
-    const consent = latestByUser.get(id);
-    return Boolean(consent?.granted) && consent?.revoked_at === null;
-  });
+  const allowed = consentedPairKeys(data ?? []);
+  return pairs.filter((p) => allowed.has(pairKey(p.userId, p.branchId)));
 }
 
 /**
- * Resuelve el segmento contra la BD y materializa una fila por destinatario en
+ * Resuelve el segmento contra la BD y materializa una fila por destinatario (alumno, escuela) en
  * `announcement_recipients`. Se corre una sola vez, en el primer lote.
  *
  * Materializar (en vez de re-consultar con OFFSET en cada lote) evita que la lista se
@@ -196,7 +92,7 @@ export async function materializeRecipients(service, announcement): Promise<numb
     .select('student_id, branch_id, status, courses!inner(type), students!inner(user_id, status)')
     .neq('students.status', 'archived');
 
-  // La sede del comunicado manda; `NULL` = multi-sede (solo admin) y ahí vale el filtro
+  // La sede del comunicado manda; `NULL` = todas las escuelas (solo admin) y ahí vale el filtro
   // que se haya pedido al segmentar.
   const branchId = announcement.branch_id ?? filters.branchId ?? null;
   if (branchId !== null) query = query.eq('branch_id', branchId);
@@ -207,41 +103,48 @@ export async function materializeRecipients(service, announcement): Promise<numb
   const { data: enrollments, error } = await query;
   if (error) throw error;
 
-  // Un alumno con dos matrículas aparece dos veces: es un destinatario, no dos.
-  const candidateUserIds = [...new Set((enrollments ?? []).map((e) => e.students.user_id))];
-  if (candidateUserIds.length === 0) return 0;
+  // Un par por (alumno, escuela): con "todas las escuelas", un alumno de las dos recibe una copia
+  // de cada una (AC-E5); dos matrículas en la misma escuela siguen siendo un destinatario.
+  let pairs = recipientPairs(enrollments ?? [], filters.excludedUserIds ?? []);
+  if (pairs.length === 0) return 0;
 
-  const excluded = new Set<number>(filters.excludedUserIds ?? []);
-  let eligibleIds = candidateUserIds.filter((id) => !excluded.has(id));
-
-  // El promocional solo alcanza a quien lo consintió y no lo revocó (AC3 de 0041-b).
+  // El promocional solo alcanza a quien lo consintió ante esa escuela y no lo revocó (AC10).
   // El operativo NO se filtra: es necesario para ejecutar el contrato (Art. 13 c).
   if (announcement.kind === 'promocional') {
-    eligibleIds = await filterByPromotionalConsent(service, eligibleIds);
+    pairs = await filterByPromotionalConsent(service, pairs);
   }
-  if (eligibleIds.length === 0) return 0;
+  if (pairs.length === 0) return 0;
 
   const { data: users, error: usersError } = await service
     .from('users')
-    .select('id, email, first_names, paternal_last_name')
-    .in('id', eligibleIds)
-    .eq('active', true)
-    .order('id', { ascending: true });
+    .select('id, email')
+    .in('id', [...new Set(pairs.map((p) => p.userId))])
+    .eq('active', true);
   if (usersError) throw usersError;
 
-  const rows = (users ?? []).map((u) => ({
-    announcement_id: announcement.id,
-    user_id: u.id,
+  const emailByUser = new Map<number, string | null>();
+  for (const u of users ?? []) {
     // `users.email` es NOT NULL en el esquema, pero NOT NULL no garantiza no-vacío:
-    // un string en blanco es tan inalcanzable como un NULL (AC-E2).
-    email: u.email?.trim() ? u.email.trim() : null,
-  }));
+    // un string en blanco es tan inalcanzable como un NULL (AC-E2 de 0041-b).
+    emailByUser.set(u.id, u.email?.trim() ? u.email.trim() : null);
+  }
 
-  // `onConflict` sobre el UNIQUE (announcement_id, user_id): reintentar el primer lote
-  // no duplica destinatarios.
+  const rows = pairs
+    .filter((p) => emailByUser.has(p.userId))
+    .sort((a, b) => a.userId - b.userId || a.branchId - b.branchId)
+    .map((p) => ({
+      announcement_id: announcement.id,
+      user_id: p.userId,
+      branch_id: p.branchId,
+      email: emailByUser.get(p.userId) ?? null,
+    }));
+  if (rows.length === 0) return 0;
+
+  // `onConflict` sobre el UNIQUE (announcement_id, user_id, branch_id): reintentar el primer
+  // lote no duplica destinatarios.
   const { error: insertError } = await service
     .from('announcement_recipients')
-    .upsert(rows, { onConflict: 'announcement_id,user_id', ignoreDuplicates: true });
+    .upsert(rows, { onConflict: 'announcement_id,user_id,branch_id', ignoreDuplicates: true });
   if (insertError) throw insertError;
 
   await service
@@ -273,7 +176,7 @@ export interface SendBatchResult {
 }
 
 const RECIPIENT_BATCH_COLUMNS =
-  'id, user_id, email, email_sent_ok, notification_id, users!inner(first_names, paternal_last_name, branches:branch_id(name, email))';
+  'id, user_id, branch_id, email, email_sent_ok, notification_id, users!inner(first_names, paternal_last_name)';
 
 /**
  * Materializa los destinatarios solo si todavía no existen, y devuelve cuántos hay.
@@ -423,26 +326,36 @@ export async function sendPendingBatch(
 
 /** Entrega el comunicado a un lote ya leído y deja el resultado en cada fila. */
 async function processRecipients(service, announcement, batch, dryRun: boolean) {
-  // Re-chequeo por lote: si alguien revocó mientras el envío avanzaba, no le llega el
-  // resto del comunicado.
-  let allowedIds: Set<number> | null = null;
-  if (announcement.kind === 'promocional') {
+  const promocional = announcement.kind === 'promocional';
+
+  // Re-chequeo por lote: si alguien revocó (ante esa escuela) mientras el envío avanzaba, no le
+  // llega el resto del comunicado.
+  let allowed: Set<string> | null = null;
+  if (promocional) {
     const stillEligible = await filterByPromotionalConsent(
       service,
-      batch.map((r) => r.user_id),
+      batch.map((r) => ({ userId: r.user_id, branchId: r.branch_id })),
     );
-    allowedIds = new Set(stillEligible);
+    allowed = new Set(stillEligible.map((p) => pairKey(p.userId, p.branchId)));
   }
 
-  const transporter = dryRun
-    ? null
-    : nodemailer.createTransport({
-        host: Deno.env.get('SMTP_HOST'),
-        port: Number(Deno.env.get('SMTP_PORT') ?? 465),
-        secure: Number(Deno.env.get('SMTP_PORT') ?? 465) === 465,
-        auth: { user: Deno.env.get('SMTP_USER'), pass: Deno.env.get('SMTP_PASS') },
-      });
-  const from = Deno.env.get('SMTP_FROM') ?? Deno.env.get('SMTP_USER');
+  const transporter = dryRun ? null : createSmtpTransport();
+  const fromAddress = platformAddress();
+
+  // Remitente de la escuela que envía, uno por escuela del lote (AC1–AC4 de 0061-b).
+  const senders = new Map<number, Awaited<ReturnType<typeof loadSchoolSender>>>();
+  const senderFor = async (branchId: number) => {
+    if (!senders.has(branchId)) {
+      senders.set(branchId, await loadSchoolSender(service, branchId, fromAddress));
+    }
+    return senders.get(branchId);
+  };
+
+  const themes = new Map<number, ContractEmailTheme>();
+  const themeFor = async (branchId: number) => {
+    if (!themes.has(branchId)) themes.set(branchId, await loadSchoolTheme(service, branchId));
+    return themes.get(branchId)!;
+  };
 
   let sent = 0;
   let failed = 0;
@@ -455,7 +368,7 @@ async function processRecipients(service, announcement, batch, dryRun: boolean) 
       continue;
     }
 
-    if (allowedIds && !allowedIds.has(recipient.user_id)) {
+    if (allowed && !allowed.has(pairKey(recipient.user_id, recipient.branch_id))) {
       await service
         .from('announcement_recipients')
         .update({ send_error: CONSENT_REVOKED_MARK })
@@ -463,18 +376,19 @@ async function processRecipients(service, announcement, batch, dryRun: boolean) 
       continue;
     }
 
+    const sender = await senderFor(recipient.branch_id);
     const nombre = recipient.users?.first_names ?? 'Alumno';
-    // Las variables se resuelven por destinatario, con sus propios datos. El cuerpo
-    // guardado en `announcements` conserva los marcadores intactos: el registro tiene
-    // que reflejar lo que se redactó, no lo que vio un alumno puntual.
-    const values = { nombre, sede: recipient.users?.branches?.name ?? '' };
+    // Las variables se resuelven por destinatario. `{{sede}}` es la escuela que ENVÍA
+    // (0061-b): antes era la escuela donde se registró el alumno. El cuerpo guardado en
+    // `announcements` conserva los marcadores intactos: el registro tiene que reflejar lo que
+    // se redactó, no lo que vio un alumno puntual.
+    const values = { nombre, sede: sender.schoolName };
     const subject = renderTemplate(announcement.subject, values);
     const body = renderTemplate(announcement.body, values);
 
     // La notificación in-app se crea aunque el correo falle o no haya dirección: es la
-    // red de contención del canal email. Pero solo una vez por destinatario — si la fila
-    // ya tiene una, este lote se está reintentando y volver a insertar le duplicaría el
-    // aviso al alumno en su portal.
+    // red de contención del canal email. Pero solo una vez por fila — si ya tiene una, este
+    // lote se está reintentando y volver a insertar le duplicaría el aviso al alumno.
     let notificationId = recipient.notification_id;
     if (notificationId === null) {
       const { data: notification } = await service
@@ -507,11 +421,13 @@ async function processRecipients(service, announcement, batch, dryRun: boolean) 
       // El HTML se arma también en dry-run: así el escapado y la sustitución se
       // ejercitan igual, y un error de plantilla no queda escondido hasta el primer
       // envío real.
-      const html = buildEmailHtml(subject, body, {
-        sede: recipient.users?.branches?.name ?? '',
-        correoSede: recipient.users?.branches?.email ?? '',
-        promocional: announcement.kind === 'promocional',
-      });
+      const html = buildEmailHtml(
+        subject,
+        body,
+        sender,
+        promocional,
+        await themeFor(recipient.branch_id),
+      );
       if (dryRun) {
         sent++;
         await service
@@ -525,7 +441,11 @@ async function processRecipients(service, announcement, batch, dryRun: boolean) 
         continue;
       }
 
-      await transporter.sendMail({ from, to: recipient.email, subject, html });
+      await sendSchoolMail(transporter, sender, {
+        to: recipient.email,
+        subject: withSchool(subject, sender),
+        html,
+      });
       sent++;
       await service
         .from('announcement_recipients')

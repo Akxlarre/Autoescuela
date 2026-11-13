@@ -904,6 +904,11 @@
   futuro: el punto de fondo es que un solo template compartido no escala a N roles con copy
   distinto.
 - **Fuente:** `specs/fixes/fix-167-m-instructor-invite-correo-set-password`
+- **Actualización (spec 0061-b):** ningún flujo usa ya `inviteUserByEmail`. Los dos que quedaban
+  (`activate-student-account` y `public-enrollment`) crean la cuenta con `generateLink({ type: 'invite' })`
+  y envían por SMTP propio con el remitente de la escuela (`_shared/student-invite-email.ts`).
+  `supabase/email-templates/invite-user.html` queda sin uso. El único correo que dispara Supabase Auth
+  es el de recuperar contraseña, y también lo envía una función propia (`send-auth-email`, Send Email Hook).
 
 ### DG-068 — `auth.admin.generateLink({ type: 'invite' })` falla si el usuario de Auth YA existe
 - **Trampa:** reutilizar `type: 'invite'` para "reenviar" una invitación a un usuario que ya
@@ -2082,6 +2087,34 @@
   vez por slot. Evaluarlo contra la fecha de cada clase sería otra regla de negocio: no está
   decidida.
 - **Fuente:** `specs/fixes/fix-251-b-agenda-aviso-documentos-vehiculo-visible`.
+
+### DG-125 — Los correos que envía Supabase Auth por SMTP propio llegan con `dkim=fail`
+
+- **Trampa:** configurar en *Authentication → Emails → SMTP Settings* la misma cuenta que usan las
+  Edge Functions (`cuentas@gestordeautoescuelas.cl`) y dar por hecho que sus correos (recuperar
+  contraseña) se autentican igual que los de la app.
+- **Realidad:** con el mismo host, usuario y dominio, los correos que manda Supabase Auth llegaban
+  con `dkim=fail` (2026-11-12), mientras los que mandan las Edge Functions con nodemailer pasan SPF,
+  DKIM y DMARC. Además usaban la plantilla del panel, que no está versionada.
+- **Regla de aplicabilidad:** todo correo que dispare Supabase Auth sale por el Send Email Hook
+  (`send-auth-email`, plantilla en `_shared/auth-email.ts`), no por el SMTP del panel. Antes de
+  subir el DMARC a `p=quarantine`, revisar los encabezados de un correo de cuenta y de uno de
+  escuela: con `p=quarantine`, un `dkim=fail` deja de llegar. Si el hook se desactiva, la
+  plantilla *Reset password* del panel tiene que estar neutra (sin nombre de escuela).
+- **Fuente:** `specs/specs/0061-b-correos-por-escuela-remitente-respuesta-marca` · `docs/DEPLOY.md` §Correo.
+
+### DG-126 — Gmail descarta sin aviso un correo cuyo adjunto PDF no es un PDF válido
+
+- **Trampa:** probar un envío real con adjunto (certificado, contrato) usando un PDF mínimo hecho a
+  mano sin páginas, y concluir que el correo "se pierde" cuando el servidor SMTP respondió `250 OK`.
+- **Realidad:** el certificado con un PDF vacío de 125 bytes no llegó en dos envíos aceptados por el
+  SMTP; el mismo correo con un PDF válido de una página llegó al instante (2026-11-12). Un contrato
+  con el mismo PDF vacío sí llegó, así que no es una regla fija: depende del filtro.
+- **Regla de aplicabilidad:** las pruebas reales de correos con adjunto usan un PDF válido (con al
+  menos una página). Cuando un correo no llega, mirar primero lo que contestó el servidor de correo
+  (`delivery` en la respuesta de `send-enrollment-contract-email` y `send-certificate-email`) antes
+  de culpar al relé o al código.
+- **Fuente:** `specs/specs/0061-b-correos-por-escuela-remitente-respuesta-marca` (T3.4).
 
 ## Convención para agregar una entrada nueva
 

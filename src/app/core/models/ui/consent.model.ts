@@ -38,6 +38,10 @@ export type ConsentStatus = 'otorgado' | 'rechazado' | 'revocado';
 export interface ConsentRow {
   id: number;
   consentType: ConsentType;
+  /** Escuela (responsable) ante la que se otorgó. Una por razón social (spec 0061-b, AC10). */
+  branchId: number;
+  /** Nombre de esa escuela, para el portal del alumno (spec 0061-b). */
+  branchName: string;
   /** Etiqueta en español del tipo, ya resuelta en el Facade. */
   typeLabel: string;
   status: ConsentStatus;

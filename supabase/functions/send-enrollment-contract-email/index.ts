@@ -17,14 +17,17 @@
 //   404  { error: '...' }   — la matrícula no existe
 //   500  { error: '...' }   — no se pudo leer el archivo o enviar el correo
 //
-// Secrets requeridos (los mismos de activate-student-account y send-certificate-email):
-//   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+// Remitente (spec 0061-b): sale a nombre de la escuela de la matrícula (enrollments.branch_id),
+// con su dirección de envío y su correo de respuesta (_shared/school-email.ts, AC1–AC4, AC-E3).
+//
+// Secrets: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM (ver _shared/school-mailer.ts)
 //
 // @ts-nocheck
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import nodemailer from 'npm:nodemailer@6';
+import { loadSchoolSender, withSchool } from '../_shared/school-email.ts';
+import { createSmtpTransport, platformAddress, sendSchoolMail } from '../_shared/school-mailer.ts';
 import {
   authErrorResponse,
   denyIfEnrollmentOutOfScope,
@@ -130,32 +133,24 @@ Deno.serve(async (req: Request) => {
       .eq('branch_id', enrollment.branch_id)
       .maybeSingle();
     const brand = websiteConfig?.config?.brand;
+    // Escuela de la matrícula, no la del alumno: con matrícula en las dos, cada contrato sale de
+    // la suya (AC-E3). Su nombre es el del remitente y el pie (AC13).
+    const sender = await loadSchoolSender(supabase, enrollment.branch_id, platformAddress());
 
     const emailData = {
       studentName:
         `${studentUser.first_names ?? ''} ${studentUser.paternal_last_name ?? ''}`.trim() ||
         'alumno(a)',
-      schoolName: (brand?.name ?? 'Autoescuela').normalize('NFC'),
+      schoolName: (sender.schoolName || brand?.name || 'Autoescuela').normalize('NFC'),
       courseName: one(enrollment.courses)?.name ?? 'Curso',
       enrollmentNumber: enrollment.number ?? null,
     };
 
     // ── 4. Enviar ───────────────────────────────────────────────────
-    const transporter = nodemailer.createTransport({
-      host: Deno.env.get('SMTP_HOST'),
-      port: Number(Deno.env.get('SMTP_PORT') ?? 465),
-      secure: Number(Deno.env.get('SMTP_PORT') ?? 465) === 465,
-      auth: {
-        user: Deno.env.get('SMTP_USER'),
-        pass: Deno.env.get('SMTP_PASS'),
-      },
-    });
-
-    const info = await transporter.sendMail({
-      from: Deno.env.get('SMTP_FROM') ?? Deno.env.get('SMTP_USER'),
+    const info = await sendSchoolMail(createSmtpTransport(), sender, {
       to: email,
-      subject: contractEmailSubject(emailData),
-      html: buildContractEmailHtml(emailData, resolveContractEmailTheme(brand?.theme)),
+      subject: withSchool(contractEmailSubject(emailData), sender),
+      html: buildContractEmailHtml(emailData, resolveContractEmailTheme(brand?.theme), sender),
       attachments: [
         {
           filename: attachment.filename,

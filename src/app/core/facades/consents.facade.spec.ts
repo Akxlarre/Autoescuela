@@ -184,6 +184,51 @@ describe('ConsentsFacade', () => {
       expect(row.status).toBe('otorgado');
     });
 
+    // spec 0061-b (AC10): el portal muestra un consentimiento promocional por escuela.
+    it('trae y mapea la escuela ante la que se otorgó (branch_id)', async () => {
+      const from = buildSelect([
+        {
+          id: 4,
+          consent_type: 'comunicaciones_promocionales',
+          branch_id: 2,
+          branches: { name: 'Conductores Chillán' },
+          granted: true,
+          granted_at: '2026-08-17T10:00:00Z',
+          revoked_at: null,
+          policy_version: '2026-08-17',
+          source: 'public',
+          ip: null,
+          granted_by_representative: false,
+        },
+        {
+          id: 5,
+          consent_type: 'comunicaciones_promocionales',
+          branch_id: 1,
+          branches: { name: 'Autoescuela Chillán' },
+          granted: false,
+          granted_at: '2026-08-10T10:00:00Z',
+          revoked_at: null,
+          policy_version: '2026-08-17',
+          source: 'public',
+          ip: null,
+          granted_by_representative: false,
+        },
+      ]);
+      setup(from);
+
+      await facade.loadByUser(10);
+
+      expect(facade.consents()[0]).toMatchObject({
+        branchId: 2,
+        branchName: 'Conductores Chillán',
+      });
+      const selectSpy = from.mock.results[0].value.select;
+      expect(selectSpy.mock.calls[0][0]).toContain('branch_id');
+      expect(selectSpy.mock.calls[0][0]).toContain('branches(name)');
+      // Uno por escuela, ordenado por escuela (AC10).
+      expect(facade.promotionalByBranch().map((c) => c.id)).toEqual([5, 4]);
+    });
+
     it('deriva el estado: rechazado cuando granted es false', async () => {
       setup(
         buildSelect([
@@ -237,9 +282,11 @@ describe('ConsentsFacade', () => {
       const eq = vi.fn().mockReturnValue({ maybeSingle });
       const select = vi.fn().mockReturnValue({ eq });
       setup(
-        vi.fn().mockImplementation((table: string) =>
-          table === 'enrollments' ? { select } : { insert: insertSpy },
-        ),
+        vi
+          .fn()
+          .mockImplementation((table: string) =>
+            table === 'enrollments' ? { select } : { insert: insertSpy },
+          ),
       );
     }
 

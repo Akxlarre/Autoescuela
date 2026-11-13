@@ -5,6 +5,8 @@
 
 import { assert, assertEquals, assertStringIncludes } from 'jsr:@std/assert';
 import { buildStaffInviteEmail } from './staff-invite-email.ts';
+import { resolveSender } from './school-email.ts';
+import { CONTRACT_EMAIL_THEMES } from './contract-email.ts';
 
 const LINK = 'https://example.supabase.co/auth/v1/verify?token=abc&type=invite&redirect_to=x';
 
@@ -74,6 +76,29 @@ Deno.test('escapa el nombre: no se puede inyectar HTML en el correo', () => {
   assertStringIncludes(html, '&lt;img src=x onerror=alert(1)&gt;');
 });
 
+Deno.test('spec 0061-b: con remitente, pie de la escuela y línea del dominio', () => {
+  const sender = resolveSender(
+    {
+      id: 1,
+      name: 'Autoescuela Chillán',
+      email_sender_name: 'Autoescuela Chillán',
+      email_sender_address: 'autoescuela-chillan@gestordeautoescuelas.cl',
+      email: 'otecchillan@gmail.com',
+      phone: '+56 42 232 7800',
+    },
+    'cuentas@gestordeautoescuelas.cl',
+  );
+  const { html } = buildStaffInviteEmail({
+    name: 'Ana',
+    roleLabel: 'secretaria',
+    actionLink: LINK,
+    sender,
+  });
+  assertStringIncludes(html, '<p class="company">Autoescuela Chillán</p>');
+  assertStringIncludes(html, 'Enviado por Autoescuela Chillán mediante Gestor de Autoescuelas');
+  assertStringIncludes(html, 'app.gestordeautoescuelas.cl');
+});
+
 Deno.test('rechaza links que no son https', () => {
   let threw = false;
   try {
@@ -86,4 +111,29 @@ Deno.test('rechaza links que no son https', () => {
     threw = true;
   }
   assert(threw);
+});
+
+Deno.test('0061-b: colores de la escuela y línea del dominio para el personal', () => {
+  const sender = resolveSender(
+    {
+      id: 1,
+      name: 'Autoescuela Chillán',
+      email_sender_name: 'Autoescuela Chillán',
+      email_sender_address: 'autoescuela-chillan@gestordeautoescuelas.cl',
+      email: 'otecchillan@gmail.com',
+      phone: null,
+    },
+    'cuentas@gestordeautoescuelas.cl',
+  );
+  const { html } = buildStaffInviteEmail({
+    name: 'Ana',
+    roleLabel: 'secretaria',
+    actionLink: LINK,
+    sender,
+    theme: CONTRACT_EMAIL_THEMES.roja,
+  });
+  assertStringIncludes(html, CONTRACT_EMAIL_THEMES.roja.gradientHero);
+  assert(!html.includes(CONTRACT_EMAIL_THEMES.azul.gradientHero));
+  assertStringIncludes(html, 'La plataforma de Autoescuela Chillán funciona en');
+  assert(!html.includes('portal de alumnos'));
 });
