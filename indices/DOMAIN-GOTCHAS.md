@@ -2103,17 +2103,20 @@
   plantilla *Reset password* del panel tiene que estar neutra (sin nombre de escuela).
 - **Fuente:** `specs/specs/0061-b-correos-por-escuela-remitente-respuesta-marca` · `docs/DEPLOY.md` §Correo.
 
-### DG-126 — Gmail descarta sin aviso un correo cuyo adjunto PDF no es un PDF válido
+### DG-126 — Un correo aceptado por el SMTP del hosting puede llegar hasta una hora después
 
-- **Trampa:** probar un envío real con adjunto (certificado, contrato) usando un PDF mínimo hecho a
-  mano sin páginas, y concluir que el correo "se pierde" cuando el servidor SMTP respondió `250 OK`.
-- **Realidad:** el certificado con un PDF vacío de 125 bytes no llegó en dos envíos aceptados por el
-  SMTP; el mismo correo con un PDF válido de una página llegó al instante (2026-11-12). Un contrato
-  con el mismo PDF vacío sí llegó, así que no es una regla fija: depende del filtro.
-- **Regla de aplicabilidad:** las pruebas reales de correos con adjunto usan un PDF válido (con al
-  menos una página). Cuando un correo no llega, mirar primero lo que contestó el servidor de correo
-  (`delivery` en la respuesta de `send-enrollment-contract-email` y `send-certificate-email`) antes
-  de culpar al relé o al código.
+- **Trampa:** ver que un correo de prueba no aparece en Gmail a los pocos minutos y concluir que se
+  perdió (o atribuirlo a lo último que se cambió: el adjunto, la plantilla, el código).
+- **Realidad:** el hosting entrega por el relé de MailChannels, que marca nuestros correos con
+  `X-MC-Relay: Junk` y puede retenerlos. El 2026-11-12, dos certificados de prueba aceptados con
+  `250 OK` (adjunto: un PDF vacío de 125 bytes) llegaron entre 37 minutos y una hora después; uno con
+  un PDF válido llegó al instante, y una activación tardó 9 minutos. Que el PDF vacío influyera en la
+  demora es plausible pero no está probado.
+- **Regla de aplicabilidad:** antes de dar por perdido un correo, mirar lo que contestó el servidor
+  de correo (`delivery` en la respuesta de `send-enrollment-contract-email` y
+  `send-certificate-email`): si dice `250 OK`, salió del hosting y la demora está en el relé, no en
+  el código. En pruebas reales con adjunto, usar un PDF válido para no sumar sospechas al filtro. Si
+  las demoras se repiten con correos reales, es un tema del hosting (consultar por `X-MC-Relay: Junk`).
 - **Fuente:** `specs/specs/0061-b-correos-por-escuela-remitente-respuesta-marca` (T3.4).
 
 ## Convención para agregar una entrada nueva
