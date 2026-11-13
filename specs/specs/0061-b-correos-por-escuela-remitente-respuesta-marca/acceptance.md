@@ -46,8 +46,9 @@
   `line-height` en los 5 correos que lo tienen.
 - El comunicado y las invitaciones de personal salían siempre en azul. Ahora usan el tema de la escuela.
 - Las invitaciones de personal decían "portal de alumnos".
-- `send-certificate-email` ahora devuelve la respuesta del servidor de correo, como el contrato
-  (DG-126: un PDF de prueba inválido hacía que Gmail descartara el correo).
+- `send-certificate-email` ahora devuelve la respuesta del servidor de correo, como el contrato.
+  Los dos primeros certificados de prueba (con un PDF vacío) parecían perdidos, pero llegaron entre
+  37 minutos y una hora después, retenidos por el relé (DG-126).
 
 ## Validación
 
@@ -67,5 +68,6 @@
 ## Para operar
 
 - `X-MC-Relay: Junk` en los encabezados: el relé de MailChannels marca los correos del hosting. Gmail
-  los entrega, pero una activación llegó 9 minutos tarde. Consultar al hosting.
+  los entrega, pero con demoras de 9 minutos (una activación) hasta una hora (dos certificados).
+  Consultar al hosting.
 - El DMARC puede subir a `p=quarantine`: los correos de escuela y los de cuenta pasan DKIM y DMARC.

@@ -136,7 +136,7 @@
   - **DoD:**
     - [x] Alumno de prueba `matiasjfr01+alumno0061@gmail.com` (users 9333, registrado en escuela 1) con matrícula `P0061-AC` (8784, escuela 1) y `P0061-CC` (8785, escuela 2), estado `withdrawn` (ninguna matrícula real lo usa) — se deja a propósito
     - [x] Contrato de cada escuela: remitente y "Responder" correctos, sin mezclar datos (AC-E3) — Gmail 2026-11-12 19:12 (AC y CC) y 19:38 (AC, tras unificar el nombre)
-    - [x] Certificado y Zoom de al menos una escuela — Zoom de Autoescuela (2026-11-12 20:02, ciclo cerrado de prueba) y certificado de Conductores (20:34, folio −61 que no mueve el máximo) confirmados en Gmail. Los dos primeros envíos del certificado no llegaron: el adjunto de prueba era un PDF vacío de 125 bytes y Gmail lo descartaba; con un PDF válido de una página llegó. Todo lo creado se borró (certificado, log, PDF, ciclo, sesión) y las matrículas volvieron a `withdrawn`
+    - [x] Certificado y Zoom de al menos una escuela — Zoom de Autoescuela (2026-11-12 20:02, ciclo cerrado de prueba) y certificado de Conductores (20:34, folio −61 que no mueve el máximo) confirmados en Gmail. Los dos primeros envíos del certificado (PDF vacío de 125 bytes) no llegaban; uno apareció a las 21:07, retenido por el relé (DG-126). Con un PDF válido de una página llegó al instante. Todo lo creado se borró (certificado, log, PDF, ciclo, sesión) y las matrículas volvieron a `withdrawn`
     - [x] `functions list` confirma las versiones (2026-11-12 20:10 UTC: las 12 funciones de la spec, `verify_jwt=false` como antes)
 
 ---
