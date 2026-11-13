@@ -358,6 +358,11 @@ allow_dynamic_registration = false
 # tenían verify_jwt = false y respondían sin sesión. Vuelven al default (true); la
 # autorización real la hacen _shared/staff-auth.ts y _shared/service-role-auth.ts.
 
+# spec 0061-b: Send Email Hook de Supabase Auth. La llama Auth (sin JWT de usuario); la
+# autorización es la firma standardwebhooks con SEND_EMAIL_HOOK_SECRET, verificada en la función.
+[functions.send-auth-email]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

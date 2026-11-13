@@ -904,6 +904,11 @@
   futuro: el punto de fondo es que un solo template compartido no escala a N roles con copy
   distinto.
 - **Fuente:** `specs/fixes/fix-167-m-instructor-invite-correo-set-password`
+- **Actualización (spec 0061-b):** ningún flujo usa ya `inviteUserByEmail`. Los dos que quedaban
+  (`activate-student-account` y `public-enrollment`) crean la cuenta con `generateLink({ type: 'invite' })`
+  y envían por SMTP propio con el remitente de la escuela (`_shared/student-invite-email.ts`).
+  `supabase/email-templates/invite-user.html` queda sin uso. El único correo que dispara Supabase Auth
+  es el de recuperar contraseña, y también lo envía una función propia (`send-auth-email`, Send Email Hook).
 
 ### DG-068 — `auth.admin.generateLink({ type: 'invite' })` falla si el usuario de Auth YA existe
 - **Trampa:** reutilizar `type: 'invite'` para "reenviar" una invitación a un usuario que ya
@@ -2083,7 +2088,38 @@
   decidida.
 - **Fuente:** `specs/fixes/fix-251-b-agenda-aviso-documentos-vehiculo-visible`.
 
-### DG-125 — `cash_closings.arqueo_amount` NULL es "Sin arqueo", no "se contaron $0"
+### DG-125 — Los correos que envía Supabase Auth por SMTP propio llegan con `dkim=fail`
+
+- **Trampa:** configurar en *Authentication → Emails → SMTP Settings* la misma cuenta que usan las
+  Edge Functions (`cuentas@gestordeautoescuelas.cl`) y dar por hecho que sus correos (recuperar
+  contraseña) se autentican igual que los de la app.
+- **Realidad:** con el mismo host, usuario y dominio, los correos que manda Supabase Auth llegaban
+  con `dkim=fail` (2026-11-12), mientras los que mandan las Edge Functions con nodemailer pasan SPF,
+  DKIM y DMARC. Además usaban la plantilla del panel, que no está versionada.
+- **Regla de aplicabilidad:** todo correo que dispare Supabase Auth sale por el Send Email Hook
+  (`send-auth-email`, plantilla en `_shared/auth-email.ts`), no por el SMTP del panel. Antes de
+  subir el DMARC a `p=quarantine`, revisar los encabezados de un correo de cuenta y de uno de
+  escuela: con `p=quarantine`, un `dkim=fail` deja de llegar. Si el hook se desactiva, la
+  plantilla *Reset password* del panel tiene que estar neutra (sin nombre de escuela).
+- **Fuente:** `specs/specs/0061-b-correos-por-escuela-remitente-respuesta-marca` · `docs/DEPLOY.md` §Correo.
+
+### DG-126 — Un correo aceptado por el SMTP del hosting puede llegar hasta una hora después
+
+- **Trampa:** ver que un correo de prueba no aparece en Gmail a los pocos minutos y concluir que se
+  perdió (o atribuirlo a lo último que se cambió: el adjunto, la plantilla, el código).
+- **Realidad:** el hosting entrega por el relé de MailChannels, que marca nuestros correos con
+  `X-MC-Relay: Junk` y puede retenerlos. El 2026-11-12, dos certificados de prueba aceptados con
+  `250 OK` (adjunto: un PDF vacío de 125 bytes) llegaron entre 37 minutos y una hora después; uno con
+  un PDF válido llegó al instante, y una activación tardó 9 minutos. Que el PDF vacío influyera en la
+  demora es plausible pero no está probado.
+- **Regla de aplicabilidad:** antes de dar por perdido un correo, mirar lo que contestó el servidor
+  de correo (`delivery` en la respuesta de `send-enrollment-contract-email` y
+  `send-certificate-email`): si dice `250 OK`, salió del hosting y la demora está en el relé, no en
+  el código. En pruebas reales con adjunto, usar un PDF válido para no sumar sospechas al filtro. Si
+  las demoras se repiten con correos reales, es un tema del hosting (consultar por `X-MC-Relay: Junk`).
+- **Fuente:** `specs/specs/0061-b-correos-por-escuela-remitente-respuesta-marca` (T3.4).
+
+### DG-127 — `cash_closings.arqueo_amount` NULL es "Sin arqueo", no "se contaron $0"
 
 - **Trampa:** leer el cierre con `arqueo_amount ?? 0` y `difference ?? arqueo − balance`, o
   guardar un cierre sin conteo con `arqueo_amount = balance` para que "cuadre".

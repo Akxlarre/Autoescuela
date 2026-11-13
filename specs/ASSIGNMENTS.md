@@ -446,6 +446,7 @@
 | ASG-i-034 | Testing: Gestión de instructores, secretarias y usuarios | [fix-197-b-testing-instructores-secretarias-usuarios](fixes/fix-197-b-testing-instructores-secretarias-usuarios/fix.md) | 2026-10-29 |
 | ASG-i-036 | Testing: Auditoría y Configuración web | [fix-485-m-testing-auditoria-configuracion-web](fixes/fix-485-m-testing-auditoria-configuracion-web/fix.md) | 2026-11-07 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-11-10 |
+| ASG-b-103 | Correos por escuela: remitente, respuesta y marca | [0061-b-correos-por-escuela-remitente-respuesta-marca](specs/0061-b-correos-por-escuela-remitente-respuesta-marca/spec.md) | 2026-11-12 |
 <!-- AUTO-GENERATED:END -->
 
 ---

@@ -121,3 +121,15 @@ Deno.test('sin marca configurada usa "Autoescuela" y el tema azul', () => {
   assertEquals(brand.theme.brandColor, '#0ea5e9');
   assertEquals(resolveZoomEmailBrand({ name: '  ', theme: 'verde' }).schoolName, 'Autoescuela');
 });
+
+Deno.test(
+  '0061-b AC13: el nombre de la escuela configurado por el admin manda sobre el de la web',
+  () => {
+    const brand = resolveZoomEmailBrand(
+      { name: 'AutoEscuela Chillán', theme: 'roja' },
+      'Autoescuela Chillán',
+    );
+    assertEquals(brand.schoolName, 'Autoescuela Chillán');
+    assertEquals(brand.initials, 'AC');
+  },
+);

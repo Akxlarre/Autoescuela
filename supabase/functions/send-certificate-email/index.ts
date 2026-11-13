@@ -19,14 +19,22 @@ import { chileYear } from '../_shared/chile-time.ts';
 //   404  { error: '...' }
 //   500  { error: '...' }
 //
-// Secrets requeridos (Supabase Dashboard → Edge Functions → Secrets):
-//   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+// Remitente (spec 0061-b): sale a nombre de la escuela de la matrícula, con su dirección de
+// envío, su correo de respuesta y el pie común (_shared/school-email.ts, AC1–AC4).
+//
+// Secrets: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM (ver _shared/school-mailer.ts)
 //
 // @ts-nocheck
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import nodemailer from 'npm:nodemailer@6';
+import {
+  loadSchoolSender,
+  schoolFooterHtml,
+  withSchool,
+  type SchoolSender,
+} from '../_shared/school-email.ts';
+import { createSmtpTransport, platformAddress, sendSchoolMail } from '../_shared/school-mailer.ts';
 import {
   authErrorResponse,
   denyIfEnrollmentOutOfScope,
@@ -65,6 +73,7 @@ function buildEmailHtml(
   tipo: 'class_b' | 'professional',
   schoolName: string,
   theme: ContractEmailTheme,
+  sender: SchoolSender,
 ): string {
   const school = escapeHtml(schoolName);
   const initials = escapeHtml(schoolInitials(schoolName));
@@ -84,7 +93,7 @@ function buildEmailHtml(
     .email-wrapper { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
     .email-header { background-color: ${theme.brandColor}; background: ${theme.gradientHero}; padding: 44px 36px 40px; text-align: center; position: relative; overflow: hidden; }
     .email-header::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(to right, rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.06) 1px, transparent 1px); background-size: 36px 36px; }
-    .logo-badge { width: 60px; height: 60px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px; backdrop-filter: blur(8px); }
+    .logo-badge { box-sizing: content-box; width: 56px; height: 56px; line-height: 56px; text-align: center; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); border-radius: 14px; display: inline-block; margin-bottom: 14px; backdrop-filter: blur(8px); }
     .logo-badge span { color: #fff; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
     .company-name { color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
     .email-body { padding: 44px 36px 36px; }
@@ -125,12 +134,10 @@ function buildEmailHtml(
         Tu certificado en formato PDF está adjunto a este correo. Guárdalo en un lugar seguro, ya que es tu comprobante oficial de finalización del curso de ${tipoLabel}.
       </div>
     </div>
-    <p style="font-size: 13px; color: #94a3b8; text-align: center;">Si tienes alguna consulta, contáctanos directamente en nuestra escuela.</p>
   </div>
   <div class="email-footer">
     <div class="footer-divider"></div>
-    <p class="footer-brand">${school}</p>
-    <p class="footer-text">Este correo fue enviado automáticamente. Por favor no responder.<br>© ${chileYear()} ${school}. Todos los derechos reservados.</p>
+${schoolFooterHtml(sender)}
   </div>
 </div>
 </body>
@@ -245,25 +252,20 @@ Deno.serve(async (req: Request) => {
     const pdfBuffer = await pdfResponse.arrayBuffer();
 
     // ── 3. Configurar transporte SMTP y enviar ───────────────────────────────
-    const transporter = nodemailer.createTransport({
-      host: Deno.env.get('SMTP_HOST'),
-      port: Number(Deno.env.get('SMTP_PORT') ?? 465),
-      secure: Number(Deno.env.get('SMTP_PORT') ?? 465) === 465,
-      auth: {
-        user: Deno.env.get('SMTP_USER'),
-        pass: Deno.env.get('SMTP_PASS'),
-      },
-    });
-
-    const from = Deno.env.get('SMTP_FROM') ?? Deno.env.get('SMTP_USER');
-
+    const sender = await loadSchoolSender(supabase, enrollment.branch_id, platformAddress());
     const tipoLabel = tipo === 'professional' ? 'Clase Profesional' : 'Clase B';
     const safeNombre = nombre.replace(/\s+/g, '_').toUpperCase();
-    await transporter.sendMail({
-      from,
+    const info = await sendSchoolMail(createSmtpTransport(), sender, {
       to: email,
-      subject: `Tu Certificado de Finalización — ${tipoLabel} · ${folio} — ${schoolName}`,
-      html: buildEmailHtml(nombre, folio, tipo, schoolName, resolveContractEmailTheme(brand?.theme)),
+      subject: withSchool(`Tu Certificado de Finalización — ${tipoLabel} · ${folio}`, sender),
+      html: buildEmailHtml(
+        nombre,
+        folio,
+        tipo,
+        sender.schoolName || schoolName,
+        resolveContractEmailTheme(brand?.theme),
+        sender,
+      ),
       attachments: [
         {
           filename: `Certificado_${safeNombre}.pdf`,
@@ -280,7 +282,18 @@ Deno.serve(async (req: Request) => {
       user_id: access.userId,
     });
 
-    return jsonResponse({ success: true, recipientEmail: email });
+    // Lo que contestó el servidor de correo (igual que el contrato): "aceptado" no es
+    // "entregado", pero permite saber si el mensaje salió de acá cuando no llega.
+    const delivery = {
+      accepted: info?.accepted?.length ?? 0,
+      rejected: info?.rejected?.length ?? 0,
+      response: info?.response ?? null,
+      messageId: info?.messageId ?? null,
+      attachmentBytes: pdfBuffer.byteLength,
+    };
+    console.log('send-certificate-email enviado', { enrollment_id, ...delivery });
+
+    return jsonResponse({ success: true, recipientEmail: email, delivery });
   } catch (err) {
     console.error('send-certificate-email error:', err);
     return jsonResponse({ error: `Error interno: ${err?.message ?? 'desconocido'}` }, 500);

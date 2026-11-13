@@ -13,7 +13,30 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 
 describe('AjustesDrawerComponent (hotfix-188-b)', () => {
-  function setup(role: 'admin' | 'secretaria' | 'instructor' | 'alumno' = 'admin') {
+  let consentsMock: any;
+  let confirmMock: any;
+
+  function promo(id: number, branchId: number, branchName: string, status: string) {
+    return {
+      id,
+      branchId,
+      branchName,
+      status,
+      consentType: 'comunicaciones_promocionales',
+      revokedAt: null,
+    };
+  }
+
+  function setup(role: 'admin' | 'secretaria' | 'instructor' | 'alumno' = 'admin', promos: any[] = []) {
+    consentsMock = {
+      consents: signal(promos),
+      promotionalByBranch: signal(promos),
+      isLoading: signal(false),
+      isSaving: signal(false),
+      loadByUser: vi.fn(),
+      revoke: vi.fn().mockResolvedValue(true),
+    };
+    confirmMock = { confirm: vi.fn().mockResolvedValue(true) };
     TestBed.configureTestingModule({
       providers: [
         {
@@ -44,12 +67,7 @@ describe('AjustesDrawerComponent (hotfix-188-b)', () => {
         },
         {
           provide: ConsentsFacade,
-          useValue: {
-            consents: signal([]),
-            isLoading: signal(false),
-            isSaving: signal(false),
-            loadByUser: vi.fn(),
-          },
+          useValue: consentsMock,
         },
         {
           provide: LayoutDrawerFacadeService,
@@ -61,7 +79,7 @@ describe('AjustesDrawerComponent (hotfix-188-b)', () => {
           useValue: { visibilityMonths: signal(3), setVisibilityMonths: vi.fn() },
         },
         { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn(), info: vi.fn() } },
-        { provide: ConfirmModalService, useValue: { confirm: vi.fn().mockResolvedValue(true) } },
+        { provide: ConfirmModalService, useValue: confirmMock },
         { provide: Router, useValue: { navigate: vi.fn() } },
       ],
     });
@@ -99,5 +117,33 @@ describe('AjustesDrawerComponent (hotfix-188-b)', () => {
     const secretaria = setup('secretaria');
     secretaria.setTab('seguridad');
     expect(secretaria.activeTab()).toBe('perfil');
+  });
+
+  // spec 0061-b (AC10): un consentimiento promocional por escuela, revocable por separado.
+  describe('promociones por escuela (spec 0061-b)', () => {
+    const AC = promo(1, 1, 'Autoescuela Chillán', 'otorgado');
+    const CC = promo(2, 2, 'Conductores Chillán', 'otorgado');
+
+    it('muestra un consentimiento por escuela', () => {
+      const alumno = setup('alumno', [AC, CC]);
+      expect(alumno.promotionalConsents().map((c: any) => c.branchName)).toEqual([
+        'Autoescuela Chillán',
+        'Conductores Chillán',
+      ]);
+    });
+
+    it('revoca solo el de la escuela elegida', async () => {
+      const alumno = setup('alumno', [AC, CC]);
+      await alumno.onRevokePromotionalConsent(CC);
+      expect(consentsMock.revoke).toHaveBeenCalledTimes(1);
+      expect(consentsMock.revoke).toHaveBeenCalledWith(2);
+      expect(confirmMock.confirm.mock.calls[0][0].message).toContain('Conductores Chillán');
+    });
+
+    it('no revoca uno que no está otorgado', async () => {
+      const alumno = setup('alumno', [promo(3, 1, 'Autoescuela Chillán', 'revocado')]);
+      await alumno.onRevokePromotionalConsent(alumno.promotionalConsents()[0]);
+      expect(consentsMock.revoke).not.toHaveBeenCalled();
+    });
   });
 });

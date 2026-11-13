@@ -11,6 +11,7 @@ import { Router } from '@angular/router';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ConsentsFacade } from '@core/facades/consents.facade';
+import type { ConsentRow } from '@core/models/ui/consent.model';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { TemplateManagerDrawerComponent } from '@features/comunicados/template-manager-drawer.component';
 import { ClassBTopicsDrawerComponent } from '@features/admin/configuracion-academica/class-b-topics-drawer.component';
@@ -32,6 +33,7 @@ import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuraci
 import { DescuentosDrawerComponent } from '@features/admin/configuracion-descuentos/descuentos-drawer.component';
 import { PreciosCursosDrawerComponent } from '@features/admin/configuracion-precios/precios-cursos-drawer.component';
 import { TarifaInstructoresDrawerComponent } from '@features/admin/configuracion-nomina/tarifa-instructores-drawer.component';
+import { CorreoEscuelasDrawerComponent } from '@features/admin/configuracion-correo/correo-escuelas-drawer.component';
 import { PenalizacionInasistenciasDrawerComponent } from '@features/admin/configuracion-inasistencias/penalizacion-inasistencias-drawer.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { TabsComponent, type TabOption } from '@shared/components/tabs/tabs.component';
@@ -257,38 +259,49 @@ import { TabsComponent, type TabOption } from '@shared/components/tabs/tabs.comp
                   @if (consents.isLoading()) {
                     <app-skeleton-block variant="text" width="60%" height="18px" />
                     <app-skeleton-block variant="text" width="85%" height="13px" />
-                  } @else if (promotionalConsent(); as consent) {
-                    <div class="flex items-start justify-between gap-3">
-                      <div class="space-y-0.5">
-                        <p class="item-title">Promociones y Novedades</p>
-                        <p class="text-xs text-text-muted">
-                          Correos ocasionales de la escuela. No afecta los avisos de tu curso
-                          (clases, documentos, certificados, saldo), que siempre llegan igual.
-                        </p>
-                      </div>
-                      <app-badge
-                        class="shrink-0"
-                        [variant]="isPromoGranted() ? 'success' : 'neutral'"
-                      >
-                        {{ isPromoGranted() ? 'Activo' : 'Desactivado' }}
-                      </app-badge>
-                    </div>
-                    @if (isPromoRevoked() && consent.revokedAt) {
+                  } @else if (promotionalConsents().length > 0) {
+                    <div class="space-y-0.5">
+                      <p class="item-title">Promociones y Novedades</p>
                       <p class="text-xs text-text-muted">
-                        Desactivado el {{ formatConsentDate(consent.revokedAt) }}.
+                        Correos ocasionales de cada escuela. No afecta los avisos de tu curso
+                        (clases, documentos, certificados, saldo), que siempre llegan igual.
                       </p>
-                    }
-                    @if (isPromoGranted()) {
-                      <button
-                        type="button"
-                        class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
-                        [disabled]="consents.isSaving()"
-                        data-llm-action="revocar-comunicaciones-promocionales"
-                        (click)="onRevokePromotionalConsent()"
-                      >
-                        <app-icon name="bell-off" [size]="14" />
-                        <span>Dejar de recibir promociones</span>
-                      </button>
+                    </div>
+                    <!-- spec 0061-b (AC10): uno por escuela, cada uno se revoca por separado. -->
+                    @for (consent of promotionalConsents(); track consent.id) {
+                      <div class="space-y-2 border-t border-border-default pt-3">
+                        <div class="flex items-center justify-between gap-3">
+                          <p class="text-sm text-text-primary">
+                            {{ consent.branchName || 'Escuela' }}
+                          </p>
+                          <app-badge
+                            class="shrink-0"
+                            [variant]="consent.status === 'otorgado' ? 'success' : 'neutral'"
+                          >
+                            {{ consent.status === 'otorgado' ? 'Activo' : 'Desactivado' }}
+                          </app-badge>
+                        </div>
+                        @if (consent.status === 'revocado' && consent.revokedAt) {
+                          <p class="text-xs text-text-muted">
+                            Desactivado el {{ formatConsentDate(consent.revokedAt) }}.
+                          </p>
+                        }
+                        @if (consent.status === 'otorgado') {
+                          <button
+                            type="button"
+                            class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
+                            [disabled]="consents.isSaving()"
+                            data-llm-action="revocar-comunicaciones-promocionales"
+                            [attr.data-llm-description]="
+                              'revoke promotional emails consent for school ' + consent.branchName
+                            "
+                            (click)="onRevokePromotionalConsent(consent)"
+                          >
+                            <app-icon name="bell-off" [size]="14" />
+                            <span>Dejar de recibir promociones</span>
+                          </button>
+                        }
+                      </div>
                     }
                   } @else {
                     <p class="text-xs text-text-muted">
@@ -423,6 +436,27 @@ import { TabsComponent, type TabOption } from '@shared/components/tabs/tabs.comp
                     >
                       <app-icon name="banknote" [size]="14" />
                       <span>Editar Tarifa</span>
+                    </button>
+                  </div>
+                }
+
+                <!-- Correo de las Escuelas card (spec 0061-b, AC11: solo admin) -->
+                @if (isAdmin()) {
+                  <div class="card p-4 space-y-3">
+                    <div class="space-y-0.5">
+                      <p class="item-title">Correo de las Escuelas</p>
+                      <p class="text-xs text-text-muted">
+                        Remitente, correo de respuesta y teléfono de los correos de cada escuela
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
+                      data-llm-action="open-school-email-settings"
+                      (click)="abrirCorreoEscuelas()"
+                    >
+                      <app-icon name="mail" [size]="14" />
+                      <span>Configurar Correo</span>
                     </button>
                   </div>
                 }
@@ -675,17 +709,9 @@ export class AjustesDrawerComponent {
    * `comunicaciones_promocionales` — la operativa no tiene control, se informa
    * (Art. 13 c), no se consiente.
    */
-  protected readonly promotionalConsent = computed(
-    () =>
-      this.consents.consents().find((c) => c.consentType === 'comunicaciones_promocionales') ??
-      null,
-  );
-  protected readonly isPromoGranted = computed(
-    () => this.promotionalConsent()?.status === 'otorgado',
-  );
-  protected readonly isPromoRevoked = computed(
-    () => this.promotionalConsent()?.status === 'revocado',
-  );
+  // spec 0061-b (AC10): uno por escuela — cada escuela es un responsable distinto y el alumno
+  // decide por separado ante cada una. Antes se mostraba solo el primero que aparecía.
+  protected readonly promotionalConsents = this.consents.promotionalByBranch;
 
   /** Configuración de sede (agenda global + editor web): solo admin y secretaria. */
   protected readonly canManageSiteConfig = computed(() => {
@@ -773,14 +799,13 @@ export class AjustesDrawerComponent {
     });
   }
 
-  async onRevokePromotionalConsent(): Promise<void> {
-    const consent = this.promotionalConsent();
-    if (!consent || consent.status !== 'otorgado') return;
+  async onRevokePromotionalConsent(consent: ConsentRow): Promise<void> {
+    if (consent.status !== 'otorgado') return;
 
+    const school = consent.branchName || 'la escuela';
     const confirmed = await this.confirmModal.confirm({
       title: 'Dejar de recibir promociones',
-      message:
-        'No volverás a recibir correos promocionales de la escuela. Los avisos de tu curso (clases, documentos, certificados, saldo) siguen llegando igual. Puedes reactivarlo cuando quieras.',
+      message: `No volverás a recibir correos promocionales de ${school}. Los avisos de tu curso (clases, documentos, certificados, saldo) siguen llegando igual. Puedes reactivarlo cuando quieras.`,
       severity: 'warn',
       confirmLabel: 'Dejar de recibir',
       cancelLabel: 'Cancelar',
@@ -839,6 +864,10 @@ export class AjustesDrawerComponent {
 
   abrirTarifaInstructores(): void {
     this.layoutDrawer.push(TarifaInstructoresDrawerComponent, 'Tarifa Instructores', 'banknote');
+  }
+
+  abrirCorreoEscuelas(): void {
+    this.layoutDrawer.push(CorreoEscuelasDrawerComponent, 'Correo de las Escuelas', 'mail');
   }
 
   abrirPenalizacionInasistencias(): void {

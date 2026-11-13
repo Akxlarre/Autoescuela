@@ -37,6 +37,13 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { type EnrollmentData, buildStructuredPdf } from '../_shared/contract-pdf.ts';
 import { loadPngForPdf } from '../_shared/pdf-utils.ts';
 import { checkClaseBSelection } from '../_shared/clase-b-selection.ts';
+import { loadSchoolSender, withSchool } from '../_shared/school-email.ts';
+import { createSmtpTransport, platformAddress, sendSchoolMail } from '../_shared/school-mailer.ts';
+import {
+  STUDENT_INVITE_SUBJECT,
+  buildStudentInviteEmailHtml,
+  resolveStudentInviteBrand,
+} from '../_shared/student-invite-email.ts';
 
 // Mismo logo que generate-contract-pdf / generate-certificate-b-pdf /
 // generate-certificate-professional-pdf / generate-student-license-pdf — bucket público `assets`
@@ -213,41 +220,6 @@ async function webpayCommit(token: string): Promise<WebpayCommitResponse> {
   }
 
   return res.json();
-}
-
-// ─── Brand theming for invite emails ───────────────────────────────────────
-// Colors sourced from webs/src/styles/themes/{azul,roja}.css — single source of truth.
-
-const THEME_COLORS = {
-  azul: {
-    brandColor: '#0ea5e9',
-    brandColorDark: '#0369a1',
-    brandColorLight: '#f0f9ff',
-    brandColorMuted: '#e0f2fe',
-    gradientHero: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 60%, #8b5cf6 100%)',
-    gradientCta: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)',
-    gradientFooter: 'linear-gradient(to right, #0ea5e9, #6366f1)',
-    shadowColor: 'rgba(14, 165, 233, 0.35)',
-  },
-  roja: {
-    brandColor: '#fd2018',
-    brandColorDark: '#bc0b05',
-    brandColorLight: '#fff1f0',
-    brandColorMuted: '#ffe2e0',
-    gradientHero: 'linear-gradient(160deg, #bc0b05 0%, #fd2018 55%, #f97316 100%)',
-    gradientCta: 'linear-gradient(135deg, #fd2018 0%, #f97316 100%)',
-    gradientFooter: 'linear-gradient(to right, #fd2018, #f97316)',
-    shadowColor: 'rgba(253, 32, 24, 0.35)',
-  },
-} as const;
-
-function getSchoolInitials(name: string): string {
-  return name
-    .split(' ')
-    .filter((w) => w.length > 2)
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join('');
 }
 
 // ─── Main handler ───
@@ -1904,44 +1876,64 @@ async function inviteStudentToAuth(supabase: any, userId: number, branchId: numb
       return;
     }
 
-    // Leer configuración de marca de la sede para personalizar el correo
-    const { data: websiteConfig } = await supabase
+    // Marca de la cabecera (website_config) y remitente de la escuela de la matrícula (AC4)
+    const { data: websiteConfig, error: configError } = await supabase
       .from('website_config')
       .select('config')
       .eq('branch_id', branchId)
       .maybeSingle();
-
-    const theme = (websiteConfig?.config?.brand?.theme ?? 'azul') as keyof typeof THEME_COLORS;
-    const colors = THEME_COLORS[theme] ?? THEME_COLORS.azul;
-    const schoolName = (websiteConfig?.config?.brand?.name ?? 'Autoescuela').normalize('NFC');
-    const schoolInitials = getSchoolInitials(schoolName);
+    if (configError) {
+      console.error('inviteStudentToAuth — website_config error:', configError.message);
+    }
+    const sender = await loadSchoolSender(supabase, branchId, platformAddress());
+    const brand = resolveStudentInviteBrand(websiteConfig?.config, sender.schoolName);
 
     const siteUrl = Deno.env.get('SITE_URL') ?? '';
+    const options = {
+      redirectTo: siteUrl,
+      data: { role: 'student', schoolName: brand.schoolName },
+    };
 
-    const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
-      inviteEmail,
-      {
-        redirectTo: siteUrl,
-        data: { role: 'student', schoolName, schoolInitials, ...colors },
-      },
-    );
+    // spec 0061-b (AC6): generateLink no envía correo; el correo sale por SMTP propio con el
+    // remitente de la escuela. Primera vez → 'invite' (crea la cuenta de Auth). Si la cuenta ya
+    // existe y no se activó → 'magiclink' ('invite' falla con "already registered", DG-068).
+    const firstTime = !userRow?.supabase_uid;
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: firstTime ? 'invite' : 'magiclink',
+      email: inviteEmail,
+      options,
+    });
 
-    if (inviteError) {
-      console.error('inviteStudentToAuth — invite error:', inviteError.message);
+    if (linkError) {
+      console.error('inviteStudentToAuth — generateLink error:', linkError.message);
       return;
     }
 
-    // Vincular supabase_uid solo si era la primera vez (no re-invite)
-    if (!userRow?.supabase_uid && inviteData?.user?.id) {
+    // Vincular supabase_uid ANTES del correo: si el envío falla, el siguiente intento entra por
+    // 'magiclink' en vez de chocar con DG-068.
+    if (firstTime && linkData?.user?.id) {
       const { error: updateError } = await supabase
         .from('users')
-        .update({ supabase_uid: inviteData.user.id })
+        .update({ supabase_uid: linkData.user.id })
         .eq('id', userId);
 
       if (updateError) {
         console.error('inviteStudentToAuth — link error:', updateError.message);
+        return;
       }
     }
+
+    await sendSchoolMail(createSmtpTransport(), sender, {
+      to: inviteEmail,
+      subject: withSchool(STUDENT_INVITE_SUBJECT, sender),
+      html: buildStudentInviteEmailHtml(
+        linkData.properties.action_link,
+        brand.colors,
+        brand.schoolName,
+        brand.initials,
+        sender,
+      ),
+    });
   } catch (err) {
     console.error('inviteStudentToAuth — unexpected error:', err?.message);
   }

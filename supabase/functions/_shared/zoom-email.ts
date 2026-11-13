@@ -125,12 +125,14 @@ export interface ZoomEmailBrand {
 /**
  * Marca del correo según la sede del ciclo (fix-062-i): `website_config.config.brand` de esa sede,
  * igual que los correos del certificado y del contrato (hotfix-159-m). Sin marca → "Autoescuela"
- * con el tema azul.
+ * con el tema azul. El nombre es el de la escuela (`branches.name`, el mismo del remitente y el
+ * pie, AC13 de 0061-b); el de la web solo si falta.
  */
 export function resolveZoomEmailBrand(
   brand: { name?: string | null; theme?: string | null } | null | undefined,
+  branchName?: string | null,
 ): ZoomEmailBrand {
-  const schoolName = (brand?.name?.trim() || 'Autoescuela').normalize('NFC');
+  const schoolName = (branchName?.trim() || brand?.name?.trim() || 'Autoescuela').normalize('NFC');
   return {
     schoolName,
     initials: schoolInitials(schoolName),

@@ -1,6 +1,6 @@
 // supabase/functions/_shared/contract-email.test.ts
 //
-// Tests del contenido del correo con el contrato firmado (fix-318-m).
+// Tests del contenido del correo con el contrato firmado (fix-318-m; pie por escuela: spec 0061-b).
 //
 //   npx deno test supabase/functions/_shared/contract-email.test.ts
 
@@ -13,6 +13,7 @@ import {
   resolveContractEmailTheme,
   schoolInitials,
 } from './contract-email.ts';
+import { resolveSender } from './school-email.ts';
 
 const DATA = {
   studentName: 'Ana Pérez',
@@ -20,6 +21,18 @@ const DATA = {
   courseName: 'Clase B',
   enrollmentNumber: '0083',
 };
+
+const SENDER = resolveSender(
+  {
+    id: 2,
+    name: 'Conductores Chillán',
+    email_sender_name: 'Conductores Chillán',
+    email_sender_address: 'conductores-chillan@gestordeautoescuelas.cl',
+    email: 'conductorchillan@gmail.com',
+    phone: '+56 42 224 4030',
+  },
+  'cuentas@gestordeautoescuelas.cl',
+);
 
 Deno.test('el asunto lleva el Nº de matrícula y la escuela', () => {
   assertEquals(
@@ -74,7 +87,7 @@ Deno.test('iniciales de la escuela', () => {
 });
 
 Deno.test('el correo nombra al alumno, el curso, la matrícula y la escuela', () => {
-  const html = buildContractEmailHtml(DATA, CONTRACT_EMAIL_THEMES.roja);
+  const html = buildContractEmailHtml(DATA, CONTRACT_EMAIL_THEMES.roja, SENDER);
   assertStringIncludes(html, 'Hola, Ana Pérez');
   assertStringIncludes(html, 'Clase B');
   assertStringIncludes(html, '0083');
@@ -86,6 +99,7 @@ Deno.test('los datos del alumno no pueden inyectar HTML en el correo', () => {
   const html = buildContractEmailHtml(
     { ...DATA, studentName: '<script>alert(1)</script>' },
     CONTRACT_EMAIL_THEMES.azul,
+    SENDER,
   );
   assert(!html.includes('<script>'));
   assertStringIncludes(html, '&lt;script&gt;');
@@ -95,6 +109,14 @@ Deno.test('sin Nº de matrícula no aparece la fila vacía', () => {
   const html = buildContractEmailHtml(
     { ...DATA, enrollmentNumber: null },
     CONTRACT_EMAIL_THEMES.azul,
+    SENDER,
   );
   assert(!html.includes('Nº de matrícula'));
+});
+
+Deno.test('AC3: pie de la escuela, con su contacto y sin "no lo respondas"', () => {
+  const html = buildContractEmailHtml(DATA, CONTRACT_EMAIL_THEMES.azul, SENDER);
+  assertStringIncludes(html, 'Enviado por Conductores Chillán mediante Gestor de Autoescuelas');
+  assertStringIncludes(html, 'conductorchillan@gmail.com');
+  assert(!/no lo respondas|no responder/i.test(html));
 });

@@ -351,9 +351,7 @@ describe('AnnouncementsFacade', () => {
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnValue({
-                in: vi.fn().mockReturnValue({
-                  order: vi.fn().mockResolvedValue({ data: consentRows, error: null }),
-                }),
+                in: vi.fn().mockResolvedValue({ data: consentRows, error: null }),
               }),
             }),
           };
@@ -362,10 +360,10 @@ describe('AnnouncementsFacade', () => {
       });
     }
 
-    function alumno(id: number, nombre: string, email = `a${id}@test.com`) {
+    function alumno(id: number, nombre: string, email = `a${id}@test.com`, branchId = 1) {
       return {
         status: 'active',
-        branch_id: 1,
+        branch_id: branchId,
         courses: { type: 'class_b' },
         students: {
           user_id: id,
@@ -418,7 +416,7 @@ describe('AnnouncementsFacade', () => {
     it('AC3 · el promocional excluye a quien no consintió, con su motivo', async () => {
       mockSegmento(
         [alumno(1, 'Ana'), alumno(2, 'Beto')],
-        [{ user_id: 1, granted: true, revoked_at: null, granted_at: '2026-09-01' }],
+        [{ user_id: 1, branch_id: 1, granted: true, revoked_at: null, granted_at: '2026-09-01' }],
       );
 
       await facade.loadPreview(FILTROS, 'promocional');
@@ -435,7 +433,15 @@ describe('AnnouncementsFacade', () => {
     it('AC3 · un consentimiento revocado no habilita', async () => {
       mockSegmento(
         [alumno(1, 'Ana')],
-        [{ user_id: 1, granted: true, revoked_at: '2026-09-05', granted_at: '2026-09-01' }],
+        [
+          {
+            user_id: 1,
+            branch_id: 1,
+            granted: true,
+            revoked_at: '2026-09-05',
+            granted_at: '2026-09-01',
+          },
+        ],
       );
 
       await facade.loadPreview(FILTROS, 'promocional');
@@ -449,14 +455,50 @@ describe('AnnouncementsFacade', () => {
       mockSegmento(
         [alumno(1, 'Ana')],
         [
-          { user_id: 1, granted: false, revoked_at: null, granted_at: '2026-09-08' },
-          { user_id: 1, granted: true, revoked_at: null, granted_at: '2026-09-01' },
+          { user_id: 1, branch_id: 1, granted: false, revoked_at: null, granted_at: '2026-09-08' },
+          { user_id: 1, branch_id: 1, granted: true, revoked_at: null, granted_at: '2026-09-01' },
         ],
       );
 
       await facade.loadPreview(FILTROS, 'promocional');
 
       expect(facade.preview()[0].included).toBe(false);
+    });
+
+    // spec 0061-b — consentimiento y destinatarios por escuela.
+    it('AC10 · un consentimiento ante la OTRA escuela no habilita', async () => {
+      mockSegmento(
+        [alumno(1, 'Ana', 'a1@test.com', 1)],
+        [{ user_id: 1, branch_id: 2, granted: true, revoked_at: null, granted_at: '2026-09-01' }],
+      );
+
+      await facade.loadPreview(FILTROS, 'promocional');
+
+      expect(facade.preview()[0]).toMatchObject({
+        included: false,
+        exclusionReason: 'sin_consentimiento',
+        branchIds: [],
+      });
+    });
+
+    it('AC-E5 · un alumno de las dos escuelas es una fila que recibe por las dos', async () => {
+      mockSegmento([alumno(1, 'Ana', 'a1@test.com', 1), alumno(1, 'Ana', 'a1@test.com', 2)]);
+
+      await facade.loadPreview({ ...FILTROS, branchId: null }, 'operativo');
+
+      expect(facade.preview()).toHaveLength(1);
+      expect(facade.preview()[0]).toMatchObject({ included: true, branchIds: [1, 2] });
+    });
+
+    it('AC-E5 + AC10 · promocional de todas: recibe solo por la escuela que consintió', async () => {
+      mockSegmento(
+        [alumno(1, 'Ana', 'a1@test.com', 1), alumno(1, 'Ana', 'a1@test.com', 2)],
+        [{ user_id: 1, branch_id: 2, granted: true, revoked_at: null, granted_at: '2026-09-01' }],
+      );
+
+      await facade.loadPreview({ ...FILTROS, branchId: null }, 'promocional');
+
+      expect(facade.preview()[0]).toMatchObject({ included: true, branchIds: [2] });
     });
 
     it('AC-E2 · un alumno sin email queda incluido, con email null', async () => {
@@ -680,6 +722,16 @@ describe('AnnouncementsFacade', () => {
       await facade.loadPreviewHtml({ ...DRAFT, kind: 'promocional' });
 
       expect(invokeSpy.mock.calls[0][1].body.preview.kind).toBe('promocional');
+    });
+
+    it('spec 0061-b · manda la escuela que envía, para la marca y el pie de la vista previa', async () => {
+      invokeSpy.mockResolvedValue({ data: { html: '<html></html>' }, error: null });
+
+      await facade.loadPreviewHtml(DRAFT);
+
+      expect(invokeSpy.mock.calls[0][1].body.preview.branchId).toBe(
+        (facade as any).effectiveBranchId(DRAFT.filters),
+      );
     });
 
     // AC-E2 — un preview vacío no dice nada; mejor avisar que gastar un round-trip.

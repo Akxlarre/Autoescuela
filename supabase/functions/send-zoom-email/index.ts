@@ -20,16 +20,24 @@
 //   404  { error: '...' }   — la sesión no existe o no es de una sede visible
 //   500  { error: '...' }
 //
-// Secrets requeridos (Supabase Dashboard → Edge Functions → Secrets):
-//   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+// Remitente (spec 0061-b): sale a nombre de la escuela del ciclo, con su dirección de envío, su
+// correo de respuesta, el pie común y la línea que explica el dominio (AC1–AC4, AC8).
+//
+// Secrets: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM (ver _shared/school-mailer.ts)
 //
 // @ts-nocheck
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import nodemailer from 'npm:nodemailer@6';
 import { authErrorResponse, requireStaff } from '../_shared/staff-auth.ts';
-import { chileYear } from '../_shared/chile-time.ts';
+import {
+  domainLineHtml,
+  loadSchoolSender,
+  schoolFooterHtml,
+  withSchool,
+  type SchoolSender,
+} from '../_shared/school-email.ts';
+import { createSmtpTransport, platformAddress, sendSchoolMail } from '../_shared/school-mailer.ts';
 import {
   buildZoomEmailContent,
   escapeHtml,
@@ -61,6 +69,7 @@ function buildEmailHtml(
   rawDate: string,
   rawLink: string,
   brand: ZoomEmailBrand,
+  sender: SchoolSender,
 ): string {
   const { theme } = brand;
   const school = escapeHtml(brand.schoolName);
@@ -83,7 +92,7 @@ function buildEmailHtml(
     .email-wrapper { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
     .email-header { background-color: ${theme.brandColor}; background: ${theme.gradientHero}; padding: 44px 36px 40px; text-align: center; position: relative; overflow: hidden; }
     .email-header::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(to right, rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.06) 1px, transparent 1px); background-size: 36px 36px; }
-    .logo-badge { width: 60px; height: 60px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px; backdrop-filter: blur(8px); }
+    .logo-badge { box-sizing: content-box; width: 56px; height: 56px; line-height: 56px; text-align: center; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); border-radius: 14px; display: inline-block; margin-bottom: 14px; backdrop-filter: blur(8px); }
     .logo-badge span { color: #fff; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
     .company-name { color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
     .email-body { padding: 44px 36px 36px; }
@@ -129,11 +138,11 @@ function buildEmailHtml(
     </div>
     <p class="fallback-label">O copia este enlace en tu navegador:</p>
     <p class="fallback-link">${zoomLink}</p>
+    ${domainLineHtml(sender)}
   </div>
   <div class="email-footer">
     <div class="footer-divider"></div>
-    <p class="footer-brand">${school}</p>
-    <p class="footer-text">Este correo fue enviado automáticamente. Por favor no responder.<br>© ${chileYear()} ${school}. Todos los derechos reservados.</p>
+${schoolFooterHtml(sender)}
   </div>
 </div>
 </body>
@@ -174,7 +183,8 @@ Deno.serve(async (req: Request) => {
     if (!session) return jsonResponse({ error: 'Clase no encontrada' }, 404);
 
     const content = buildZoomEmailContent(session);
-    if (!content) return jsonResponse({ error: 'La clase no tiene un enlace Zoom válido (https)' }, 400);
+    if (!content)
+      return jsonResponse({ error: 'La clase no tiene un enlace Zoom válido (https)' }, 400);
 
     // fix-062-i: marca de la sede del ciclo (website_config es de lectura pública).
     const { data: cycle } = await supabaseUser
@@ -189,11 +199,14 @@ Deno.serve(async (req: Request) => {
           .eq('branch_id', cycle.branch_id)
           .maybeSingle()
       : { data: null };
-    const brand = resolveZoomEmailBrand(websiteConfig?.config?.brand);
+    const sender = await loadSchoolSender(supabaseUser, cycle?.branch_id, platformAddress());
+    const brand = resolveZoomEmailBrand(websiteConfig?.config?.brand, sender.schoolName);
 
     const { data: rows, error: rowsError } = await supabaseUser
       .from('enrollments')
-      .select('id, theory_cycle_id, status, students!inner(users!inner(first_names, paternal_last_name, email))')
+      .select(
+        'id, theory_cycle_id, status, students!inner(users!inner(first_names, paternal_last_name, email))',
+      )
       .in('id', enrollmentIds)
       .eq('theory_cycle_id', session.cycle_id);
     if (rowsError) throw rowsError;
@@ -203,29 +216,25 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: 'Sin destinatarios con correo en este ciclo' }, 400);
     }
 
-    // ── Configurar transporte SMTP ───────────────────────────────────────────
-    const transporter = nodemailer.createTransport({
-      host: Deno.env.get('SMTP_HOST'),
-      port: Number(Deno.env.get('SMTP_PORT') ?? 465),
-      secure: Number(Deno.env.get('SMTP_PORT') ?? 465) === 465,
-      auth: {
-        user: Deno.env.get('SMTP_USER'),
-        pass: Deno.env.get('SMTP_PASS'),
-      },
-    });
-
-    const from = Deno.env.get('SMTP_FROM') ?? Deno.env.get('SMTP_USER');
+    // ── Remitente: la escuela del ciclo (AC4) ────────────────────────────────
+    const transporter = createSmtpTransport();
 
     // ── Enviar correos ───────────────────────────────────────────────────────
     const result = { sent: 0, errors: [] as string[] };
 
     for (const recipient of recipients) {
       try {
-        await transporter.sendMail({
-          from,
+        await sendSchoolMail(transporter, sender, {
           to: recipient.email,
-          subject: content.subject,
-          html: buildEmailHtml(recipient.name, content.topic, content.date, content.zoomLink, brand),
+          subject: withSchool(content.subject, sender),
+          html: buildEmailHtml(
+            recipient.name,
+            content.topic,
+            content.date,
+            content.zoomLink,
+            brand,
+            sender,
+          ),
         });
         result.sent++;
       } catch (err) {

@@ -1,7 +1,8 @@
 # Hotfix: test de agenda hotfix-077-b falla en fin de semana
 > id: hotfix-175-b-test-agenda-falla-en-fin-de-semana
 > refs: —
-> status: in_progress
+> status: done
+> closed: 2026-11-12
 > created: 2026-11-07
 
 ## Problema

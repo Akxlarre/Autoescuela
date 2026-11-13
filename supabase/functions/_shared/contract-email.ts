@@ -2,6 +2,10 @@
 //
 // Contenido del correo que le lleva al alumno su contrato de matrícula firmado (fix-318-m).
 // Funciones puras, sin I/O: el envío vive en send-enrollment-contract-email/index.ts.
+// spec 0061-b: el pie es el común de school-email.ts (escuela, contacto, "Enviado por … mediante
+// Gestor de Autoescuelas"); ya no pide no responder, porque la respuesta llega a la escuela.
+
+import { schoolFooterHtml, type SchoolSender } from './school-email.ts';
 
 /** Colores de marca por tema de sede (mismos valores que activate-student-account). */
 export const CONTRACT_EMAIL_THEMES = {
@@ -82,7 +86,11 @@ export function contractAttachment(
   return { filename: `Contrato_Matricula${sufijo}.${ext}`, contentType };
 }
 
-export function buildContractEmailHtml(data: ContractEmailData, theme: ContractEmailTheme): string {
+export function buildContractEmailHtml(
+  data: ContractEmailData,
+  theme: ContractEmailTheme,
+  sender: SchoolSender,
+): string {
   const student = escapeHtml(data.studentName);
   const school = escapeHtml(data.schoolName);
   const course = escapeHtml(data.courseName);
@@ -128,10 +136,7 @@ export function buildContractEmailHtml(data: ContractEmailData, theme: ContractE
   </div>
 
   <div style="padding:24px 36px;text-align:center;background-color:#f8fafc;border-top:1px solid #e2e8f0;">
-    <p style="margin:0 0 6px;color:#334155;font-size:14px;font-weight:700;">${school}</p>
-    <p style="margin:0;color:#94a3b8;font-size:12px;">
-      Este correo se envió automáticamente al confirmar tu matrícula. Por favor no lo respondas.
-    </p>
+${schoolFooterHtml(sender)}
   </div>
 
 </div>
