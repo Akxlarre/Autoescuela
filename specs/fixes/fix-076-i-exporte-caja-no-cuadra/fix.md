@@ -1,7 +1,8 @@
 # Fix: El Excel/PDF de la Caja Diaria no cuadra con la pantalla
 > id: fix-076-i-exporte-caja-no-cuadra
 > refs: fix-073-i (casos E02, E04, E07, F15, M04 · sospecha S6) · ASG-i-029
-> status: in_progress
+> status: done
+> closed: 2026-11-15
 > created: 2026-11-10
 > priority: P1
 
@@ -35,11 +36,45 @@ Confirmado en `fix-073-i` (sede 1, 2026-11-10):
 
 ## Cambio
 
-- **Archivo:** `supabase/functions/generate-cash-closing-report/index.ts` (+ el formateo de la
-  diferencia en `detalle-cuadratura-modal`).
-- **Qué cambia:** mismas reglas que la pantalla; snapshot si la caja está cerrada.
+- **Nuevo `supabase/functions/_shared/cash-closing-report.ts`:** copia espejo del cálculo de
+  `CuadraturaFacade`: `ingresoByMethod()` (columna por medio de pago, tarjeta incluida),
+  `resolveCajaTotals()` (caja abierta: fondo + efectivo − egreso en efectivo; caja cerrada: los
+  montos del snapshot), `rowsAtClose()` (omite lo registrado después del cierre),
+  `diferenciaLabel()` ("Faltante: $500", un solo signo) y `paymentMethodLabel()`.
+- **`supabase/functions/generate-cash-closing-report/index.ts`:**
+  - pagos por `payment_date` con los estados que suman (antes `created_at` y solo `paid`);
+  - suma las ventas de servicios especiales cobradas;
+  - anticipos filtrados por la sede del instructor;
+  - lee la fila del día también en borrador: el fondo de la caja abierta es el de la pantalla;
+  - caja cerrada: totales del snapshot y detalle hasta `closed_at`; el estado dice "montos del
+    cierre guardado";
+  - columna Tarjeta en el PDF y el Excel (antes "Otro" / sin columna), medio de pago en egresos.
+- **`detalle-cuadratura-modal`:** la diferencia se muestra "− $500" (antes "− $-500").
 
 ## Test de Regresión
 
-- Test de la edge function (Deno) con un día de pagos, venta de servicio, anticipo de otra sede y
-  cierre: totales del archivo = totales esperados.
+- `supabase/functions/_shared/cash-closing-report.test.ts` (Deno) ✓ 7/7: caja abierta = pantalla
+  (fondo del borrador + servicio especial: $550.000 / efectivo $290.000), caja cerrada = snapshot
+  aunque haya un ingreso posterior ($810.000 → $550.000), cierre antiguo sin `cash_expenses`,
+  corte por `closed_at`, diferencia con un solo signo, nombres de medio de pago.
+- `deno check` de la función: solo el error `Uint8Array` → `Response` que ya existía. `npm run
+  lint:arch`: 0 errores.
+- Base (solo lectura, 2026-11-15): sede 1, 10-11-2026, cerrada → snapshot fondo $50.000, ingresos
+  $550.000, efectivo $290.000, egresos $65.000 ($50.000 en efectivo), saldo teórico $290.000,
+  diferencia −$500. Es lo que el archivo debe mostrar (antes $810.000 / $540.000).
+
+## Verificación (2026-11-15, función desplegada con autorización de Ignacio)
+
+Llamada real a `generate-cash-closing-report` con la sesión de `admin@test.com`, sede 1:
+
+- **10-11-2026 (cerrada), Excel:** "Estado: Caja Cerrada (montos del cierre guardado)" · Fondo
+  $50.000 · Ingresos $550.000 · Efectivo $290.000 · Egresos $65.000 ($50.000 en efectivo, $15.000
+  tarjeta/transferencia) · Saldo teórico $290.000 · Físico $289.500 · Diferencia "Faltante: $500".
+  La fila TOTAL del detalle suma lo mismo: efectivo $290.000, transferencia $30.000, tarjeta
+  $10.000, total $550.000 (antes $810.000 / $540.000). Columnas "Tarjeta" y "Medio de pago".
+  AC-2 ✓ AC-4 ✓ AC-5 ✓
+- **10-11-2026, PDF:** 200 `application/pdf`; contiene $550.000, $290.000, $65.000, "Faltante:
+  $500", "Tarjeta", "Medio de pago"; ningún "$-". AC-2 ✓ AC-4 ✓ AC-5 ✓
+- **15-11-2026 (abierta, sin movimientos):** 200, todo en $0. AC-1 y AC-3 quedan cubiertos por el
+  test Deno (caja abierta = cálculo de la pantalla) y por las mismas consultas que
+  `CuadraturaFacade` (servicios especiales; anticipos por `instructors.users.branch_id`).

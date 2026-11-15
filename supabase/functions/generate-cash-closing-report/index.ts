@@ -1,5 +1,13 @@
 import { chileDayRange, chileToday, formatChilePattern } from '../_shared/chile-time.ts';
 import { resolveArqueo } from '../_shared/cash-arqueo.ts';
+import {
+  diferenciaLabel,
+  ingresoByMethod,
+  paymentMethodLabel,
+  resolveCajaTotals,
+  rowsAtClose,
+} from '../_shared/cash-closing-report.ts';
+import { PAYMENT_STATUSES_QUE_SUMAN } from '../_shared/financial-report-categories.ts';
 // supabase/functions/generate-cash-closing-report/index.ts
 //
 // Edge Function: generate-cash-closing-report
@@ -90,7 +98,8 @@ Deno.serve(async (req: Request) => {
     // Día de Chile como rango semiabierto de instantes: [dayStart, dayEnd).
     const { start: dayStart, endExclusive: dayEnd } = chileDayRange(date);
 
-    // ── Ingresos del día (payments) ────────────────────────────────────────────
+    // fix-076-i: mismas consultas que la pantalla (CuadraturaFacade). Los pagos van por
+    // `payment_date` (no `created_at`), con los estados que suman; los anulados no entran.
     let paymentsQ = adminClient
       .from('payments')
       .select(
@@ -98,20 +107,12 @@ Deno.serve(async (req: Request) => {
          cash_amount, transfer_amount, card_amount, voucher_amount, total_amount,
          enrollments!inner(branch_id, students!inner(users!inner(first_names, paternal_last_name, rut)))`,
       )
-      .eq('status', 'paid')
-      .gte('created_at', dayStart)
-      .lt('created_at', dayEnd)
+      .in('status', [...PAYMENT_STATUSES_QUE_SUMAN])
+      .eq('payment_date', date)
       .order('created_at', { ascending: true });
+    if (branchId !== null) paymentsQ = paymentsQ.eq('enrollments.branch_id', branchId);
 
-    if (branchId !== null) {
-      paymentsQ = paymentsQ.eq('enrollments.branch_id', branchId);
-    }
-
-    const { data: rawPayments, error: payErr } = await paymentsQ;
-    if (payErr) throw payErr;
-
-    // ── Cobros de cursos singulares del día (fix-016 AC3) ──────────────────────
-    // No existen en `payments`: viven en standalone_course_enrollments.paid_at.
+    // Cobros de cursos singulares del día (fix-016 AC3): viven en standalone_course_enrollments.
     let singularsQ = adminClient
       .from('standalone_course_enrollments')
       .select(
@@ -123,15 +124,16 @@ Deno.serve(async (req: Request) => {
       .gte('paid_at', dayStart)
       .lt('paid_at', dayEnd)
       .order('paid_at', { ascending: true });
+    if (branchId !== null) singularsQ = singularsQ.eq('standalone_courses.branch_id', branchId);
 
-    if (branchId !== null) {
-      singularsQ = singularsQ.eq('standalone_courses.branch_id', branchId);
-    }
+    // Ventas de servicios especiales cobradas el día (fix-024-i). Una anulada queda paid = false.
+    let servicesQ = adminClient
+      .from('special_service_sales')
+      .select('id, created_at, price, service_name, client_name, client_rut, document_number, payment_method')
+      .eq('sale_date', date)
+      .eq('paid', true);
+    if (branchId !== null) servicesQ = servicesQ.eq('branch_id', branchId);
 
-    const { data: rawSingulars, error: singErr } = await singularsQ;
-    if (singErr) throw singErr;
-
-    // ── Egresos del día (expenses) ─────────────────────────────────────────────
     let expQ = adminClient
       .from('expenses')
       .select('id, description, amount, created_at, payment_method')
@@ -139,38 +141,50 @@ Deno.serve(async (req: Request) => {
       .order('created_at', { ascending: true });
     if (branchId !== null) expQ = expQ.eq('branch_id', branchId);
 
-    // ── Anticipos del día (instructor_advances) ────────────────────────────────
-    const advQ = adminClient
+    // `instructor_advances` no tiene branch_id: la sede es la del instructor (fix-243-m).
+    let advQ = adminClient
       .from('instructor_advances')
-      .select('id, reason, description, amount, created_at, payment_method')
+      .select(
+        'id, reason, description, amount, created_at, payment_method, instructors!inner(users!inner(branch_id))',
+      )
       .eq('date', date)
       .order('created_at', { ascending: true });
+    if (branchId !== null) advQ = advQ.eq('instructors.users.branch_id', branchId);
 
-    const [expRes, advRes] = await Promise.all([expQ, advQ]);
-
-    // ── Cierre de caja del día ─────────────────────────────────────────────────
+    // La fila del día, cerrada o borrador: el borrador trae el fondo que se ve en pantalla.
     let cierreQ = adminClient
       .from('cash_closings')
       .select(
         `date, closed, closed_at, status, notes,
          cash_amount, transfer_amount, card_amount, voucher_amount,
-         total_income, total_expenses, balance, payments_count,
+         total_income, total_expenses, cash_expenses, balance, payments_count,
          opening_amount, arqueo_amount, difference,
          qty_bill_20000, qty_bill_10000, qty_bill_5000, qty_bill_2000, qty_bill_1000,
          qty_coin_500, qty_coin_100, qty_coin_50, qty_coin_10`,
       )
-      .eq('date', date)
-      .eq('closed', true);
+      .eq('date', date);
     if (branchId !== null) cierreQ = cierreQ.eq('branch_id', branchId);
-    const { data: cierreData } = await cierreQ.maybeSingle();
+
+    const [payRes, singRes, servRes, expRes, advRes, cierreRes] = await Promise.all([
+      paymentsQ,
+      singularsQ,
+      servicesQ,
+      expQ,
+      advQ,
+      cierreQ.maybeSingle(),
+    ]);
+    for (const r of [payRes, singRes, servRes, expRes, advRes, cierreRes]) {
+      if (r.error) throw r.error;
+    }
+
+    const cierreRow = cierreRes.data;
+    const cierreData = cierreRow?.status === 'closed' ? cierreRow : null;
+    const closedAt: string | null = cierreData?.closed_at ?? null;
 
     // ── Normalizar datos ───────────────────────────────────────────────────────
-    // fix-226-m: fondo de apertura real (cash_closings.opening_amount, spec 0012-m) en vez
-    // del 50.000 hardcodeado. Null en cierres previos / caja aún abierta → 0.
-    const fondoInicial = cierreData?.opening_amount ?? 0;
-
-    const ingresosPagos: IngresoRow[] = (rawPayments ?? []).map((p: any) => ({
+    const ingresosPagos: IngresoRow[] = (payRes.data ?? []).map((p: any) => ({
       hora: formatTimeCL(p.created_at),
+      registradoEn: p.created_at ?? null,
       nBoleta: p.document_number ?? '—',
       alumno: formatAlumno(p.enrollments?.students?.users),
       rut: p.enrollments?.students?.users?.rut ?? '—',
@@ -178,59 +192,64 @@ Deno.serve(async (req: Request) => {
       efectivo: p.cash_amount ?? 0,
       transferencia: p.transfer_amount ?? 0,
       sence: p.voucher_amount ?? 0,
-      otros: p.card_amount ?? 0,
+      tarjeta: p.card_amount ?? 0,
       total: p.total_amount ?? 0,
     }));
 
-    // Mismos buckets que CuadraturaFacade.mapSingularSaleToIngreso():
-    // efectivo→efectivo · transferencia→transferencia · tarjeta→otros · sence→sence
-    const ingresosSingulares: IngresoRow[] = (rawSingulars ?? []).map((s: any) => {
-      const monto = s.amount_paid ?? 0;
-      const metodo = s.payment_method ?? 'efectivo';
-      return {
-        hora: formatTimeCL(s.paid_at),
-        nBoleta: '—',
-        alumno: formatAlumno(s.students?.users),
-        rut: s.students?.users?.rut ?? '—',
-        concepto: `Curso: ${s.standalone_courses?.name ?? 'singular'}`,
-        efectivo: metodo === 'efectivo' ? monto : 0,
-        transferencia: metodo === 'transferencia' ? monto : 0,
-        sence: metodo === 'sence' ? monto : 0,
-        otros: metodo === 'tarjeta' ? monto : 0,
-        total: monto,
-      };
+    const ingresosSingulares: IngresoRow[] = (singRes.data ?? []).map((s: any) => ({
+      hora: formatTimeCL(s.paid_at),
+      registradoEn: s.paid_at ?? null,
+      nBoleta: '—',
+      alumno: formatAlumno(s.students?.users),
+      rut: s.students?.users?.rut ?? '—',
+      concepto: `Curso: ${s.standalone_courses?.name ?? 'singular'}`,
+      ...ingresoByMethod(s.amount_paid ?? 0, s.payment_method),
+    }));
+
+    const ingresosServicios: IngresoRow[] = (servRes.data ?? []).map((v: any) => ({
+      hora: formatTimeCL(v.created_at),
+      registradoEn: v.created_at ?? null,
+      nBoleta: v.document_number ?? '—',
+      alumno: v.client_name ?? '—',
+      rut: v.client_rut ?? '—',
+      concepto: `Servicio: ${v.service_name ?? 'especial'}`,
+      ...ingresoByMethod(v.price ?? 0, v.payment_method),
+    }));
+
+    const ingresos: IngresoRow[] = rowsAtClose(
+      [...ingresosPagos, ...ingresosSingulares, ...ingresosServicios],
+      closedAt,
+    ).sort((a, b) => a.hora.localeCompare(b.hora));
+
+    const egresos: EgresoRow[] = rowsAtClose(
+      [
+        ...(expRes.data ?? []).map((e: any) => ({
+          hora: formatTimeCL(e.created_at),
+          registradoEn: e.created_at ?? null,
+          descripcion: e.description ?? '—',
+          tipo: 'Gasto' as const,
+          monto: e.amount ?? 0,
+          metodoPago: e.payment_method ?? 'efectivo',
+        })),
+        ...(advRes.data ?? []).map((a: any) => ({
+          hora: formatTimeCL(a.created_at),
+          registradoEn: a.created_at ?? null,
+          descripcion: a.reason ?? a.description ?? 'Anticipo instructor',
+          tipo: 'Anticipo' as const,
+          monto: a.amount ?? 0,
+          metodoPago: a.payment_method ?? 'efectivo',
+        })),
+      ],
+      closedAt,
+    ).sort((a, b) => a.hora.localeCompare(b.hora));
+
+    // Caja abierta: el cálculo de la pantalla (fondo del borrador). Cerrada: el snapshot.
+    const totals = resolveCajaTotals({
+      ingresos,
+      egresos,
+      fondoInicial: cierreRow?.opening_amount ?? 0,
+      snapshot: cierreData,
     });
-
-    const ingresos: IngresoRow[] = [...ingresosPagos, ...ingresosSingulares].sort((a, b) =>
-      a.hora.localeCompare(b.hora),
-    );
-
-    const egresos: EgresoRow[] = [
-      ...(expRes.data ?? []).map((e: any) => ({
-        hora: formatTimeCL(e.created_at),
-        descripcion: e.description ?? '—',
-        tipo: 'Gasto' as const,
-        monto: e.amount ?? 0,
-        metodoPago: e.payment_method ?? 'efectivo',
-      })),
-      ...(advRes.data ?? []).map((a: any) => ({
-        hora: formatTimeCL(a.created_at),
-        descripcion: a.reason ?? a.description ?? 'Anticipo instructor',
-        tipo: 'Anticipo' as const,
-        monto: a.amount ?? 0,
-        metodoPago: a.payment_method ?? 'efectivo',
-      })),
-    ].sort((a, b) => a.hora.localeCompare(b.hora));
-
-    const totalIngresos = ingresos.reduce((s, i) => s + i.total, 0);
-    const totalEfectivo = ingresos.reduce((s, i) => s + i.efectivo, 0);
-    const totalEgresos = egresos.reduce((s, e) => s + e.monto, 0);
-    // Solo el egreso pagado en efectivo baja el saldo físico de la caja (fix-211-m / fix-226-m).
-    const totalEgresosEfectivo = egresos.reduce(
-      (s, e) => s + (e.metodoPago === 'efectivo' ? e.monto : 0),
-      0,
-    );
-    const saldoTeorico = fondoInicial + totalEfectivo - totalEgresosEfectivo;
 
     const reportData: ReportData = {
       fecha: date,
@@ -238,12 +257,7 @@ Deno.serve(async (req: Request) => {
       generatedBy,
       ingresos,
       egresos,
-      fondoInicial,
-      totalIngresos,
-      totalEfectivo,
-      totalEgresos,
-      totalEgresosEfectivo,
-      saldoTeorico,
+      ...totals,
       cierre: cierreData
         ? {
             cerradoEn: cierreData.closed_at ? formatDateTimeCL(cierreData.closed_at) : '—',
@@ -294,6 +308,8 @@ Deno.serve(async (req: Request) => {
 
 interface IngresoRow {
   hora: string;
+  /** Instante en que se registró; con la caja cerrada se omite lo posterior al cierre. */
+  registradoEn: string | null;
   nBoleta: string;
   alumno: string;
   rut: string;
@@ -301,12 +317,13 @@ interface IngresoRow {
   efectivo: number;
   transferencia: number;
   sence: number;
-  otros: number;
+  tarjeta: number;
   total: number;
 }
 
 interface EgresoRow {
   hora: string;
+  registradoEn: string | null;
   descripcion: string;
   tipo: 'Gasto' | 'Anticipo';
   monto: number;
@@ -365,7 +382,7 @@ function buildExcelPayload(d: ReportData): ExcelPayload {
   rows.push(['CUADRATURA DIARIA DE CAJA']);
   rows.push([`Fecha: ${formatDateCL(d.fecha)}`]);
   rows.push([`Sede: ${d.branchName}`]);
-  rows.push([`Estado: ${d.cierre ? 'Caja Cerrada' : 'Caja Abierta'}`]);
+  rows.push([`Estado: ${d.cierre ? 'Caja Cerrada (montos del cierre guardado)' : 'Caja Abierta'}`]);
   rows.push([`Generado por: ${d.generatedBy}`]);
   rows.push([]);
 
@@ -385,7 +402,7 @@ function buildExcelPayload(d: ReportData): ExcelPayload {
   rows.push(['Saldo Teórico en Efectivo', d.saldoTeorico]);
   if (d.cierre) {
     rows.push(['Total Físico Arqueado', d.cierre.arqueoTotal ?? 'Sin arqueo']);
-    rows.push(['Diferencia', d.cierre.diferencia ?? 'Sin arqueo']);
+    rows.push(['Diferencia', diferenciaLabel(d.cierre.diferencia)]);
   }
   rows.push([]);
 
@@ -400,7 +417,7 @@ function buildExcelPayload(d: ReportData): ExcelPayload {
     'Efectivo',
     'Transferencia',
     'SENCE',
-    'Otro',
+    'Tarjeta',
     'Total',
   ]);
   for (const ing of d.ingresos) {
@@ -413,7 +430,7 @@ function buildExcelPayload(d: ReportData): ExcelPayload {
       ing.efectivo,
       ing.transferencia,
       ing.sence,
-      ing.otros,
+      ing.tarjeta,
       ing.total,
     ]);
   }
@@ -426,18 +443,18 @@ function buildExcelPayload(d: ReportData): ExcelPayload {
     d.ingresos.reduce((s, i) => s + i.efectivo, 0),
     d.ingresos.reduce((s, i) => s + i.transferencia, 0),
     d.ingresos.reduce((s, i) => s + i.sence, 0),
-    d.ingresos.reduce((s, i) => s + i.otros, 0),
+    d.ingresos.reduce((s, i) => s + i.tarjeta, 0),
     d.totalIngresos,
   ]);
   rows.push([]);
 
   // ── Egresos ───────────────────────────────────────────────────────────────
   rows.push([`EGRESOS Y ANTICIPOS (${d.egresos.length} registros)`]);
-  rows.push(['Hora', 'Descripción', 'Tipo', 'Monto']);
+  rows.push(['Hora', 'Descripción', 'Tipo', 'Medio de pago', 'Monto']);
   for (const eg of d.egresos) {
-    rows.push([eg.hora, eg.descripcion, eg.tipo, eg.monto]);
+    rows.push([eg.hora, eg.descripcion, eg.tipo, paymentMethodLabel(eg.metodoPago), eg.monto]);
   }
-  rows.push(['', 'TOTAL', '', d.totalEgresos]);
+  rows.push(['', 'TOTAL', '', '', d.totalEgresos]);
   rows.push([]);
 
   // ── Arqueo / Desglose de billetes (si caja cerrada) ───────────────────────
@@ -459,7 +476,7 @@ function buildExcelPayload(d: ReportData): ExcelPayload {
       if (d2.qty > 0) rows.push([d2.label, d2.qty, d2.qty * d2.val]);
     }
     rows.push(['TOTAL FÍSICO ARQUEADO', '', d.cierre.arqueoTotal ?? 'Sin arqueo']);
-    rows.push(['DIFERENCIA', '', d.cierre.diferencia ?? 'Sin arqueo']);
+    rows.push(['DIFERENCIA', '', diferenciaLabel(d.cierre.diferencia)]);
     if (d.cierre.notas) rows.push(['Observaciones', d.cierre.notas]);
     rows.push([`Cierre registrado: ${d.cierre.cerradoEn}`]);
   }
@@ -517,7 +534,7 @@ function buildPdf(data: ReportData): Uint8Array {
     ops.push('1 g 1 G');
     T(M, PH - 20, 'CUADRATURA DIARIA DE CAJA', 13, true);
     T(M, PH - 33, `${data.branchName}  —  ${formatDateCL(data.fecha)}`, 8);
-    T(M, PH - 44, `Estado: ${data.cierre ? 'Caja Cerrada' : 'Caja Abierta'}`, 7);
+    T(M, PH - 44, `Estado: ${data.cierre ? 'Caja Cerrada (montos del cierre guardado)' : 'Caja Abierta'}`, 7);
     T(PW - M - 140, PH - 30, `Generado por: ${data.generatedBy}`, 6);
     T(PW - M - 140, PH - 40, `Fecha: ${formatDateTimeCL(new Date().toISOString())}`, 6);
     black();
@@ -630,14 +647,7 @@ function buildPdf(data: ReportData): Uint8Array {
     need(30, 'Cuadratura');
     const dif = data.cierre.diferencia;
     // fix-074-i: sin arqueo no hay diferencia que informar.
-    const difLabel =
-      dif === null
-        ? 'Sin arqueo'
-        : dif === 0
-          ? 'Cuadrado'
-          : dif > 0
-            ? `Sobrante: ${clp(dif)}`
-            : `Faltante: ${clp(Math.abs(dif))}`;
+    const difLabel = diferenciaLabel(dif);
     const difColor: [number, number, number] =
       dif === null
         ? [0.45, 0.45, 0.45]
@@ -672,7 +682,7 @@ function buildPdf(data: ReportData): Uint8Array {
   sectionBar(`Ingresos del Día (${data.ingresos.length} registros)`);
   y -= 4;
 
-  const iCols = [34, 52, 130, 72, 64, 50, 50, 40, 23];
+  const iCols = [28, 42, 102, 58, 65, 44, 44, 36, 44, 52];
   const iHeaders = [
     'Hora',
     'N° Boleta',
@@ -682,6 +692,7 @@ function buildPdf(data: ReportData): Uint8Array {
     'Efectivo',
     'Transfer.',
     'SENCE',
+    'Tarjeta',
     'Total',
   ];
 
@@ -701,12 +712,13 @@ function buildPdf(data: ReportData): Uint8Array {
     const cells = [
       ing.hora,
       ing.nBoleta,
-      truncate(ing.alumno, 26),
+      truncate(ing.alumno, 22),
       ing.rut,
-      truncate(ing.concepto, 10),
+      truncate(ing.concepto, 14),
       clp(ing.efectivo),
       clp(ing.transferencia),
       clp(ing.sence),
+      clp(ing.tarjeta),
       clp(ing.total),
     ];
 
@@ -749,8 +761,8 @@ function buildPdf(data: ReportData): Uint8Array {
     sectionBar(`Egresos y Anticipos del Día (${data.egresos.length} registros)`);
     y -= 4;
 
-    const eCols = [34, 310, 87, 84];
-    const eHeaders = ['Hora', 'Descripción', 'Tipo', 'Monto'];
+    const eCols = [34, 250, 70, 77, 84];
+    const eHeaders = ['Hora', 'Descripción', 'Tipo', 'Medio de pago', 'Monto'];
 
     tblHeader(eCols, eHeaders);
 
@@ -765,7 +777,13 @@ function buildPdf(data: ReportData): Uint8Array {
         black();
       }
 
-      const cells = [eg.hora, truncate(eg.descripcion, 62), eg.tipo, clp(eg.monto)];
+      const cells = [
+        eg.hora,
+        truncate(eg.descripcion, 50),
+        eg.tipo,
+        paymentMethodLabel(eg.metodoPago),
+        clp(eg.monto),
+      ];
       let xc = M;
       for (let j = 0; j < cells.length; j++) {
         if (j === cells.length - 1) {
@@ -852,8 +870,7 @@ function buildPdf(data: ReportData): Uint8Array {
       rgb(0.13, 0.33, 0.68);
       T(M + 4, y - 9, `Total Físico Arqueado: ${clp(data.cierre.arqueoTotal ?? 0)}`, 7.5, true);
       ops.push(`${difColor[0]} ${difColor[1]} ${difColor[2]} rg`);
-      const difStr =
-        dif === 0 ? 'Sin diferencia' : dif > 0 ? `Sobrante: +${clp(dif)}` : `Faltante: ${clp(dif)}`;
+      const difStr = diferenciaLabel(data.cierre.diferencia);
       T(CW + M - 180, y - 9, difStr, 7.5, true);
       black();
       y -= 16;

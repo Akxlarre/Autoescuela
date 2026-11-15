@@ -193,7 +193,7 @@ interface DenominacionRow {
                     >
                       @if (d.diferencia !== null) {
                         {{ d.diferencia > 0 ? '+ ' : d.diferencia < 0 ? '− ' : ''
-                        }}{{ formatAmt(d.diferencia) }}
+                        }}{{ formatAbsAmt(d.diferencia) }}
                       } @else {
                         <span class="text-text-muted">—</span>
                       }
@@ -460,6 +460,11 @@ export class DetalleCuadraturaModalComponent {
 
   protected formatAmt(val: number): string {
     return formatCLP(val);
+  }
+
+  /** Monto sin signo: el signo ya lo pone el template ("− $500", no "− $-500", fix-076-i). */
+  protected formatAbsAmt(val: number): string {
+    return formatCLP(Math.abs(val));
   }
 
   protected readonly exportMenuOpen = signal(false);
