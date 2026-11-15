@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import type { User } from '@core/models/dto/user.model';
-import { AuthFacade } from './auth.facade';
+import { AuthFacade, PASSWORD_RECOVERY_MARK_KEY } from './auth.facade';
 import { BranchFacade } from './branch.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
@@ -433,6 +433,77 @@ describe('AuthFacade', () => {
       authCallback!('SIGNED_OUT', null);
 
       expect(service.passwordRecovery()).toBe(false);
+    });
+
+    // F10: cambiar la URL a mano recarga la página y el signal vuelve a false; la sesión del
+    // enlace sigue guardada, así que se entraba a la app sin fijar la clave (prueba del owner).
+    describe('la marca sobrevive a recargar la página (F10)', () => {
+      beforeEach(() => {
+        localStorage.removeItem(PASSWORD_RECOVERY_MARK_KEY);
+        vi.spyOn(router, 'navigate').mockResolvedValue(true);
+      });
+      afterEach(() => localStorage.removeItem(PASSWORD_RECOVERY_MARK_KEY));
+
+      it('PASSWORD_RECOVERY guarda la marca con el id de la cuenta', () => {
+        authCallback!('PASSWORD_RECOVERY', { user: { id: 'u1' } });
+
+        expect(localStorage.getItem(PASSWORD_RECOVERY_MARK_KEY)).toBe('u1');
+      });
+
+      it('al recargar, la sesión de la misma cuenta sigue en recuperación', () => {
+        localStorage.setItem(PASSWORD_RECOVERY_MARK_KEY, 'u1');
+
+        authCallback!('INITIAL_SESSION', { user: { id: 'u1', email: 'a@b.cl' } });
+
+        expect(service.passwordRecovery()).toBe(true);
+      });
+
+      it('una marca de otra cuenta no cuenta y se borra', () => {
+        localStorage.setItem(PASSWORD_RECOVERY_MARK_KEY, 'otra');
+
+        authCallback!('INITIAL_SESSION', { user: { id: 'u1', email: 'a@b.cl' } });
+
+        expect(service.passwordRecovery()).toBe(false);
+        expect(localStorage.getItem(PASSWORD_RECOVERY_MARK_KEY)).toBeNull();
+      });
+
+      it('sin sesión al arrancar, la marca se borra', () => {
+        localStorage.setItem(PASSWORD_RECOVERY_MARK_KEY, 'u1');
+
+        authCallback!('INITIAL_SESSION', null);
+
+        expect(service.passwordRecovery()).toBe(false);
+        expect(localStorage.getItem(PASSWORD_RECOVERY_MARK_KEY)).toBeNull();
+      });
+
+      it('fijar la clave borra la marca', async () => {
+        authCallback!('PASSWORD_RECOVERY', { user: { id: 'u1' } });
+
+        await service.completePasswordRecovery('NuevaClave123');
+
+        expect(localStorage.getItem(PASSWORD_RECOVERY_MARK_KEY)).toBeNull();
+      });
+
+      it('si fijar la clave falla, la marca se queda', async () => {
+        authCallback!('PASSWORD_RECOVERY', { user: { id: 'u1' } });
+        (service as any).supabase.client.auth.updateUser.mockResolvedValue({
+          error: Object.assign(new Error('Password should be at least 6 characters'), {
+            name: 'AuthApiError',
+          }),
+        });
+
+        await service.completePasswordRecovery('123');
+
+        expect(localStorage.getItem(PASSWORD_RECOVERY_MARK_KEY)).toBe('u1');
+      });
+
+      it('SIGNED_OUT borra la marca', () => {
+        authCallback!('PASSWORD_RECOVERY', { user: { id: 'u1' } });
+
+        authCallback!('SIGNED_OUT', null);
+
+        expect(localStorage.getItem(PASSWORD_RECOVERY_MARK_KEY)).toBeNull();
+      });
     });
   });
 
