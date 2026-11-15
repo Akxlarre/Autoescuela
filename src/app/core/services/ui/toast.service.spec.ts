@@ -50,6 +50,17 @@ describe('ToastService', () => {
     });
   });
 
+  // fix-181-b (F9): un aviso de dos frases no se alcanza a leer en 4 s.
+  it('warning() acepta una duración propia', () => {
+    service.warning('Título', 'Detalle largo', 9000);
+    expect(msgSpy.add).toHaveBeenCalledWith({
+      severity: 'warn',
+      summary: 'Título',
+      detail: 'Detalle largo',
+      life: 9000,
+    });
+  });
+
   it('info() should add an info message with 3000ms life', () => {
     service.info('FYI', 'Just so you know');
     expect(msgSpy.add).toHaveBeenCalledWith({

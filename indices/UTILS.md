@@ -32,7 +32,7 @@
 | `src/app/core/utils/archive-confirmation.utils.ts` | `ARCHIVE_CONFIRMATION_WORD`, `buildFutureClassesBlockMessage`, `CLASE_B_ARCHIVE_WARNING`, `isArchiveConfirmationText` |
 | `src/app/core/utils/audit-actor.utils.ts` | `AuditActorPlan`, `auditActorPlan`, `auditUserLabel`, `usuariosForActor` — filtro "Quién" de Auditoría (fix-069-i). Espejo de `auditUserLabel` en `generate-audit-report` (`ROLE_LABEL`). |
 | `src/app/core/utils/auth-errors.utils.ts` | `mapAuthError` |
-| `src/app/core/utils/auth-link-error.utils.ts` | `AuthLinkError`, `authLinkErrorFromUrl`, `authLinkErrorMessage` — lee el error con que Supabase vuelve de un enlace de correo vencido o ya usado (`#error_code=otp_expired`) y da el aviso del login (`?enlace=vencido\|invalido`). Lo usan `passwordRecoveryGuard` y `LoginComponent` (fix-181-b). |
+| `src/app/core/utils/auth-link-error.utils.ts` | `AuthLinkError`, `authLinkErrorFromUrl`, `authLinkErrorMessage`, `AuthLinkErrorNotice`, `authLinkErrorSessionNotice` — lee el error con que Supabase vuelve de un enlace de correo vencido o ya usado (`#error_code=otp_expired`) y arma el aviso: en el login (`?enlace=vencido\|invalido`) o, si quedó otra sesión abierta, un toast que nombra esa cuenta. Lo usan `passwordRecoveryGuard` y `LoginComponent` (fix-181-b). |
 | `src/app/core/utils/avatar-palette.ts` | `AvatarPaletteEntry`, `AVATAR_PALETTES`, `avatarPalette` |
 | `src/app/core/utils/beca.utils.ts` | `esBecaCompleta` |
 | `src/app/core/utils/branch-scope-ui.utils.ts` | `isSedeDisabled`, `isBothBranchesVisible`, `isBothBranchesDisabled` |

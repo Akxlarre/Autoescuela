@@ -45,8 +45,8 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
 
 ## Test de Regresión
 - `npx vitest run src/app/core/facades/auth.facade.spec.ts src/app/core/guards` — F1, F2, F3, F5.
-- `npx vitest run src/app/core/utils/auth-link-error.utils.spec.ts src/app/core/guards/password-recovery.guard.spec.ts src/app/features/auth/login/login.component.spec.ts src/app/features/auth/force-password-change`
-  — F6, F7, F8.
+- `npx vitest run src/app/core/utils/auth-link-error.utils.spec.ts src/app/core/guards/password-recovery.guard.spec.ts src/app/features/auth/login/login.component.spec.ts src/app/features/auth/force-password-change src/app/core/services/ui/toast.service.spec.ts`
+  — F6, F7, F8, F9.
 - Build (`ng build`) para el componente y la ruta (F4); verificación visual con `/verify` si hay
   servidor disponible.
 
@@ -71,10 +71,14 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
 - [x] Prueba manual en producción: pedir "recuperar contraseña" con una cuenta de prueba con correo
       real → abrir el link → fijar clave → entrar con la clave nueva. ✅ 2026-11-14, más D08.
 - [x] F6, F7, F8: código + tests + build (2026-11-14).
-- [ ] Release con F6–F8.
-- [ ] **Owner**, en producción después del release: D07 (abrir el enlace ya usado → aviso en el
-      login), D10 (abrir el enlace con otra cuenta logueada → se ve "Cuenta: …") y L05 (anotar si
-      la sesión del otro equipo se cierra). Recién entonces `/fix-close`.
+- [x] F9: código + tests + build (2026-11-14).
+- [ ] Release con F6–F9.
+- [ ] **Owner**, en producción después del release:
+      D07 sin sesión (abrir el enlace ya usado sin estar logueado → aviso en el login),
+      D07 con sesión (lo mismo estando logueado → tu inicio con el aviso que nombra la cuenta),
+      D10 (pedir un enlace **nuevo** desde otra ventana privada o el celular y abrirlo donde hay
+      otra cuenta logueada → "Cuenta: …" con la cuenta del enlace) y L05 (anotar si la sesión del
+      otro equipo se cierra). Recién entonces `/fix-close`.
 
 ## Estado al retomar (2026-11-14)
 
@@ -137,6 +141,41 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
   `login.component.spec.ts` (+4), `force-password-change.component.spec.ts` (4, nuevo).
 - Falta para cerrar: release y que el owner repita en producción D07 (abrir el enlace ya usado),
   D10 (abrir el enlace con otra cuenta logueada) y L05.
+
+### Segunda prueba en producción (owner, 2026-11-14, con el código de `v0.2.x`, sin F6–F8)
+
+Reportado: "la segunda vez que apreté el enlace me llevó al módulo no disponible" y "con otra
+cuenta que estaba abierta, entró a esa cuenta, a su inicio". Los logs de Auth (hora Chile) muestran
+que las dos fueron **el mismo enlace ya usado, con una sesión abierta**:
+
+| Hora | Evento |
+|---|---|
+| 22:02:51 | `/recover` de la cuenta de prueba (rol alumno) |
+| 22:03:12 | `/verify` OK → sesión de recuperación |
+| 22:03:46 | `PUT /user` → clave nueva guardada |
+| 22:03:54 y 22:04:02 | `/verify` → 403 "One-time token not found" (mismo enlace) |
+| 22:04:06 | logout del alumno |
+| 22:05:14 | login con contraseña de `admin@test.com` |
+| 22:05:25 | `/verify` → 403 otra vez (mismo enlace, con el admin adentro) |
+
+Causa: cuando el enlace falla, supabase-js **conserva la sesión que había**
+(`GoTrueClient._initialize`: "A failed attempt shouldn't invalidate a valid session"). El guard
+mandaba a `/login`, `guestGuard` veía esa sesión y la rebotaba a `/app`: el alumno caía en
+"Módulo no disponible" (su portal está cerrado en el piloto, `pilotPhaseGuard('alumno')`) y el
+admin en su dashboard, sin saber que el enlace no sirvió. F6 tal como estaba no lo cubría: el
+`?enlace=vencido` se perdía en el mismo rebote.
+
+D10 de verdad (enlace **nuevo** con otra cuenta abierta) no se probó. Por el código, Supabase
+reemplaza la sesión por la de la cuenta del enlace y la pantalla muestra "Cuenta: …" (F7).
+
+- **F9 — Enlace vencido o usado con una sesión abierta:** el guard lleva a `/app` (el inicio de
+  esa cuenta) con un toast de 9 s: "El enlace venció o ya se usó" / "No se cambió ninguna
+  contraseña. Sigues con la sesión de *correo*; para cambiar la de otra cuenta, cierra sesión y
+  pide un enlace nuevo." La condición "hay sesión que entra a /app" es la misma de `guestGuard`
+  (`landsInApp`, exportada de `guest.guard.ts`), así que nunca se manda a `/login` un aviso que
+  ese guard va a rebotar.
+  - Implementado: `authLinkErrorSessionNotice` (util), `ToastService.warning(…, life)`,
+    `passwordRecoveryGuard`. Tests: util (+3), guard (+3), toast (+1).
 
 ## Bloqueo (2026-10-16) — superado el 2026-11-06 con el dominio definitivo
 Revisado: el código salió en los releases (producción en `v0.2.1`, `/recuperar-contrasena` responde)

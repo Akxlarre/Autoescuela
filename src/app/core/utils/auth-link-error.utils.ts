@@ -32,3 +32,23 @@ export function authLinkErrorFromUrl(hash: string, search: string): AuthLinkErro
 export function authLinkErrorMessage(value: string | null): string | null {
   return value === 'vencido' || value === 'invalido' ? MESSAGES[value] : null;
 }
+
+export interface AuthLinkErrorNotice {
+  summary: string;
+  detail: string;
+}
+
+/**
+ * Aviso para cuando el enlace falla con una sesión ya abierta (F9). supabase-js conserva esa
+ * sesión, así que la persona sigue adentro con esa cuenta: el aviso dice que no cambió nada y cuál
+ * es la cuenta, porque puede no ser la del enlace.
+ */
+export function authLinkErrorSessionNotice(
+  error: AuthLinkError,
+  email: string | undefined,
+): AuthLinkErrorNotice {
+  return {
+    summary: error === 'vencido' ? 'El enlace venció o ya se usó' : 'El enlace no es válido',
+    detail: `No se cambió ninguna contraseña. Sigues con la sesión de ${email || 'tu cuenta'}; para cambiar la de otra cuenta, cierra sesión y pide un enlace nuevo.`,
+  };
+}
