@@ -3,7 +3,14 @@ import {
   chileToday,
   formatChileDate,
   formatChilePattern,
+  toChileDate,
 } from '../_shared/chile-time.ts';
+import {
+  expenseCategory,
+  incomeCategory,
+  PAYMENT_STATUSES_QUE_SUMAN,
+  sumFinancialTotals,
+} from '../_shared/financial-report-categories.ts';
 // supabase/functions/generate-financial-report/index.ts
 //
 // Edge Function: generate-financial-report
@@ -35,23 +42,8 @@ function jsonError(msg: string, status = 500) {
   });
 }
 
-// ─── Labels de dominio ────────────────────────────────────────────────────────
-
-const LICENSE_LABELS: Record<string, string> = {
-  class_b: 'Clase B',
-  professional: 'Clase Profesional',
-  complement: 'Complemento',
-  special_service: 'Servicio Especial',
-  standalone: 'Cursos Singulares',
-};
-
-const EXPENSE_LABELS: Record<string, string> = {
-  fuel: 'Bencina',
-  rent: 'Arriendo',
-  cleaning: 'Aseo',
-  materials: 'Materiales',
-  other: 'Otros',
-};
+// Los nombres de categoría salen de _shared/financial-report-categories.ts: son los mismos de la
+// pantalla de Reportes (fix-077-i).
 
 // ─── Handler principal ────────────────────────────────────────────────────────
 
@@ -119,7 +111,7 @@ Deno.serve(async (req: Request) => {
          enrollments!inner(branch_id, license_group,
            students!inner(users!inner(first_names, paternal_last_name, rut)))`,
       )
-      .eq('status', 'paid')
+      .in('status', [...PAYMENT_STATUSES_QUE_SUMAN])
       .gte('payment_date', desde)
       .lte('payment_date', hasta)
       .order('payment_date', { ascending: true });
@@ -185,12 +177,40 @@ Deno.serve(async (req: Request) => {
     const { data: rawExpenses, error: expErr } = await expQ;
     if (expErr) throw expErr;
 
+    // ── Gastos fijos en el rango (fix-077-i) ──────────────────────────────────
+    // La pantalla los suma a los gastos (Arriendo, Sueldos…); el archivo no los traía y el
+    // Total Gastos y el Neto no cuadraban con ella.
+    let fixedQ = adminClient
+      .from('fixed_expenses')
+      .select('amount, category, date, description')
+      .gte('date', desde)
+      .lte('date', hasta)
+      .order('date', { ascending: true });
+
+    if (branchId !== null) {
+      fixedQ = fixedQ.eq('branch_id', branchId);
+    }
+
+    const { data: rawFixed, error: fixedErr } = await fixedQ;
+    if (fixedErr) throw fixedErr;
+
+    const showBranch = branchId === null;
+
     // ── Filtro adicional de payments por branch (PostgREST inner join) ────────
     const paymentsFromTable: PaymentRow[] = (rawPayments ?? [])
       .filter((p: any) => branchId === null || p.enrollments?.branch_id === branchId)
       .map((p: any) => ({
         date: p.payment_date ?? '',
-        licenseGroup: p.enrollments?.license_group ?? 'other',
+        ...categoryFields(
+          incomeCategory(
+            {
+              type: p.type ?? null,
+              licenseGroup: p.enrollments?.license_group ?? null,
+              branchId: p.enrollments?.branch_id ?? null,
+            },
+            showBranch,
+          ),
+        ),
         amount: p.total_amount ?? 0,
         alumno: formatName(p.enrollments?.students?.users),
         rut: p.enrollments?.students?.users?.rut ?? '—',
@@ -200,15 +220,27 @@ Deno.serve(async (req: Request) => {
     const singularPayments: PaymentRow[] = (rawSingulars ?? [])
       .filter((s: any) => branchId === null || s.standalone_courses?.branch_id === branchId)
       .map((s: any) => ({
-        date: s.paid_at ? String(s.paid_at).slice(0, 10) : '',
-        licenseGroup: 'standalone',
+        // Día de Chile del cobro, no el de UTC (un cobro de las 22:00 es de ese día).
+        date: s.paid_at ? toChileDate(s.paid_at) : '',
+        ...categoryFields(
+          incomeCategory(
+            {
+              type: 'standalone',
+              licenseGroup: 'standalone',
+              branchId: s.standalone_courses?.branch_id ?? null,
+            },
+            showBranch,
+          ),
+        ),
         amount: s.amount_paid ?? 0,
         alumno: formatName(s.students?.users),
         rut: s.students?.users?.rut ?? '—',
         type: `Curso: ${s.standalone_courses?.name ?? 'singular'}`,
       }));
 
-    const specialPayments: PaymentRow[] = (rawSpecials ?? []).map(mapSpecialServiceSaleRow);
+    const specialPayments: PaymentRow[] = (rawSpecials ?? []).map((s: any) =>
+      mapSpecialServiceSaleRow(s, showBranch),
+    );
 
     const payments: PaymentRow[] = [
       ...paymentsFromTable,
@@ -216,17 +248,24 @@ Deno.serve(async (req: Request) => {
       ...specialPayments,
     ].sort((a, b) => a.date.localeCompare(b.date));
 
-    const expenses: ExpenseRow[] = (rawExpenses ?? []).map((e: any) => ({
+    const mapExpense = (e: any, fijo: boolean): ExpenseRow => ({
       date: e.date ?? '',
-      category: e.category ?? 'other',
+      ...categoryFields(expenseCategory(e.category)),
       amount: e.amount ?? 0,
-      description: e.description ?? '—',
-    }));
+      description: fijo ? `Gasto fijo: ${e.description ?? '—'}` : (e.description ?? '—'),
+    });
+    const operationalExpenses = (rawExpenses ?? []).map((e: any) => mapExpense(e, false));
+    const fixedExpenses = (rawFixed ?? []).map((e: any) => mapExpense(e, true));
+    const expenses: ExpenseRow[] = [...operationalExpenses, ...fixedExpenses].sort((a, b) =>
+      a.date.localeCompare(b.date),
+    );
 
     // ── Cómputos ──────────────────────────────────────────────────────────────
-    const totalIngresos = payments.reduce((s, p) => s + p.amount, 0);
-    const totalGastos = expenses.reduce((s, e) => s + e.amount, 0);
-    const totalNeto = totalIngresos - totalGastos;
+    const { totalIngresos, totalGastos, totalNeto } = sumFinancialTotals(
+      payments,
+      operationalExpenses,
+      fixedExpenses,
+    );
     const margen = totalIngresos > 0 ? (totalNeto / totalIngresos) * 100 : 0;
 
     const ingresosCategoria = computeIngresosCategoria(payments, totalIngresos);
@@ -283,7 +322,8 @@ Deno.serve(async (req: Request) => {
 
 interface PaymentRow {
   date: string;
-  licenseGroup: string;
+  categoryKey: string;
+  categoria: string;
   amount: number;
   alumno: string;
   rut: string;
@@ -292,7 +332,8 @@ interface PaymentRow {
 
 interface ExpenseRow {
   date: string;
-  category: string;
+  categoryKey: string;
+  categoria: string;
   amount: number;
   description: string;
 }
@@ -352,14 +393,16 @@ interface ReportData {
 
 function computeIngresosCategoria(payments: PaymentRow[], total: number): CategoriaIngreso[] {
   const map = new Map<string, { monto: number; ops: number }>();
+  const names = new Map<string, string>();
   for (const p of payments) {
-    const key = p.licenseGroup || 'other';
+    const key = p.categoryKey;
+    names.set(key, p.categoria);
     const cur = map.get(key) ?? { monto: 0, ops: 0 };
     map.set(key, { monto: cur.monto + p.amount, ops: cur.ops + 1 });
   }
   return [...map.entries()]
     .map(([key, v]) => ({
-      nombre: LICENSE_LABELS[key] ?? key,
+      nombre: names.get(key) ?? key,
       licenseGroup: key,
       monto: v.monto,
       operaciones: v.ops,
@@ -370,14 +413,16 @@ function computeIngresosCategoria(payments: PaymentRow[], total: number): Catego
 
 function computeGastosCategoria(expenses: ExpenseRow[], total: number): CategoriaGasto[] {
   const map = new Map<string, { monto: number; regs: number }>();
+  const names = new Map<string, string>();
   for (const e of expenses) {
-    const key = e.category || 'other';
+    const key = e.categoryKey;
+    names.set(key, e.categoria);
     const cur = map.get(key) ?? { monto: 0, regs: 0 };
     map.set(key, { monto: cur.monto + e.amount, regs: cur.regs + 1 });
   }
   return [...map.entries()]
     .map(([key, v]) => ({
-      nombre: EXPENSE_LABELS[key] ?? key,
+      nombre: names.get(key) ?? key,
       category: key,
       monto: v.monto,
       registros: v.regs,
@@ -515,14 +560,7 @@ function buildExcelPayload(d: ReportData): ExcelPayload {
     rows.push([`DETALLE DE PAGOS (${d.payments.length} registros)`]);
     rows.push(['Fecha', 'Alumno', 'RUT', 'Categoría', 'Tipo', 'Monto']);
     for (const p of d.payments) {
-      rows.push([
-        formatDateCL(p.date),
-        p.alumno,
-        p.rut,
-        LICENSE_LABELS[p.licenseGroup] ?? p.licenseGroup,
-        p.type,
-        p.amount,
-      ]);
+      rows.push([formatDateCL(p.date), p.alumno, p.rut, p.categoria, p.type, p.amount]);
     }
     rows.push(['', '', '', '', 'TOTAL', d.totalIngresos]);
     rows.push([]);
@@ -533,12 +571,7 @@ function buildExcelPayload(d: ReportData): ExcelPayload {
     rows.push([`DETALLE DE GASTOS (${d.expenses.length} registros)`]);
     rows.push(['Fecha', 'Descripción', 'Categoría', 'Monto']);
     for (const e of d.expenses) {
-      rows.push([
-        formatDateCL(e.date),
-        e.description,
-        EXPENSE_LABELS[e.category] ?? e.category,
-        e.amount,
-      ]);
+      rows.push([formatDateCL(e.date), e.description, e.categoria, e.amount]);
     }
     rows.push(['', 'TOTAL', '', d.totalGastos]);
   }
@@ -1027,15 +1060,25 @@ function pdfStr(s: string): string {
     .replace(/[^\x20-\x7E]/g, '?');
 }
 
+/** Clave y nombre de categoría para una fila (los nombres son los de la pantalla). */
+function categoryFields(c: { key: string; label: string }) {
+  return { categoryKey: c.key, categoria: c.label };
+}
+
 /**
  * Venta cobrada de Servicio Especial → fila de ingreso del reporte (fix-047-i). Cae en la
- * categoría `special_service` ("Servicio Especial"), igual que en la pantalla de Reportes.
+ * categoría "Psicotécnico / Servicios", igual que en la pantalla de Reportes.
  * El cliente puede no ser alumno: se usa el nombre/RUT guardados en la venta.
  */
-function mapSpecialServiceSaleRow(s: any): PaymentRow {
+function mapSpecialServiceSaleRow(s: any, showBranch: boolean): PaymentRow {
   return {
     date: s.sale_date ?? '',
-    licenseGroup: 'special_service',
+    ...categoryFields(
+      incomeCategory(
+        { type: 'special_service', licenseGroup: null, branchId: s.branch_id ?? null },
+        showBranch,
+      ),
+    ),
     amount: s.price ?? 0,
     alumno: s.client_name ?? '—',
     rut: s.client_rut ?? '—',

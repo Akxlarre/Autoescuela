@@ -62,6 +62,8 @@ const INCOME_COLORS: Record<string, string> = {
   standalone: '#0d9488',
 };
 
+// Copia espejo para el Excel/PDF: supabase/functions/_shared/financial-report-categories.ts
+// (fix-077-i). Un nombre o categoría que cambie acá cambia también allá, con su test.
 const EXPENSE_LABEL: Record<string, string> = {
   fuel: 'Bencina',
   rent: 'Arriendo',
