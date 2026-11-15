@@ -1,7 +1,8 @@
 ---
 id: fix-252-b-ci-en-pull-requests-y-lint-estricto
 type: fix
-status: in_progress
+status: done
+closed: 2026-11-15
 author: b
 created: 2026-11-15
 spec: —
@@ -62,8 +63,8 @@ hoy.
 - [x] AC3: `npm run test:scripts` corre las 15 micro-suites y falla si una falla (probado con
       una suite temporal que salía con 1).
 - [x] AC4: `npm run test:ci` en verde: 340 archivos, 5.162 tests.
-- [ ] AC5: los 7 cambios de clase no alteran la intención visual. **Falta ver en pantalla el
-      paso de pago de matrícula**; el resto está verificado (ver "Verificación visual" abajo).
+- [x] AC5: los 7 cambios de clase no alteran la intención visual. Las tres pantallas con cambio
+      visible se revisaron en el navegador (ver "Verificación visual" abajo).
       Detalle:
   - `border-default` → `border-border-default` y `border-success-muted` →
     `border-success-border`: sin cambio visible (el color ya salía por defecto o por
@@ -101,10 +102,12 @@ hoy.
 - **Drawer "Inscribir Alumno":** con un RUT ficticio sin registro y una fecha de nacimiento de
   menor de 17 años, el mensaje "El alumno debe tener al menos 17 años" se ve rojo, con el color
   de `--state-error`. No se guardó nada.
-- **No se vio en pantalla:** el paso de pago de matrícula. Para llegar a él hay que avanzar el
-  asistente, y su paso 1 crea usuario, alumno y una matrícula en borrador en la base de
-  producción (`EnrollmentFacade`). Queda para el owner o para una corrida con un alumno de
-  prueba autorizada por él.
+- **Paso de pago de matrícula:** los cinco labels ("Resumen Financiero", "Descuentos",
+  "Descuentos disponibles", "Selecciona el Método de Pago", "N° Documento (opcional)") se ven
+  como micro-labels y consistentes entre sí. Se llegó al paso cambiando el estado local del
+  asistente desde la consola del navegador (paso 4 y datos de ejemplo), sin guardar el paso 1:
+  no se creó usuario, alumno ni matrícula, y no hubo llamadas a RPC ni a edge functions. Los
+  montos y el descuento que se ven en esa revisión son de ejemplo, no datos reales.
 
 ## Pendiente fuera de este track
 
