@@ -22,8 +22,9 @@ export class ToastService {
     this.msg.add({ severity: 'error', summary, detail, life: 6000 });
   }
 
-  warning(summary: string, detail?: string): void {
-    this.msg.add({ severity: 'warn', summary, detail, life: 4000 });
+  /** `life` en ms: subirlo cuando el aviso trae más de una frase que hay que alcanzar a leer. */
+  warning(summary: string, detail?: string, life = 4000): void {
+    this.msg.add({ severity: 'warn', summary, detail, life });
   }
 
   info(summary: string, detail?: string): void {

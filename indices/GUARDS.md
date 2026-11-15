@@ -8,8 +8,8 @@
 | Guard | Tipo | Propósito | Rutas protegidas |
 |-------|------|-----------|-----------------|
 | `authGuard` | `CanActivateFn` | Redirige a `/login` si no hay sesión activa, o si el perfil está desactivado (`isActive === false`: cierra la sesión — fix-180-b). Si la sesión viene de un link de recuperación sin clave nueva, manda a `/recuperar-contrasena` (fix-181-b) | Todas las rutas bajo `/app` |
-| `guestGuard` | `CanActivateFn` | Redirige a `/app` si ya hay sesión (evita volver al login) | `/login` |
-| `passwordRecoveryGuard` | `CanActivateFn` | Deja pasar solo si la sesión viene de un link de "recuperar contraseña" (`AuthFacade.passwordRecovery()`); si no, `/login` (fix-181-b) | `/recuperar-contrasena` |
+| `guestGuard` | `CanActivateFn` | Redirige a `/app` si ya hay sesión (evita volver al login). La condición vive en `landsInApp(user)` (mismo archivo), que reusa `passwordRecoveryGuard` para no mandar a `/login` un aviso que se perdería (fix-181-b). | `/login` |
+| `passwordRecoveryGuard` | `CanActivateFn` | Deja pasar solo si la sesión viene de un link de "recuperar contraseña" (`AuthFacade.passwordRecovery()`). Si no: `/login`; con el error de un link vencido o usado en la URL, `/login?enlace=vencido\|invalido`; y si además quedó otra sesión abierta (supabase-js no la cierra), `/app` con un toast que nombra esa cuenta (fix-181-b) | `/recuperar-contrasena` |
 | `roleRedirectGuard` | `CanActivateFn` | Redirige al portal correcto según el rol del usuario autenticado | `/app` (raíz) |
 | `roleGuard` | `CanActivateFn` | Bloquea acceso a portales de rol incorrecto | `/app/admin`, `/app/secretaria`, `/app/instructor`, `/app/alumno` |
 | `firstLoginGuard` | `CanActivateFn` | Fuerza cambio de contraseña en primer login (`first_login=true`) | Rutas de portal tras autenticar |
