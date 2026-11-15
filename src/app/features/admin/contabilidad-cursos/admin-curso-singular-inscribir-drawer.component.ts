@@ -294,7 +294,7 @@ const PAYMENT_METHODS: {
                       (valueChange)="patchForm('birthDate', $event)"
                     />
                     @if (form().birthDate.length > 0 && !edadValida()) {
-                      <p class="text-xs text-state-error flex items-center gap-1">
+                      <p class="text-xs text-error flex items-center gap-1">
                         <app-icon name="circle-alert" [size]="12" color="var(--state-error)" />
                         El alumno debe tener al menos 17 años
                       </p>

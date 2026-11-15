@@ -27,6 +27,8 @@ Detalle completo: @docs/HOOKS-SYSTEM.md
 - Build: `ng build`
 - Lint: `ng lint`
 - Lint arquitectónico: `npm run lint:arch`
+- Lint arquitectónico estricto (el que corre el CI de pull requests): `npm run lint:arch:strict`
+- Tests de los guardrails (`scripts/lib/*.test.mjs`): `npm run test:scripts`
 - Tests: `npm run test:ci` (sin watch, para auto-validación)
 - Tests cobertura: `npm run test:coverage`
 - Supabase local: `npx supabase start`

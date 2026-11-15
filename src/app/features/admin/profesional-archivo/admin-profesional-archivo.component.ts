@@ -217,9 +217,7 @@ import { PromocionDetalleContentComponent } from '@shared/components/promocion-d
             <!-- KPIs del Curso -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
               @for (kpi of cursoKpis(); track kpi.id) {
-                <div
-                  class="flex flex-col gap-1.5 p-4 rounded-xl border border-border-subtle bg-surface-elevated"
-                >
+                <div class="flex flex-col gap-1.5 p-4 rounded-xl border border-border-subtle">
                   <div class="flex items-center justify-between">
                     <span class="text-2xs uppercase font-bold text-text-muted tracking-wider">{{
                       kpi.label

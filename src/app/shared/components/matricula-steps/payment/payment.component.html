@@ -37,9 +37,7 @@
 
       <!-- Desglose de Precios -->
       <div class="space-y-4">
-        <label class="text-xs font-bold text-text-muted uppercase tracking-widest"
-          >Resumen Financiero</label
-        >
+        <label class="micro-label">Resumen Financiero</label>
 
         <div class="card-tinted rounded-2xl p-6 relative overflow-hidden shadow-xl">
           <div class="absolute right-0 top-0 p-8 opacity-10">
@@ -82,9 +80,7 @@
 
       <!-- Descuentos -->
       <div class="space-y-4">
-        <label class="text-xs font-bold text-text-muted uppercase tracking-widest"
-          >Descuentos</label
-        >
+        <label class="micro-label">Descuentos</label>
 
         @if (data().discount.enabled) {
           <div
@@ -118,9 +114,7 @@
             <!-- Descuentos predefinidos desde la BD -->
             @if (data().availableDiscounts.length > 0) {
               <div class="space-y-2">
-                <p class="text-xs font-bold text-text-muted uppercase tracking-widest">
-                  Descuentos disponibles
-                </p>
+                <p class="micro-label">Descuentos disponibles</p>
                 <div class="flex flex-wrap gap-2">
                   @for (disc of data().availableDiscounts; track disc.id) {
                     <button
@@ -207,9 +201,7 @@
       } @else {
         <!-- Seleccionar Método de Pago -->
         <div class="space-y-4">
-          <label class="text-xs font-bold text-text-muted uppercase tracking-widest"
-            >Selecciona el Método de Pago</label
-          >
+          <label class="micro-label">Selecciona el Método de Pago</label>
           <div class="grid sm:grid-cols-2 gap-3">
             @for (option of paymentMethodOptions; track option.value) {
               <button
@@ -251,11 +243,7 @@
       <!-- N° de Documento (opcional) — fix-036-i -->
       @if (data().paymentMethod && data().paymentMethod !== 'pendiente') {
         <div class="flex flex-col gap-1.5">
-          <label
-            for="pago-matricula-doc"
-            class="text-xs font-bold text-text-muted uppercase tracking-widest"
-            >N° Documento (opcional)</label
-          >
+          <label for="pago-matricula-doc" class="micro-label">N° Documento (opcional)</label>
           <input
             id="pago-matricula-doc"
             type="text"
