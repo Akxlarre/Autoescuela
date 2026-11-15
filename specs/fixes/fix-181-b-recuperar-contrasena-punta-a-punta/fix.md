@@ -44,7 +44,7 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
   (navega a la pantalla), pero conviene registrarla.
 
 ## Test de Regresión
-- `npx vitest run src/app/core/facades/auth.facade.spec.ts src/app/core/guards` — F1, F2, F3, F5.
+- `npx vitest run src/app/core/facades/auth.facade.spec.ts src/app/core/guards` — F1, F2, F3, F5, F10.
 - `npx vitest run src/app/core/utils/auth-link-error.utils.spec.ts src/app/core/guards/password-recovery.guard.spec.ts src/app/features/auth/login/login.component.spec.ts src/app/features/auth/force-password-change src/app/core/services/ui/toast.service.spec.ts`
   — F6, F7, F8, F9.
 - Build (`ng build`) para el componente y la ruta (F4); verificación visual con `/verify` si hay
@@ -72,13 +72,15 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
       real → abrir el link → fijar clave → entrar con la clave nueva. ✅ 2026-11-14, más D08.
 - [x] F6, F7, F8: código + tests + build (2026-11-14).
 - [x] F9: código + tests + build (2026-11-14).
-- [ ] Release con F6–F9.
+- [x] Release con F6–F9. Tercera prueba del owner (2026-11-15): D07 sin y con sesión ✅, L05 ✅
+      (ver abajo).
+- [x] F10: código + tests + build (2026-11-15).
+- [ ] Release con F10.
 - [ ] **Owner**, en producción después del release:
-      D07 sin sesión (abrir el enlace ya usado sin estar logueado → aviso en el login),
-      D07 con sesión (lo mismo estando logueado → tu inicio con el aviso que nombra la cuenta),
-      D10 (pedir un enlace **nuevo** desde otra ventana privada o el celular y abrirlo donde hay
-      otra cuenta logueada → "Cuenta: …" con la cuenta del enlace) y L05 (anotar si la sesión del
-      otro equipo se cierra). Recién entonces `/fix-close`.
+      F10 (abrir un enlace nuevo, no escribir nada, cambiar la URL o recargar → sigue en la
+      pantalla de nueva clave) y D10 (pedir un enlace **nuevo** desde otra ventana privada o el
+      celular y abrirlo donde hay **otra** cuenta logueada → "Cuenta: …" con la cuenta del enlace).
+      Recién entonces `/fix-close`.
 
 ## Estado al retomar (2026-11-14)
 
@@ -175,7 +177,46 @@ reemplaza la sesión por la de la cuenta del enlace y la pantalla muestra "Cuent
   (`landsInApp`, exportada de `guest.guard.ts`), así que nunca se manda a `/login` un aviso que
   ese guard va a rebotar.
   - Implementado: `authLinkErrorSessionNotice` (util), `ToastService.warning(…, life)`,
-    `passwordRecoveryGuard`. Tests: util (+3), guard (+3), toast (+1).
+    `passwordRecoveryGuard`. Tests: util (+3), guard (+3), toast (+1). Salió en PR #413.
+
+### Tercera prueba en producción (owner, 2026-11-15, con F6–F9 publicados)
+
+Logs de Auth (UTC; hora Chile = UTC − 3) y `auth.sessions` de la cuenta de prueba:
+
+| UTC | Evento |
+|---|---|
+| 03:51:19 → 03:51:34 | enlace nuevo, `/verify` OK → sesión de recuperación |
+| 03:52:59 | logout **sin** `PUT /user`: cambió la URL a mano, entró al inicio y cerró sesión |
+| 03:53:03 | mismo enlace sin sesión → 403 (D07 sin sesión) |
+| 03:53:11 → 03:53:38 | login `admin@test.com` + mismo enlace dos veces → 403 (D07 con sesión) |
+| 03:54:19 → 03:54:26 | login de la cuenta de prueba + mismo enlace → 403 (D07 con sesión, alumno) |
+| 03:55:43 → 03:56:03 | login de la cuenta de prueba + enlace nuevo → OK (enlace con la misma cuenta abierta) |
+| 03:57:55 | login de la cuenta de prueba en el teléfono |
+| 03:58:25 → 03:58:55 | enlace nuevo en el laptop, `PUT /user` → clave cambiada |
+| 04:00:30 | `POST /logout` → 403 `session_not_found`: la sesión del teléfono ya no existía |
+
+- ✅ **D07 sin sesión:** aviso en el login (F6).
+- ✅ **D07 con sesión:** inicio de la cuenta + toast que la nombra (F9), con admin y con alumno
+  (este cae en "Módulo no disponible" por el piloto, con el toast encima).
+- ✅ **Enlace nuevo con la misma cuenta abierta:** abre la pantalla de nueva clave. Las otras
+  pestañas del mismo navegador también saltan a ella: supabase-js reparte `PASSWORD_RECOVERY`
+  entre pestañas y todas comparten la sesión del enlace. Es lo correcto.
+- ✅ **L05:** al cambiar la clave, Supabase borra las demás sesiones de la cuenta (en
+  `auth.sessions` queda solo la del enlace). El teléfono **no lo nota en el momento**: su token de
+  acceso sigue valiendo hasta que vence (1 h salvo que se haya cambiado en Supabase) o hasta que habla con Auth (el logout de
+  las 04:00:30 respondió `session_not_found`). Al intentar renovarlo, supabase-js cierra la sesión.
+- ❌ **Nuevo — F10:** en la pantalla de nueva clave, escribir otra URL (o recargar) dejaba entrar
+  sin fijar la clave. `passwordRecovery()` era un signal en memoria: la recarga lo devolvía a
+  `false` y la sesión del enlace, guardada por supabase-js, era una sesión normal. F3 solo valía
+  mientras no se recargara la página.
+
+- **F10 — La recuperación sobrevive a recargar:** mientras no se fije la clave, recargar o
+  escribir cualquier URL de `/app` vuelve a `/recuperar-contrasena`. Se guarda el id de Auth de la
+  cuenta en `localStorage` (`PASSWORD_RECOVERY_MARK_KEY`, donde vive la sesión) al recibir
+  `PASSWORD_RECOVERY`; en `INITIAL_SESSION` se retoma solo si coincide con la cuenta con sesión
+  (si no, o sin sesión, se borra); se borra al fijar la clave y en `SIGNED_OUT`.
+  - Implementado: `AuthFacade` (`restorePasswordRecovery`, `readRecoveryMark`,
+    `writeRecoveryMark`). Tests: `auth.facade.spec.ts` (+7; 5 fallaban antes de implementar).
 
 ## Bloqueo (2026-10-16) — superado el 2026-11-06 con el dominio definitivo
 Revisado: el código salió en los releases (producción en `v0.2.1`, `/recuperar-contrasena` responde)
