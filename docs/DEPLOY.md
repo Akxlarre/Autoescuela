@@ -17,6 +17,33 @@ retoman, el workflow se recupera desde git.
 
 ---
 
+## Antes de mergear: CI de pull requests
+
+> [`fix-252-b`](../specs/fixes/fix-252-b-ci-en-pull-requests-y-lint-estricto/fix.md) ·
+> Workflow: [ci](../.github/workflows/ci.yml)
+
+Cada pull request hacia `main` corre el workflow **CI**, sin secretos y sin tocar producción:
+
+| Job              | Qué corre                                                                                                                                   | Cómo reproducirlo en tu equipo                                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `calidad`        | lint arquitectónico **estricto**, micro-suites de los guardrails, tests unitarios, tests de fechas en 3 zonas horarias, build de producción | `npm run lint:arch:strict` · `npm run test:scripts` · `npm run test:ci` · `node scripts/test-tz.mjs` · `npx ng build`                    |
+| `edge-functions` | tests Deno de `supabase/functions` (menos `auto-create-next-promotions/index.test.ts`, que necesita un Postgres local)                      | `DENO_NO_PACKAGE_JSON=1 deno test --allow-read --ignore=supabase/functions/auto-create-next-promotions/index.test.ts supabase/functions` |
+
+**Modo estricto.** `npm run lint:arch` deja como advertencia las regresiones de los ratchets
+(ARCH-15/16/17/19/25/26) y las clases de token muertas (ARCH-11). `npm run lint:arch:strict` las
+trata como error, y es lo que corre el CI: un archivo que supera su cuota del baseline deja el PR
+en rojo. Si bajaste el backlog, consolida la mejora con
+`npm run lint:arch -- --update-ds-baseline`.
+
+**Para que un PR en rojo no se pueda mergear** hay que exigir los checks en la rama: GitHub →
+Settings → Branches → regla para `main` → _Require status checks to pass_ → `Lint, tests y build`
+y `Tests de edge functions (Deno)`. Sin esa regla el CI avisa, pero no bloquea.
+
+El gate del deploy (paso 3 de abajo) sigue existiendo como red de respaldo y corre `lint:arch`
+sin modo estricto.
+
+---
+
 ## Publicar una versión (2 clics + aprobación)
 
 1. Asegúrate de que lo que quieres publicar ya está **mergeado en `main`**. Mergear no publica
@@ -47,11 +74,12 @@ git tag v0.1.7 && git push origin v0.1.7
 
 El número lo eliges tú (tiene que ser mayor que el último). El resto es igual: tests → aprobación
 → publicación → Release.
+
 </details>
 
 **Un deploy a la vez.** Si hay un deploy esperando aprobación y se lanza otro, el nuevo queda en
-cola (*pending*) detrás, sin pedir aprobación todavía. GitHub **no** cancela el que espera: si ya
-no corresponde, **recházalo** en *Review deployments → Reject* y pasa el siguiente. Una subida en
+cola (_pending_) detrás, sin pedir aprobación todavía. GitHub **no** cancela el que espera: si ya
+no corresponde, **recházalo** en _Review deployments → Reject_ y pasa el siguiente. Una subida en
 curso nunca se corta.
 
 ## Volver a una versión anterior (rollback)
@@ -85,16 +113,16 @@ La lógica vive en `scripts/lib/deploy-manifest.js`, con su test en
 
 ## Configuración del environment `Production` (GitHub → Settings → Environments)
 
-| Qué | Valor |
-|---|---|
-| Required reviewers | `Akxlarre`, `SorkoTheProgram`, `m-fuentesr` |
-| Deployment branches and tags | *Selected* → **dos** reglas: rama `main` (los botones corren desde `main`) **y** tag `v*` (push manual de un tag). Con solo la de tag, GitHub bloquea los deploys de los botones |
-| Secret `FTP_SERVER` | hostname **del servidor** que figura en el certificado TLS (hoy `rs7-va.serverhostgroup.com`), no `ftp.<dominio>` — ver Problemas conocidos |
-| Secret `FTP_USERNAME` | cuenta FTP dedicada, **enjaulada en el docroot del subdominio** |
-| Secret `FTP_PASSWORD` | contraseña de esa cuenta |
-| Variable `APP_DOMAIN` | dominio sin `https://` (hoy `app.gestordeautoescuelas.cl`) |
+| Qué                          | Valor                                                                                                                                                                            |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Required reviewers           | `Akxlarre`, `SorkoTheProgram`, `m-fuentesr`                                                                                                                                      |
+| Deployment branches and tags | _Selected_ → **dos** reglas: rama `main` (los botones corren desde `main`) **y** tag `v*` (push manual de un tag). Con solo la de tag, GitHub bloquea los deploys de los botones |
+| Secret `FTP_SERVER`          | hostname **del servidor** que figura en el certificado TLS (hoy `rs7-va.serverhostgroup.com`), no `ftp.<dominio>` — ver Problemas conocidos                                      |
+| Secret `FTP_USERNAME`        | cuenta FTP dedicada, **enjaulada en el docroot del subdominio**                                                                                                                  |
+| Secret `FTP_PASSWORD`        | contraseña de esa cuenta                                                                                                                                                         |
+| Variable `APP_DOMAIN`        | dominio sin `https://` (hoy `app.gestordeautoescuelas.cl`)                                                                                                                       |
 
-Los secrets van **en el environment**, no como *Repository secrets*: así solo los lee el job que
+Los secrets van **en el environment**, no como _Repository secrets_: así solo los lee el job que
 pasó la aprobación.
 
 ## Cambiar de dominio
@@ -115,7 +143,7 @@ impreso en los contratos). Al cambiarlo:
 - [ ] **cPanel**: crear el subdominio (con SSL activo) y una cuenta FTP enjaulada en su docroot.
       El plan tiene tope de dominios adicionales (addon), no de subdominios.
 - [ ] **GitHub**: actualizar `APP_DOMAIN` y los secrets FTP del environment `Production`.
-- [ ] **Supabase Auth → URL Configuration**: *Site URL* = `https://<dominio>` y en *Redirect URLs*
+- [ ] **Supabase Auth → URL Configuration**: _Site URL_ = `https://<dominio>` y en _Redirect URLs_
       agregar `https://<dominio>/recuperar-contrasena`. El link de "Recuperar contraseña" pide volver
       a esa ruta (fix-181-b); si no está registrada, Supabase lo manda a la Site URL (la app igual
       redirige a la pantalla, pero no conviene depender de eso).
@@ -147,18 +175,18 @@ dominio: probado el 2026-11-12 con SPF, DKIM y DMARC en `pass`.
   `SMTP_USER=SMTP_FROM=cuentas@gestordeautoescuelas.cl`, `SMTP_PASS`. `SMTP_FROM` es la dirección
   neutra: la de los correos de cuenta y la de respaldo de una escuela sin dirección propia. El
   transporte vive en `_shared/school-mailer.ts`; quién firma cada correo, en `_shared/school-email.ts`.
-- **Remitente de cada escuela**: lo edita el admin en *Ajustes → Correo de las Escuelas*
+- **Remitente de cada escuela**: lo edita el admin en _Ajustes → Correo de las Escuelas_
   (`branches.email_sender_name`, `email_sender_address`, `email` = correo de respuesta, `phone` =
   pie). Vale desde el correo siguiente, sin redesplegar. La dirección de envío solo puede ser
   `@gestordeautoescuelas.cl` (CHECK `branches_email_sender_domain_chk`); para otra escuela, crear
   primero la casilla en cPanel.
 - **Correos de Supabase Auth (recuperar contraseña)**: los manda la función `send-auth-email`
-  vía *Authentication → Hooks → Send Email* (HTTPS, secret `SEND_EMAIL_HOOK_SECRET`). Motivo: los
+  vía _Authentication → Hooks → Send Email_ (HTTPS, secret `SEND_EMAIL_HOOK_SECRET`). Motivo: los
   que mandaba Supabase llegaban con `dkim=fail` y con una plantilla sin versionar. **Vuelta atrás:**
   desactivar el hook en el panel; Supabase vuelve a su SMTP (`cuentas@`, "Gestor de Autoescuelas")
-  y a la plantilla *Reset password* del panel, que debe quedar neutra.
-- **Rotar la contraseña de `cuentas@`**: cPanel → *Email Accounts* → *Manage*, y cargarla en los dos
-  lugares: `npx supabase secrets set "SMTP_PASS=…"` y *Authentication → Emails → SMTP Settings*.
+  y a la plantilla _Reset password_ del panel, que debe quedar neutra.
+- **Rotar la contraseña de `cuentas@`**: cPanel → _Email Accounts_ → _Manage_, y cargarla en los dos
+  lugares: `npx supabase secrets set "SMTP_PASS=…"` y _Authentication → Emails → SMTP Settings_.
 - **Cambiar el dominio de envío**: `SENDER_DOMAIN` en `_shared/school-email.ts` y en
   `core/utils/branch-email.utils.ts`, el CHECK de `branches` (migración nueva), las casillas en
   cPanel, SPF/DKIM/DMARC del dominio nuevo y los secrets `SMTP_*`.
@@ -175,7 +203,7 @@ dominio: probado el 2026-11-12 con SPF, DKIM y DMARC en `pass`.
   `echo | openssl s_client -starttls ftp -connect ftp.<dominio>:21 2>/dev/null | openssl x509 -noout -ext subjectAltName`
   y usar uno de los DNS listados. **No** desactives `ssl:verify-certificate`.
 - **IP de GitHub bloqueada** (cPHulk / Imunify360) tras varios logins fallidos: desbloquear desde
-  cPanel → *Bloqueador de IP*, y corregir las credenciales antes de reintentar.
+  cPanel → _Bloqueador de IP_, y corregir las credenciales antes de reintentar.
 - **Rutas de la SPA con "extensión"** (ej. `/algo/archivo.pdf`) responden 404: el `.htaccess`
   trata toda ruta con extensión como archivo. Hoy ninguna ruta de `indices/ROUTES.md` es así.
 - **`test:ci` es lento en Windows local** (~19 min); en el runner Linux de GitHub tarda ~1,5 min y el job `build` completo ~2,5 min (timeout: 45 min).

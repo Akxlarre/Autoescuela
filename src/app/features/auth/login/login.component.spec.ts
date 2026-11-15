@@ -135,3 +135,55 @@ describe('LoginComponent — vuelve a la pantalla pedida (hotfix-096-b)', () => 
     }
   });
 });
+
+// ─── fix-181-b (F6, D07): el guard de /recuperar-contrasena manda acá con ?enlace=vencido|invalido
+// cuando el link del correo venció o ya se usó. Antes el login abría sin explicar nada. ───
+describe('LoginComponent — enlace de recuperación vencido (fix-181-b)', () => {
+  function setup(enlace: string | null) {
+    TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        { provide: AuthFacade, useValue: { login: vi.fn(), resetPasswordForEmail: vi.fn() } },
+        { provide: Router, useValue: { navigate: vi.fn(), navigateByUrl: vi.fn() } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { queryParamMap: convertToParamMap(enlace === null ? {} : { enlace }) },
+          },
+        },
+        { provide: GsapAnimationsService, useValue: { animateHero: vi.fn() } },
+        { provide: ErrorSanitizerService, useValue: { sanitize: vi.fn() } },
+      ],
+    });
+    return TestBed.createComponent(LoginComponent).componentInstance;
+  }
+
+  it('?enlace=vencido → abre en "recuperar" con el aviso de enlace vencido', () => {
+    const component = setup('vencido');
+    expect(component.mode()).toBe('reset');
+    expect(component.errorMsg()).toBe(
+      'El enlace para restablecer tu contraseña venció o ya se usó. Pide uno nuevo con tu correo.',
+    );
+  });
+
+  it('?enlace=invalido → abre en "recuperar" con el aviso de enlace no válido', () => {
+    const component = setup('invalido');
+    expect(component.mode()).toBe('reset');
+    expect(component.errorMsg()).toContain('no es válido');
+  });
+
+  it('sin el parámetro o con otro valor → login normal, sin aviso', () => {
+    for (const enlace of [null, 'cualquiera']) {
+      TestBed.resetTestingModule();
+      const component = setup(enlace);
+      expect(component.mode()).toBe('login');
+      expect(component.errorMsg()).toBe('');
+    }
+  });
+
+  it('cambiar de modo borra el aviso', () => {
+    const component = setup('vencido');
+    component.switchMode('login');
+    expect(component.errorMsg()).toBe('');
+  });
+});

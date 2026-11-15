@@ -1,0 +1,14 @@
+# Mantiene al día las GitHub Actions de los workflows (fix-252-b).
+#
+# Solo actions, a propósito: las dependencias npm (Angular, PrimeNG, Supabase) se actualizan a
+# mano, porque un salto de versión ahí pide revisar la app y no solo que el CI pase.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns: ['*']

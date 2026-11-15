@@ -195,7 +195,7 @@
 
 | Componente | Tipo/Categoría | Props principales | Ubicación | Estado |
 |------------|----------------|-------------------|-----------|--------|
-| `app-login-card` | Auth / Form | `mode` ('login'|'reset'), `loading` (false), `errorMsg` (''), `successMsg` ('') — outputs: `modeChange`, `formSubmit` (LoginFormData). Sin `@if` para layout: contraseña y mensajes siempre en DOM, GSAP anima `height`+`opacity` vía `effect()` + `viewChild`. `LoginFormData`: `{ email, password }`. | `shared/components/login-card/login-card.component.ts` | ✅ Estable |
+| `app-login-card` | Auth / Form | `mode` ('login'|'reset'), `loading` (false), `errorMsg` (''), `successMsg` ('') — outputs: `modeChange`, `formSubmit` (LoginFormData). Sin `@if` para layout: contraseña y mensajes siempre en DOM, GSAP anima `height`+`opacity` vía `effect()` + `viewChild`. Un `errorMsg`/`successMsg` que ya viene puesto al abrir se muestra sin animar (fix-181-b: aviso de enlace de recuperación vencido); vacío arranca colapsado. `LoginFormData`: `{ email, password }`. | `shared/components/login-card/login-card.component.ts` | ✅ Estable |
 
 ## Páginas / Vistas (Pages)
 *Componentes enrutables (Smart components) que consumen Servicios.*

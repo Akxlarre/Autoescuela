@@ -2133,6 +2133,26 @@
   edge functions, `resolveArqueo()` de `supabase/functions/_shared/cash-arqueo.ts`.
 - **Fuente:** `specs/fixes/fix-074-i-cierre-sin-arqueo-falla`.
 
+### DG-128 — Un enlace de correo de Supabase Auth no avisa nada fuera del evento, y no cierra la sesión que había
+
+- **Trampa:** tratar el evento `PASSWORD_RECOVERY` como un estado (un `signal` que se enciende
+  una vez), y suponer que un enlace que falla deja al usuario sin sesión o que cambiar la clave
+  saca al instante a los otros equipos.
+- **Realidad:** con flujo implícito y `detectSessionInUrl`, el enlace bueno guarda una sesión
+  **normal** en `localStorage` y emite `PASSWORD_RECOVERY` una sola vez: recargar o escribir otra
+  URL pierde todo lo que se derivó del evento, y la sesión entra a la app sin fijar clave. Un
+  enlace vencido o ya usado vuelve con `#error_code=otp_expired`, **conserva** la sesión que ya
+  estaba abierta (otra cuenta incluida) y no borra el hash: un guard de invitados la rebota a
+  `/app` y el aviso se pierde. Cambiar la clave borra las demás sesiones en `auth.sessions`, pero
+  el otro equipo sigue con su token de acceso hasta que vence o hasta que habla con Auth.
+- **Regla de aplicabilidad:** cualquier estado de auth que nazca de un evento de un enlace de
+  correo (recuperación, invitación, cambio de correo) se guarda junto a la sesión, con el id de la
+  cuenta, y se retoma en `INITIAL_SESSION` solo si coincide (`AuthFacade`,
+  `PASSWORD_RECOVERY_MARK_KEY`). Al leer el error de un enlace, decidir con la sesión que quedó
+  (`landsInApp()` de `guest.guard.ts`) antes de mandar a una ruta de invitados. No prometer
+  "cierre inmediato" de otros equipos al cambiar la clave.
+- **Fuente:** `specs/fixes/fix-181-b-recuperar-contrasena-punta-a-punta` (F6, F9, F10 y L05).
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

@@ -897,7 +897,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                             [class.border-border]="!docFileSignal(doc.key)()"
                             [class.text-text-secondary]="!docFileSignal(doc.key)()"
                             [class.hover:bg-elevated]="!docFileSignal(doc.key)()"
-                            [class.border-success-muted]="!!docFileSignal(doc.key)()"
+                            [class.border-success-border]="!!docFileSignal(doc.key)()"
                             [class.text-success]="!!docFileSignal(doc.key)()"
                             [style.border-color]="
                               docFileSignal(doc.key)()

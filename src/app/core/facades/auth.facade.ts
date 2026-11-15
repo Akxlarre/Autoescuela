@@ -21,6 +21,14 @@ const AUTH_READY_TIMEOUT_MS = 15_000;
 /** Esperas entre reintentos al leer el perfil tras un error de red/servidor (fix-185-b). */
 const PROFILE_RETRY_DELAYS_MS = [1000, 2000];
 
+/**
+ * Clave de `localStorage` con el id de Auth de la cuenta que abrió un enlace de recuperación y
+ * todavía no fijó la clave nueva (fix-181-b, F10). Vive donde vive la sesión de supabase-js: sin
+ * ella, recargar la página o escribir otra URL dejaba la sesión del enlace y perdía la marca, y se
+ * entraba a la app sin cambiar la clave.
+ */
+export const PASSWORD_RECOVERY_MARK_KEY = 'auth-password-recovery';
+
 @Injectable({
   providedIn: 'root',
 })
@@ -36,7 +44,8 @@ export class AuthFacade {
 
   /**
    * La sesión actual viene de un link de "recuperar contraseña" y todavía no se fijó la clave
-   * nueva (fix-181-b). Mientras sea true, authGuard no deja entrar a /app.
+   * nueva (fix-181-b). Mientras sea true, authGuard no deja entrar a /app. Sobrevive a recargar
+   * la página gracias a `PASSWORD_RECOVERY_MARK_KEY` (F10).
    */
   private _passwordRecovery = signal(false);
   readonly passwordRecovery = this._passwordRecovery.asReadonly();
@@ -70,6 +79,8 @@ export class AuthFacade {
         // Es la única fuente de verdad para la carga inicial; evita la race
         // condition que provocaba "Refresh Token Not Found" cuando getUser()
         // y INITIAL_SESSION intentaban rotar el token en paralelo.
+        // Va antes de resolver whenReady: los guards leen passwordRecovery() apenas resuelve.
+        this.restorePasswordRecovery(session?.user?.id);
         if (session?.user) {
           this.loadUserFromSession(session.user)
             .catch(() => undefined)
@@ -83,14 +94,48 @@ export class AuthFacade {
         // El link del correo abre una sesión: sin esto la app la trataba como un login normal y
         // el usuario entraba sin fijar clave nueva (fix-181-b).
         this._passwordRecovery.set(true);
+        if (session?.user?.id) this.writeRecoveryMark(session.user.id);
         if (session?.user) this.loadUserFromSession(session.user).catch(() => undefined);
         void this.router.navigate(['/recuperar-contrasena']);
       } else if (event === 'SIGNED_OUT') {
         this.disposeRealtime();
         this._passwordRecovery.set(false);
+        this.writeRecoveryMark(null);
         this._currentUser.set(null);
       }
     });
+  }
+
+  /**
+   * Al arrancar, retoma la recuperación pendiente si la marca es de la cuenta con sesión
+   * (F10). Una marca de otra cuenta, o sin sesión, ya no sirve y se borra.
+   */
+  private restorePasswordRecovery(authUserId: string | undefined): void {
+    const mark = this.readRecoveryMark();
+    if (!mark) return;
+    if (authUserId && mark === authUserId) {
+      this._passwordRecovery.set(true);
+    } else {
+      this.writeRecoveryMark(null);
+    }
+  }
+
+  private readRecoveryMark(): string | null {
+    try {
+      return localStorage.getItem(PASSWORD_RECOVERY_MARK_KEY);
+    } catch {
+      return null; // sin localStorage la marca vive solo en memoria, como antes de F10
+    }
+  }
+
+  /** Guarda el id de la cuenta en recuperación, o borra la marca con `null`. */
+  private writeRecoveryMark(authUserId: string | null): void {
+    try {
+      if (authUserId) localStorage.setItem(PASSWORD_RECOVERY_MARK_KEY, authUserId);
+      else localStorage.removeItem(PASSWORD_RECOVERY_MARK_KEY);
+    } catch {
+      // sin localStorage la marca vive solo en memoria, como antes de F10
+    }
   }
 
   /** Cargas de perfil en curso por id de Auth: SIGNED_IN y login() comparten una sola (fix-185-b). */
@@ -343,7 +388,10 @@ export class AuthFacade {
   /** Fija la clave nueva de una sesión de recuperación y la da por terminada (fix-181-b). */
   async completePasswordRecovery(password: string): Promise<{ error: Error | null }> {
     const result = await this.updatePassword(password);
-    if (!result.error) this._passwordRecovery.set(false);
+    if (!result.error) {
+      this._passwordRecovery.set(false);
+      this.writeRecoveryMark(null);
+    }
     return result;
   }
 

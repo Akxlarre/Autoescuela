@@ -71,7 +71,9 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
         <ng-template #content>
           <form [formGroup]="form" class="flex flex-col gap-6 w-full" (ngSubmit)="onSubmit()">
             <!-- Info Alumno -->
-            <div class="flex items-center gap-3 p-3 rounded-xl bg-elevated border border-default">
+            <div
+              class="flex items-center gap-3 p-3 rounded-xl bg-elevated border border-border-default"
+            >
               <div
                 class="w-10 h-10 rounded-full bg-subtle flex items-center justify-center text-text-muted"
               >

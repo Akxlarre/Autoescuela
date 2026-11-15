@@ -12,6 +12,8 @@
     "claude:fix": "claude -p \"Ejecuta ng lint, identifica los errores y corrígelos\" --allowedTools Read,Edit,Bash",
     "claude:tdd": "claude -p \"Ejecuta las pruebas unitarias (ng test --watch=false). Si fallan, auto-corrige la lógica hasta que el compilador pase en verde.\" --allowedTools Read,Edit,Bash",
     "lint:arch": "node scripts/lint-arch-wrapper.js",
+    "lint:arch:strict": "node scripts/lint-arch-wrapper.js --strict",
+    "test:scripts": "node scripts/run-lib-tests.mjs",
     "indices:sync": "node scripts/indices-sync.js",
     "assignments:audit": "node scripts/assignments-audit.js",
     "assignments:sync": "node scripts/assignments-sync.js",
