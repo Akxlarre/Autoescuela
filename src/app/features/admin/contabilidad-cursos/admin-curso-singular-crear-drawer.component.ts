@@ -154,9 +154,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                   data-llm-description="Sede a la que pertenece el curso singular"
                 />
                 @if (form.controls['branchId'].invalid && form.controls['branchId'].touched) {
-                  <p class="text-xs text-state-error">
-                    El curso debe pertenecer a una sede específica.
-                  </p>
+                  <p class="text-xs text-error">El curso debe pertenecer a una sede específica.</p>
                 }
               </div>
             }

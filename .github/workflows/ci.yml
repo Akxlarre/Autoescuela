@@ -1,0 +1,85 @@
+# CI de pull requests — fix-252-b.
+#
+# Corre el gate de calidad en cada pull request hacia main, para que un cambio que rompe tests,
+# arquitectura o build se vea ANTES de mergear y no recién al publicar.
+#
+# El deploy (deploy-app-production.yml) conserva su propio gate como red de respaldo. Este
+# workflow es más exigente en un punto: corre lint:arch en modo estricto, donde las regresiones
+# de los ratchets y las clases de token muertas son error y no advertencia.
+#
+# No usa secretos ni toca producción: no despliega nada y no habla con Supabase.
+#
+# Para que un PR en rojo no se pueda mergear hay que exigir estos checks en la rama main
+# (Settings → Branches). Ver docs/DEPLOY.md.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Un push nuevo al mismo PR cancela la corrida anterior: solo importa el último commit.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  calidad:
+    name: Lint, tests y build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      # Primero lo más rápido: un fallo de arquitectura se ve en segundos.
+      - name: Lint arquitectónico estricto (lint:arch:strict)
+        run: npm run lint:arch:strict
+
+      - name: Micro-suites de los guardrails (test:scripts)
+        run: npm run test:scripts
+
+      - name: Tests (test:ci)
+        run: npm run test:ci
+
+      # Un test que pasa en una zona y falla en otra delata código que depende del reloj del
+      # equipo (.claude/rules/dates.md).
+      - name: Tests de fechas en UTC, Tokio y Santiago
+        run: node scripts/test-tz.mjs
+
+      - name: Build de producción
+        run: npx ng build --configuration production
+
+  edge-functions:
+    name: Tests de edge functions (Deno)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # El package.json de la raíz es de la app Angular. Sin esto Deno lo toma como propio y
+      # busca en node_modules las dependencias npm: de las edge functions, que no están ahí.
+      DENO_NO_PACKAGE_JSON: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      # Incluye la copia espejo de chile-time: si se desvía de la de la app, falla acá.
+      # Queda fuera auto-create-next-promotions/index.test.ts: es un test de concurrencia que se
+      # conecta a un Postgres local (supabase start), que este job no levanta.
+      - name: deno test
+        run: >
+          deno test --allow-read
+          --ignore=supabase/functions/auto-create-next-promotions/index.test.ts
+          supabase/functions

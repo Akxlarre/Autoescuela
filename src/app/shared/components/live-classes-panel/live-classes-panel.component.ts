@@ -94,7 +94,7 @@ import { TooltipModule } from 'primeng/tooltip';
       </ul>
     } @else if (classes().length === 0) {
       <div
-        class="border border-border-subtle rounded-xl bg-surface-hover flex-1 flex flex-col justify-center"
+        class="border border-border-subtle rounded-xl flex-1 flex flex-col justify-center"
       >
         <app-empty-state
           icon="clock"
