@@ -1,8 +1,7 @@
 ---
 id: fix-252-b-ci-en-pull-requests-y-lint-estricto
 type: fix
-status: done
-closed: 2026-11-15
+status: in_progress
 author: b
 created: 2026-11-15
 spec: —
@@ -63,8 +62,8 @@ hoy.
 - [x] AC3: `npm run test:scripts` corre las 15 micro-suites y falla si una falla (probado con
       una suite temporal que salía con 1).
 - [x] AC4: `npm run test:ci` en verde: 340 archivos, 5.162 tests.
-- [x] AC5: los 7 cambios de clase no alteran la intención visual. Verificación parcial en
-      navegador (ver "Verificación visual" abajo); el owner cerró el track con ese alcance.
+- [ ] AC5: los 7 cambios de clase no alteran la intención visual. **Falta ver en pantalla el
+      paso de pago de matrícula**; el resto está verificado (ver "Verificación visual" abajo).
       Detalle:
   - `border-default` → `border-border-default` y `border-success-muted` →
     `border-success-border`: sin cambio visible (el color ya salía por defecto o por
@@ -99,9 +98,13 @@ hoy.
   rojo; su color computado es el de `--state-error`.
 - **`.micro-label`:** medida en el navegador sobre un `label` y un `p`: 12 px, semibold,
   mayúsculas, color `--text-muted`, sin decoración; igual a los micro-labels existentes.
-- **No se vio en pantalla:** el error de edad del drawer "Inscribir Alumno" (misma clase que el
-  caso de arriba) ni el paso de pago de matrícula. Llegar a ellos exigía editar la ficha de un
-  registro existente o avanzar el asistente de matrícula contra la base de producción.
+- **Drawer "Inscribir Alumno":** con un RUT ficticio sin registro y una fecha de nacimiento de
+  menor de 17 años, el mensaje "El alumno debe tener al menos 17 años" se ve rojo, con el color
+  de `--state-error`. No se guardó nada.
+- **No se vio en pantalla:** el paso de pago de matrícula. Para llegar a él hay que avanzar el
+  asistente, y su paso 1 crea usuario, alumno y una matrícula en borrador en la base de
+  producción (`EnrollmentFacade`). Queda para el owner o para una corrida con un alumno de
+  prueba autorizada por él.
 
 ## Pendiente fuera de este track
 
