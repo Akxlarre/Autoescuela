@@ -1,7 +1,8 @@
 ---
 id: fix-252-b-ci-en-pull-requests-y-lint-estricto
 type: fix
-status: in_progress
+status: done
+closed: 2026-11-15
 author: b
 created: 2026-11-15
 spec: —
@@ -53,17 +54,18 @@ hoy.
 
 ## Acceptance Criteria
 
-- [ ] AC1: un pull request hacia `main` dispara el workflow `CI` con los jobs `calidad` y
-      `edge-functions`. **Pendiente:** solo se comprueba con el primer PR real en GitHub. En
-      local cada paso del workflow corrió con exit 0 (2026-11-15).
+- [x] AC1: un pull request hacia `main` dispara el workflow `CI` con los jobs `calidad` y
+      `edge-functions`. Comprobado en el PR #415: los dos checks corrieron y terminaron en
+      verde antes del merge.
 - [x] AC2: `npm run lint:arch:strict` termina en 0 sobre el árbol actual y en 1 si un archivo
       supera su cuota de ratchet (probado inyectando un cluster tipográfico: estricto exit 1, no
       estricto exit 0; archivo restaurado).
 - [x] AC3: `npm run test:scripts` corre las 15 micro-suites y falla si una falla (probado con
       una suite temporal que salía con 1).
 - [x] AC4: `npm run test:ci` en verde: 340 archivos, 5.162 tests.
-- [ ] AC5: los 7 cambios de clase no alteran la intención visual. **Pendiente:** no se verificó
-      en el navegador (`/verify`). Detalle:
+- [x] AC5: los 7 cambios de clase no alteran la intención visual. Las tres pantallas con cambio
+      visible se revisaron en el navegador (ver "Verificación visual" abajo).
+      Detalle:
   - `border-default` → `border-border-default` y `border-success-muted` →
     `border-success-border`: sin cambio visible (el color ya salía por defecto o por
     `[style.border-color]`).
@@ -90,3 +92,27 @@ hoy.
 - `npm run lint:arch:strict` → exit 0.
 - `npm run test:scripts` → 15 suites en verde.
 - `npm run test:ci` → verde.
+
+## Verificación visual (2026-11-15, local, rol admin)
+
+- **Drawer "Nuevo Curso":** el mensaje "El curso debe pertenecer a una sede específica" se ve
+  rojo; su color computado es el de `--state-error`.
+- **`.micro-label`:** medida en el navegador sobre un `label` y un `p`: 12 px, semibold,
+  mayúsculas, color `--text-muted`, sin decoración; igual a los micro-labels existentes.
+- **Drawer "Inscribir Alumno":** con un RUT ficticio sin registro y una fecha de nacimiento de
+  menor de 17 años, el mensaje "El alumno debe tener al menos 17 años" se ve rojo, con el color
+  de `--state-error`. No se guardó nada.
+- **Paso de pago de matrícula:** los cinco labels ("Resumen Financiero", "Descuentos",
+  "Descuentos disponibles", "Selecciona el Método de Pago", "N° Documento (opcional)") se ven
+  como micro-labels y consistentes entre sí. Se llegó al paso cambiando el estado local del
+  asistente desde la consola del navegador (paso 4 y datos de ejemplo), sin guardar el paso 1:
+  no se creó usuario, alumno ni matrícula, y no hubo llamadas a RPC ni a edge functions. Los
+  montos y el descuento que se ven en esa revisión son de ejemplo, no datos reales.
+
+## Pendiente fuera de este track
+
+- `indices/ANTI-PATTERNS.md` define el reemplazo canónico de dos clases que acá se quitaron en
+  vez de migrarse: `bg-surface-elevated` → `bg-elevated` (KPIs de archivo profesional) y
+  `bg-surface-hover` → `bg-subtle` (estado vacío del panel de clases en vivo). Quitarlas conserva
+  el aspecto que ya tenían; migrarlas les daría el fondo que el autor quiso poner.
+- Exigir los checks del CI en la rama `main` (ajuste del repositorio).
