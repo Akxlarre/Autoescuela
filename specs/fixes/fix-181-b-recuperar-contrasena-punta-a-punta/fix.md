@@ -1,7 +1,8 @@
 # Fix: Recuperar contraseña no permite fijar una clave nueva
 > id: fix-181-b-recuperar-contrasena-punta-a-punta
 > refs: ASG-i-044 (parte 2 de 2: recuperar contraseña. La parte 1 fue fix-180-b-usuarios-desactivados-siguen-entrando)
-> status: in_progress
+> status: done
+> closed: 2026-11-15
 > created: 2026-10-05
 
 ## Root Cause
@@ -74,13 +75,10 @@ Ninguno de una spec previa — fix autónomo (origen ASG-i-044). ACs propios:
 - [x] F9: código + tests + build (2026-11-14).
 - [x] Release con F6–F9. Tercera prueba del owner (2026-11-15): D07 sin y con sesión ✅, L05 ✅
       (ver abajo).
-- [x] F10: código + tests + build (2026-11-15).
-- [ ] Release con F10.
-- [ ] **Owner**, en producción después del release:
-      F10 (abrir un enlace nuevo, no escribir nada, cambiar la URL o recargar → sigue en la
-      pantalla de nueva clave) y D10 (pedir un enlace **nuevo** desde otra ventana privada o el
-      celular y abrirlo donde hay **otra** cuenta logueada → "Cuenta: …" con la cuenta del enlace).
-      Recién entonces `/fix-close`.
+- [x] F10: código + tests + build (2026-11-15). PR #414.
+- [x] Release con F10.
+- [x] **Owner**, en producción después del release: F10 y D10 pasan (2026-11-15, ver "Cuarta
+      prueba").
 
 ## Estado al retomar (2026-11-14)
 
@@ -217,6 +215,26 @@ Logs de Auth (UTC; hora Chile = UTC − 3) y `auth.sessions` de la cuenta de pru
   (si no, o sin sesión, se borra); se borra al fijar la clave y en `SIGNED_OUT`.
   - Implementado: `AuthFacade` (`restorePasswordRecovery`, `readRecoveryMark`,
     `writeRecoveryMark`). Tests: `auth.facade.spec.ts` (+7; 5 fallaban antes de implementar).
+    Salió en PR #414.
+
+### Cuarta prueba en producción (owner, 2026-11-15, con F10 publicado)
+
+El owner reporta que todo pasa. Los logs de Auth coinciden (UTC):
+
+| UTC | Evento |
+|---|---|
+| 04:17:09 | login de `admin@test.com` |
+| 04:32:19 → 04:32:29 | enlace nuevo de la cuenta de prueba, `/verify` OK con el admin logueado |
+| 04:33:00 | logout de la cuenta de prueba **sin** `PUT /user`: no se fijó clave y no entró a la app |
+| 04:33:25 → 04:34:03 | otro enlace nuevo, `/verify` OK, `PUT /user` → clave cambiada |
+| 04:34:09 | `POST /logout` → 403 `session_not_found` de otra sesión de la cuenta (L05 otra vez) |
+
+- ✅ **F10:** con la sesión del enlace, cambiar la URL o recargar se queda en la pantalla de nueva
+  clave.
+- ✅ **D10:** el enlace abierto con otra cuenta logueada muestra "Cuenta: …" con la cuenta del
+  enlace (F7).
+
+Con esto quedan cumplidos F1–F10 y los casos heredados D05, D07, D08, D10 y L05.
 
 ## Bloqueo (2026-10-16) — superado el 2026-11-06 con el dominio definitivo
 Revisado: el código salió en los releases (producción en `v0.2.1`, `/recuperar-contrasena` responde)
