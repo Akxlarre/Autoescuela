@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { safeReturnUrl } from '@core/utils/return-url.utils';
+import { authLinkErrorMessage } from '@core/utils/auth-link-error.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import {
@@ -118,9 +119,17 @@ export class LoginComponent {
   protected readonly testAccounts = TEST_ACCOUNTS;
   protected readonly testPassword = TEST_PASSWORD;
 
-  readonly mode = signal<'login' | 'reset'>('login');
+  /**
+   * fix-181-b (F6, D07): el guard de /recuperar-contrasena manda acá con `?enlace=vencido|invalido`
+   * cuando el link del correo ya no sirve. El login abre en "recuperar" y explica por qué.
+   */
+  private readonly linkErrorMsg = authLinkErrorMessage(
+    this.route.snapshot.queryParamMap.get('enlace'),
+  );
+
+  readonly mode = signal<'login' | 'reset'>(this.linkErrorMsg ? 'reset' : 'login');
   readonly loading = signal(false);
-  readonly errorMsg = signal('');
+  readonly errorMsg = signal(this.linkErrorMsg ?? '');
   readonly successMsg = signal('');
 
   readonly modes: { value: 'login' | 'reset'; label: string }[] = [
