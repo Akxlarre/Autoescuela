@@ -46,18 +46,28 @@ import { ProductBrandComponent } from '@shared/components/product-brand/product-
       <div #cardRef class="w-full max-w-110">
         <div class="surface-glass w-full rounded-2xl p-10">
           <div class="mb-8 text-center">
+            <!-- Marca del producto arriba y en su propia línea, como en el login (fix-242-b).
+                 fix-181-b (F8): iba al lado del ícono y, como los dos son inline-flex, se pisaban. -->
+            <div class="mb-6">
+              <app-product-brand />
+            </div>
             <div
               class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-primary"
               style="box-shadow:  0 8px 40px color-mix(in srgb, var(--ds-brand) 35%, transparent)"
             >
               <app-icon [name]="copy.icon" [size]="32" color="white" />
             </div>
-            <!-- Marca del producto, la misma del login (fix-242-b). -->
-            <app-product-brand size="sm" class="mb-3" />
             <h1 class="m-0 mb-1 font-display text-2xl font-bold text-text-primary">
               {{ copy.title }}
             </h1>
             <p class="m-0 text-sm text-text-muted">{{ copy.subtitle }}</p>
+            <!-- fix-181-b (F7, D10): sin esto no se sabía de qué cuenta se cambiaba la clave. -->
+            @if (accountEmail()) {
+              <p class="m-0 mt-3 text-sm text-text-secondary" data-llm-description="account email">
+                Cuenta:
+                <span class="font-semibold text-text-primary break-all">{{ accountEmail() }}</span>
+              </p>
+            }
           </div>
 
           <div #errorMsgRef class="overflow-hidden">
@@ -210,6 +220,8 @@ export class ForcePasswordChangeComponent {
       rut: user?.rut,
     });
   });
+  /** Correo de la cuenta cuya contraseña se está creando (F7). Vacío mientras no hay usuario. */
+  readonly accountEmail = computed(() => this.auth.currentUser()?.email ?? '');
   readonly mismatch = computed(() => {
     const { password, confirm } = this.values();
     return !!confirm && confirm !== password;

@@ -269,12 +269,14 @@ export class LoginCardComponent {
   readonly showPassword = signal(false);
 
   constructor() {
-    // Estado inicial sin animación — elementos colapsados antes del primer paint
+    // Estado inicial sin animación — elementos colapsados antes del primer paint.
+    // fix-181-b (F6): un mensaje que ya viene puesto al abrir (enlace de recuperación vencido) se
+    // deja visible; colapsarlo lo escondía para siempre, porque su effect solo anima cambios.
     afterNextRender(() => {
       const errorEl = this.errorMsgRef()?.nativeElement;
       const successEl = this.successMsgRef()?.nativeElement;
-      if (errorEl) gsap.set(errorEl, { height: 0, opacity: 0 });
-      if (successEl) gsap.set(successEl, { height: 0, opacity: 0 });
+      if (errorEl) gsap.set(errorEl, this.initialMessageState(this.errorMsg()));
+      if (successEl) gsap.set(successEl, this.initialMessageState(this.successMsg()));
 
       // Si la página carga directamente en modo reset, colapsar contraseña
       if (this.mode() === 'reset') {
@@ -339,6 +341,11 @@ export class LoginCardComponent {
           : { height: 0, opacity: 0, marginBottom: 0, duration: 0.25, ease: 'power2.in' },
       );
     });
+  }
+
+  /** Visible con el mismo margen que deja su effect al aparecer; vacío → colapsado. */
+  private initialMessageState(message: string): gsap.TweenVars {
+    return message ? { marginBottom: 16 } : { height: 0, opacity: 0 };
   }
 
   togglePasswordVisibility(): void {
