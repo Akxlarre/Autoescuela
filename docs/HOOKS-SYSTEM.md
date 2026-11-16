@@ -108,13 +108,15 @@ tenga las rules y skills presentes **sin tener que leerlas manualmente**.
   de todos los archivos `indices/*.md` al contexto. Claude nunca pierde la memoria
   de lo que existe en el proyecto.
 
-### 5. Sync Check (prompt hook)
+### 5. Sync Check (`sync-check.js`)
 - **Evento**: Stop
 - **Matcher**: ninguno (se ejecuta en cada respuesta)
-- **Tipo**: `prompt` (evaluado por modelo Haiku)
-- **Función**: Cuando Claude termina de responder, Haiku evalúa si se crearon
-  componentes/servicios nuevos sin actualizar los índices. Si detecta drift,
-  fuerza a Claude a continuar y actualizar los índices.
+- **Tipo**: `command` (determinista, sin modelo)
+- **Función**: Lee en la transcripción qué archivos escribió la sesión y le pregunta a git
+  cuáles son nuevos. Bloquea el cierre solo si la sesión creó un componente, facade,
+  servicio, directiva, pipe o guard en `src/app` y no escribió ningún índice. Modificar un
+  archivo que ya existía no bloquea: revisar si cambió su contrato es parte del paso
+  SINCRONIZAR.
 
 ### 6. Prettier (post-edit.js)
 - **Evento**: PostToolUse

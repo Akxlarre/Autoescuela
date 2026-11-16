@@ -18,7 +18,7 @@
       "Harness Gate": "harness-gate.js",
       "Bash Guard": "bash-guard.js",
       "Compact Recovery": "compact-recovery.js",
-      "Sync Check": "sync-check auditor",
+      "Sync Check": "sync-check.js",
       "Prettier": "post-edit.js"
     }
   },
