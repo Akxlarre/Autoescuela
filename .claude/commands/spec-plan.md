@@ -41,6 +41,13 @@ Si existen, léelos en paralelo:
 - `indices/DIRECTIVES.md` — ¿hay directivas reutilizables?
 - `indices/STYLES.md` — ¿qué tokens/clases del DS aplican?
 
+Esos índices dicen **qué existe**. Lee además los que dicen **cómo se decidió construir**:
+- `indices/PATTERNS.md` — completo. ¿Qué arquetipos instancia esta feature y cuál es la
+  implementación de referencia de cada uno?
+- `indices/ANTI-PATTERNS.md` — completo. Son pocos y cada uno ya costó un fix.
+- `indices/DOMAIN-GOTCHAS.md` — no completo (es largo): busca con Grep las tablas, funciones y
+  conceptos que toca la spec, y lee las entradas que aparezcan.
+
 Si el proyecto no tiene `indices/`, marca esa sección del plan como "N/A — proyecto sin índices canónicos" y procede igual.
 
 ### 4. Clasificar el tamaño del feature (auto-sizing)
@@ -80,7 +87,7 @@ Esperar confirmación del usuario antes de generar el plan.
 ls .claude/rules/ 2>/dev/null
 ```
 
-Si existen, identifica cuáles aplican al feature (architecture, facades, models, visual-system, swr-pattern, notifications, testing-tdd, ai-readability).
+Si existen, identifica cuáles aplican al feature (architecture, facades, models, visual-system, swr-pattern, notifications, testing-tdd, ai-readability, dates, database).
 
 ### 6. Generar el `plan.md`
 
@@ -98,6 +105,10 @@ Lee la plantilla `.claude/skills/sdd/templates/plan.md` y complétala con:
 3. **Reutilización** (sección 3):
    - Cruza con los índices: qué componentes/facades/services existentes encajan
    - Si propones crear algo nuevo, justifica por qué no se puede reutilizar lo existente
+   - **Patrones del catálogo:** por cada cosa que la feature construye (pantalla, drawer, facade,
+     función, migración), nombra el arquetipo de `indices/PATTERNS.md` y su implementación de
+     referencia. Si ninguno calza, dilo: es un patrón nuevo y queda anotado para el cierre.
+   - **Trampas que aplican:** los antipatrones y gotchas que esta feature podría pisar, por su ID.
 
 4. **Modelo de datos** (sección 4):
    - Si la spec involucra persistencia, propone tablas, RLS y modelos

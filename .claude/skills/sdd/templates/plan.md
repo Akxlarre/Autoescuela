@@ -47,6 +47,21 @@
 ### Componentes/Facades que NO existen y debemos crear
 - … (justificar: por qué no se puede reutilizar uno existente)
 
+### Patrones del catálogo que instancia
+
+> De `indices/PATTERNS.md`. Una fila por cosa que se construye. Si ningún arquetipo calza,
+> escribir "patrón nuevo": se agrega al catálogo al cerrar el track.
+
+| Qué se construye | Arquetipo | Se parte de |
+|------------------|-----------|-------------|
+| … | (ej. Lista app-like con KPIs) | `ruta/de/la/referencia` |
+
+### Trampas que aplican
+
+> Antipatrones (`AP-NNN`) y gotchas (`DG-NNN`) que esta feature podría pisar.
+
+- `AP-…` / `DG-…` — por qué aplica acá
+
 ---
 
 ## 4. Modelo de datos
@@ -104,7 +119,9 @@ Usuario → <SmartComponent>
 - [ ] `architecture.md` — Patrón Facade, OnPush, Signals
 - [ ] `facades.md` — Branch-scoped si aplica
 - [ ] `models.md` — DTO vs UI separados
-- [ ] `visual-system.md` — Tokens, bento grid, sin colores hardcodeados
+- [ ] `visual-system.md` — Tokens, bento grid, patrón app-like (default de toda página), vocabulario tipográfico
+- [ ] `dates.md` — Si convierte entre instante y día, o filtra por fecha
+- [ ] `database.md` — Si hay migración: RLS activada y test SQL de cada política
 - [ ] `swr-pattern.md` — Si el Facade cachea entre navegaciones
 - [ ] `notifications.md` — Si dispara toasts o notificaciones
 - [ ] `testing-tdd.md` — .spec.ts obligatorios para facades y utils

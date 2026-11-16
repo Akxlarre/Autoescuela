@@ -19,6 +19,7 @@ const ARCHITECT_PATH = path.join(PROJECT_ROOT, 'scripts', 'architect.js');
 const DATE_DISCIPLINE_PATH = path.join(PROJECT_ROOT, 'scripts', 'check-date-discipline.mjs');
 const THEME_NAME_COLLISIONS_PATH = path.join(PROJECT_ROOT, 'scripts', 'check-theme-name-collisions.mjs');
 const AGENTS_MIRROR_PATH = path.join(PROJECT_ROOT, 'scripts', 'check-agents-mirror.mjs');
+const QA_GUARDRAILS_PATH = path.join(PROJECT_ROOT, 'scripts', 'check-qa-guardrails.mjs');
 
 function ensureTempDir() {
   fs.mkdirSync(TEMP_DIR, { recursive: true });
@@ -99,6 +100,18 @@ async function main() {
   result.stdout = `${result.stdout}${agentsMirror.stdout}`;
   result.stderr = `${result.stderr}${agentsMirror.stderr}`;
   result.code = result.code === 0 ? agentsMirror.code : result.code;
+
+  // ARCH-31…37 (el harness y las capas de test fuera de src/app): hooks sin conectar,
+  // credenciales versionadas, tests desactivados, edge functions sin guard, migraciones de
+  // permisos sin test. Solo se le pasa --strict: su --update-qa-baseline no debe activarse
+  // desde lint:arch, igual que el --fix del espejo.
+  const qaGuardrails = await runScript(
+    QA_GUARDRAILS_PATH,
+    process.argv.slice(2).filter((arg) => arg === '--strict'),
+  );
+  result.stdout = `${result.stdout}${qaGuardrails.stdout}`;
+  result.stderr = `${result.stderr}${qaGuardrails.stderr}`;
+  result.code = result.code === 0 ? qaGuardrails.code : result.code;
 
   // Reimprimir salidas del linter (conserva UX)
   if (result.stdout) process.stdout.write(result.stdout);

@@ -90,7 +90,8 @@ Las credenciales de prueba están **visibles en el pie de `/login`** en dev (spe
 | `instructor@test.com` | instructor |
 | `alumno@test.com` | alumno |
 
-Contraseña única: `Test123456`
+La contraseña es la que muestra el pie de `/login` en dev. No se repite acá: una credencial no se
+escribe en un archivo versionado, tampoco una de prueba (ARCH-34 de `npm run lint:arch`).
 
 ### Paso 0 — Limpiar sesión previa (imprescindible)
 
@@ -115,7 +116,7 @@ Los selectores CSS fallan. Localizar por **nombre accesible** — sacar los `ref
 ```
 browser_fill_form({ fields: [
   { target: "<ref>", name: "Correo electrónico", type: "textbox", value: "admin@test.com" },
-  { target: "<ref>", name: "Contraseña",         type: "textbox", value: "Test123456" }
+  { target: "<ref>", name: "Contraseña",         type: "textbox", value: "<la del pie de /login>" }
 ]})
 browser_click({ target: "<ref>", element: "Botón Iniciar Sesión" })
 browser_wait_for({ time: 2 })

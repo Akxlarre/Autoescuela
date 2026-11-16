@@ -2133,6 +2133,26 @@
   edge functions, `resolveArqueo()` de `supabase/functions/_shared/cash-arqueo.ts`.
 - **Fuente:** `specs/fixes/fix-074-i-cierre-sin-arqueo-falla`.
 
+### DG-128 — No existe una base de desarrollo: `--linked` y el MCP de Supabase operan sobre la base real
+- **Trampa:** leer "BD de desarrollo" en `docs/E2E-PLAYWRIGHT.md` o "Supabase local" en la lista
+  de comandos y asumir que un comando con `--linked`, una llamada al MCP de Supabase o la suite
+  e2e trabajan sobre datos descartables.
+- **Realidad:** la autoescuela tiene un solo proyecto Supabase. `src/environments/environment.ts`
+  es el único archivo de entorno y `angular.json` no lo reemplaza al compilar, así que `ng serve`,
+  la suite e2e (`e2e/support/env-guard.ts` permite solo ese proyecto), los tests SQL
+  (`npx supabase db query --linked`) y la app publicada comparten la misma base. `docs/DEPLOY.md`
+  lo confirma: no hay ambiente QA.
+- **Aplica cuando:** vayas a ejecutar SQL con `--linked`, usar el MCP de Supabase para escribir
+  (`execute_sql`, `apply_migration`), correr un script de `supabase/scripts/` o un seed, o escribir
+  un helper de e2e que borra o modifica filas. Regla: leer es libre; escribir va dentro de una
+  transacción que termina deshaciéndose, o con datos propios marcados `E2E-` y limpieza
+  garantizada; un cambio de esquema o un borrado que no se puede deshacer se le pide a una persona.
+  Nunca `db reset` ni un `DELETE`/`UPDATE` sin `WHERE` contra el proyecto enlazado.
+- **No aplica** cuando el comando corre contra Supabase local (`npx supabase start`): ahí los
+  datos sí son descartables.
+- **Fuente:** `specs/madurez-qa/002-entorno-de-pruebas-aislado.md` (evidencia y plan para separar
+  los entornos).
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:

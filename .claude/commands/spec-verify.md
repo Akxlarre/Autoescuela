@@ -72,6 +72,22 @@ Calculá:
 - **⚠️ PARCIAL**: 80%+ cumplidos pero quedan gaps menores no bloqueantes
 - **❌ NO PASA**: hay AC importantes sin cumplir o scope creep significativo
 
+### 7.5. Cosechar lo que esta spec decidió
+
+Antes de reportar, responde: **¿este track decidió algo que la próxima feature debería repetir o
+evitar?** Mira la sección "Patrones del catálogo que instancia" del `plan.md` y lo que cambió
+durante la implementación.
+
+| Si pasó esto | Va a |
+|---|---|
+| Se construyó algo que el plan marcó "patrón nuevo", y va a repetirse | Una fila nueva en `indices/PATTERNS.md` |
+| La implementación quedó mejor que la referencia del catálogo | Reemplazar la ruta de esa fila |
+| Se descubrió un atajo de código que no hay que repetir | `indices/ANTI-PATTERNS.md` |
+| Una regla de `.claude/rules/` resultó incompleta o equivocada | Corregir la regla, con su criterio de aplicación |
+| Nada de lo anterior | Decirlo en el reporte: "sin patrones nuevos" |
+
+Incluye el resultado en el reporte del paso 8.
+
 ### 8. Reportar al usuario
 
 Si **PASA**:

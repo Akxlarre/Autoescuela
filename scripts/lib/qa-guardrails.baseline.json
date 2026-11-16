@@ -1,0 +1,50 @@
+{
+  "$schema": "Línea base de los trinquetes de scripts/check-qa-guardrails.mjs. Se regenera con --update-qa-baseline. Un valor solo debería bajar: si sube, el diff de este archivo lo muestra en el PR.",
+  "generatedAt": "2026-11-15T23:29:28.817Z",
+  "compactRecovery": {
+    "$nota": "Techo de lo que compact-recovery.js inyecta al contexto. El hook inyecta un mapa de los índices, no su contenido.",
+    "maxBytes": 60000,
+    "targetBytes": 60000
+  },
+  "indexRows": {
+    "indices/COMPONENTS.md": {
+      "count": 58,
+      "chars": 113689
+    },
+    "indices/DATABASE.md": {
+      "count": 18,
+      "chars": 41736
+    },
+    "indices/FACADES.md": {
+      "count": 31,
+      "chars": 87613
+    },
+    "indices/SERVICES.md": {
+      "count": 25,
+      "chars": 46985
+    },
+    "indices/USAGE-MAP.md": {
+      "count": 12,
+      "chars": 31162
+    }
+  },
+  "credentials": {
+    "docs/E2E-PLAYWRIGHT.md": 2,
+    "e2e/auth-sesion-3.spec.ts": 1,
+    "e2e/auth-sesion.spec.ts": 3,
+    "e2e/support/accounts.ts": 1,
+    "specs/assignments/ASG-i-039-sacar-credenciales-prueba-login.md": 1,
+    "specs/fixes/fix-071-b-fase-5-qa-visual-restante/fix.md": 1,
+    "specs/fixes/fix-072-b-portales-hero-slim/fix.md": 1,
+    "specs/hotfixes/hotfix-007-i-credenciales-prueba-login-solo-dev/hotfix.md": 2,
+    "specs/specs/0019-m-suite-playwright-e2e/plan.md": 1,
+    "specs/specs/0019-m-suite-playwright-e2e/tasks.md": 2,
+    "src/app/features/auth/login/login.component.ts": 1
+  },
+  "testHygiene": {
+    "unitSkips": 7,
+    "vitestExcludedSpecs": 6,
+    "e2eFixedWaits": 51,
+    "e2eSkips": 31
+  }
+}

@@ -25,6 +25,11 @@ paths:
 - **SIEMPRE** activar RLS en tablas nuevas: `ALTER TABLE x ENABLE ROW LEVEL SECURITY;`
 - Documentar cada policy: quién puede SELECT, INSERT, UPDATE, DELETE
 - Usar funciones helper si hay lógica de ownership compleja
+- Siempre que una migración cree, cambie o borre una política, o defina una función
+  `SECURITY DEFINER`, llega con un test en `supabase/tests/` que la nombra por su timestamp y que
+  prueba también lo que **no** se puede hacer. Lo exige ARCH-37 (`npm run lint:arch`) para las
+  migraciones nuevas. No aplica si el cambio no altera quién accede a qué: en ese caso se declara
+  con su motivo en `scripts/lib/qa-guardrails.allowlist.json`. Detalle: `testing-tdd.md`.
 
 ## Realtime
 

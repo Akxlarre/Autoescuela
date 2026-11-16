@@ -90,6 +90,25 @@ process.stdin.on('end', () => {
 
 
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // 4. BASE REAL — el proyecto enlazado es la base que usan los clientes
+    //    (indices/DOMAIN-GOTCHAS.md DG-128)
+    // ═══════════════════════════════════════════════════════════════════════
+    const linkedDbPatterns = [
+      { re: /supabase\s+db\s+reset\b[^;|&]*--(?:linked|db-url)/, msg: 'db reset contra el proyecto enlazado borra la base real' },
+    ];
+
+    for (const { re, msg } of linkedDbPatterns) {
+      if (re.test(command)) {
+        process.stderr.write(
+          `\u{1F6D1} BASH GUARD: Operacion sobre la base real bloqueada.\n` +
+          `Razon: ${msg}\n` +
+          `No existe una base de desarrollo (DG-128). Pide al humano que lo ejecute en su terminal.`
+        );
+        process.exit(2);
+      }
+    }
+
     process.exit(0);
   } catch {
     // Fail-open: si el hook falla, permitir el comando

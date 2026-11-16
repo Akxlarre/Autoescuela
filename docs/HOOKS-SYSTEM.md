@@ -168,6 +168,32 @@ El linter AST se ejecuta con `npm run lint:arch` y valida **8 reglas**:
 | 7 | Sin @keyframes en SCSS | Regex en .scss/.css |
 | 8 | Sin colores Tailwind hardcodeados | Regex en .ts/.html |
 
+### Reglas del propio harness y de las capas de test (`check-qa-guardrails.mjs`)
+
+`npm run lint:arch` corre además `scripts/check-qa-guardrails.mjs`, que vigila lo que
+`architect.js` no recorre: el harness mismo y los tests fuera de `src/app`. La detección vive en
+`scripts/lib/` (`harness-selfcheck.js`, `versioned-credentials.js`, `test-discipline.js`), cada
+una con su micro-suite.
+
+| Regla | Qué vigila | Tipo |
+|-------|------------|------|
+| ARCH-31 | Un hook de `.claude/hooks/` sin conectar en `settings.json`, o un hook que `CLAUDE.md` presenta como activo sin respaldo | Error |
+| ARCH-32 | Cuánto inyecta `compact-recovery.js` al contexto después de una compactación | Trinquete |
+| ARCH-33 | Filas de `indices/*.md` de más de 1.200 caracteres: el índice volviéndose historial | Trinquete |
+| ARCH-34 | Una credencial escrita en un archivo versionado, también en prosa y también si es de prueba | Error |
+| ARCH-35 | Tests unitarios desactivados, specs excluidos de Vitest, esperas fijas y saltos de los e2e | Trinquete |
+| ARCH-36 | Una edge function que no importa un guard de autorización de `_shared` | Error |
+| ARCH-37 | Una migración nueva que cambia permisos sin un test SQL que la nombre | Error |
+| ARCH-38 | Una ruta citada en `indices/PATTERNS.md` que ya no existe | Error |
+
+- **Error:** falla siempre.
+- **Trinquete:** compara contra `scripts/lib/qa-guardrails.baseline.json`. Avisa en modo normal y
+  falla con `--strict`, que es como corre el CI de pull requests. Una mejora se consolida con
+  `node scripts/check-qa-guardrails.mjs --update-qa-baseline`.
+- **Excepciones:** `scripts/lib/qa-guardrails.allowlist.json`, con un motivo por entrada. Una
+  excepción que deja de ser verdad (el hook se conectó, la función pasó a usar un guard) también
+  hace fallar el chequeo.
+
 ## Antigravity (`.agents/`)
 
 Antigravity no lee `.claude/`. Su adaptador vive en `.agents/`:

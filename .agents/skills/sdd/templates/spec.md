@@ -43,6 +43,21 @@
 - **AC-E1**: Given {{caso límite}}, When …, Then …
 - **AC-E2**: …
 
+### Preguntas de calidad
+
+> Responde cada una, aunque sea "no aplica". La que aplica se vuelve un AC o un edge case de
+> arriba: no queda solo como respuesta en esta tabla.
+
+| Pregunta | Respuesta |
+|----------|-----------|
+| **Permisos:** ¿qué pasa si lo intenta otro rol, otra sede o alguien sin sesión? | … |
+| **Carga fallida:** ¿qué ve el usuario si la lectura o la escritura falla? | … |
+| **Dos a la vez:** si comprueba y después escribe, ¿qué impide que dos personas se pisen? | … |
+| **Dinero o agenda:** ¿qué tiene que seguir cuadrando en los datos después de esto? | … |
+| **Terceros:** si llama a correo, pago o PDF, ¿qué pasa cuando no responde o responde dos veces? | … |
+| **Capa del test:** ¿la regla vive en la base, en una función o en la interfaz? El test va ahí. | … |
+| **Producción:** ¿cómo nos enteraríamos si esto falla con usuarios reales? | … |
+
 ---
 
 ## 4. Out of scope
