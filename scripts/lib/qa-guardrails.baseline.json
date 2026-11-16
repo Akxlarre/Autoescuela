@@ -1,6 +1,6 @@
 {
   "$schema": "Línea base de los trinquetes de scripts/check-qa-guardrails.mjs. Se regenera con --update-qa-baseline. Un valor solo debería bajar: si sube, el diff de este archivo lo muestra en el PR.",
-  "generatedAt": "2026-11-16T14:54:45.839Z",
+  "generatedAt": "2026-11-16T15:12:22.848Z",
   "compactRecovery": {
     "$nota": "Techo de lo que compact-recovery.js inyecta al contexto. El hook inyecta un mapa de los índices, no su contenido.",
     "maxBytes": 60000,
@@ -13,19 +13,19 @@
     },
     "indices/DATABASE.md": {
       "count": 18,
-      "chars": 41736
+      "chars": 41718
     },
     "indices/FACADES.md": {
       "count": 31,
-      "chars": 87613
+      "chars": 87582
     },
     "indices/SERVICES.md": {
       "count": 27,
-      "chars": 50204
+      "chars": 50177
     },
     "indices/USAGE-MAP.md": {
       "count": 12,
-      "chars": 31162
+      "chars": 31150
     }
   },
   "credentials": {

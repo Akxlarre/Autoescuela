@@ -156,6 +156,13 @@ const mejora = compareIndexRows(
 );
 check('fila acortada → mejora, no regresión', mejora.regressions.length === 0 && mejora.improvements.length === 1);
 
+{
+  const fila = `| ${'x'.repeat(1300)} |`;
+  const lf = measureLongRows(`${fila}\ncorta\n${fila}\n`);
+  const crlf = measureLongRows(`${fila}\r\ncorta\r\n${fila}\r\n`);
+  check('saltos de Windows y de Linux miden lo mismo', lf.count === 2 && lf.count === crlf.count && lf.chars === crlf.chars);
+}
+
 // ── ARCH-38: referencias del catálogo de patrones ───────────────────────────────────────────
 const CATALOGO = [
   '| Lista | `src/app/features/a/a.component.ts` | `visual-system.md` | Ninguno |',

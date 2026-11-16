@@ -125,7 +125,10 @@ async function main() {
       exitCode: result.code,
       summary: buildSummary(result),
     });
-    process.exit(1);
+    // exitCode y no process.exit(): con la salida conectada a un pipe (el CI), exit() termina
+    // el proceso antes de vaciarla y el log se corta sin mostrar el error que hizo fallar.
+    process.exitCode = 1;
+    return;
   }
 
   // Si pasó y había un fallo previo, convertirlo en "lección" y limpiar estado
@@ -144,7 +147,7 @@ async function main() {
     }
   }
 
-  process.exit(0);
+  process.exitCode = 0;
 }
 
 main();
