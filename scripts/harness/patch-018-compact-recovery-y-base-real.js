@@ -8,7 +8,7 @@
  *   1. Reemplaza .claude/hooks/compact-recovery.js por la versión que inyecta un MAPA de los
  *      índices (unos 18 KB) en vez de su contenido completo (unos 742 KB).
  *   2. Agrega a .claude/hooks/bash-guard.js un bloque que frena `supabase db reset` contra el
- *      proyecto enlazado, que es la base real (indices/DOMAIN-GOTCHAS.md DG-128).
+ *      proyecto enlazado, que es la base real (indices/DOMAIN-GOTCHAS.md DG-129).
  *   3. Baja el techo de ARCH-32 en scripts/lib/qa-guardrails.baseline.json a su objetivo.
  *   4. Corrige la viñeta de Compact Recovery en .claude/CLAUDE.md.
  *
@@ -77,7 +77,7 @@ const ruleLines = RULES.filter(([, , onlyFull]) => FULL || !onlyFull)
 const BLOCK = [
   '    // ═══════════════════════════════════════════════════════════════════════',
   '    // 4. BASE REAL — el proyecto enlazado es la base que usan los clientes',
-  '    //    (indices/DOMAIN-GOTCHAS.md DG-128)',
+  '    //    (indices/DOMAIN-GOTCHAS.md DG-129)',
   '    // ═══════════════════════════════════════════════════════════════════════',
   '    const linkedDbPatterns = [',
   ruleLines,
@@ -88,7 +88,7 @@ const BLOCK = [
   '        process.stderr.write(',
   '          `\\u{1F6D1} BASH GUARD: Operacion sobre la base real bloqueada.\\n` +',
   '          `Razon: ${msg}\\n` +',
-  '          `No existe una base de desarrollo (DG-128). Pide al humano que lo ejecute en su terminal.`',
+  '          `No existe una base de desarrollo (DG-129). Pide al humano que lo ejecute en su terminal.`',
   '        );',
   '        process.exit(2);',
   '      }',
@@ -97,7 +97,12 @@ const BLOCK = [
 ].join('\n');
 
 const guard = fs.readFileSync(at(BASH_GUARD), 'utf8');
-if (guard.includes('linkedDbPatterns')) {
+// El gotcha de la base real quedó como DG-129: al integrar main, DG-128 ya era de otra entrada.
+const STALE_REF = /(DOMAIN-GOTCHAS\.md |base de desarrollo \()DG-128/g;
+if (guard.includes('linkedDbPatterns') && STALE_REF.test(guard)) {
+  writes.push([BASH_GUARD, guard.replace(STALE_REF, '$1DG-129')]);
+  notes.push(`✔ ${BASH_GUARD}: referencia al gotcha corregida a DG-129.`);
+} else if (guard.includes('linkedDbPatterns')) {
   notes.push(`= ${BASH_GUARD}: el bloque de base real ya estaba.`);
 } else {
   // Ancla: el process.exit(0) que cierra el try, justo antes del catch.

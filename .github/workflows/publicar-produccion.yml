@@ -45,12 +45,12 @@ jobs:
           echo "::error::Publicar solo se puede lanzar desde main (se lanzó desde ${{ github.ref_name }}). En 'Run workflow' elige la rama main. No se creó ningún tag."
           exit 1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 

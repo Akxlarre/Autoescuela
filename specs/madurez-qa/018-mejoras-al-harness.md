@@ -48,7 +48,7 @@ Viven en `scripts/check-qa-guardrails.mjs`, conectado desde `scripts/lint-arch-w
 | `.claude/CLAUDE.md` | Sale "Context Guard" de la lista de hooks activos: el archivo existe y nunca se conectó. La lista pasa a nombrar solo lo que corre, y ARCH-31 lo sostiene |
 | `.claude/rules/testing-tdd.md` | Sección nueva "Las capas de test fuera de `src/app`": qué se prueba dónde, reglas de tests SQL y de e2e. La regla ahora carga también al tocar `supabase/` y `e2e/` |
 | `.claude/rules/database.md` | Una política nueva o cambiada llega con su test SQL |
-| `indices/DOMAIN-GOTCHAS.md` | DG-128: no existe una base de desarrollo; `--linked` y el MCP operan sobre la base real |
+| `indices/DOMAIN-GOTCHAS.md` | DG-129: no existe una base de desarrollo; `--linked` y el MCP operan sobre la base real |
 | `.claude/skills/verify/SKILL.md` | Se quitaron las dos copias de la contraseña de prueba |
 | `.claude/skills/sync-indices/SKILL.md` | Un índice describe el estado vigente, no la historia |
 | `.claude/skills/sdd/templates/spec.md` | Tabla "Preguntas de calidad" (permisos, carga fallida, dos a la vez, dinero o agenda, terceros, capa del test, producción) |
@@ -209,7 +209,7 @@ no tiene freno.
 ```js
     // ═══════════════════════════════════════════════════════════════════════
     // 4. BASE REAL — el proyecto enlazado es la base que usan los clientes
-    //    (indices/DOMAIN-GOTCHAS.md DG-128)
+    //    (indices/DOMAIN-GOTCHAS.md DG-129)
     // ═══════════════════════════════════════════════════════════════════════
     const linkedDbPatterns = [
       { re: /supabase\s+db\s+reset\b[^;|&]*--(?:linked|db-url)/, msg: 'db reset contra el proyecto enlazado borra la base real' },
@@ -223,7 +223,7 @@ no tiene freno.
         process.stderr.write(
           `\u{1F6D1} BASH GUARD: Operacion sobre la base real bloqueada.\n` +
           `Razon: ${msg}\n` +
-          `No existe una base de desarrollo (DG-128). Pide al humano que lo ejecute en su terminal.`
+          `No existe una base de desarrollo (DG-129). Pide al humano que lo ejecute en su terminal.`
         );
         process.exit(2);
       }

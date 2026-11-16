@@ -262,7 +262,6 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | `b` | [fix-181-b-recuperar-contrasena-punta-a-punta](fixes/fix-181-b-recuperar-contrasena-punta-a-punta/fix.md) | 2026-10-01 |
 | ASG-i-062 | Clase 7 bloqueada sin el segundo pago (con habilitación rápida y forzado) | `i` | [0010-i-clase-7-bloqueada-sin-segundo-pago](specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md) | 2026-10-13 |
 | ASG-i-023 | Testing: Matrícula presencial (Clase B, refuerzo y Clase Profesional) | `i` | [fix-058-i-testing-matricula-presencial](fixes/fix-058-i-testing-matricula-presencial/fix.md) | 2026-10-18 |
 | ASG-i-029 | Testing: Contabilidad (cuadratura, historial, reportes, anticipos, liquidaciones, cursos) | `i` | [fix-073-i-testing-contabilidad](fixes/fix-073-i-testing-contabilidad/fix.md) | 2026-11-09 |
@@ -447,6 +446,7 @@
 | ASG-i-036 | Testing: Auditoría y Configuración web | [fix-485-m-testing-auditoria-configuracion-web](fixes/fix-485-m-testing-auditoria-configuracion-web/fix.md) | 2026-11-07 |
 | ASG-i-026 | Testing: Agenda Clase B y Triple Match | [fix-186-b-testing-agenda-triple-match](fixes/fix-186-b-testing-agenda-triple-match/fix.md) | 2026-11-10 |
 | ASG-b-103 | Correos por escuela: remitente, respuesta y marca | [0061-b-correos-por-escuela-remitente-respuesta-marca](specs/0061-b-correos-por-escuela-remitente-respuesta-marca/spec.md) | 2026-11-12 |
+| ASG-i-044 | Usuarios desactivados siguen entrando, y recuperar contraseña no pide clave nueva | [fix-181-b-recuperar-contrasena-punta-a-punta](fixes/fix-181-b-recuperar-contrasena-punta-a-punta/fix.md) | 2026-11-15 |
 <!-- AUTO-GENERATED:END -->
 
 ---

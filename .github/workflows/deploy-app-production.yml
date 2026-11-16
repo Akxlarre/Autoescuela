@@ -64,7 +64,7 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: refs/tags/${{ steps.ref.outputs.tag }}
           fetch-depth: 0
@@ -79,7 +79,7 @@ jobs:
           fi
 
       # ── Publicación (push de tag) ────────────────────────────────────────────────────────
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.ref.outputs.mode == 'publish'
         with:
           node-version: '22'
@@ -146,7 +146,7 @@ jobs:
           test -f dist/Autoescuela/browser/.htaccess || { echo "::error::.htaccess no está en el build"; exit 1; }
           cat dist/Autoescuela/browser/version.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: site
           path: dist/Autoescuela/browser/
@@ -186,12 +186,12 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: refs/tags/${{ needs.build.outputs.tag }}
           sparse-checkout: scripts
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: site
           path: site
@@ -259,7 +259,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: site
           path: site

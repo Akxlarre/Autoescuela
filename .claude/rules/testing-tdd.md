@@ -109,7 +109,7 @@ muestra el dato, no que el dato sea inaccesible.
 - **Suplanta a un usuario real** (`SET LOCAL role authenticated` más sus claims). Una consulta
   probada como dueño de la base no pasa por las políticas.
 - **El test termina deshaciendo todo.** Hoy estos tests se corren contra el proyecto enlazado, que
-  es la base real (`indices/DOMAIN-GOTCHAS.md` DG-128): van dentro de una transacción que termina
+  es la base real (`indices/DOMAIN-GOTCHAS.md` DG-129): van dentro de una transacción que termina
   en `RAISE`. Nunca quites ese cierre.
 - **Simular la sesión no prueba la petición real.** Cuando lo que arreglas depende de cómo llega
   la sesión por la API (no de la lógica de la política), agrega además un test por la API.
