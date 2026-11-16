@@ -22,6 +22,7 @@ import { ClickOutsideDirective } from '@core/directives/click-outside.directive'
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import type { HistorialCierre } from '@core/models/ui/historial-cuadraturas.model';
+import { groupCierresByFecha } from '@core/utils/historial-cuadraturas.utils';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -31,6 +32,16 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 interface CalendarDay {
   day: number | null;
   dateStr: string | null;
+  /** El cierre del día cuando hay uno solo (la celda entera abre el detalle). */
+  cierre: HistorialCierre | null;
+  /** Todos los cierres del día: con "Todas las sedes" puede haber uno por sede (fix-078-i). */
+  cierres: HistorialCierre[];
+  isToday: boolean;
+}
+
+/** Fila de la vista móvil: un cierre, o el día de hoy todavía sin cierre. */
+interface MobileItem {
+  day: number;
   cierre: HistorialCierre | null;
   isToday: boolean;
 }
@@ -109,6 +120,24 @@ function formatCLP(value: number): string {
     }
     .cal-cell--clickable:hover {
       background: color-mix(in srgb, var(--ds-brand) 4%, var(--bg-surface));
+    }
+    /* fix-078-i: un cierre por sede dentro de la misma celda */
+    .cal-cierre-mini {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0;
+      width: 100%;
+      padding: 2px 6px;
+      border: none;
+      border-radius: var(--radius-md);
+      background: var(--bg-subtle);
+      cursor: pointer;
+      text-align: left;
+      transition: background 150ms ease;
+    }
+    .cal-cierre-mini:hover {
+      background: color-mix(in srgb, var(--ds-brand) 8%, var(--bg-subtle));
     }
     .badge-cuadrado {
       display: block;
@@ -323,7 +352,7 @@ function formatCLP(value: number): string {
                         {{ celda.day }}
                       </span>
                     }
-                    @if (celda.cierre) {
+                    @if (celda.cierres.length > 0) {
                       <app-icon name="lock" [size]="11" color="var(--text-muted)" />
                     }
                   </div>
@@ -354,15 +383,50 @@ function formatCLP(value: number): string {
                       </p>
                     </div>
 
-                    <!-- Fila inferior: cajero -->
-                    <div class="flex items-center gap-1">
-                      <app-icon name="user" [size]="10" color="var(--text-muted)" />
-                      <span
-                        class="text-xs truncate text-text-muted"
-                        [style.max-width]="'calc(100% - 16px)'"
-                        >{{ cierre.cajero }}</span
-                      >
+                    <!-- Fila inferior: cajero (y sede con Todas las sedes, fix-078-i) -->
+                    <div class="flex flex-col gap-0.5">
+                      @if (mostrarSede() && cierre.sedeNombre) {
+                        <span class="text-2xs font-semibold truncate text-text-secondary">{{
+                          cierre.sedeNombre
+                        }}</span>
+                      }
+                      <div class="flex items-center gap-1">
+                        <app-icon name="user" [size]="10" color="var(--text-muted)" />
+                        <span
+                          class="text-xs truncate text-text-muted"
+                          [style.max-width]="'calc(100% - 16px)'"
+                          >{{ cierre.cajero }}</span
+                        >
+                      </div>
                     </div>
+                  } @else if (celda.cierres.length > 1) {
+                    <div class="flex flex-col gap-1 mt-1">
+                      @for (c of celda.cierres; track c.id) {
+                        <button
+                          type="button"
+                          class="cal-cierre-mini"
+                          [attr.aria-label]="
+                            'Ver detalle del cierre del día ' +
+                            celda.day +
+                            ' de ' +
+                            (c.sedeNombre ?? 'la sede')
+                          "
+                          (click)="cierreClicked.emit(c)"
+                        >
+                          <span
+                            class="text-2xs font-semibold truncate text-text-secondary w-full"
+                            [attr.title]="c.sedeNombre"
+                            >{{ c.sedeNombre ?? '—' }}</span
+                          >
+                          <span
+                            class="text-2xs font-bold shrink-0"
+                            [style.color]="colorEstado(c)"
+                            >{{ estadoCorto(c) }}</span
+                          >
+                        </button>
+                      }
+                    </div>
+                    <span></span>
                   } @else if (celda.isToday) {
                     <p class="text-xs font-semibold text-center my-auto text-brand">En curso</p>
                     <span></span>
@@ -390,8 +454,8 @@ function formatCLP(value: number): string {
               </div>
             }
           } @else {
-            @for (celda of calendarDays(); track $index) {
-              @if (celda.day && (celda.cierre || celda.isToday)) {
+            @for (celda of mobileItems(); track $index) {
+              @if (celda.day) {
                 <button
                   class="flex items-center justify-between p-4 bg-surface hover:bg-subtle active:bg-border-muted/30 transition-colors w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand cursor-pointer"
                   (click)="celda.cierre && cierreClicked.emit(celda.cierre)"
@@ -442,6 +506,11 @@ function formatCLP(value: number): string {
                           <app-icon name="user" [size]="10" />
                           <span class="truncate max-w-30 lg:max-w-none">{{ cierre.cajero }}</span>
                         </div>
+                        @if (mostrarSede() && cierre.sedeNombre) {
+                          <span class="text-2xs font-semibold text-text-secondary">{{
+                            cierre.sedeNombre
+                          }}</span>
+                        }
                       } @else if (celda.isToday) {
                         <div class="flex items-center gap-1.5 mb-1 text-brand">
                           <app-icon name="clock" [size]="14" />
@@ -505,6 +574,8 @@ export class HistorialCuadraturasContentComponent implements AfterViewInit {
   backRoute = input<string | null>(null);
   backLabel = input<string>('Volver');
   isExporting = input(false);
+  /** "Todas las sedes": cada cierre muestra su sede (fix-078-i). */
+  mostrarSede = input(false);
 
   // ── Outputs ───────────────────────────────────────────────────────────────
   mesAnterior = output<void>();
@@ -536,7 +607,7 @@ export class HistorialCuadraturasContentComponent implements AfterViewInit {
   protected readonly calendarDays = computed<CalendarDay[]>(() => {
     const mes = this.mesActual();
     const anio = this.anioActual();
-    const cierresMap = new Map(this.cierres().map((c) => [c.fecha, c]));
+    const cierresMap = groupCierresByFecha(this.cierres());
 
     const todayStr = chileToday();
 
@@ -546,17 +617,19 @@ export class HistorialCuadraturasContentComponent implements AfterViewInit {
     const days: CalendarDay[] = [];
 
     for (let i = 0; i < offset; i++) {
-      days.push({ day: null, dateStr: null, cierre: null, isToday: false });
+      days.push({ day: null, dateStr: null, cierre: null, cierres: [], isToday: false });
     }
 
     const yyyy = String(anio);
     const mm = String(mes).padStart(2, '0');
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${yyyy}-${mm}-${String(d).padStart(2, '0')}`;
+      const cierres = cierresMap.get(dateStr) ?? [];
       days.push({
         day: d,
         dateStr,
-        cierre: cierresMap.get(dateStr) ?? null,
+        cierre: cierres.length === 1 ? cierres[0] : null,
+        cierres,
         isToday: dateStr === todayStr,
       });
     }
@@ -564,16 +637,26 @@ export class HistorialCuadraturasContentComponent implements AfterViewInit {
     const remainder = days.length % 7;
     if (remainder !== 0) {
       for (let i = 0; i < 7 - remainder; i++) {
-        days.push({ day: null, dateStr: null, cierre: null, isToday: false });
+        days.push({ day: null, dateStr: null, cierre: null, cierres: [], isToday: false });
       }
     }
 
     return days;
   });
 
-  protected readonly mesSinCierresMobile = computed(() => {
-    return !this.calendarDays().some((c) => c.day && (c.cierre || c.isToday));
-  });
+  /** Vista móvil: una fila por cierre (dos el mismo día si son de sedes distintas) + hoy. */
+  protected readonly mobileItems = computed<MobileItem[]>(() =>
+    this.calendarDays().flatMap((c): MobileItem[] => {
+      if (!c.day) return [];
+      const day = c.day;
+      if (c.cierres.length > 0) {
+        return c.cierres.map((cierre) => ({ day, cierre, isToday: c.isToday }));
+      }
+      return c.isToday ? [{ day, cierre: null, isToday: true }] : [];
+    }),
+  );
+
+  protected readonly mesSinCierresMobile = computed(() => this.mobileItems().length === 0);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -584,6 +667,19 @@ export class HistorialCuadraturasContentComponent implements AfterViewInit {
     if (diff > 0) return `+ ${formatted}`;
     if (diff < 0) return `- ${formatted}`;
     return formatted;
+  }
+
+  protected estadoCorto(c: HistorialCierre): string {
+    if (c.estadoDiferencia === 'balanced') return 'Cuadrado';
+    if (c.estadoDiferencia === 'unaudited') return 'Sin arqueo';
+    return this.formatDiferencia(c.diferencia);
+  }
+
+  protected colorEstado(c: HistorialCierre): string {
+    if (c.estadoDiferencia === 'shortage') return 'var(--color-error)';
+    if (c.estadoDiferencia === 'surplus') return 'var(--color-warning)';
+    if (c.estadoDiferencia === 'unaudited') return 'var(--text-muted)';
+    return 'var(--color-success)';
   }
 
   protected requestExport(format: 'excel' | 'pdf'): void {

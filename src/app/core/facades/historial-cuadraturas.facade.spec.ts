@@ -78,6 +78,7 @@ describe('HistorialCuadraturasFacade', () => {
   const mkCierre = (overrides: Partial<HistorialCierre> = {}): HistorialCierre => ({
     id: 1,
     branchId: 2,
+    sedeNombre: 'Conductores Chillán',
     fecha: '2026-07-15',
     closed: true,
     fondoInicial: 50_000,
@@ -372,6 +373,39 @@ describe('HistorialCuadraturasFacade', () => {
       expect(ui.saldoFisico).toBe(14_827);
       expect(ui.diferencia).toBe(-173);
       expect(ui.estadoDiferencia).toBe('shortage');
+    });
+  });
+
+  // ─── fix-078-i: con "Todas las sedes" cada cierre lleva su sede ─────────────
+
+  describe('sede del cierre (fix-078-i)', () => {
+    it('mapCierreToHistorial toma el nombre de la sede del join', () => {
+      const row: any = {
+        id: 1,
+        branch_id: 1,
+        date: '2026-11-10',
+        branches: { name: 'Autoescuela Chillán' },
+      };
+      expect(mapCierreToHistorial(row).sedeNombre).toBe('Autoescuela Chillán');
+      expect(mapCierreToHistorial({ ...row, branches: null }).sedeNombre).toBeNull();
+    });
+
+    it('exportar un cierre usa la sede del cierre, no la del selector ("Todas" = null)', async () => {
+      authFacadeSpy.currentUser.mockReturnValue({ role: 'admin', branchId: null });
+      const invoke = vi.fn().mockResolvedValue({ data: null, error: new Error('stop') });
+      supabaseSpy.client.functions = { invoke };
+      (facade as any)._cierreSeleccionado.set(mkCierre({ branchId: 1, fecha: '2026-11-10' }));
+
+      await facade.exportarCierre('pdf');
+
+      expect(invoke).toHaveBeenCalledWith('generate-cash-closing-report', {
+        body: { format: 'pdf', date: '2026-11-10', branch_id: 1 },
+      });
+    });
+
+    it('mostrarSede es true con "Todas las sedes"', () => {
+      authFacadeSpy.currentUser.mockReturnValue({ role: 'admin', branchId: null });
+      expect(facade.mostrarSede()).toBe(true);
     });
   });
 

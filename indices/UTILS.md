@@ -56,6 +56,7 @@
 | `src/app/core/utils/course-resolution.utils.ts` | `findCourseByLicenseClass` |
 | `src/app/core/utils/cuadratura-hero-kpis.utils.ts` | `CuadraturaHeroKpiInput`, `buildCuadraturaHeroKpis` |
 | `src/app/core/utils/cuadratura-medio-pago.utils.ts` | `medioDePagoLabel` |
+| `src/app/core/utils/historial-cuadraturas.utils.ts` | `groupCierresByFecha` — cierres del mes agrupados por fecha (uno por sede con "Todas las sedes", fix-078-i) |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
 | `src/app/core/utils/date.utils.ts` | `todayIso`, `notAfterTodayValidator`, `monthsAgoIso`, `formatDayMonthYear`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP` |
 | `src/app/core/utils/db-error.utils.ts` | `MENSAJE_PAGO_PENDIENTE_CLASE_7`, `NoRowsAffectedError`, `assertWriteOk`, `assertReadOk` (lanza el `error` de una lectura y devuelve `data`; una lista queda sin `null`, un `maybeSingle()` conserva el suyo — spec 0060-b), `toFriendlyDbMessage` |

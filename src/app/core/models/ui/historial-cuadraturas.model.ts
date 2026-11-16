@@ -2,6 +2,8 @@
 export interface HistorialCierre {
   id: number;
   branchId: number | null;
+  /** Nombre de la sede del cierre (join `branches(name)`, fix-078-i). */
+  sedeNombre: string | null;
   /** Fecha del cierre (DATE string, ej: '2026-03-31') */
   fecha: string;
   /** Siempre `true` en este modelo — el historial solo trae cierres cerrados (spec 0002-i). */

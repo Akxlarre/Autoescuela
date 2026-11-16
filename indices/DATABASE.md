@@ -125,7 +125,7 @@
 
 | Función | Migración | Programación | Descripción |
 |---------|-----------|--------------|-------------|
-| `chile_today()` → `date` | `20261009120000_time_fn_chile_today.sql` | — (la usan funciones, la policy `select_cash_closings` y la vista `v_class_b_schedule_availability`) | **Spec 0024-m.** Hoy en Chile (`America/Santiago`). `STABLE`. En policies y vistas se envuelve en `(SELECT public.chile_today())` para que se evalúe una sola vez. `EXECUTE` para `anon`, `authenticated`, `service_role`. |
+| `chile_today()` → `date` | `20261009120000_time_fn_chile_today.sql` | — (la usan funciones, la vista `v_class_b_schedule_availability`) | **Spec 0024-m.** Hoy en Chile (`America/Santiago`). `STABLE`. En policies y vistas se envuelve en `(SELECT public.chile_today())` para que se evalúe una sola vez. `EXECUTE` para `anon`, `authenticated`, `service_role`. |
 | `chile_date(p_instant timestamptz)` → `date` | `20261009120000_time_fn_chile_today.sql` | — | **Spec 0024-m.** Día de Chile de un instante. Reemplaza a `x::date` sobre un `timestamptz`. `IMMUTABLE`. |
 | `chile_day_start(p_day date)` → `timestamptz` | `20261009120000_time_fn_chile_today.sql` | — | **Spec 0024-m.** Primer instante de un día de Chile (resuelve la medianoche inexistente del cambio a horario de verano). Un día completo es `[chile_day_start(d), chile_day_start(d + 1))`. `IMMUTABLE`. |
 | `run_class_b_absences_cutoff()` → `boolean` | `20261009122000_time_cron_absences_2100_chile.sql` | pg_cron `mark-end-of-day-class-b-absences`: `0 0,1 * * *` (00:00 y 01:00 UTC) | **Spec 0024-m (AC12).** Envoltorio del corte de inasistencias: ejecuta `mark_end_of_day_class_b_absences()` solo en la corrida que cae a las 21 hora Chile (verano: la de las 00:00 UTC; invierno: la de las 01:00 UTC) y devuelve `true`; en la otra no hace nada (`false`). `EXECUTE` solo para `service_role`. |
@@ -475,7 +475,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | insert_cash_closings | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
 | delete_cash_closings | DELETE | `auth_user_role() = 'admin'` | — |
 | update_cash_closings | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND status = 'd…` | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
-| select_cash_closings | SELECT | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` | — |
+| select_cash_closings | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visible(branch_id))` — **fix-078-i:** la secretaria ve todo el historial de su sede (antes solo los últimos 3 días) | — |
 
 **Índices:** `ux_cash_closings_date_branch`
 
@@ -977,7 +977,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_cuadratura_adjustments | SELECT | `auth_user_role() = 'admin'` | — |
+| select_cuadratura_adjustments | SELECT | `auth_user_role() = 'admin' OR (secretary AND EXISTS cierre con branch_visible(c.branch_id))` — **fix-078-i:** la secretaria ve los ajustes de los cierres de su sede | — |
 | insert_cuadratura_adjustments | INSERT | — | `auth_user_role() = 'admin'` |
 
 ### `digital_contracts` — 🔒 RLS

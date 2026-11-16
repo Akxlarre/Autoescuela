@@ -14,6 +14,7 @@ import type { HistorialCierre } from '@core/models/ui/historial-cuadraturas.mode
       [cierres]="facade.historialCierres()"
       [isLoading]="facade.isLoadingHistorial()"
       [isExporting]="facade.isExporting()"
+      [mostrarSede]="facade.mostrarSede()"
       [mesActual]="facade.mesActual()"
       [anioActual]="facade.anioActual()"
       backRoute="../cuadratura"

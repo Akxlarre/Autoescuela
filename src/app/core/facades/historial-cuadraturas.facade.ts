@@ -52,7 +52,10 @@ function mapAdjustmentToRow(
 // ─── Helpers puros ────────────────────────────────────────────────────────────
 
 export function mapCierreToHistorial(
-  row: CashClosing & { users?: { first_names: string; paternal_last_name: string } | null },
+  row: CashClosing & {
+    users?: { first_names: string; paternal_last_name: string } | null;
+    branches?: { name: string | null } | null;
+  },
 ): HistorialCierre {
   const saldoSistema = row.balance ?? 0;
   // Sin arqueo no hay conteo (fix-074-i): arqueo_amount null no es "se contaron $0" — leerlo
@@ -87,6 +90,7 @@ export function mapCierreToHistorial(
   return {
     id: row.id,
     branchId: row.branch_id ?? null,
+    sedeNombre: row.branches?.name ?? null,
     fecha: row.date,
     // El historial solo trae `.eq('closed', true)` — este campo documenta esa garantía
     // en vez de asumirla implícitamente (spec 0002-i, AC-E1).
@@ -200,6 +204,9 @@ export class HistorialCuadraturasFacade {
    * `DetalleCuadraturaModalComponent` (shared/) no necesite inyectar `AuthFacade`.
    */
   readonly isAdmin = computed(() => this.auth.currentUser()?.role === 'admin');
+
+  /** Con "Todas las sedes" un día puede tener un cierre por sede: cada uno lleva su sede (fix-078-i). */
+  readonly mostrarSede = computed(() => this.getActiveBranchId() === null);
 
   readonly ajustesCierre = this._ajustesCierre.asReadonly();
   readonly isLoadingAjustes = this._isLoadingAjustes.asReadonly();
@@ -412,7 +419,7 @@ export class HistorialCuadraturasFacade {
 
       let query = this.supabase.client
         .from('cash_closings')
-        .select('*, users(first_names, paternal_last_name)')
+        .select('*, users(first_names, paternal_last_name), branches(name)')
         .eq('closed', true)
         .gte('date', fechaInicio)
         .lte('date', fechaFin)
@@ -495,7 +502,9 @@ export class HistorialCuadraturasFacade {
 
     this._isExporting.set(true);
     try {
-      const branchId = this.getActiveBranchId();
+      // La sede del cierre, no la del selector: con "Todas las sedes" el selector es null y el
+      // reporte mezclaba las dos sedes (fix-078-i).
+      const branchId = cierre.branchId ?? this.getActiveBranchId();
       const { data, error } = await this.supabase.client.functions.invoke(
         'generate-cash-closing-report',
         { body: { format, date: cierre.fecha, branch_id: branchId } },

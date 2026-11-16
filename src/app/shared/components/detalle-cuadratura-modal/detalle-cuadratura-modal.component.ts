@@ -43,6 +43,14 @@ interface DenominacionRow {
               >Fecha Cierre</span
             >
             <span class="item-title">{{ fechaLabel() }}</span>
+            @if (d.sedeNombre) {
+              <!-- fix-078-i: con Todas las sedes, de qué sede es el cierre -->
+              <span
+                class="text-xs text-text-secondary"
+                data-llm-description="branch of this closing"
+                >{{ d.sedeNombre }}</span
+              >
+            }
           </div>
           <div
             class="card p-3 flex flex-col gap-1 border-border-muted"
