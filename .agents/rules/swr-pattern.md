@@ -212,6 +212,12 @@ export class MiPageComponent implements OnInit {
 - **Filtros limitados** — solo `eq`, no rangos (`gte`, `lt`). Para filtrar por rango de fechas, escuchar todos los eventos y refrescar incondicionalmente.
 - **Idempotencia** — `subscribeRealtime()` siempre llama `disposeRealtime()` primero para evitar canales duplicados.
 
+## Guardrail
+
+**ARCH-40** (`npm run lint:arch`) falla si un Facade declara `initialize()` y no tiene la bandera
+`_initialized` o el método `refreshSilently()`. Si SWR no aplica a ese Facade (no hay pantalla que
+se re-visite), se declara con su motivo en `scripts/lib/qa-guardrails.allowlist.json`.
+
 ## Prohibiciones
 
 - **NUNCA** mostrar skeleton si `_data()` ya tiene valor (SWR activo).

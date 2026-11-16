@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * check-qa-guardrails.mjs — Runner de ARCH-31 a ARCH-38.
+ * check-qa-guardrails.mjs — Runner de ARCH-31 a ARCH-42.
  *
  * Reglas que vigilan lo que architect.js no recorre: el propio harness y las capas de test fuera
  * de src/app. La detección vive en scripts/lib; acá solo se lee el disco.
@@ -12,9 +12,16 @@
  *   ARCH-35  tests desactivados y esperas fijas de los e2e                                trinquete
  *   ARCH-36  edge function que no importa un guard de autorización                        error
  *   ARCH-37  migración que cambia permisos sin un test SQL que la nombre                  error
+ *   ARCH-38  ruta del catálogo de patrones que ya no existe                               error
+ *   ARCH-39  Facade que filtra por sede sin guard de orden de respuestas                  deuda
+ *   ARCH-40  Facade con initialize() sin la bandera o el refresco silencioso de SWR       deuda
+ *   ARCH-41  página con .bento-grid sin modificador app-like ni entrada en el registro    error
+ *   ARCH-42  regla, antipatrón o skill sin alcance declarado (boilerplate o proyecto)     error
  *
  * Un "error" falla siempre. Un "trinquete" compara contra la línea base: avisa en modo normal y
- * falla con --strict, que es como corre el CI de pull requests.
+ * falla con --strict, que es como corre el CI de pull requests. Una "deuda" es una lista de archivos
+ * con nombre en la línea base: un caso que no está en la lista falla siempre, y la lista solo se
+ * achica al consolidar.
  *
  *   node scripts/check-qa-guardrails.mjs                        → lo corre npm run lint:arch
  *   node scripts/check-qa-guardrails.mjs --strict               → lo corre npm run lint:arch:strict
@@ -30,9 +37,20 @@ import {
   findStaleNotWired,
   findUnbackedDocumentedHooks,
   findUnwiredHooks,
+  findScopeGaps,
   measureLongRows,
   parseDocumentedHooks,
+  parseScopeTable,
+  SCOPES,
 } from './lib/harness-selfcheck.js';
+import {
+  classifyDebt,
+  hasGridWithoutFillScreen,
+  isBranchScopedWithoutGuard,
+  isInRegistry,
+  nextDebt,
+  swrGaps,
+} from './lib/pattern-guards.js';
 import {
   compareHygiene,
   countE2eSkips,
@@ -363,6 +381,108 @@ if (patternsText !== null) {
   }
 }
 
+// ══ ARCH-39 y ARCH-40 — patrones de los Facades ════════════════════════════════════════════
+const facadeFiles = walk('src/app', (f) => f.endsWith('.facade.ts'));
+const facadeExempt = allow.facades ?? {};
+const debt = baseline.patternDebt ?? {};
+
+const guardOffenders = facadeFiles.filter(
+  (f) => !(f in (facadeExempt.withoutRequestGuard ?? {})) && isBranchScopedWithoutGuard(read(f) ?? ''),
+);
+const swrMissing = Object.fromEntries(
+  facadeFiles
+    .filter((f) => !(f in (facadeExempt.withoutSwr ?? {})))
+    .map((f) => [f, swrGaps(read(f) ?? '')])
+    .filter(([, gaps]) => gaps.length > 0),
+);
+const swrOffenders = Object.keys(swrMissing);
+
+function checkDebt(rule, offenders, known, describe, fix, exemptKey) {
+  const { fresh, resolved } = classifyDebt(offenders, known ?? []);
+  // Sin lista previa todavía no hay con qué comparar: la primera consolidación la crea.
+  if (Array.isArray(known)) {
+    for (const file of fresh) {
+      fail(rule, file, describe(file), `${fix} Si el patrón no aplica a este Facade, decláralo con su motivo en ${exemptKey} de scripts/lib/qa-guardrails.allowlist.json.`);
+    }
+  } else if (!UPDATE) {
+    note(rule, `${offenders.length} caso(s) y ninguna lista de deuda registrada. Corre --update-qa-baseline.`);
+  }
+  if (resolved.length > 0 && !UPDATE) {
+    note(rule, `${resolved.length} archivo(s) de la lista de deuda ya cumplen. Consolida con --update-qa-baseline.`);
+  }
+}
+checkDebt(
+  'ARCH-39',
+  guardOffenders,
+  debt.requestGuard,
+  () => 'Lee la sede activa (selectedBranchId) y no crea ningún guard de orden: al cambiar de sede rápido, una respuesta vieja puede pisar a la nueva sin error visible.',
+  'Usa createRequestGuard() de core/utils/request-guard.utils.ts: next() al inicio del fetch, isCurrent() justo antes de aplicar el resultado (.claude/rules/facades.md §7).',
+  'facades.withoutRequestGuard',
+);
+checkDebt(
+  'ARCH-40',
+  swrOffenders,
+  debt.swr,
+  (file) => `Tiene initialize() y le falta ${swrMissing[file].join(' y ')}: cada re-visita vuelve a mostrar skeleton, o no hay refresco sin skeleton después de guardar.`,
+  'Sigue .claude/rules/swr-pattern.md: bandera _initialized, y refreshSilently() para re-entrada, Realtime y post-mutación.',
+  'facades.withoutSwr',
+);
+for (const key of ['withoutRequestGuard', 'withoutSwr']) {
+  for (const file of Object.keys(facadeExempt[key] ?? {})) {
+    if (!fs.existsSync(abs(file))) {
+      fail(key === 'withoutSwr' ? 'ARCH-40' : 'ARCH-39', file, 'Figura como exento en la lista de excepciones y el archivo ya no existe.', `Quita la entrada de facades.${key} en scripts/lib/qa-guardrails.allowlist.json.`);
+    }
+  }
+}
+
+// ══ ARCH-41 — páginas con grilla y sin modificador app-like ════════════════════════════════
+const APP_LIKE_REGISTRY = 'indices/APP-LIKE-ROLLOUT.md';
+const registryText = read(APP_LIKE_REGISTRY);
+if (registryText !== null) {
+  const nested = allow.appLike?.nestedGrids ?? {};
+  const pages = walk('src/app/features', (f) => /.component.(?:ts|html)$/.test(f));
+  for (const file of pages) {
+    if (file in nested || !hasGridWithoutFillScreen(read(file) ?? '') || isInRegistry(file, registryText)) continue;
+    fail(
+      'ARCH-41',
+      file,
+      'Declara una .bento-grid sin modificador de pantalla completa y el registro de app-like no la nombra. App-like es el default de toda página enrutable.',
+      `Aplica bento-grid--fill-screen (o -2 / -kpi) con su celda .bento-fill (.claude/rules/visual-system.md §"Patrón App-like"). Si es una excepción justificada, regístrala en ${APP_LIKE_REGISTRY}; si es una grilla interna de una página que ya es app-like, decláralo en appLike.nestedGrids de scripts/lib/qa-guardrails.allowlist.json.`,
+    );
+  }
+  for (const file of Object.keys(nested)) {
+    if (!fs.existsSync(abs(file)) || !hasGridWithoutFillScreen(read(file) ?? '')) {
+      fail('ARCH-41', file, 'Figura como grilla interna en la lista de excepciones, pero el archivo ya no existe o ya no tiene una grilla sin modificador.', 'Quita la entrada de appLike.nestedGrids en scripts/lib/qa-guardrails.allowlist.json.');
+    }
+  }
+}
+
+// ══ ARCH-42 — alcance de cada pieza del harness ════════════════════════════════════════════
+const SCOPE_TABLE = 'docs/HARNESS-SCOPE.md';
+const scopeText = read(SCOPE_TABLE);
+if (scopeText !== null) {
+  const pieces = [
+    ...walk('.claude/rules', (f) => f.endsWith('.md')).map((f) => `rules/${f.split('/').pop()}`),
+    ...[...(read('indices/ANTI-PATTERNS.md') ?? '').matchAll(/^## (AP-\d+)\b/gm)].map((m) => m[1]),
+    ...(fs.existsSync(abs('.claude/skills'))
+      ? fs
+          .readdirSync(abs('.claude/skills'))
+          .filter((name) => fs.statSync(abs(`.claude/skills/${name}`)).isDirectory())
+          .map((name) => `skills/${name}`)
+      : []),
+  ];
+  const gaps = findScopeGaps(pieces, parseScopeTable(scopeText));
+  for (const id of gaps.missing) {
+    fail('ARCH-42', `${SCOPE_TABLE} → ${id}`, 'La pieza existe y la tabla de alcance no la clasifica.', `Agrega su fila con uno de: ${SCOPES.join(', ')}.`);
+  }
+  for (const id of gaps.stale) {
+    fail('ARCH-42', `${SCOPE_TABLE} → ${id}`, 'La tabla de alcance clasifica una pieza que ya no existe.', 'Quita la fila, o corrige el nombre si la pieza se renombró.');
+  }
+  for (const { id, scope } of gaps.invalid) {
+    fail('ARCH-42', `${SCOPE_TABLE} → ${id}`, `El alcance "${scope}" no es válido.`, `Usa uno de: ${SCOPES.join(', ')}.`);
+  }
+}
+
 // ══ Línea base ═════════════════════════════════════════════════════════════════════════════
 if (UPDATE) {
   const next = {
@@ -373,6 +493,12 @@ if (UPDATE) {
     indexRows,
     credentials,
     testHygiene,
+    patternDebt: {
+      $nota:
+        'Facades que hoy no siguen el patrón (ARCH-39 guard de orden, ARCH-40 SWR). La lista solo se achica al consolidar: un caso nuevo se arregla o se agrega a mano.',
+      requestGuard: nextDebt(guardOffenders, debt.requestGuard),
+      swr: nextDebt(swrOffenders, debt.swr),
+    },
   };
   fs.writeFileSync(BASELINE_PATH, `${JSON.stringify(next, null, 2)}\n`);
   console.log(green(`✔ Línea base escrita en ${toPosix(path.relative(ROOT, BASELINE_PATH))}.`));
@@ -380,11 +506,11 @@ if (UPDATE) {
 }
 
 if (errors > 0) {
-  console.error(red(`\n❌ ARCH-31…38: ${errors} error(es).`));
+  console.error(red(`\n❌ ARCH-31…42: ${errors} error(es).`));
   process.exit(1);
 }
 if (warnings > 0) {
-  console.error(yellow(`\n⚠️  ARCH-31…38: ${warnings} regresión(es) de trinquete. Con --strict son error.`));
+  console.error(yellow(`\n⚠️  ARCH-31…42: ${warnings} regresión(es) de trinquete. Con --strict son error.`));
   process.exit(0);
 }
-console.log(green('✅ ARCH-31…38: harness y capas de test sin regresiones.'));
+console.log(green('✅ ARCH-31…42: harness y capas de test sin regresiones.'));

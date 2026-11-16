@@ -254,6 +254,11 @@ patrón en otros wizards en vez de excluirlos por default.
 Ver `indices/APP-LIKE-ROLLOUT.md` para el registro vivo de excepciones justificadas vs candidatas
 pendientes de reestructurar.
 
+**Guardrail: ARCH-41** (`npm run lint:arch`). Falla si un componente de `features/` declara una
+`.bento-grid` sin modificador de pantalla completa y ese registro no lo nombra. Una grilla interna
+de una página que ya es app-like se declara, con su motivo, en
+`scripts/lib/qa-guardrails.allowlist.json`.
+
 ## Cards
 
 - `.card` — base con borde y padding estándar

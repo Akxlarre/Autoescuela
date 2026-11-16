@@ -231,6 +231,11 @@ export class EjemploFacade {
 - Un Facade con más de un método `fetchXxxData()` independiente (que no comparten la misma
   condición de carrera) usa un guard separado por método, no uno compartido.
 
+**Guardrail: ARCH-39** (`npm run lint:arch`). Falla si un Facade lee `selectedBranchId()` y no
+crea ningún guard de orden. Comprueba que el guard existe, no que `isCurrent()` se llame en el
+lugar correcto: eso sigue siendo tuyo. Un Facade que lee la sede sin cargar datos filtrados por
+ella se declara, con su motivo, en `scripts/lib/qa-guardrails.allowlist.json`.
+
 ### Facades que DEBEN aplicar branch filter
 
 | Facade | Campo a filtrar |
