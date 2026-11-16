@@ -43,6 +43,15 @@ allowed-tools: Read, Write, Bash, Glob
    `indices/DOMAIN-GOTCHAS.md` (ver convención al final de ese archivo). Si el fix fue
    puramente visual/UI o no dejó ningún hallazgo reutilizable, sáltalo.
 
+5.7. Lo mismo para **patrones de código** (el paso anterior cubre solo dominio):
+   - Si el fix corrigió un atajo que se repetía o se puede repetir en otros archivos → entrada
+     `AP-NNN` en `indices/ANTI-PATTERNS.md`.
+   - Si dejó una implementación mejor que la referencia de `indices/PATTERNS.md`, o un patrón que
+     va a repetirse → actualiza o agrega la fila.
+   - Si el error era de una **clase** que un test puede vigilar (se repite en varios archivos) →
+     anótalo para `/harness-feedback`: corresponde un guardrail, no solo una nota.
+   - Si el fix no dejó nada reutilizable, sáltalo.
+
 6. Imprimir confirmación:
    ```
    ✅ Fix <id> cerrado.

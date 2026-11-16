@@ -3,6 +3,8 @@ paths:
   - "src/app/core/**/*.ts"
   - "src/app/features/**/*.ts"
   - "**/*.spec.ts"
+  - "supabase/**"
+  - "e2e/**"
 ---
 
 # Agentic Test-Driven Development (TDD) y Determinismo
@@ -56,7 +58,9 @@ Este proyecto usa **Vitest** como test runner (no Karma/Jasmine).
 ### Comandos
 - `npm run test` — tests interactivos (watch mode via ng test, legacy)
 - `npm run test:ci` — tests sin watch, verbose (para CI y auto-validación)
-- `npm run test:coverage` — genera reporte de cobertura en `coverage/`
+- `npm run test:coverage` — genera reporte de cobertura en `coverage/`. Cuando falle por una
+  dependencia faltante, es que el proveedor `@vitest/coverage-v8` no está instalado: pídele al
+  humano que lo instale (el Bash Guard bloquea `npm install`), no lo des por corrido.
 
 ### Mocking con Vitest
 - `vi.fn()` para crear mock functions
@@ -81,6 +85,53 @@ Este proyecto usa **Vitest** como test runner (no Karma/Jasmine).
 - Usar `LucideAngularModule.pick({ Icon1, Icon2 })` en `imports:` del TestBed
 - **NUNCA** usar `provideIcons()` en tests (no existe en lucide-angular 0.577+)
 
+## Las capas de test fuera de `src/app`
+
+Regla: **una regla se prueba en la capa donde vive.** Cuando la regla es una política de la base,
+un trigger o el código de una edge function, un test de interfaz solo prueba que la pantalla no
+muestra el dato, no que el dato sea inaccesible.
+
+| Qué cambias | Dónde va el test | Lo exige |
+|---|---|---|
+| Una política de RLS o una función `SECURITY DEFINER` | `supabase/tests/<dominio>/` | ARCH-37 |
+| Un trigger o una función con regla de negocio (candado de caja, solape de agenda) | `supabase/tests/<dominio>/` | — |
+| Lógica de una edge function | Función pura en `supabase/functions/_shared/` con su `*.test.ts` | — |
+| Una edge function nueva | Importa un guard de autorización de `_shared` | ARCH-36 |
+| Un permiso, visto desde afuera | E2E que consulta la API con `getClientFor()` | — |
+| Un flujo entre pantallas o entre roles | `e2e/*.spec.ts` | — |
+
+### Tests SQL (`supabase/tests/`)
+
+- **Nombra la migración que pruebas por su timestamp** en el encabezado del test. Es el vínculo
+  que ARCH-37 busca.
+- **Prueba también lo que no se puede hacer.** Siempre que pruebes un permiso, incluye el caso
+  negativo: otro rol, otra sede, sin sesión. Es el caso que protege.
+- **Suplanta a un usuario real** (`SET LOCAL role authenticated` más sus claims). Una consulta
+  probada como dueño de la base no pasa por las políticas.
+- **El test termina deshaciendo todo.** Hoy estos tests se corren contra el proyecto enlazado, que
+  es la base real (`indices/DOMAIN-GOTCHAS.md` DG-129): van dentro de una transacción que termina
+  en `RAISE`. Nunca quites ese cierre.
+- **Simular la sesión no prueba la petición real.** Cuando lo que arreglas depende de cómo llega
+  la sesión por la API (no de la lógica de la política), agrega además un test por la API.
+
+### E2E (`e2e/`)
+
+- **Nunca `waitForTimeout`:** espera la condición (`expect(locator).toBeVisible()`, `expect.poll`,
+  `waitForResponse`), no el reloj.
+- **Nunca un `test.skip` que dependa de los datos del día:** un test que se salta deja de probar
+  sin avisar. Siembra lo que el test necesita (`createE2eAlumno`, `seedClase`).
+- **Un bug conocido no se salta ni se relaja:** se escribe con el comportamiento correcto y se
+  marca con `knownBug()`.
+
+### Tests desactivados
+
+Nunca dejes un `describe.skip`, un `it.skip` ni un spec nuevo en el `exclude` de
+`vitest.config.ts` para llegar a verde. Excepción: si el motivo es de infraestructura y no lo
+puedes resolver en el track, dilo en tu respuesta final con el motivo.
+
+ARCH-35 lleva la cuenta de los cuatro (tests unitarios desactivados, specs excluidos, esperas
+fijas, saltos de e2e) contra una línea base: ninguno puede subir.
+
 ## Shadow CI y Cobertura
 
-El Linter Arquitectónico (`npm run lint:arch`) verifica que lógicas y módulos clave tengan sus `.spec.ts` complementarios. Si detecta una falta, interrumpirá tu flujo de éxito.
+El Linter Arquitectónico (`npm run lint:arch`) verifica que lógicas y módulos clave tengan sus `.spec.ts` complementarios. Si detecta una falta, interrumpirá tu flujo de éxito. Las capas fuera de `src/app` las cubre el mismo comando con ARCH-35, ARCH-36 y ARCH-37 (`scripts/check-qa-guardrails.mjs`).

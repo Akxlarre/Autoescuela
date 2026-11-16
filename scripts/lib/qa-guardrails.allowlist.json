@@ -1,0 +1,46 @@
+{
+  "$schema": "Excepciones de scripts/check-qa-guardrails.mjs (ARCH-31, ARCH-36, ARCH-37). Cada entrada lleva su motivo.",
+  "$comoAgregarUna": "Agregar una excepción es un acto deliberado y revisable en el PR, no un trámite. El motivo dice POR QUÉ la regla no aplica a ese caso, no que 'falló el lint'. Una excepción que deja de ser verdad (el hook se conectó, la función pasó a usar un guard) hace fallar el chequeo: la lista tiene que seguir describiendo la realidad.",
+
+  "hooks": {
+    "$notWired": "Archivos de .claude/hooks que settings.json no nombra, a propósito.",
+    "notWired": {
+      ".claude/hooks/context-enrichment-guard.js": "Guard de día 0: bloquea la escritura si DOMAIN_DICTIONARY.md o DATABASE.md están vacíos. Nunca se conectó en settings.json, y con los índices ya poblados no tendría efecto. Conectarlo o borrarlo queda a decisión de quien mantiene el harness."
+    },
+    "$documented": "Cada hook que .claude/CLAUDE.md presenta como activo → el texto que lo respalda en settings.json: el archivo del hook, o una frase propia si es un hook de tipo prompt.",
+    "documented": {
+      "Discovery Gate": "discovery-tracker.js",
+      "Architect Guard": "pre-write-guard.js",
+      "Spec Gate": "spec-gate.js",
+      "Plan Injector": "plan-injector.js",
+      "AC Verifier": "SDD Acceptance Criteria Verifier",
+      "File Protector": "pre-write-guard.js",
+      "Harness Gate": "harness-gate.js",
+      "Bash Guard": "bash-guard.js",
+      "Compact Recovery": "compact-recovery.js",
+      "Sync Check": "sync-check auditor",
+      "Prettier": "post-edit.js"
+    }
+  },
+
+  "edgeFunctions": {
+    "$withoutSharedGuard": "Funciones que no importan staff-auth, service-role-auth ni user-edit-authz, y por qué eso es correcto.",
+    "withoutSharedGuard": {
+      "dispatch-scheduled-announcements": "La invoca la tarea programada, no un usuario. Valida en su propio código que el token sea el de servicio.",
+      "export-table-pdf": "Valida la sesión por su cuenta con auth.getUser() y responde 401 si no hay usuario. No lee la base: arma el PDF con las filas que recibe.",
+      "generate-epq-pdf": "No lee la base ni Storage: arma un cuestionario en blanco con los datos que recibe en la petición. No hay datos que proteger.",
+      "generate-ficha-tecnica-pdf": "Consulta con la clave anónima y el Authorization de quien llama: el acceso lo decide la RLS, no la función.",
+      "generate-route-sheet-pdf": "Consulta con la clave anónima y el Authorization de quien llama: el acceso lo decide la RLS, no la función.",
+      "public-enrollment": "Pública por diseño: es la matrícula en línea, sin sesión. Se protege con la lista de orígenes permitidos y con _shared/anti-abuse.",
+      "send-auth-email": "Hook de correo de Supabase Auth: no recibe una sesión de usuario. Valida el secreto del hook.",
+      "student-payment": "Flujo del alumno: identifica a quien llama por el sub del JWT que el gateway ya verificó y valida la pertenencia de la matrícula en cada consulta."
+    }
+  },
+
+  "permissionMigrations": {
+    "$after": "Timestamp de la última migración anterior a la regla. Las migraciones hasta esa inclusive quedan fuera: ARCH-37 rige para las nuevas.",
+    "after": "20261112200000",
+    "$exempt": "Migración → por qué cambia permisos sin necesitar un test SQL.",
+    "exempt": {}
+  }
+}

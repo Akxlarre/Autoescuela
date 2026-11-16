@@ -6,7 +6,6 @@ Tu stack: **Angular + Tailwind v4 + PrimeNG + Supabase + GSAP**.
 
 Este proyecto tiene guardrails automáticos que se ejecutan sin intervención humana:
 
-- **Context Guard** — Verifica que exista contexto de negocio. Si `indices/DOMAIN_DICTIONARY.md` o `DATABASE.md` están vacíos/incompletos, te bloqueará para que pidas el brief al humano antes de programar a ciegas.
 - **Discovery Gate** — NO puedes escribir código en `src/app/` sin antes leer al menos un archivo de `indices/`. Serás bloqueado automáticamente.
 - **Architect Guard** — Cada Edit/Write es validado en tiempo real. Se bloquean: `*ngIf`, `@Input()`, colores hardcodeados, imports de Supabase en UI, `@angular/animations`, `@keyframes`.
 - **Spec Gate** — NO puedes escribir código de producción sin un track activo en `specs/.active` con `plan.md` aprobado. Paths exentos: `specs/`, `indices/`, `docs/`, tests, configs.
@@ -15,9 +14,15 @@ Este proyecto tiene guardrails automáticos que se ejecutan sin intervención hu
 - **File Protector** — No puedes modificar los archivos del sistema de hooks (`.claude/hooks/`, `settings.json`, `architect.js`).
 - **Harness Gate** — Cada edición a `.claude/rules/`, `indices/ANTI-PATTERNS.md`, `indices/DOMAIN-GOTCHAS.md`, `CLAUDE.md` o `scripts/*.js` se valida contra el Generalization Gate: bloquea lecciones que citan un track (fix-/spec-/hotfix-NNN) sin criterio de aplicabilidad, snippets de despacho por keyword-matching, código ejecutable colado en un archivo de guía, o consejos sin mecanismo colados en un script. No aplica a `specs/**`, donde el track ID es el contenido legítimo. Skill asociado: `/harness-feedback`.
 - **Bash Guard** — No puedes crear archivos `.ts/.html/.scss` via Bash. Usa Edit/Write.
-- **Compact Recovery** — Si el contexto se compacta, los índices se re-inyectan automáticamente.
+- **Compact Recovery** — Si el contexto se compacta, se re-inyecta el mapa de los índices (qué hay y dónde), no su contenido: vuelve a leer con Read la sección que necesites.
 - **Sync Check** — Al terminar de responder, se verifica si los índices necesitan actualización.
 - **Prettier** — Cada archivo editado se formatea automáticamente.
+
+> **Esta lista nombra solo lo que corre.** Regla: un hook se agrega acá cuando está conectado en
+> `settings.json`, nunca antes. `npm run lint:arch` (ARCH-31) falla si un hook de la lista no
+> tiene respaldo en `settings.json`, o si un archivo de `.claude/hooks/` no está conectado y no
+> figura con su motivo en `scripts/lib/qa-guardrails.allowlist.json`. Hoy hay uno en ese caso:
+> `context-enrichment-guard.js` (guard de día 0 para índices vacíos). No cuentes con él.
 
 Detalle completo: @docs/HOOKS-SYSTEM.md
 
@@ -29,6 +34,7 @@ Detalle completo: @docs/HOOKS-SYSTEM.md
 - Lint arquitectónico: `npm run lint:arch`
 - Lint arquitectónico estricto (el que corre el CI de pull requests): `npm run lint:arch:strict`
 - Tests de los guardrails (`scripts/lib/*.test.mjs`): `npm run test:scripts`
+- Consolidar una mejora en los trinquetes de QA (ARCH-33/34/35): `node scripts/check-qa-guardrails.mjs --update-qa-baseline`
 - Tests: `npm run test:ci` (sin watch, para auto-validación)
 - Tests cobertura: `npm run test:coverage`
 - Supabase local: `npx supabase start`
@@ -82,8 +88,8 @@ obtener tu código y calcular el siguiente número correcto para TU autor en ESE
 
 ## Flujo obligatorio y Estado Cero (6 pasos)
 
-0. **CONTEXT SEEDING (Día 0)** — Si es un proyecto/módulo nuevo, DEBES establecer el Lenguaje Ubicuo (`indices/DOMAIN_DICTIONARY.md`) y el modelo de datos (`indices/DATABASE.md`) ANTES de codificar. Si te falta contexto, pídeselo al humano (el Context Guard te obligará a hacerlo si lo olvidas).
-1. **DESCUBRIR** — Lee `indices/COMPONENTS.md`, `indices/SERVICES.md`, `indices/DIRECTIVES.md`, `indices/STYLES.md` antes de escribir código. Si vas a tocar lógica de negocio, RLS, o una query nueva, lee también `indices/DOMAIN-GOTCHAS.md`. **El Discovery Gate te bloqueará si no lo haces.**
+0. **CONTEXT SEEDING (Día 0)** — Si es un proyecto/módulo nuevo, DEBES establecer el Lenguaje Ubicuo (`indices/DOMAIN_DICTIONARY.md`) y el modelo de datos (`indices/DATABASE.md`) ANTES de codificar. Si te falta contexto, pídeselo al humano: ningún hook lo exige, es responsabilidad tuya.
+1. **DESCUBRIR** — Lee `indices/COMPONENTS.md`, `indices/SERVICES.md`, `indices/DIRECTIVES.md`, `indices/STYLES.md` antes de escribir código. Siempre que vayas a construir algo nuevo (pantalla, drawer, facade, función, migración), lee también `indices/PATTERNS.md` para partir de la implementación de referencia y `indices/ANTI-PATTERNS.md` para no repetir un atajo que ya costó un fix. Si vas a tocar lógica de negocio, RLS, o una query nueva, lee también `indices/DOMAIN-GOTCHAS.md`. **El Discovery Gate te bloqueará si no lo haces.**
 2. **PLANIFICAR** — Define qué vas a tocar sin violar las reglas de arquitectura.
 3. **EJECUTAR** — Escribe el código. Reutiliza siempre lo existente primero. Los hooks validarán cada escritura en tiempo real. **Si hay lógica nueva, escribe el `.spec.ts` primero (TDD).**
 4. **VALIDAR** — Corre `npm run lint:arch` para auditoría arquitectónica y `npm run test:ci` para tests. **Para cambios de UI, ejecutar también `/verify` (Playwright) para confirmar renderizado real en el navegador.**

@@ -58,6 +58,10 @@ Tu tarea es revisar el trabajo de esta sesión y mantener los índices del proye
 - No elimines entradas manuales existentes sin confirmación explícita del usuario
 - Si un componente cambió de estado (ej: 🚧 En desarrollo → ✅ Estable), actualízalo
 - Sé conciso en las descripciones — una línea por componente/servicio
+- **Un índice describe el estado vigente, no la historia.** Cuando una entrada cambia, reescribe la
+  fila con lo que vale hoy y deja un puntero al track. No agregues al final "(fix-NNN): antes hacía
+  X, ahora Y": el historial vive en `specs/` y en git. `npm run lint:arch` (ARCH-33) avisa, y en
+  modo estricto falla, si una fila que ya pasaba los 1.200 caracteres crece o si aparece otra.
 
 ## Formato de tablas (secciones manuales)
 
