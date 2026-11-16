@@ -118,7 +118,8 @@ export const INDEX_ROW_LIMIT = 1200;
 export function measureLongRows(text, limit = INDEX_ROW_LIMIT) {
   let count = 0;
   let chars = 0;
-  for (const line of text.split('\n')) {
+  // \r?\n: el mismo archivo mide igual con saltos de Windows (checkout local) y de Linux (CI).
+  for (const line of text.split(/\r?\n/)) {
     if (line.length > limit) {
       count++;
       chars += line.length;
