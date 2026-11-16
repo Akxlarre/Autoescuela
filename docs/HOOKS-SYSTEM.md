@@ -108,13 +108,15 @@ tenga las rules y skills presentes **sin tener que leerlas manualmente**.
   de todos los archivos `indices/*.md` al contexto. Claude nunca pierde la memoria
   de lo que existe en el proyecto.
 
-### 5. Sync Check (prompt hook)
+### 5. Sync Check (`sync-check.js`)
 - **Evento**: Stop
 - **Matcher**: ninguno (se ejecuta en cada respuesta)
-- **Tipo**: `prompt` (evaluado por modelo Haiku)
-- **Función**: Cuando Claude termina de responder, Haiku evalúa si se crearon
-  componentes/servicios nuevos sin actualizar los índices. Si detecta drift,
-  fuerza a Claude a continuar y actualizar los índices.
+- **Tipo**: `command` (determinista, sin modelo)
+- **Función**: Lee en la transcripción qué archivos escribió la sesión y le pregunta a git
+  cuáles son nuevos. Bloquea el cierre solo si la sesión creó un componente, facade,
+  servicio, directiva, pipe o guard en `src/app` y no escribió ningún índice. Modificar un
+  archivo que ya existía no bloquea: revisar si cambió su contrato es parte del paso
+  SINCRONIZAR.
 
 ### 6. Prettier (post-edit.js)
 - **Evento**: PostToolUse
@@ -172,7 +174,8 @@ El linter AST se ejecuta con `npm run lint:arch` y valida **8 reglas**:
 
 `npm run lint:arch` corre además `scripts/check-qa-guardrails.mjs`, que vigila lo que
 `architect.js` no recorre: el harness mismo y los tests fuera de `src/app`. La detección vive en
-`scripts/lib/` (`harness-selfcheck.js`, `versioned-credentials.js`, `test-discipline.js`), cada
+`scripts/lib/` (`harness-selfcheck.js`, `versioned-credentials.js`, `test-discipline.js`,
+`pattern-guards.js`), cada
 una con su micro-suite.
 
 | Regla | Qué vigila | Tipo |
@@ -185,11 +188,19 @@ una con su micro-suite.
 | ARCH-36 | Una edge function que no importa un guard de autorización de `_shared` | Error |
 | ARCH-37 | Una migración nueva que cambia permisos sin un test SQL que la nombre | Error |
 | ARCH-38 | Una ruta citada en `indices/PATTERNS.md` que ya no existe | Error |
+| ARCH-39 | Un Facade que lee la sede activa (`selectedBranchId()`) y no crea un guard de orden (`createRequestGuard`) | Deuda |
+| ARCH-40 | Un Facade con `initialize()` sin la bandera `_initialized` o sin `refreshSilently()` | Deuda |
+| ARCH-41 | Un componente de `features/` con una `.bento-grid` sin modificador de pantalla completa, que `indices/APP-LIKE-ROLLOUT.md` no nombra | Error |
+| ARCH-42 | Una regla, un antipatrón o un skill sin fila en `docs/HARNESS-SCOPE.md` (boilerplate, mixto o proyecto) | Error |
 
 - **Error:** falla siempre.
 - **Trinquete:** compara contra `scripts/lib/qa-guardrails.baseline.json`. Avisa en modo normal y
   falla con `--strict`, que es como corre el CI de pull requests. Una mejora se consolida con
   `node scripts/check-qa-guardrails.mjs --update-qa-baseline`.
+- **Deuda:** la línea base guarda la lista, con nombre, de los archivos que hoy no cumplen
+  (`patternDebt`). Un archivo que no está en la lista falla siempre. Consolidar solo quita de la
+  lista lo que ya cumple: nunca agrega. ARCH-39, 40 y 41 detectan que el identificador está, no
+  que se use bien.
 - **Excepciones:** `scripts/lib/qa-guardrails.allowlist.json`, con un motivo por entrada. Una
   excepción que deja de ser verdad (el hook se conectó, la función pasó a usar un guard) también
   hace fallar el chequeo.

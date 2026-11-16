@@ -60,7 +60,9 @@ const baseline = JSON.stringify({
   indexRows: {},
   credentials: {},
   testHygiene: { unitSkips: 0, vitestExcludedSpecs: 0, e2eFixedWaits: 0, e2eSkips: 0 },
+  patternDebt: { requestGuard: [], swr: [] },
 });
+const SCOPED_FACADE = 'const sede = this.branchFacade.selectedBranchId();\nthis._data.set(rows);\n';
 
 const cleanRepo = {
   '.claude/settings.json': settings,
@@ -71,6 +73,12 @@ const cleanRepo = {
   'scripts/lib/qa-guardrails.baseline.json': baseline,
   'indices/COMPONENTS.md': '| `app-x` | una fila corta |\n',
   'docs/GUIA.md': 'La contraseña se lee de la variable `E2E_PASSWORD`.\n',
+  'docs/HARNESS-SCOPE.md': '| Pieza | Alcance | Nota |\n|---|---|---|\n| `rules/a.md` | boilerplate | |\n',
+  '.claude/rules/a.md': '# Regla\n',
+  'indices/APP-LIKE-ROLLOUT.md': '| `/x` | `ExcepcionComponent` | no aplica: contenido corto |\n',
+  'src/app/features/x/excepcion.component.ts': 'template: `<div class="bento-grid"></div>`\n',
+  'src/app/features/y/lista.component.ts': 'template: `<div class="bento-grid bento-grid--fill-screen"></div>`\n',
+  'src/app/core/facades/ok.facade.ts': `private g = createRequestGuard();\n  private _initialized = false;\n  async initialize() { void this.refreshSilently(); }\n${SCOPED_FACADE}`,
   'vitest.config.ts': "export default { test: { exclude: [] } };\n",
   'src/app/a.spec.ts': "describe('a', () => { it('b', () => {}); });\n",
   'e2e/a.spec.ts': "test('a', async ({ page }) => { await expect(page).toBeTruthy(); });\n",
@@ -84,7 +92,7 @@ const cleanRepo = {
   const root = makeRepo(cleanRepo);
   const normal = run(root);
   check('repo limpio → exit 0', normal.code === 0);
-  check('repo limpio → sin ninguna regla disparada', !/\[ARCH-3\d\]/.test(normal.out));
+  check('repo limpio → sin ninguna regla disparada', !/\[ARCH-[34]\d\]/.test(normal.out));
   check('repo limpio en modo estricto → exit 0', run(root, ['--strict']).code === 0);
   fs.rmSync(root, { recursive: true, force: true });
 }
@@ -96,6 +104,11 @@ const hardCases = [
   ['ARCH-34', 'credencial en una guía', { 'docs/GUIA.md': 'Contraseña de la cuenta de prueba: `Ejemplo12345`\n' }],
   ['ARCH-36', 'edge function sin guard', { 'supabase/functions/sin-guard/index.ts': 'Deno.serve(() => new Response("ok"));\n' }],
   ['ARCH-37', 'migración de permisos sin test', { 'supabase/migrations/20270202000000_otra.sql': 'ALTER POLICY p ON t USING (false);\n' }],
+  ['ARCH-39', 'facade nuevo con sede y sin guard de orden', { 'src/app/core/facades/nuevo.facade.ts': SCOPED_FACADE }],
+  ['ARCH-40', 'facade nuevo con initialize() sin SWR', { 'src/app/core/facades/nuevo.facade.ts': '  async initialize(): Promise<void> {}\n' }],
+  ['ARCH-41', 'página nueva con grilla sin app-like ni registro', { 'src/app/features/z/nueva.component.ts': 'template: `<div class="bento-grid" appBentoGridLayout></div>`\n' }],
+  ['ARCH-42', 'regla nueva sin alcance declarado', { '.claude/rules/nueva.md': '# Otra regla\n' }],
+  ['ARCH-42', 'fila de una pieza que ya no existe', { 'docs/HARNESS-SCOPE.md': '| `rules/a.md` | boilerplate | |\n| `rules/borrada.md` | proyecto | |\n' }],
 ];
 for (const [rule, name, extra] of hardCases) {
   const root = makeRepo({ ...cleanRepo, ...extra });
@@ -129,6 +142,26 @@ for (const [rule, name, extra] of ratchetCases) {
   check('registra el conteo medido', written.testHygiene.e2eFixedWaits === 1);
   check('conserva el techo de la recuperación', written.compactRecovery.maxBytes === 1000);
   check('con la base registrada, el modo estricto pasa', run(root, ['--strict']).code === 0);
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// ── La lista de deuda solo se achica ────────────────────────────────────────────────────────
+{
+  const debtFile = 'src/app/core/facades/deuda.facade.ts';
+  const withDebt = JSON.stringify({ ...JSON.parse(baseline), patternDebt: { requestGuard: [debtFile], swr: [] } });
+  const root = makeRepo({
+    ...cleanRepo,
+    'scripts/lib/qa-guardrails.baseline.json': withDebt,
+    [debtFile]: SCOPED_FACADE,
+    'src/app/core/facades/nuevo.facade.ts': SCOPED_FACADE,
+  });
+  const result = run(root);
+  check('un facade de la lista de deuda no dispara', !result.out.includes('deuda.facade'));
+  check('uno fuera de la lista sí dispara', result.out.includes('nuevo.facade') && result.code === 1);
+  run(root, ['--update-qa-baseline']);
+  const written = JSON.parse(fs.readFileSync(path.join(root, 'scripts/lib/qa-guardrails.baseline.json'), 'utf8'));
+  check('consolidar no agrega el caso nuevo a la lista', written.patternDebt.requestGuard.join() === debtFile);
+  check('después de consolidar sigue fallando', run(root).code === 1);
   fs.rmSync(root, { recursive: true, force: true });
 }
 

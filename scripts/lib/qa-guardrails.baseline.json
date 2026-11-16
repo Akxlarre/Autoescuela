@@ -1,6 +1,6 @@
 {
   "$schema": "Línea base de los trinquetes de scripts/check-qa-guardrails.mjs. Se regenera con --update-qa-baseline. Un valor solo debería bajar: si sube, el diff de este archivo lo muestra en el PR.",
-  "generatedAt": "2026-11-16T01:34:03.469Z",
+  "generatedAt": "2026-11-16T14:54:45.839Z",
   "compactRecovery": {
     "$nota": "Techo de lo que compact-recovery.js inyecta al contexto. El hook inyecta un mapa de los índices, no su contenido.",
     "maxBytes": 60000,
@@ -8,8 +8,8 @@
   },
   "indexRows": {
     "indices/COMPONENTS.md": {
-      "count": 58,
-      "chars": 113689
+      "count": 59,
+      "chars": 115076
     },
     "indices/DATABASE.md": {
       "count": 18,
@@ -21,7 +21,7 @@
     },
     "indices/SERVICES.md": {
       "count": 27,
-      "chars": 50013
+      "chars": 50204
     },
     "indices/USAGE-MAP.md": {
       "count": 12,
@@ -46,5 +46,31 @@
     "vitestExcludedSpecs": 6,
     "e2eFixedWaits": 51,
     "e2eSkips": 31
+  },
+  "patternDebt": {
+    "$nota": "Facades que hoy no siguen el patrón (ARCH-39 guard de orden, ARCH-40 SWR). La lista solo se achica al consolidar: un caso nuevo se arregla o se agrega a mano.",
+    "requestGuard": [
+      "src/app/core/facades/admin-alumnos-profesional.facade.ts",
+      "src/app/core/facades/admin-pre-inscritos.facade.ts",
+      "src/app/core/facades/anticipos.facade.ts",
+      "src/app/core/facades/archivo-profesional.facade.ts",
+      "src/app/core/facades/asistencia-profesional.facade.ts",
+      "src/app/core/facades/certificacion-profesional.facade.ts",
+      "src/app/core/facades/courses.facade.ts",
+      "src/app/core/facades/cuadratura.facade.ts",
+      "src/app/core/facades/cursos-singulares.facade.ts",
+      "src/app/core/facades/historial-cuadraturas.facade.ts",
+      "src/app/core/facades/liquidaciones.facade.ts",
+      "src/app/core/facades/promociones.facade.ts",
+      "src/app/core/facades/tasks.facade.ts"
+    ],
+    "swr": [
+      "src/app/core/facades/announcements.facade.ts",
+      "src/app/core/facades/auditoria.facade.ts",
+      "src/app/core/facades/certificacion-profesional.facade.ts",
+      "src/app/core/facades/instructor-profile.facade.ts",
+      "src/app/core/facades/notification-templates.facade.ts",
+      "src/app/core/facades/student-enrollment-context.facade.ts"
+    ]
   }
 }

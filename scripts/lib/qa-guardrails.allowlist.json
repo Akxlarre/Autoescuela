@@ -5,7 +5,7 @@
   "hooks": {
     "$notWired": "Archivos de .claude/hooks que settings.json no nombra, a propósito.",
     "notWired": {
-      ".claude/hooks/context-enrichment-guard.js": "Guard de día 0: bloquea la escritura si DOMAIN_DICTIONARY.md o DATABASE.md están vacíos. Nunca se conectó en settings.json, y con los índices ya poblados no tendría efecto. Conectarlo o borrarlo queda a decisión de quien mantiene el harness."
+      ".claude/hooks/context-enrichment-guard.js": "Guard de día 0 del boilerplate: bloquea la escritura si DOMAIN_DICTIONARY.md o DATABASE.md están vacíos. Decisión (2026-11-16): se conserva sin conectar. En este proyecto los índices ya están poblados y nunca dispararía; sirve al arrancar un proyecto nuevo desde el boilerplate, y ahí es donde se conecta."
     },
     "$documented": "Cada hook que .claude/CLAUDE.md presenta como activo → el texto que lo respalda en settings.json: el archivo del hook, o una frase propia si es un hook de tipo prompt.",
     "documented": {
@@ -18,7 +18,7 @@
       "Harness Gate": "harness-gate.js",
       "Bash Guard": "bash-guard.js",
       "Compact Recovery": "compact-recovery.js",
-      "Sync Check": "sync-check auditor",
+      "Sync Check": "sync-check.js",
       "Prettier": "post-edit.js"
     }
   },
@@ -42,5 +42,27 @@
     "after": "20261112200000",
     "$exempt": "Migración → por qué cambia permisos sin necesitar un test SQL.",
     "exempt": {}
+  },
+
+  "facades": {
+    "$withoutRequestGuard": "Facade que lee selectedBranchId() y no necesita guard de orden (ARCH-39), y por qué.",
+    "withoutRequestGuard": {
+      "src/app/core/facades/branch.facade.ts": "Es quien define selectedBranchId(): mantiene la sede activa, no carga datos filtrados por ella."
+    },
+    "$withoutSwr": "Facade con initialize() al que no le aplica el patrón SWR (ARCH-40), y por qué.",
+    "withoutSwr": {
+      "src/app/core/facades/notifications.facade.ts": "initialize() abre la suscripción Realtime una sola vez desde AppShellComponent y es idempotente (.claude/rules/notifications.md): no hay re-visita de pantalla que refrescar."
+    }
+  },
+
+  "appLike": {
+    "$nestedGrids": "Componente de features/ con una .bento-grid sin modificador (ARCH-41) porque es una grilla interna: la pantalla completa la pone la página que lo contiene.",
+    "nestedGrids": {
+      "src/app/features/admin/configuracion-web/tabs/contacto-tab.component.ts": "Tab de Configuración Web: la página que la contiene ya lleva bento-grid--fill-screen y esta grilla ordena el formulario dentro del panel de la tab.",
+      "src/app/features/admin/configuracion-web/tabs/cursos-tab.component.ts": "Tab de Configuración Web: mismo caso que contacto-tab.",
+      "src/app/features/admin/configuracion-web/tabs/general-tab.component.ts": "Tab de Configuración Web: mismo caso que contacto-tab.",
+      "src/app/features/admin/configuracion-web/tabs/hero-tab.component.ts": "Tab de Configuración Web: mismo caso que contacto-tab.",
+      "src/app/features/admin/configuracion-web/tabs/promo-tab.component.ts": "Tab de Configuración Web: mismo caso que contacto-tab."
+    }
   }
 }

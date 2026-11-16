@@ -148,3 +148,39 @@ export function compareIndexRows(current, baseline = {}) {
   }
   return { regressions, improvements };
 }
+
+// ── ARCH-42: alcance de cada pieza del harness ──────────────────────────────────────────────
+
+export const SCOPES = ['boilerplate', 'proyecto', 'mixto'];
+
+/**
+ * Lee la tabla de alcance: filas `| \`id\` | alcance | nota |`.
+ * @returns {Record<string, string>} id → alcance tal como está escrito
+ */
+export function parseScopeTable(text) {
+  const table = {};
+  for (const line of text.split('\n')) {
+    const match = line.match(/^\|\s*`([^`]+)`\s*\|\s*([^|]*?)\s*\|/);
+    if (match) table[match[1]] = match[2];
+  }
+  return table;
+}
+
+/**
+ * Compara las piezas que existen contra la tabla de alcance.
+ *  - missing: pieza que existe y la tabla no clasifica.
+ *  - stale:   fila de una pieza que ya no existe.
+ *  - invalid: fila con un alcance fuera de SCOPES.
+ */
+export function findScopeGaps(existingIds, table) {
+  const existing = new Set(existingIds);
+  return {
+    missing: existingIds.filter((id) => !(id in table)).sort(),
+    stale: Object.keys(table)
+      .filter((id) => !existing.has(id))
+      .sort(),
+    invalid: Object.entries(table)
+      .filter(([id, scope]) => existing.has(id) && !SCOPES.includes(scope))
+      .map(([id, scope]) => ({ id, scope })),
+  };
+}

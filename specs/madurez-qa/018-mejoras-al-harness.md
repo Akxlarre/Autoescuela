@@ -245,9 +245,10 @@ en vez de bloquear. Queda como propuesta, sin código.
 
 ### 2.4 Decidir qué hacer con `context-enrichment-guard.js`
 
-Hoy está declarado como excepción en la lista de ARCH-31. Es un guard para un proyecto recién
-creado (bloquea si los índices están vacíos) y acá no tendría efecto. Las opciones son borrarlo o
-conectarlo; cualquiera de las dos obliga a quitar su entrada de la lista de excepciones.
+**Decidido (2026-11-16): se conserva sin conectar.** Es un guard para un proyecto recién creado
+(bloquea si los índices están vacíos). Acá nunca dispararía, así que conectarlo solo suma un
+proceso por escritura; borrarlo le quita al boilerplate la única pieza que cubre el día 0. Sigue
+en la lista de excepciones de ARCH-31, con ese motivo, y se conecta al arrancar un proyecto nuevo.
 
 ### 2.5 El Sync Check dispara sin que se haya tocado `src/app`
 
@@ -258,10 +259,32 @@ Al cerrar esta sesión, el hook de cierre pidió actualizar `COMPONENTS.md`, `SE
 **Causa probable:** el chequeo es un hook de tipo prompt, que decide leyendo la conversación. Una
 sesión que nombra muchos archivos `.ts` sin tocarlos se le parece a una que los creó.
 
-**Cambio propuesto:** que la decisión de preguntar sea determinista. El hook de comando que corre
-antes ya lleva la lista de lo escrito en la sesión (`.claude/temp/session-writes.json`): el aviso
-de índices debería salir solo cuando esa lista trae un archivo de `src/app/`. Es un cambio en
-`settings.json`, protegido.
+**Cambio preparado (falta que una persona lo aplique):** el Sync Check pasa a ser un comando
+determinista. Lee en la transcripción qué archivos escribió la sesión y le pregunta a git cuáles
+son nuevos; bloquea solo si se creó un componente, facade, servicio, directiva, pipe o guard en
+`src/app` sin escribir ningún índice.
+
+```bash
+node scripts/harness/patch-018-sync-check.js --dry-run
+```
+
+```bash
+node scripts/harness/patch-018-sync-check.js
+```
+
+El parche crea `.claude/hooks/sync-check.js`, cambia una entrada de `settings.json`, actualiza el
+respaldo de ARCH-31 y la sección de `docs/HOOKS-SYSTEM.md`. Lo cubre
+`scripts/lib/sync-check-hook.test.mjs`.
+
+**Lo que se pierde:** el prompt también opinaba sobre archivos "modificados significativamente".
+El comando no: decidir si una edición cambió el contrato de un componente pide juicio, y esa parte
+queda en el paso SINCRONIZAR.
+
+**Hallazgo al preparar el cambio:** `.claude/temp/session-writes.json` no lo escribe nadie. El
+comando de cierre que corre `npm run indices:sync` cuando esa lista tiene contenido nunca corre,
+y el prompt afirmaba "USAGE-MAP.md ya se regeneró automáticamente" sin que fuera cierto. El parche
+no lo revive: regenerar índices en cada cierre es un cambio de comportamiento que merece su propia
+decisión. Por eso el hook nuevo lee la transcripción y no ese archivo.
 
 ---
 
@@ -302,8 +325,22 @@ a un lugar donde el próximo agente lo lee es una fracción.
   (propuesta inicial, a confirmar por el equipo); `/spec-plan` y la plantilla del plan lo
   consultan junto con antipatrones y gotchas; `/spec-verify` y `/fix-close` preguntan al cerrar
   qué decidió el track. ARCH-38 falla si una ruta del catálogo deja de existir.
-- **13 y 14: pendientes.** La 13 son tests guardianes sobre `src/app` y merece su propio track.
-  La 14 espera saber si el boilerplate se mantiene para otros proyectos.
+- **13: aplicada (2026-11-16) como reglas del linter,** no como specs de Vitest: así corren sin
+  levantar Angular y comparten la lista de excepciones. ARCH-39 (guard de orden), ARCH-40 (SWR) y
+  ARCH-41 (app-like), en `scripts/lib/pattern-guards.js`. Estado al aplicarla:
+  - ARCH-39: 13 facades leen la sede sin guard de orden. Quedan con nombre en la línea base
+    (`patternDebt.requestGuard`). Nadie revisó todavía cuáles tienen la condición de carrera y
+    cuáles no la necesitan: es una lista de pendientes, no de culpables.
+  - ARCH-40: 6 facades con `initialize()` sin alguna de las dos piezas de SWR
+    (`patternDebt.swr`). `notifications.facade.ts` queda exento con motivo.
+  - ARCH-41: las 51 grillas de `features/` cumplen o están en el registro, salvo 5 tabs de
+    Configuración Web, declaradas como grillas internas.
+  - Un facade o una página nuevos que no sigan el patrón fallan desde hoy.
+- **14: aplicada (2026-11-16).** `docs/HARNESS-SCOPE.md` clasifica las 10 reglas, los 18
+  antipatrones y los 14 skills en boilerplate, mixto o proyecto. ARCH-42 exige que cada pieza
+  nueva se clasifique. La clasificación es una propuesta inicial.
+- **Límite de la 13:** las tres reglas detectan que el identificador está, no que se use bien. Y
+  ARCH-41 solo ve páginas que declaran una `.bento-grid`: una página nueva sin grilla no la ve.
 - **Causa raíz del hueco A, encontrada al aplicar la 12:** el paso 5.6 de `/fix-close` pedía
   cosechar solo gotchas de dominio y decía explícitamente que un fix visual o de código se
   saltara. Por eso los gotchas citan 146 tracks y los patrones casi ninguno.

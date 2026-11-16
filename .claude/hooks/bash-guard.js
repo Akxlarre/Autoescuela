@@ -92,7 +92,7 @@ process.stdin.on('end', () => {
 
     // ═══════════════════════════════════════════════════════════════════════
     // 4. BASE REAL — el proyecto enlazado es la base que usan los clientes
-    //    (indices/DOMAIN-GOTCHAS.md DG-128)
+    //    (indices/DOMAIN-GOTCHAS.md DG-129)
     // ═══════════════════════════════════════════════════════════════════════
     const linkedDbPatterns = [
       { re: /supabase\s+db\s+reset\b[^;|&]*--(?:linked|db-url)/, msg: 'db reset contra el proyecto enlazado borra la base real' },
@@ -103,7 +103,7 @@ process.stdin.on('end', () => {
         process.stderr.write(
           `\u{1F6D1} BASH GUARD: Operacion sobre la base real bloqueada.\n` +
           `Razon: ${msg}\n` +
-          `No existe una base de desarrollo (DG-128). Pide al humano que lo ejecute en su terminal.`
+          `No existe una base de desarrollo (DG-129). Pide al humano que lo ejecute en su terminal.`
         );
         process.exit(2);
       }

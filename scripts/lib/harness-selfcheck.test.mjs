@@ -13,6 +13,9 @@ import {
   findUnwiredHooks,
   measureLongRows,
   parseDocumentedHooks,
+  findScopeGaps,
+  parseScopeTable,
+  SCOPES,
 } from './harness-selfcheck.js';
 
 let failures = 0;
@@ -168,6 +171,30 @@ check(
   findMissingReferences(CATALOGO, (p) => !p.includes('y.js'))[0] === 'scripts/lib/y.js',
 );
 check('todas existen → nada', findMissingReferences(CATALOGO, () => true).length === 0);
+
+// ── ARCH-42: tabla de alcance ───────────────────────────────────────────────────────────────
+const ALCANCE = [
+  '| Pieza | Alcance | Nota |',
+  '|---|---|---|',
+  '| `rules/a.md` | boilerplate | vale en cualquier proyecto |',
+  '| `AP-001` | proyecto | |',
+  '| `skills/vieja` | mixto | ya no existe |',
+  '| `rules/b.md` | generico | valor inventado |',
+].join('\n');
+const tabla = parseScopeTable(ALCANCE);
+check('lee id y alcance de cada fila', tabla['rules/a.md'] === 'boilerplate' && tabla['AP-001'] === 'proyecto');
+check('la cabecera y el separador no son filas', Object.keys(tabla).length === 4);
+{
+  const gaps = findScopeGaps(['rules/a.md', 'rules/b.md', 'AP-001', 'AP-002'], tabla);
+  check('pieza sin clasificar → missing', gaps.missing.length === 1 && gaps.missing[0] === 'AP-002');
+  check('fila de una pieza que ya no existe → stale', gaps.stale.length === 1 && gaps.stale[0] === 'skills/vieja');
+  check('alcance fuera de la lista → invalid', gaps.invalid.length === 1 && gaps.invalid[0].id === 'rules/b.md');
+}
+{
+  const gaps = findScopeGaps(['rules/a.md', 'AP-001'], parseScopeTable(ALCANCE.split('\n').slice(0, 4).join('\n')));
+  check('tabla completa → sin huecos', gaps.missing.length + gaps.stale.length + gaps.invalid.length === 0);
+}
+check('los tres alcances válidos', SCOPES.join() === 'boilerplate,proyecto,mixto');
 
 if (failures > 0) {
   console.error(`\n${failures} caso(s) fallaron.`);

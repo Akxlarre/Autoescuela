@@ -18,8 +18,8 @@
 
 | Arquetipo | Cuándo | Referencia | Regla | Guard |
 |---|---|---|---|---|
-| Lista app-like con KPIs | Página enrutable con hero, fila de KPIs y un listado que scrollea por dentro. Es el default | `src/app/features/secretaria/observaciones/secretaria-observaciones.component.ts` | `visual-system.md` §Patrón App-like | Ninguno |
-| Página con tabs | Varias secciones que antes eran bloques secuenciales: cada tab es su propia celda que crece | `src/app/features/admin/tareas/admin-tareas.component.ts` | `visual-system.md` §Cuándo NO aplica el patrón | Ninguno |
+| Lista app-like con KPIs | Página enrutable con hero, fila de KPIs y un listado que scrollea por dentro. Es el default | `src/app/features/secretaria/observaciones/secretaria-observaciones.component.ts` | `visual-system.md` §Patrón App-like | ARCH-41 (grilla sin modificador de pantalla completa) |
+| Página con tabs | Varias secciones que antes eran bloques secuenciales: cada tab es su propia celda que crece | `src/app/features/admin/tareas/admin-tareas.component.ts` | `visual-system.md` §Cuándo NO aplica el patrón | ARCH-41 |
 | Ficha de detalle | Detalle por `:id` con secciones fijas | Sin referencia limpia: la ficha del alumno tiene casi 2.000 líneas. Partir de "Página con tabs" | `visual-system.md`, `swr-pattern.md` (solo fetch) | Ninguno |
 | Wizard de pantalla completa | Flujo por pasos con stepper | `src/app/features/secretaria/matricula/secretaria-matricula.component.scss` | `visual-system.md` §Cuándo NO aplica el patrón | Ninguno |
 | Estado de error de carga | Toda pantalla que lee datos: caso A (se retira lo visible, "Reintentar") y caso B (se mantiene, con aviso) | `src/app/features/secretaria/observaciones/secretaria-observaciones.component.ts` | `swr-pattern.md` §Errores de carga | E2E X01 de `e2e/transversal-shell.spec.ts` |
@@ -37,9 +37,9 @@
 
 | Arquetipo | Cuándo | Referencia | Regla | Guard |
 |---|---|---|---|---|
-| Facade SWR con sede, guard de orden y Realtime | Datos que persisten entre navegaciones, dependen de la sede y cambian por otros usuarios | `src/app/core/facades/flota.facade.ts` | `facades.md` §7, `swr-pattern.md` | Lecturas y escrituras: `src/app/core/facades/unchecked-reads.guard.spec.ts`. SWR y guard de orden: ninguno |
+| Facade SWR con sede, guard de orden y Realtime | Datos que persisten entre navegaciones, dependen de la sede y cambian por otros usuarios | `src/app/core/facades/flota.facade.ts` | `facades.md` §7, `swr-pattern.md` | Lecturas y escrituras: `src/app/core/facades/unchecked-reads.guard.spec.ts`. Guard de orden: ARCH-39. SWR: ARCH-40 |
 | Lectura y escritura a la base | Toda llamada a Supabase revisa su error | `src/app/core/utils/db-error.utils.ts` | `facades.md` §4 | `src/app/core/facades/unchecked-reads.guard.spec.ts` y su par de escrituras |
-| Respuestas fuera de orden | Un `fetch` que aplica resultados a signals y puede dispararse varias veces | `src/app/core/utils/request-guard.utils.ts` | `facades.md` §Guard contra respuestas fuera de orden | Ninguno |
+| Respuestas fuera de orden | Un `fetch` que aplica resultados a signals y puede dispararse varias veces | `src/app/core/utils/request-guard.utils.ts` | `facades.md` §Guard contra respuestas fuera de orden | ARCH-39 (solo facades que leen la sede) |
 | Lógica de negocio | Cálculo o transformación: función pura fuera del facade | `src/app/core/utils/chile-time.utils.ts` | `architecture.md` §Núcleo Funcional | Linter (complejidad de facades) |
 | Fechas | Todo lo que convierte entre instante y día | `src/app/core/utils/chile-time.utils.ts` | `dates.md` | ARCH-27, ARCH-28 |
 | Presupuesto de alto por contenedor | Cuántos ítems caben en una celda que crece | `src/app/core/utils/layout-tier.utils.ts` | `visual-system.md` §Pilar 2 | Ninguno |
