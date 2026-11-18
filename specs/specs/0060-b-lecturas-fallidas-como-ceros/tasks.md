@@ -124,12 +124,15 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
 
 > Antes de empezar: avisar a Ignacio por `fix-073-i` y partir de `main` con sus PR mergeados.
 
-- [ ] **T1.1** — `pagos.facade.ts` + `admin-pagos` y sus drawers
+- [x] **T1.1** — `pagos.facade.ts` + `admin-pagos` y sus drawers
   - **AC ref:** AC3–AC7
   - **DoD:** DoD-F, más:
-    - [ ] Las 8 lecturas (KPIs, deudores, recientes, desglose) lanzan; una que falle hace fallar la carga
-    - [ ] `refreshSilently()` deja de tragar el error
-  - **Avance (2026-11-17), pendiente de revisión:**
+    - [x] Las 8 lecturas (KPIs, deudores, recientes, desglose) lanzan; una que falle hace fallar la carga
+    - [x] `refreshSilently()` deja de tragar el error
+  - **Cerrada (2026-11-18):** mergeada en el PR #422 con CI en verde. Sobre `main` con T1.1, T1.2 y
+    T1.4 juntas: `lint:arch:strict` 0 errores y `test:ci` 5324 en verde. Las pruebas de navegador y
+    las mutaciones son las de la nota de abajo; no se repitieron al cerrar.
+  - **Avance (2026-11-17):**
     - **Facade.** Las 7 lecturas de la pantalla (4 KPIs, deudores, recientes, métodos) y las 2 del
       Estado de Cuenta lanzan (`assertReadOk`; el conteo de boletas con `if (error) throw error`).
       Antes cada lectura aplicaba su signal por separado, así que una que fallaba dejaba los demás
