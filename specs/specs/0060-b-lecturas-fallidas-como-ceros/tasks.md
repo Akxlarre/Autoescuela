@@ -231,12 +231,15 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
       el build de producción de este worktree en un puerto libre, como pide T0.4 (5 passed,
       incluidos los 4 inicios de sesión del setup).
 
-- [ ] **T1.3** — `liquidaciones.facade.ts` + liquidaciones de admin y secretaria
+- [x] **T1.3** — `liquidaciones.facade.ts` + liquidaciones de admin y secretaria
   - **AC ref:** AC3, AC4, AC7
   - **DoD:** DoD-F, más:
-    - [ ] `hoursRes`, `advancesRes` y `paymentsRes` se revisan (hoy solo `instrRes`)
-    - [ ] "Registrar pago" queda bloqueado si las horas o los anticipos no cargaron
-  - **Avance (2026-11-18), pendiente de revisión.** La tarea sigue abierta.
+    - [x] `hoursRes`, `advancesRes` y `paymentsRes` se revisan (antes solo `instrRes`)
+    - [x] "Registrar pago" queda bloqueado si las horas o los anticipos no cargaron
+  - **Cerrada (2026-11-18), con el visto bueno del autor:** mergeada en el PR #427 con CI en verde.
+    Liquidaciones ya no lleva `knownBug` en X01, pero ese bloque no se ejecutó en esta tarea. Las
+    pruebas de navegador y las mutaciones son las de la nota de abajo; no se repitieron al cerrar.
+  - **Avance (2026-11-18):**
     - **Facade.** Instructores, horas, anticipos, pagos y tarifa forman una sola carga: si una falla
       no se aplica nada. La tarifa se lee con `PayrollConfigFacade.readRates()`, que lanza; el valor
       de respaldo queda solo para una sede sin fila. `createRequestGuard` descarta respuestas viejas.
