@@ -129,6 +129,60 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
   - **DoD:** DoD-F, más:
     - [ ] Las 8 lecturas (KPIs, deudores, recientes, desglose) lanzan; una que falle hace fallar la carga
     - [ ] `refreshSilently()` deja de tragar el error
+  - **Avance (2026-11-17), pendiente de revisión:**
+    - **Facade.** Las 7 lecturas de la pantalla (4 KPIs, deudores, recientes, métodos) y las 2 del
+      Estado de Cuenta lanzan (`assertReadOk`; el conteo de boletas con `if (error) throw error`).
+      Antes cada lectura aplicaba su signal por separado, así que una que fallaba dejaba los demás
+      KPIs puestos; ahora `fetchAll()` las aplica juntas y solo si todas salieron bien, con el
+      `isCurrent()` después del `throw`. KPIs en `null` (no `0`) sin carga vigente.
+      `cargarCompleta()` (primera carga, cambio de sede, reintento del caso A) retira los datos y
+      no marca `_initialized` si falla. `refreshSilently()` marca `refreshFailed` (caso B); si no
+      hay datos vigentes de esa sede (un Realtime que reemplazó una carga completa, o tras un caso
+      A) sigue siendo caso A. `reintentar()` elige B o A. Estado de Cuenta: `errorDetalle` (otra
+      matrícula, caso A), `detalleRefreshFailed` (misma matrícula, p. ej. después de registrar un
+      pago, caso B) y `reintentarEstadoCuenta()`.
+    - **Pantallas** (`admin-pagos`, `secretaria-pagos`): aviso del caso B dentro de la celda
+      `.bento-fill` (`p-4 pb-0 shrink-0`); caso A con `app-empty-state` "Reintentar" en la lista,
+      hero sin KPIs ni chips y sin el contador "0 de 0 alumnos". Se quitó el banner de error que
+      era un hijo directo de la grilla.
+    - **Drawers.** Pagos Recientes: caso A en métodos y lista (antes "Sin pagos registrados este
+      mes"), aviso del caso B arriba. Estado de Cuenta: caso A distinto de "No se encontró la
+      matrícula" (que sigue para una fila inexistente), aviso del caso B. Registrar Pago: guardado
+      bloqueado en modo global con la lista caída (antes decía "No hay alumnos con saldo
+      pendiente" y el pago se guardaba sin matrícula) y en modo contextual sin Estado de Cuenta ni
+      fila en la lista (no se conoce el saldo para el tope); "Reintentar" en ambos, y si la lista
+      llega con el drawer abierto el alumno pasa a ser obligatorio.
+    - **Bloqueo en caso B: ninguno.** Ninguna acción de la pantalla guarda un valor calculado con
+      estos datos: el monto lo escribe el usuario, el saldo lo recalcula el trigger
+      `trg_update_balance`, y el reporte PDF lo arma la edge function.
+    - **Guardrails.** Fuera de `PENDING`; `S('pagos')` sin `knownBug` en X01. No figuraba en la
+      línea base de ARCH-39/40. Mocks viejos del spec del facade sin `.in()` completados: antes
+      el `TypeError` se perdía y las lecturas de `enrollments` igual pintaban.
+    - **Validación.** TDD: 20 tests del facade en rojo y 8 de pantalla y 8 de drawers en rojo antes
+      del cambio. `lint:arch:strict` 0 errores, `ngc --noEmit` limpio, `test:ci` 5211 en verde,
+      `test-tz.mjs` 206/206 en las tres zonas (7 specs). Mutaciones: cada uno de los 6 archivos
+      vuelto a `main` hace fallar sus tests (2 a 21), y 6 mutaciones dirigidas del facade
+      (refresco que traga el error, caso A que no retira, reintento siempre con skeleton, Estado
+      de Cuenta siempre caso A, boletas sin revisar `error`, refresco sin datos vigentes como B)
+      también.
+    - **Navegador (secretaria, 1440x900, claro y oscuro).** Con la red cortada parcheando
+      `rest.fetch`: caso A con el estado de error y "Reintentar" dentro de `.bento-fill`, el hero
+      sin KPIs ni chips, la grilla con 2 hijos y sin scroll de página; Pagos Recientes y Registrar
+      Pago con su error ("Guardar Pago" deshabilitado). Caso B con el aviso dentro de la celda,
+      10 filas y KPIs intactos, sin scroll de página; "Reintentar" sin red no muestra skeleton y
+      con red lo limpia. Recorrido con red normal (Pagos Recientes, Ver detalle, Registrar Pago
+      cancelado, sin escrituras) sin errores nuevos en consola.
+    - **Navegador (admin, 1440x900, claro y oscuro).** Caso A en la primera carga y también al
+      cambiar de "Todas las sedes" a una sede con la red cortada (se retiran los datos de la
+      consulta anterior, sin KPIs, "Reintentar" dentro de `.bento-fill`, sin scroll de página).
+      Caso B con el aviso dentro de la celda, 10 filas y KPIs intactos: la tabla pasa de 310 a
+      168 px, exactamente el alto del aviso con su padding (no la aplasta la grilla). Recorrido
+      con red normal (sede puntual y "Todas", Pagos Recientes, Ver detalle, Registrar Pago
+      cancelado, sin escrituras) sin errores nuevos; el único error de consola es el timeout de
+      View Transition de la recarga forzada.
+    - **X01 contra el build de producción** (`ng serve -c production` en el 4200): `X01:
+      /app/secretaria/pagos` en verde con `--repeat-each=2`, y el bloque X01 completo 26/26 (las
+      marcadas de etapas posteriores fallan como `knownBug`, como se espera).
 
 - [x] **T1.2** — `reportes-contables.facade.ts` + reportes de admin y secretaria
   - **AC ref:** AC3, AC4, AC6

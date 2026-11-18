@@ -80,8 +80,58 @@ Responden a la §5 del checklist:
 - **Aviso de pagos sin marcar:** Liquidaciones avisa cuando un mes ya terminado tiene
   instructores sin marcar como pagados.
 
-Pendientes de decidir: el resto de la §5 del checklist (B08, C07, D20, F04, F10, F17/G10, H04,
-H05, H18, H22, I05, I07, J02, J12, J17).
+Decisiones de Ignacio, 2026-11-17:
+
+- **J12 — Qué clases entran en la liquidación:** solo las prácticas de Clase B completadas
+  (0,75 h c/u), como hoy. Las clases profesionales y teóricas no se pagan por liquidación.
+- **J17 / S12 — Pago de liquidación y caja:** el sueldo lo paga el admin aparte (transferencia
+  o dinero propio); marcar una liquidación como pagada no toca la caja del día, como hoy.
+- **I07 — Anticipos y caja:** el anticipo **no** debe aparecer en la caja. **Cambia lo actual:**
+  hoy `CuadraturaFacade` y `generate-cash-closing-report` lo suman como egreso en efectivo del
+  día de su fecha. Hay que sacarlo de la pantalla de la caja, del cierre y del Excel/PDF. Con
+  eso, la fecha del anticipo solo decide en qué mes se descuenta. Ojo: `instructor_advances`
+  tiene el trigger `guard_egreso_en_caja_cerrada` (fix-445); si el anticipo deja de ser de la
+  caja, ese candado tampoco aplica.
+- **I05 — Botón de anticipo por fila:** sí. Cada fila de instructor (también los "Al día") tiene
+  un botón "Dar anticipo" que abre el registro con ese instructor ya elegido. **Cambio nuevo.**
+- **H05 / S10 — Sueldos en Reportes:** las liquidaciones pagadas cuentan como gasto; los
+  anticipos no (son parte del sueldo). Se suma el sueldo **completo** de la liquidación (líquido
+  + anticipos descontados), no solo el líquido: si no, la plata adelantada no aparece en ningún
+  lado. **Cambio nuevo** en `ReportesContablesFacade` y el Excel/PDF de Reportes. Las ventas de
+  servicios especiales ya cuentan como ingreso (verificado en H01).
+- **J02 — Horas exactas:** el pago se calcula con las horas exactas (0,75 por clase: 3 clases =
+  2,25 h = $11.250 a $5.000/h, no 2,3 h = $11.500) y se muestran con dos decimales; el pie suma
+  las exactas (9,75, no 9,9). **Cambio** en Liquidaciones y su Excel/PDF.
+- **B08 / S18 — Servicios especiales en efectivo:** cuentan para el efectivo de la caja del día,
+  como hoy (`fix-047-i`). Sin cambio.
+- **B13 — Quién borra en la caja abierta:** como hoy. Pagos de alumnos: solo admin; inscripciones
+  a cursos singulares y gastos del día: admin y secretaria. Con la caja cerrada nadie borra
+  (triggers `guard_*_caja_cerrada`). Sin cambio.
+- **C07 — Combustible de un vehículo de otra sede:** se imputa a la sede de la caja donde se pagó
+  (de ahí salió el dinero, así la caja cuadra). El costo por vehículo se sigue viendo por la
+  patente del gasto. **Verificado 2026-11-17: hoy NO funciona así.** `registrar-egreso-drawer`
+  usa `resolveFuelExpenseBranch()` (`fix-243-m`): el combustible va a la sede del **vehículo**
+  (salvo vehículos "de ambas sedes", que van a la sede activa). Cambiarlo contradice una decisión
+  de Matías; pendiente de que Ignacio lo hable o lo apruebe. **2026-11-18: Ignacio lo aprobó**
+  (caso poco probable, cliente sin confirmar, pero prefiere que la caja cuadre) → **fix-082-i**.
+- **D20 — Secretaria multi-sede:** no existe en el negocio. Cada secretaria tiene una sola sede;
+  "Todas las sedes" es solo del admin. Ojo: en la base (2026-11-17) 1 de 10 secretarias tiene
+  `users.can_access_both_branches = true`, que le da acceso a las dos sedes vía `branch_visible`.
+  Ignacio: todas las secretarias de la base son de prueba; no se hace nada al respecto.
+- **F04 — Meses futuros:** en el historial de cierres y en Liquidaciones no se puede avanzar más
+  allá del mes actual (Chile): la flecha "siguiente" queda deshabilitada. **Cambio.**
+- **F10 — Cierre sin arqueo:** se muestra como hoy, "Sin arqueo" en gris, sin faltante ni
+  sobrante (un día puede no haber efectivo). Sin cambio.
+- **H04 — Rango invertido en Reportes:** si "Desde" es posterior a "Hasta", avisa "La fecha Desde
+  no puede ser posterior a Hasta" y no genera el reporte. **Cambio.**
+- **H18 — Gastos fijos para la secretaria:** no los ve, como hoy (`select_fixed_expenses` solo
+  admin). Sin cambio.
+- **H22 — Filtros de Reportes:** se recuerdan mientras dure la sesión (período y sede) y hay un
+  botón "Restablecer filtros" que vuelve al mes actual. **Cambio.**
+- **F17 / G10 / S13:** resuelta en `fix-078-i` (la secretaria ve el historial completo de su sede
+  y sus ajustes).
+
+Con esto la §5 del checklist queda decidida completa (2026-11-17).
 
 ## ACs Afectados
 

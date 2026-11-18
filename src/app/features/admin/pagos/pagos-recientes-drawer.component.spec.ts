@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { PagosRecientesDrawerComponent } from './pagos-recientes-drawer.component';
 import { PagosFacade } from '@core/facades/pagos.facade';
 import type { PagoReciente } from '@core/models/ui/pagos.model';
@@ -136,5 +136,61 @@ describe('PagosRecientesDrawerComponent — filtros', () => {
     (component as any).clearFilters();
     expect((component as any).hasActiveFilters()).toBe(false);
     expect((component as any).pagosFiltrados().length).toBe(3);
+  });
+});
+
+// ─── spec 0060-b (T1.1): una carga fallida no se ve como "sin pagos este mes" ───
+describe('PagosRecientesDrawerComponent — lecturas fallidas (spec 0060-b)', () => {
+  let fixture: ReturnType<typeof TestBed.createComponent<PagosRecientesDrawerComponent>>;
+  let facade: any;
+
+  function render(estado: { error: string | null; refreshFailed: boolean }): void {
+    facade = {
+      isLoading: signal(false),
+      error: signal(estado.error),
+      refreshFailed: signal(estado.refreshFailed),
+      pagosRecientes: signal(
+        estado.error
+          ? []
+          : [{ id: 1, alumno: 'Pablo Pérez', estado: 'completado', monto: 1000 } as PagoReciente],
+      ),
+      metodosPagoMes: signal([]),
+      reintentar: vi.fn(),
+    };
+    TestBed.configureTestingModule({
+      imports: [PagosRecientesDrawerComponent],
+      providers: [{ provide: PagosFacade, useValue: facade }],
+    }).overrideComponent(PagosRecientesDrawerComponent, {
+      set: { imports: [], schemas: [NO_ERRORS_SCHEMA] },
+    });
+    fixture = TestBed.createComponent(PagosRecientesDrawerComponent);
+    fixture.detectChanges();
+  }
+
+  const el = () => fixture.nativeElement as HTMLElement;
+
+  it('caso A: métodos y lista muestran el error con "Reintentar", no "sin pagos"', () => {
+    render({ error: 'No se pudieron cargar los pagos.', refreshFailed: false });
+
+    expect(el().textContent).not.toContain('Sin pagos registrados este mes');
+    expect(el().textContent).not.toContain('No se encontraron pagos');
+    const vacios = Array.from(el().querySelectorAll('app-empty-state'));
+    expect(vacios.length).toBeGreaterThan(0);
+    expect(vacios.every((e) => e.getAttribute('actionLabel') === 'Reintentar')).toBe(true);
+
+    vacios[0].dispatchEvent(new CustomEvent('action'));
+    expect(facade.reintentar).toHaveBeenCalledTimes(1);
+  });
+
+  it('caso B: aviso con "Reintentar" y la lista sigue visible', () => {
+    render({ error: null, refreshFailed: true });
+
+    const btn = el().querySelector(
+      'app-alert-card button[data-llm-action="reintentar-pagos-recientes"]',
+    ) as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    expect(el().textContent).toContain('Pablo Pérez');
+    btn.click();
+    expect(facade.reintentar).toHaveBeenCalledTimes(1);
   });
 });

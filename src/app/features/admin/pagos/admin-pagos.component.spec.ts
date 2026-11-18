@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { AdminPagosComponent } from './admin-pagos.component';
 import { PagosFacade } from '@core/facades/pagos.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { LayoutService } from '@core/services/ui/layout.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { ChileDatePipe } from '@shared/pipes/chile-date.pipe';
 import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
 
 // ─── fix-132-m (ASG-b-076): densidad adaptativa app-like (Deudores) ───
@@ -39,6 +40,7 @@ describe('AdminPagosComponent — densidad app-like', () => {
           useValue: {
             isLoading: signal(false),
             error: signal(null),
+            refreshFailed: signal(false),
             isGeneratingReport: signal(false),
             alumnosConDeuda: signal(deudores),
             pagosRecientes: signal([]),
@@ -211,6 +213,7 @@ describe('AdminPagosComponent — filtros de deudores (fix-248-m)', () => {
           useValue: {
             isLoading: signal(false),
             error: signal(null),
+            refreshFailed: signal(false),
             isGeneratingReport: signal(false),
             alumnosConDeuda: signal(deudores),
             pagosRecientes: signal([]),
@@ -334,5 +337,120 @@ describe('AdminPagosComponent — filtros de deudores (fix-248-m)', () => {
     expect((component as any).hayFiltrosActivos()).toBe(false);
     (component as any).setFiltroCurso('class_b');
     expect((component as any).hayFiltrosActivos()).toBe(true);
+  });
+});
+
+// ─── spec 0060-b (T1.1): una lectura que falla se ve como error, no como $0 o "sin deudores" ───
+describe('AdminPagosComponent — lecturas fallidas (spec 0060-b)', () => {
+  let fixture: ReturnType<typeof TestBed.createComponent<AdminPagosComponent>>;
+  let facade: any;
+
+  const deudor = {
+    enrollmentId: 1,
+    alumno: 'Alumno 1',
+    rut: '1-9',
+    totalAPagar: 500000,
+    pagado: 100000,
+    saldo: 400000,
+    cursoTipo: 'class_b',
+    cursoNombre: 'Clase B',
+    fechaMatricula: '2026-03-10T00:00:00Z',
+    sedeId: 1,
+    sedeNombre: 'Sede 1',
+  } as AlumnoDeudor;
+
+  function setup(estado: { error: string | null; refreshFailed: boolean; conDatos: boolean }) {
+    facade = {
+      isLoading: signal(false),
+      error: signal(estado.error),
+      refreshFailed: signal(estado.refreshFailed),
+      isGeneratingReport: signal(false),
+      alumnosConDeuda: signal(estado.conDatos ? [deudor] : []),
+      pagosRecientes: signal([]),
+      metodosPagoMes: signal([]),
+      ingresosHoy: signal(estado.conDatos ? 15000 : null),
+      ingresosMes: signal(estado.conDatos ? 250000 : null),
+      boletasMes: signal(estado.conDatos ? 4 : null),
+      totalDeudores: signal(estado.conDatos ? 1 : 0),
+      pagosPendientesTotales: signal(estado.conDatos ? 400000 : null),
+      initialize: vi.fn(),
+      reintentar: vi.fn(),
+      destroyRealtime: vi.fn(),
+      seleccionarEnrollment: vi.fn(),
+      seleccionarParaPago: vi.fn(),
+      generarReporte: vi.fn(),
+    };
+    TestBed.configureTestingModule({
+      imports: [AdminPagosComponent],
+      providers: [
+        { provide: PagosFacade, useValue: facade },
+        {
+          provide: BranchFacade,
+          useValue: {
+            selectedBranchId: signal(1),
+            selectedBranchLabel: signal('Sede 1'),
+            branches: signal([]),
+          },
+        },
+        {
+          provide: LayoutDrawerFacadeService,
+          useValue: { open: vi.fn(), close: vi.fn(), isOpen: signal(false) },
+        },
+        { provide: LayoutService, useValue: { tier: signal('desktop') } },
+        { provide: GsapAnimationsService, useValue: { animateBentoGrid: vi.fn() } },
+      ],
+    }).overrideComponent(AdminPagosComponent, { set: { imports: [ChileDatePipe], schemas: [NO_ERRORS_SCHEMA] } });
+    fixture = TestBed.createComponent(AdminPagosComponent);
+    fixture.detectChanges();
+  }
+
+  const host = () => fixture.nativeElement as HTMLElement;
+  const grid = () => host().querySelector('.bento-grid') as HTMLElement;
+  const fill = () => host().querySelector('.bento-fill') as HTMLElement;
+
+  it('caso B: el aviso va dentro de la celda .bento-fill, nunca como hijo directo de la grilla', () => {
+    setup({ error: null, refreshFailed: true, conDatos: true });
+
+    expect(fill().querySelector('app-alert-card')).not.toBeNull();
+    const hijos = Array.from(grid().children).map((c) => c.tagName.toLowerCase());
+    expect(hijos).not.toContain('app-alert-card');
+    expect(grid().children).toHaveLength(2); // hero + celda
+    // Los datos siguen visibles.
+    expect(fill().textContent).toContain('Alumno 1');
+  });
+
+  it('caso B: "Reintentar" del aviso llama a reintentar() y lleva data-llm-action', () => {
+    setup({ error: null, refreshFailed: true, conDatos: true });
+    const btn = fill().querySelector(
+      'app-alert-card button[data-llm-action="reintentar-pagos"]',
+    ) as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    btn.click();
+    expect(facade.reintentar).toHaveBeenCalledTimes(1);
+  });
+
+  it('caso A: estado de error con "Reintentar" en la celda; sin KPIs, chips ni "sin saldos"', () => {
+    setup({ error: 'No se pudieron cargar los pagos.', refreshFailed: false, conDatos: false });
+    const cmp = fixture.componentInstance as any;
+
+    const empty = fill().querySelector('app-empty-state');
+    expect((empty as any)?.message).toBe('No se pudieron cargar los pagos.');
+    expect(empty?.getAttribute('actionLabel')).toBe('Reintentar');
+    expect(fill().textContent).not.toContain('Sin saldos pendientes');
+    expect(fill().textContent).not.toContain('0 de 0');
+    expect(cmp.heroKpis()).toEqual([]);
+    expect(cmp.heroChips()).toEqual([]);
+    expect(grid().children).toHaveLength(2);
+
+    empty!.dispatchEvent(new CustomEvent('action'));
+    expect(facade.reintentar).toHaveBeenCalledTimes(1);
+  });
+
+  it('con datos: KPIs con sus valores y sin avisos', () => {
+    setup({ error: null, refreshFailed: false, conDatos: true });
+    const cmp = fixture.componentInstance as any;
+    expect(cmp.heroKpis().map((k: any) => k.value)).toEqual([15, 250, 400, 4]);
+    expect(fill().querySelector('app-alert-card')).toBeNull();
+    expect(fill().querySelector('app-empty-state')).toBeNull();
   });
 });

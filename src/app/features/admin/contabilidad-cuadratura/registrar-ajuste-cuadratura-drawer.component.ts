@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HistorialCuadraturasFacade } from '@core/facades/historial-cuadraturas.facade';
@@ -393,6 +393,23 @@ export class RegistrarAjusteCuadraturaDrawerComponent {
 
   constructor() {
     void this.flotaFacade.initialize();
+    // Validadores condicionales atados al tipo (G05/S20): se ponen Y se quitan al cambiarlo.
+    // Antes se agregaban en onSubmit() y nunca se quitaban — un intento fallido como
+    // "Corrección manual" dejaba `efecto` requerido aunque después se eligiera "Gasto olvidado"
+    // (campo oculto), y el botón quedaba deshabilitado para siempre.
+    this.form.controls.tipo.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe((tipo) => this.syncValidadoresPorTipo(tipo ?? ''));
+  }
+
+  private syncValidadoresPorTipo(tipo: string): void {
+    const { categoria, efecto } = this.form.controls;
+    categoria.setValidators(tipo === 'gasto_olvidado' ? Validators.required : null);
+    // "Corrección manual" exige elegir explícitamente el efecto (suma/resta) —
+    // sin default implícito, para no adivinar la intención del admin.
+    efecto.setValidators(tipo === 'correccion_manual' ? Validators.required : null);
+    categoria.updateValueAndValidity({ emitEvent: false });
+    efecto.updateValueAndValidity({ emitEvent: false });
   }
 
   // ── Vehículos (mismo patrón que RegistrarEgresoDrawerComponent, fix-006-i) ───
@@ -444,16 +461,6 @@ export class RegistrarAjusteCuadraturaDrawerComponent {
   }
 
   protected async onSubmit(): Promise<void> {
-    if (this.isGastoOlvidado()) {
-      this.form.get('categoria')?.addValidators(Validators.required);
-      this.form.get('categoria')?.updateValueAndValidity();
-    } else {
-      // "Corrección manual" exige elegir explícitamente el efecto (suma/resta) —
-      // sin default implícito, para no adivinar la intención del admin.
-      this.form.get('efecto')?.addValidators(Validators.required);
-      this.form.get('efecto')?.updateValueAndValidity();
-    }
-
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;

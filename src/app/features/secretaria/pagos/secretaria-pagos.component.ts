@@ -28,6 +28,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -59,6 +60,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ClearFiltersButtonComponent,
+    AlertCardComponent,
     EmptyStateComponent,
     FormsModule,
     ChileDatePipe,
@@ -95,6 +97,28 @@ function toCompact(amount: number): { value: number; suffix: string } {
         [class.deudores-compact]="layoutDrawer.isOpen()"
         appCardHover
       >
+        <!-- Caso B (spec 0060-b): dentro de la celda, nunca como hijo directo de la grilla -->
+        @if (facade.refreshFailed()) {
+          <div class="p-4 pb-0 shrink-0" role="alert">
+            <app-alert-card severity="error" title="No se pudieron actualizar los pagos">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span class="text-compact text-text-secondary">
+                  Los montos y la lista pueden no estar al día.
+                </span>
+                <button
+                  type="button"
+                  class="btn-secondary flex items-center gap-2 shrink-0"
+                  data-llm-action="reintentar-pagos"
+                  (click)="facade.reintentar()"
+                >
+                  <app-icon name="refresh-cw" [size]="14" />
+                  Reintentar
+                </button>
+              </div>
+            </app-alert-card>
+          </div>
+        }
+
         <div
           class="shrink-0 flex items-center justify-between px-6 py-4 border-b border-border-muted"
         >
@@ -105,9 +129,11 @@ function toCompact(amount: number): { value: number; suffix: string } {
               clase 7 cuando corresponda.
             </p>
           </div>
-          <span class="text-xs text-text-muted">
-            {{ deudoresFiltrados().length }} de {{ facade.alumnosConDeuda().length }} alumnos
-          </span>
+          @if (!facade.error()) {
+            <span class="text-xs text-text-muted">
+              {{ deudoresFiltrados().length }} de {{ facade.alumnosConDeuda().length }} alumnos
+            </span>
+          }
         </div>
 
         <!-- ── Filtros (fix-248-m / ASG-m-005) — client-side sobre alumnosConDeuda() ── -->
@@ -180,6 +206,18 @@ function toCompact(amount: number): { value: number; suffix: string } {
                   </div>
                 </div>
               }
+            </div>
+          } @else if (facade.error()) {
+            <!-- Caso A (spec 0060-b): una carga fallida no es "sin saldos pendientes" -->
+            <div class="flex-1 h-full flex items-center justify-center px-6 py-10">
+              <app-empty-state
+                icon="alert-triangle"
+                [message]="facade.error()!"
+                subtitle="Revisa tu conexión e inténtalo de nuevo."
+                actionLabel="Reintentar"
+                actionIcon="refresh-cw"
+                (action)="facade.reintentar()"
+              />
             </div>
           } @else if (facade.alumnosConDeuda().length === 0) {
             <div class="px-6 py-10 flex flex-col items-center gap-2 text-center">
@@ -329,16 +367,6 @@ function toCompact(amount: number): { value: number; suffix: string } {
           </div>
         }
       </div>
-
-      @if (facade.error()) {
-        <div
-          class="bento-banner card p-4 flex items-center gap-3 border-error bg-error/8"
-          appCardHover
-        >
-          <app-icon name="alert-circle" [size]="18" color="var(--state-error)" />
-          <p class="text-sm text-error">{{ facade.error() }}</p>
-        </div>
-      }
     </div>
 
     <!-- Modal: Configurar Reporte de Pagos -->
@@ -503,48 +531,58 @@ export class SecretariaPagosComponent implements OnInit, AfterViewInit {
     { id: 'register-payment', label: 'Registrar Pago', icon: 'plus', primary: true },
   ];
 
-  readonly heroChips = computed(() => [
-    { label: `${this.facade.boletasMes()} boletas emitidas`, style: 'default' as const },
-    { label: `${this.facade.totalDeudores()} con deuda`, style: 'default' as const },
-  ]);
+  readonly heroChips = computed(() => {
+    // spec 0060-b: sin carga vigente no hay conteos que mostrar (nunca "0 con deuda").
+    const boletas = this.facade.boletasMes();
+    if (this.facade.error() || boletas === null) return [];
+    return [
+      { label: `${boletas} boletas emitidas`, style: 'default' as const },
+      { label: `${this.facade.totalDeudores()} con deuda`, style: 'default' as const },
+    ];
+  });
 
   protected readonly clp = formatCLP;
   protected readonly describirMatricula = describeMatriculaDeudor;
 
-  protected readonly ingresosHoyDisplay = computed(() => toCompact(this.facade.ingresosHoy()));
-  protected readonly ingresosMesDisplay = computed(() => toCompact(this.facade.ingresosMes()));
-  protected readonly pagosPendientesDisplay = computed(() =>
-    toCompact(this.facade.pagosPendientesTotales()),
-  );
-
-  protected readonly heroKpis = computed((): SectionHeroKpi[] => [
-    {
-      id: 'ingresos-hoy',
-      label: 'Ingresos Hoy',
-      value: this.ingresosHoyDisplay().value,
-      prefix: '$',
-      suffix: this.ingresosHoyDisplay().suffix,
-      icon: 'dollar-sign',
-    },
-    {
-      id: 'ingresos-mes',
-      label: 'Ingresos Mes',
-      value: this.ingresosMesDisplay().value,
-      prefix: '$',
-      suffix: this.ingresosMesDisplay().suffix,
-      icon: 'trending-up',
-    },
-    {
-      id: 'pendientes',
-      label: 'Pagos Pendientes',
-      value: this.pagosPendientesDisplay().value,
-      prefix: '$',
-      suffix: this.pagosPendientesDisplay().suffix,
-      icon: 'alert-circle',
-      color: 'warning',
-    },
-    { id: 'boletas', label: 'Boletas Emitidas', value: this.facade.boletasMes(), icon: 'receipt' },
-  ]);
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => {
+    const hoy = this.facade.ingresosHoy();
+    const mes = this.facade.ingresosMes();
+    const pendientes = this.facade.pagosPendientesTotales();
+    const boletas = this.facade.boletasMes();
+    // spec 0060-b: con la carga fallida (o sin carga vigente) el hero no muestra $0.
+    if (hoy === null || mes === null || pendientes === null || boletas === null) return [];
+    const hoyC = toCompact(hoy);
+    const mesC = toCompact(mes);
+    const pendientesC = toCompact(pendientes);
+    return [
+      {
+        id: 'ingresos-hoy',
+        label: 'Ingresos Hoy',
+        value: hoyC.value,
+        prefix: '$',
+        suffix: hoyC.suffix,
+        icon: 'dollar-sign',
+      },
+      {
+        id: 'ingresos-mes',
+        label: 'Ingresos Mes',
+        value: mesC.value,
+        prefix: '$',
+        suffix: mesC.suffix,
+        icon: 'trending-up',
+      },
+      {
+        id: 'pendientes',
+        label: 'Pagos Pendientes',
+        value: pendientesC.value,
+        prefix: '$',
+        suffix: pendientesC.suffix,
+        icon: 'alert-circle',
+        color: 'warning',
+      },
+      { id: 'boletas', label: 'Boletas Emitidas', value: boletas, icon: 'receipt' },
+    ];
+  });
 
   protected readonly showReportModal = signal(false);
   protected reportStartDate: Date = isoToCalendarDate(`${chileMonth()}-01`)!;

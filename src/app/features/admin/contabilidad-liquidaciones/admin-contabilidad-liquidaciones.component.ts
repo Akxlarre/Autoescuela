@@ -21,6 +21,7 @@ import type { LiquidacionRow } from '@core/models/ui/liquidaciones.model';
       [anioActual]="facade.anioActual()"
       [isDrawerOpen]="layoutDrawer.isOpen()"
       (mesAnterior)="facade.mesAnterior()"
+      [puedeAvanzarMes]="facade.puedeAvanzarMes()"
       (mesSiguiente)="facade.mesSiguiente()"
       (deshacer)="facade.deshacerPago($event)"
       (pagar)="onPagar($event)"

@@ -250,7 +250,8 @@ function formatCLP(value: number): string {
             {{ mesLabel() }}
           </span>
           <button
-            class="px-3 py-2 text-text-secondary transition-colors cursor-pointer hover:bg-subtle border-0 bg-transparent"
+            class="px-3 py-2 text-text-secondary transition-colors cursor-pointer hover:bg-subtle border-0 bg-transparent disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            [disabled]="!puedeAvanzarMes()"
             (click)="mesSiguiente.emit()"
             aria-label="Mes siguiente"
             data-llm-action="historial-mes-siguiente"
@@ -576,6 +577,8 @@ export class HistorialCuadraturasContentComponent implements AfterViewInit {
   isExporting = input(false);
   /** "Todas las sedes": cada cierre muestra su sede (fix-078-i). */
   mostrarSede = input(false);
+  /** false en el mes actual: no se navega a meses futuros (fix-079-i). */
+  puedeAvanzarMes = input(true);
 
   // ── Outputs ───────────────────────────────────────────────────────────────
   mesAnterior = output<void>();

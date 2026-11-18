@@ -10,6 +10,8 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 import { withAllOption } from '@core/utils/filter-options.utils';
 import { matchesSearchTokens } from '@core/utils/search-filter.utils';
 import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-button/clear-filters-button.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 
 /**
  * PagosRecientesDrawerComponent — Historial de pagos recientes + Métodos de Pago del mes.
@@ -32,10 +34,32 @@ import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-bu
     SkeletonBlockComponent,
     DrawerFormComponent,
     ClearFiltersButtonComponent,
+    AlertCardComponent,
+    EmptyStateComponent,
   ],
   template: `
     <app-drawer-form [hasFooter]="false">
       <div class="flex flex-col gap-5">
+        <!-- Caso B (spec 0060-b): los datos siguen, pero el último refresco falló -->
+        @if (facade.refreshFailed()) {
+          <app-alert-card severity="error" title="No se pudieron actualizar los pagos" role="alert">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span class="text-compact text-text-secondary">
+                La lista y los porcentajes pueden no estar al día.
+              </span>
+              <button
+                type="button"
+                class="btn-secondary flex items-center gap-2 shrink-0"
+                data-llm-action="reintentar-pagos-recientes"
+                (click)="facade.reintentar()"
+              >
+                <app-icon name="refresh-cw" [size]="14" />
+                Reintentar
+              </button>
+            </div>
+          </app-alert-card>
+        }
+
         <!-- ── Métodos de Pago ──────────────────────────────────────────────────── -->
         <div class="card p-4 flex flex-col gap-3">
           <h3 class="item-title">Métodos de Pago ({{ mesActual() }})</h3>
@@ -47,6 +71,16 @@ import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-bu
                 <app-skeleton-block variant="rect" width="100%" height="6px" />
               </div>
             }
+          } @else if (facade.error()) {
+            <!-- Caso A (spec 0060-b): una carga fallida no es "sin pagos este mes" -->
+            <app-empty-state
+              icon="alert-triangle"
+              [message]="facade.error()!"
+              subtitle="Revisa tu conexión e inténtalo de nuevo."
+              actionLabel="Reintentar"
+              actionIcon="refresh-cw"
+              (action)="facade.reintentar()"
+            />
           } @else {
             @for (metodo of facade.metodosPagoMes(); track metodo.metodo) {
               <div class="flex flex-col gap-1.5">
@@ -133,6 +167,17 @@ import { ClearFiltersButtonComponent } from '@shared/components/clear-filters-bu
                   <app-skeleton-block variant="text" width="90%" height="12px" />
                 </div>
               }
+            </div>
+          } @else if (facade.error()) {
+            <div class="px-4 py-10 flex items-center justify-center">
+              <app-empty-state
+                icon="alert-triangle"
+                [message]="facade.error()!"
+                subtitle="Revisa tu conexión e inténtalo de nuevo."
+                actionLabel="Reintentar"
+                actionIcon="refresh-cw"
+                (action)="facade.reintentar()"
+              />
             </div>
           } @else if (pagosFiltrados().length === 0) {
             <div class="px-4 py-10 flex flex-col items-center gap-2 text-center">

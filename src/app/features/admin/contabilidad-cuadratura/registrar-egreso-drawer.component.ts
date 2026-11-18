@@ -28,8 +28,9 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
  * Reutilizable: se abre desde la página de Cuadratura y desde el atajo del dashboard.
  *
  * fix-243-m — cada tipo de egreso ahora exige la asociación de la que sale su sede:
- * - `combustible` → vehículo obligatorio (sede = `vehicle.branchId`; si el vehículo es una
- *   fila legacy sin sede, aparece el campo Sede como fallback).
+ * - `combustible` → vehículo obligatorio. La sede es la caja de quien registra
+ *   (`resolveFuelExpenseBranch`, fix-082-i); con el admin en "Todas las sedes", la del vehículo.
+ *   Si el vehículo es una fila legacy sin sede, aparece el campo Sede como fallback.
  * - `anticipo` → instructor obligatorio. El guardado NO pasa por `CuadraturaFacade` sino
  *   por `AnticiposFacade.registrarAnticipo()` (necesita `instructor_id`; la tabla no tiene
  *   `branch_id`, la sede se deriva del instructor).

@@ -489,7 +489,7 @@ const X01_SCREENS: X01Screen[] = [
   S('profesional/promociones'),
   S('profesional/alumnos'),
   // Etapa 1 — Dinero
-  S('pagos', '0060-b etapa 1'),
+  S('pagos'),
   S('contabilidad/reportes'),
   S('contabilidad/liquidaciones', '0060-b etapa 1'),
   A('contabilidad/anticipos', '0060-b etapa 1'),
