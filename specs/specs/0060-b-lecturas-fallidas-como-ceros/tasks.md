@@ -196,9 +196,43 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
     - [ ] `hoursRes`, `advancesRes` y `paymentsRes` se revisan (hoy solo `instrRes`)
     - [ ] "Registrar pago" queda bloqueado si las horas o los anticipos no cargaron
 
-- [ ] **T1.4** — `dashboard.facade.ts` + `secretaria-dashboard`
+- [x] **T1.4** — `dashboard.facade.ts` + `secretaria-dashboard`
   - **AC ref:** AC3, AC5
   - **DoD:** DoD-F
+  - **Cierre (2026-11-18), aprobado tras revisión:**
+    - **Alcance.** El dashboard de admin usa `ExecutiveDashboardFacade`, no este facade: no se tocó.
+      Sí se migraron los dos drawers que leen de `DashboardFacade` (Agenda de Hoy y Actividad
+      Reciente).
+    - **Facade.** Las lecturas de actividad y de resolución de alumno lanzan con `assertReadOk`; las
+      12 consultas de la carga fallan juntas. Caso A (primera carga, cambio de sede o refresco sin
+      datos vigentes): `data` en null, `error` y sin `_initialized`. Caso B: `refreshFailed`, con los
+      datos intactos. `reintentar()` elige B o A y `refreshing` bloquea el botón. Un refresco
+      reemplazado por una carga con skeleton no avisa ni limpia nada, y un evento llegado durante un
+      refresco fallido se atiende. `refreshLiveClassesOnly()` avisa si falla y descarta la respuesta
+      si cambió la sede.
+    - **`refreshFailed` no bloquea acciones.** Se usa solo para el aviso: ninguna acción guarda un
+      valor calculado con estos datos, y `moveSession` valida en la BD el estado de la clase.
+    - **Pantallas.** Caso A con `app-empty-state` en una celda de dos filas; caso B con
+      `app-alert-card` proyectado en la celda de "Clases Actuales" (`[liveClassesNotice]`). Actividad
+      Reciente distingue "no cargó" de "sin actividad"; si falla resolver un alumno solo se pierde
+      ese enlace.
+    - **Guardrails.** Fuera de `PENDING`. `S('dashboard')` ya no tenía `knownBug` y el facade no
+      figuraba en la línea base de ARCH-39/40.
+    - **Validación.** TDD: 45 tests en rojo antes del cambio. `lint:arch:strict` 0 errores, `ngc
+      --noEmit` limpio, `test:ci` 5289 en verde, `test-tz.mjs` 254 en verde en las tres zonas (6
+      specs). Mutaciones: los 5 archivos vueltos a `main` y 21 mutaciones dirigidas hacen fallar
+      tests.
+    - **Navegador como secretaria (1440x900, claro y oscuro, lecturas cortadas solo en la
+      pestaña).** Caso A: sin KPIs, estado de error en la celda de dos filas, "Reintentar" recupera.
+      Caso B: KPIs intactos, aviso dentro de la celda `.bento-fill`, sin scroll de página. También
+      probados los drawers de Agenda de Hoy y Actividad Reciente, y el aviso parcial de alertas de
+      T3.3, que desaparece al volver a entrar. Con red normal: 126 alumnos, 0 clases, $280.000 y 9
+      vehículos.
+    - **Navegador como admin.** En "Operación de hoy", una falla parcial muestra "Puede faltar
+      alguna" en claro y oscuro, sin afectar los KPIs ni el layout, y desaparece al volver a entrar.
+    - **Límites de la prueba.** Los KPIs no se compararon contra un `main` corriendo: el diff no
+      cambia sus consultas ni sus cálculos. El cambio de sede con error se cubre solo con tests,
+      porque secretaria no cambia de sede y admin no usa este facade.
 
 - [ ] **T1.5** — `enrollment-payment.facade.ts` y `anticipos.facade.ts`
   - **AC ref:** AC3, AC7

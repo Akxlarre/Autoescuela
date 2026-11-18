@@ -5,6 +5,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { PAYMENT_STATUSES_QUE_SUMAN } from '@core/utils/payment-status.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
+import { assertReadOk } from '@core/utils/db-error.utils';
 import { DashboardModel, LiveClassModel } from '@core/models/ui/dashboard.model';
 import {
   addDaysIso,
@@ -18,6 +19,8 @@ import {
 import { resolveVehicleStatus } from '@core/utils/vehicle-status.utils';
 import { VALID_CLASS_B_SESSION_STATUSES } from '@core/utils/class-b-session.utils';
 
+const MENSAJE_ERROR_CARGA = 'Error al cargar datos del dashboard';
+
 @Injectable({ providedIn: 'root' })
 export class DashboardFacade {
   private readonly supabase = inject(SupabaseService);
@@ -26,8 +29,22 @@ export class DashboardFacade {
 
   // ── 1. ESTADO REACTIVO (Signals) ────────────────────────────────────────────
   readonly loading = signal<boolean>(false);
+  /** Caso A (spec 0060-b): la carga de la sede vigente falló y `data` queda en null. */
   readonly error = signal<string | null>(null);
   readonly data = signal<DashboardModel | null>(null);
+  /**
+   * Caso B (spec 0060-b): `data` es de la consulta vigente, pero el último refresco falló.
+   *
+   * Existe para mostrar el aviso; no bloquea ninguna acción, porque ninguna guarda un valor
+   * calculado con estos datos. Los KPIs solo se leen. Los accesos rápidos abren drawers con sus
+   * propios facades. Iniciar o cerrar una clase del panel valida en la BD que la sesión siga en el
+   * estado esperado (`StaleSessionError`), y los km que se proponen los confirma quien guarda.
+   */
+  private readonly _refreshFailed = signal<boolean>(false);
+  readonly refreshFailed = this._refreshFailed.asReadonly();
+  /** Hay un refresco silencioso en curso (bloquea el "Reintentar" del aviso). */
+  private readonly _refreshing = signal<boolean>(false);
+  readonly refreshing = this._refreshing.asReadonly();
   private readonly _liveUpdates = signal(0);
   /**
    * Sube cada vez que termina una recarga pedida por un evento Realtime (una por ráfaga, no una
@@ -42,14 +59,15 @@ export class DashboardFacade {
   private _loadedUserId: string | null = null;
   /** Número de la última carga con skeleton (ver `initialize`). */
   private _loadTicket = 0;
-  /** Hay un refresco silencioso en curso / pedido mientras otra carga corría (fix-407-m). */
-  private _refreshRunning = false;
+  /** Se pidió un refresco mientras otra carga corría: se hace al terminar (fix-407-m). */
   private _refreshQueued = false;
   /** Llegó un evento Realtime que todavía no cubre ninguna recarga terminada (fix-420-m). */
   private _realtimePending = false;
   private _realtimeChannel: any | null = null;
   /** Descarta respuestas de fetchRealDashboardData() fuera de orden (spec 0005-m). */
   private readonly dashboardGuard = createRequestGuard();
+  /** Solo el último `refreshLiveClassesOnly()` aplica su resultado o avisa de su error. */
+  private readonly liveClassesGuard = createRequestGuard();
 
   // ── 2. MÉTODOS DE ACCIÓN ─────────────────────────────────────────────────────
 
@@ -87,12 +105,24 @@ export class DashboardFacade {
     }
   }
 
+  /**
+   * Refresca solo "Clases Actuales" tras iniciar, cerrar o marcar una clase. Si sale bien no borra
+   * `refreshFailed`: los KPIs y la actividad pueden seguir viejos.
+   */
   async refreshLiveClassesOnly(): Promise<void> {
+    const token = this.liveClassesGuard.next();
+    const branchId = this.getActiveBranchId();
+    const sigueVigente = () =>
+      this.liveClassesGuard.isCurrent(token) &&
+      branchId === this.getActiveBranchId() &&
+      !this.loading();
     try {
-      const liveClasses = await this.fetchLiveClasses(this.getActiveBranchId());
+      const liveClasses = await this.fetchLiveClasses(branchId);
+      if (!sigueVigente()) return;
       this.data.update((d) => (d ? { ...d, liveClasses } : null));
     } catch {
-      // Swallowed
+      // Sin `data` no hay panel que pueda quedar viejo: se llama también desde Asistencia.
+      if (sigueVigente() && this.data()) this._refreshFailed.set(true);
     }
   }
 
@@ -132,25 +162,46 @@ export class DashboardFacade {
       this.data.set(null);
     }
 
-    if (this._initialized && branchId === this._lastBranchId) {
+    if (this.tieneDatosVigentes(branchId)) {
       void this.refreshSilently();
       return;
     }
 
+    await this.cargarCompleta(branchId);
+  }
+
+  /**
+   * Botón "Reintentar": con datos vigentes de la sede es un refresco sin skeleton (caso B); si no,
+   * una carga completa (caso A).
+   */
+  async reintentar(): Promise<void> {
+    const branchId = this.getActiveBranchId();
+    if (this.tieneDatosVigentes(branchId)) {
+      await this.refreshSilently();
+      return;
+    }
+    await this.cargarCompleta(branchId);
+  }
+
+  private tieneDatosVigentes(branchId: number | null): boolean {
+    return this._initialized && branchId === this._lastBranchId;
+  }
+
+  /** Carga con skeleton: primera visita, cambio de sede o de usuario, o reintento del caso A. */
+  private async cargarCompleta(branchId: number | null): Promise<void> {
     // Solo la carga más reciente apaga el skeleton, registra la sede cargada o muestra su error:
     // si se disparó otra mientras esta esperaba (cambio de sede seguido), la vieja no debe
     // dejar la pantalla "lista" con datos que no son de la sede elegida (fix-404-m).
     const ticket = ++this._loadTicket;
+    this._initialized = false;
     this.loading.set(true);
     this.error.set(null);
+    this._refreshFailed.set(false);
     try {
       await this.fetchRealDashboardData(branchId);
-      if (ticket === this._loadTicket) {
-        this._initialized = true;
-        this._lastBranchId = branchId;
-      }
+      if (ticket === this._loadTicket) this.marcarCargado(branchId);
     } catch {
-      if (ticket === this._loadTicket) this.error.set('Error al cargar datos del dashboard');
+      if (ticket === this._loadTicket) this.aplicarCasoA();
     } finally {
       if (ticket === this._loadTicket) {
         this.loading.set(false);
@@ -158,6 +209,19 @@ export class DashboardFacade {
         if (this._refreshQueued) void this.refreshSilently();
       }
     }
+  }
+
+  private marcarCargado(branchId: number | null): void {
+    this._initialized = true;
+    this._lastBranchId = branchId;
+  }
+
+  /** Lo que hubiera en memoria responde a otra consulta (otra sede): no se sigue mostrando. */
+  private aplicarCasoA(): void {
+    this._initialized = false;
+    this.data.set(null);
+    this._refreshFailed.set(false);
+    this.error.set(MENSAJE_ERROR_CARGA);
   }
 
   /**
@@ -169,25 +233,38 @@ export class DashboardFacade {
    * clases) ninguna llegaba a aplicarse y el dashboard quedaba vacío (fix-407-m).
    */
   private async refreshSilently(): Promise<void> {
-    if (this.loading() || this._refreshRunning) {
+    if (this.loading() || this._refreshing()) {
       this._refreshQueued = true;
       return;
     }
 
-    this._refreshRunning = true;
+    this._refreshing.set(true);
     try {
       do {
         this._refreshQueued = false;
         const porEvento = this._realtimePending;
         this._realtimePending = false;
-        await this.fetchRealDashboardData(this.getActiveBranchId());
-        if (porEvento) this._liveUpdates.update((n) => n + 1);
+        // Un refresco solo lo puede reemplazar una carga con skeleton, y esa cambia el ticket.
+        const ticket = this._loadTicket;
+        const branchId = this.getActiveBranchId();
+        try {
+          await this.fetchRealDashboardData(branchId);
+          if (ticket === this._loadTicket) {
+            this.marcarCargado(branchId);
+            this._refreshFailed.set(false);
+            this.error.set(null);
+          }
+          if (porEvento) this._liveUpdates.update((n) => n + 1);
+        } catch {
+          if (ticket === this._loadTicket) {
+            if (this.tieneDatosVigentes(branchId)) this._refreshFailed.set(true);
+            else this.aplicarCasoA();
+          }
+        }
         // Empezó una carga con skeleton (cambio de sede): ella refresca al terminar.
       } while (this._refreshQueued && !this.loading());
-    } catch {
-      // Fail silencioso — los datos anteriores siguen visibles.
     } finally {
-      this._refreshRunning = false;
+      this._refreshing.set(false);
     }
   }
 
@@ -596,7 +673,7 @@ export class DashboardFacade {
     }
     query = this.scopeAuditLogToViewer(query);
 
-    const { data } = await query;
+    const data = assertReadOk(await query) as any[] | null;
 
     return (data ?? []).map((log: any) => this.mapAuditLogToActivity(log));
   }
@@ -611,19 +688,23 @@ export class DashboardFacade {
       case 'students':
         return entityId;
       case 'enrollments': {
-        const { data } = await this.supabase.client
-          .from('enrollments')
-          .select('student_id')
-          .eq('id', entityId)
-          .maybeSingle();
+        const data = assertReadOk(
+          await this.supabase.client
+            .from('enrollments')
+            .select('student_id')
+            .eq('id', entityId)
+            .maybeSingle(),
+        );
         return data?.student_id ?? null;
       }
       case 'class_b_sessions': {
-        const { data } = await this.supabase.client
-          .from('class_b_sessions')
-          .select('enrollments(student_id)')
-          .eq('id', entityId)
-          .maybeSingle();
+        const data = assertReadOk(
+          await this.supabase.client
+            .from('class_b_sessions')
+            .select('enrollments(student_id)')
+            .eq('id', entityId)
+            .maybeSingle(),
+        );
         return (data as any)?.enrollments?.student_id ?? null;
       }
       default:

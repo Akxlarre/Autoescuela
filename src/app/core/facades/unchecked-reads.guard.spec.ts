@@ -249,7 +249,6 @@ describe('Facades: ninguna lectura a Supabase descarta su error', () => {
   const PENDING: Record<string, string> = {
     // Etapa 1 — Dinero
     'liquidaciones.facade.ts': 'etapa 1',
-    'dashboard.facade.ts': 'etapa 1',
     'enrollment-payment.facade.ts': 'etapa 1',
     'anticipos.facade.ts': 'etapa 1',
     // Etapa 2 — Lecturas que alimentan una escritura o una decisión

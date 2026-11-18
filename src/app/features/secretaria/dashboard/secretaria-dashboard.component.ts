@@ -112,6 +112,8 @@ import {
       @if (loadError(); as message) {
         <div
           class="bento-banner bento-card bento-fill flex items-center justify-center"
+          data-row-span-md="2"
+          data-row-span="2"
           role="alert"
         >
           <app-empty-state
@@ -135,7 +137,30 @@ import {
           [maxItems]="liveClassesBudget()"
           (actionClick)="handleLiveClassAction($event)"
           (viewAllClick)="openAgenda()"
-        />
+        >
+          <!-- Caso B (spec 0060-b): dentro de la celda, nunca como hijo directo de la grilla -->
+          @if (refreshFailed()) {
+            <div liveClassesNotice class="shrink-0">
+              <app-alert-card severity="warning" title="No se pudo actualizar el panel">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <span class="text-compact text-text-secondary">
+                    Los indicadores, las clases y la actividad pueden no estar actualizados.
+                  </span>
+                  <button
+                    type="button"
+                    class="btn-secondary flex items-center gap-2 shrink-0"
+                    data-llm-action="reintentar-dashboard-secretaria"
+                    [disabled]="refreshing()"
+                    (click)="retry()"
+                  >
+                    <app-icon name="refresh-cw" [size]="14" />
+                    Reintentar
+                  </button>
+                </div>
+              </app-alert-card>
+            </div>
+          }
+        </app-live-classes-panel>
 
         <!-- Actividad reciente -->
         <div
@@ -379,12 +404,14 @@ export class SecretariaDashboardComponent {
 
   readonly loading = computed(() => this.dashboardFacade.loading());
   /**
-   * Mensaje cuando la carga falló y no hay nada que mostrar. Con datos ya cargados (un refresco
-   * en segundo plano que falla) no aplica: los datos anteriores siguen a la vista.
+   * Caso A: la carga falló y no hay nada que mostrar. Con datos ya cargados (un refresco en
+   * segundo plano que falla) no aplica: es el caso B, con `refreshFailed`.
    */
   readonly loadError = computed(() =>
     !this.loading() && !this.dashboardFacade.data() ? this.dashboardFacade.error() : null,
   );
+  readonly refreshFailed = computed(() => this.dashboardFacade.refreshFailed());
+  readonly refreshing = computed(() => this.dashboardFacade.refreshing());
   /** Aviso cuando la lista de alertas no es confiable (carga fallida o incompleta). */
   readonly alertsProblem = computed(() => this.dashboardAlertsFacade.loadProblem());
   readonly alertsLoading = computed(() => this.dashboardAlertsFacade.isLoading());
@@ -497,7 +524,7 @@ export class SecretariaDashboardComponent {
   }
 
   retry(): void {
-    void this.dashboardFacade.initialize();
+    void this.dashboardFacade.reintentar();
     void this.dashboardAlertsFacade.initialize();
   }
 

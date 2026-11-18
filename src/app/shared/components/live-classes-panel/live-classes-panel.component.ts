@@ -49,6 +49,9 @@ import { TooltipModule } from 'primeng/tooltip';
       <h2 class="m-0 font-semibold text-text-primary">Clases Actuales</h2>
     </div>
 
+    <!-- Aviso del contenedor (p. ej. datos sin actualizar): queda dentro de la celda -->
+    <ng-content select="[liveClassesNotice]" />
+
     @if (loading()) {
       <ul class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-hidden pr-2">
         @for (i of skeletonItems(); track i) {
@@ -93,9 +96,7 @@ import { TooltipModule } from 'primeng/tooltip';
         }
       </ul>
     } @else if (classes().length === 0) {
-      <div
-        class="border border-border-subtle rounded-xl flex-1 flex flex-col justify-center"
-      >
+      <div class="border border-border-subtle rounded-xl flex-1 flex flex-col justify-center">
         <app-empty-state
           icon="clock"
           message="Sin clases actuales"
@@ -199,7 +200,9 @@ import { TooltipModule } from 'primeng/tooltip';
                   >
                     @if (cls.enrollmentNumber) {
                       <span class="item-title shrink-0">Nº {{ cls.enrollmentNumber }}</span>
-                      <span class="text-sm text-text-secondary truncate">· {{ cls.studentName }}</span>
+                      <span class="text-sm text-text-secondary truncate"
+                        >· {{ cls.studentName }}</span
+                      >
                     } @else {
                       <span class="item-title truncate">{{ cls.studentName }}</span>
                     }

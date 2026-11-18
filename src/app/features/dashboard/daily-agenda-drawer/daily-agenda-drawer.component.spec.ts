@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 import { DailyAgendaDrawerComponent } from './daily-agenda-drawer.component';
@@ -79,5 +79,67 @@ describe('DailyAgendaDrawerComponent', () => {
     expect(pushSpy).toHaveBeenCalledTimes(1);
     expect(pushSpy.mock.calls[0][1]).toBe('Clase: Ana Pérez');
     expect(pushSpy.mock.calls[0][2]).toBe('calendar-clock');
+  });
+
+  describe('lectura fallida (spec 0060-b T1.4)', () => {
+    let facade: any;
+
+    function montar(estado: { data: unknown; error?: string; refreshFailed?: boolean }) {
+      facade = {
+        data: signal(estado.data),
+        loading: signal(false),
+        error: signal(estado.error ?? null),
+        refreshFailed: signal(estado.refreshFailed ?? false),
+        refreshing: signal(false),
+        reintentar: vi.fn(),
+      };
+      TestBed.overrideProvider(DashboardFacade, { useValue: facade });
+      TestBed.overrideComponent(DailyAgendaDrawerComponent, {
+        set: { imports: [], schemas: [NO_ERRORS_SCHEMA] },
+      });
+      const fixture = TestBed.createComponent(DailyAgendaDrawerComponent);
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    beforeEach(() => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [DailyAgendaDrawerComponent],
+        providers: [
+          { provide: DashboardFacade, useValue: {} },
+          { provide: AsistenciaClaseBFacade, useValue: { selectPractica: vi.fn() } },
+          { provide: AgendaFacade, useValue: { setSelectedSlot: vi.fn() } },
+          { provide: LayoutDrawerFacadeService, useValue: { push: vi.fn(), close: vi.fn() } },
+        ],
+      });
+    });
+
+    it('caso A: error con Reintentar en vez de un panel vacío', () => {
+      const host = montar({ data: null, error: 'Error al cargar' });
+
+      expect(host.querySelector('app-live-classes-panel')).toBeNull();
+      const vacio = host.querySelector('app-empty-state') as HTMLElement;
+      expect(vacio.getAttribute('actionLabel')).toBe('Reintentar');
+      vacio.dispatchEvent(new CustomEvent('action'));
+      expect(facade.reintentar).toHaveBeenCalledTimes(1);
+    });
+
+    it('caso B: las clases se quedan, con el aviso dentro del panel', () => {
+      const host = montar({ data: { liveClasses: [buildClass()] }, refreshFailed: true });
+
+      expect(host.querySelector('app-live-classes-panel app-alert-card')).not.toBeNull();
+      (
+        host.querySelector('[data-llm-action="reintentar-agenda-hoy"]') as HTMLButtonElement
+      ).click();
+      expect(facade.reintentar).toHaveBeenCalledTimes(1);
+    });
+
+    it('con la carga bien no muestra avisos', () => {
+      const host = montar({ data: { liveClasses: [buildClass()] } });
+
+      expect(host.querySelector('app-alert-card')).toBeNull();
+      expect(host.querySelector('app-empty-state')).toBeNull();
+    });
   });
 });
