@@ -290,7 +290,7 @@ type ReporteTab = 'categorias' | 'evolucion' | 'rentabilidad' | 'gastos-fijos';
             @if (filtrosModificados()) {
               <button
                 type="button"
-                class="btn-secondary h-9 flex items-center gap-1.5 text-sm"
+                class="btn-secondary h-9 flex items-center gap-1.5"
                 data-llm-action="restablecer-filtros-reportes"
                 (click)="restablecerFiltros()"
               >
