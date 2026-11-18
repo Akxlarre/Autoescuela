@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { todayIso } from '@core/utils/date.utils';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -34,19 +34,40 @@ const MOTIVO_OPTIONS = [
           <label for="ant-instructor" class="field-label">
             INSTRUCTOR <span class="text-error">*</span>
           </label>
-          <p-select
-            id="ant-instructor"
-            formControlName="instructorId"
-            [options]="facade.instructores()"
-            optionLabel="nombre"
-            optionValue="id"
-            styleClass="w-full"
-            placeholder="Seleccionar instructor..."
-            data-llm-description="Selector del instructor al que se registra el anticipo"
-            [class.field-input--error]="isInvalid('instructorId')"
-          />
-          @if (isInvalid('instructorId')) {
-            <span class="field-error">Seleccione un instructor.</span>
+          @if (instructoresNoCargaron()) {
+            <!-- spec 0060-b: una lista que no cargó no es una lista vacía -->
+            <div class="flex flex-col gap-2 py-2 px-3 rounded-lg bg-error/8" role="alert">
+              <p class="text-xs text-error">
+                No se pudo cargar la lista de instructores. Reintenta antes de registrar el
+                anticipo.
+              </p>
+              <button
+                type="button"
+                class="btn-secondary self-start flex items-center gap-2"
+                data-llm-action="reintentar-instructores-anticipo"
+                [disabled]="facade.isLoading()"
+                (click)="facade.reintentar()"
+              >
+                <app-icon name="refresh-cw" [size]="12" />
+                Reintentar
+              </button>
+            </div>
+          } @else {
+            <p-select
+              id="ant-instructor"
+              formControlName="instructorId"
+              [options]="facade.instructores()"
+              [loading]="facade.isLoading()"
+              optionLabel="nombre"
+              optionValue="id"
+              styleClass="w-full"
+              placeholder="Seleccionar instructor..."
+              data-llm-description="Selector del instructor al que se registra el anticipo"
+              [class.field-input--error]="isInvalid('instructorId')"
+            />
+            @if (isInvalid('instructorId')) {
+              <span class="field-error">Seleccione un instructor.</span>
+            }
           }
         </div>
 
@@ -130,7 +151,7 @@ const MOTIVO_OPTIONS = [
           type="button"
           class="btn-primary flex items-center gap-2"
           (click)="onSubmit()"
-          [disabled]="facade.isSaving() || form.invalid"
+          [disabled]="facade.isSaving() || form.invalid || instructoresNoCargaron()"
           data-llm-action="save-anticipo"
         >
           @if (facade.isSaving()) {
@@ -154,6 +175,12 @@ export class RegistrarAnticipoDrawerComponent {
 
   protected readonly errorMsg = signal<string | null>(null);
 
+  /**
+   * Caso A de la carga (spec 0060-b): no hay lista contra la cual elegir, y un instructor ya
+   * elegido puede ser de la consulta anterior. Un refresco fallido (caso B) no bloquea.
+   */
+  protected readonly instructoresNoCargaron = computed(() => !!this.facade.error());
+
   protected readonly form = this.fb.nonNullable.group({
     // Precargado si se abrió desde la fila de un instructor (facade.selectInstructor());
     // vacío si se abrió desde el botón "Registrar Anticipo" del hero.
@@ -171,7 +198,7 @@ export class RegistrarAnticipoDrawerComponent {
 
   protected async onSubmit(): Promise<void> {
     this.form.markAllAsTouched();
-    if (this.form.invalid) return;
+    if (this.form.invalid || this.instructoresNoCargaron()) return;
 
     const raw = this.form.getRawValue();
     const ok = await this.facade.registrarAnticipo({

@@ -17,6 +17,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { TabsComponent, type TabOption } from '@shared/components/tabs/tabs.component';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import type { AnticipoCuentaCorriente, AnticipoHistorial } from '@core/models/ui/anticipos.model';
@@ -43,6 +44,7 @@ function clp(n: number): string {
     IconComponent,
     SkeletonBlockComponent,
     AlertCardComponent,
+    EmptyStateComponent,
     TabsComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
@@ -68,15 +70,6 @@ function clp(n: number): string {
         (actionClick)="onHeroAction($event)"
       />
 
-      <!-- ── Error ─────────────────────────────────────────────────────────── -->
-      @if (facade.error()) {
-        <div class="bento-banner">
-          <app-alert-card severity="error" title="Error al cargar anticipos">
-            {{ facade.error() }}
-          </app-alert-card>
-        </div>
-      }
-
       <!-- ── Tabs (Cuenta Corriente / Historial) ─────────────────────────────── -->
       <app-tabs
         class="bento-banner"
@@ -91,7 +84,42 @@ function clp(n: number): string {
         class="bento-banner bento-fill card p-0 overflow-hidden flex flex-col h-full dual-viewport-container"
         appCardHover
       >
-        @switch (activeTab()) {
+        <!-- Caso B (spec 0060-b): dentro de la celda; en la grilla aplastaría la lista -->
+        @if (facade.refreshFailed()) {
+          <div class="p-4 pb-0 shrink-0" role="alert">
+            <app-alert-card severity="error" title="No se pudieron actualizar los anticipos">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span class="text-compact text-text-secondary">
+                  Los montos y la lista pueden no estar al día.
+                </span>
+                <button
+                  type="button"
+                  class="btn-secondary flex items-center gap-2 shrink-0"
+                  data-llm-action="reintentar-anticipos"
+                  (click)="facade.reintentar()"
+                >
+                  <app-icon name="refresh-cw" [size]="14" />
+                  Reintentar
+                </button>
+              </div>
+            </app-alert-card>
+          </div>
+        }
+
+        @switch (panelActivo()) {
+          @case ('error') {
+            <!-- Caso A (spec 0060-b): una carga fallida no es "no hay instructores" -->
+            <div class="flex-1 min-h-0 flex items-center justify-center px-6 py-10">
+              <app-empty-state
+                icon="alert-triangle"
+                [message]="facade.error()!"
+                subtitle="Revisa tu conexión e inténtalo de nuevo."
+                actionLabel="Reintentar"
+                actionIcon="refresh-cw"
+                (action)="facade.reintentar()"
+              />
+            </div>
+          }
           @case ('cuenta-corriente') {
             <div
               class="shrink-0 flex items-center gap-2 px-5 py-4"
@@ -458,9 +486,20 @@ export class AdminContabilidadAnticiposComponent implements AfterViewInit {
   // ── Tabs (Cuenta Corriente / Historial) ─────────────────────────────────────
   protected readonly activeTab = signal<AnticiposTab>('cuenta-corriente');
 
+  /** Con la carga fallida, ambas pestañas muestran el mismo estado de error. */
+  protected readonly panelActivo = computed((): AnticiposTab | 'error' =>
+    this.facade.error() ? 'error' : this.activeTab(),
+  );
+
   protected readonly tabOptions = computed((): TabOption[] => [
     { id: 'cuenta-corriente', label: 'Cuenta Corriente', icon: 'wallet' },
-    { id: 'historial', label: 'Historial', icon: 'history', count: this.facade.historial().length },
+    {
+      id: 'historial',
+      label: 'Historial',
+      icon: 'history',
+      // Sin una carga vigente no hay cantidad que informar.
+      count: this.facade.error() || this.facade.isLoading() ? null : this.facade.historial().length,
+    },
   ]);
 
   protected setActiveTab(tabId: string): void {
@@ -476,28 +515,33 @@ export class AdminContabilidadAnticiposComponent implements AfterViewInit {
     },
   ];
 
-  protected readonly heroKpis = computed((): SectionHeroKpi[] => [
-    {
-      id: 'pendiente',
-      label: 'Anticipos Pendientes',
-      value: clp(this.facade.kpis().totalPendiente),
-      icon: 'banknote',
-      color: 'warning',
-    },
-    {
-      id: 'historico',
-      label: 'Total Anticipado',
-      value: clp(this.facade.kpis().totalHistorico),
-      icon: 'history',
-    },
-    {
-      id: 'descontado',
-      label: 'Ya Descontados',
-      value: clp(this.facade.kpis().totalDescontado),
-      icon: 'check-circle',
-      color: 'success',
-    },
-  ]);
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => {
+    // spec 0060-b: con la carga fallida el hero no muestra $0.
+    if (this.facade.error()) return [];
+    const kpis = this.facade.kpis();
+    return [
+      {
+        id: 'pendiente',
+        label: 'Anticipos Pendientes',
+        value: clp(kpis.totalPendiente),
+        icon: 'banknote',
+        color: 'warning',
+      },
+      {
+        id: 'historico',
+        label: 'Total Anticipado',
+        value: clp(kpis.totalHistorico),
+        icon: 'history',
+      },
+      {
+        id: 'descontado',
+        label: 'Ya Descontados',
+        value: clp(kpis.totalDescontado),
+        icon: 'check-circle',
+        color: 'success',
+      },
+    ];
+  });
 
   ngAfterViewInit(): void {
     const el = this.pageRef()?.nativeElement;

@@ -363,6 +363,41 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
       previos a `fix-050-i`), `maybeSingle()` da error: antes se ignoraba y ahora bloquea, y
       reintentar no lo resuelve. No se consultó producción para saber si existen. (2) El `DELETE` de
       la RPC no filtra `status`, así que también borraría un pago anulado del borrador.
+  - **Avance (2026-11-18), `anticipos.facade.ts` y sus pantallas, pendiente de revisión.** Con esto
+    están las dos partes de la tarea; sigue sin marcar hasta que se revise.
+    - **Facade.** `instructor_advances` e `instructors` son una sola carga: si una falla no se aplica
+      nada. `createRequestGuard` con `isCurrent()` después del `throw`. Caso A (primera carga, cambio
+      de sede o refresco sin datos de la sede activa): datos retirados, `error` y sin `_initialized`;
+      la sede solo queda registrada si la carga salió bien. Al cambiar de sede los datos se retiran
+      apenas empieza la carga, para que un drawer abierto no ofrezca instructores de otra sede. Caso
+      B: `refreshFailed`, con los datos intactos. `reintentar()` elige A o B.
+    - **Escrituras.** `registrarAnticipo` ya no toca `error`, y `refreshFailed` no la bloquea: guarda
+      lo que escribe el usuario y la BD valida. Si guarda y falla el refresco es éxito y pasa a caso
+      B. Sigue el mensaje de `fix-445-m`. Una falla de `resolveInstructorUserId` solo omite el aviso.
+    - **Pantalla.** Caso A con `app-empty-state` centrado dentro de `.bento-fill` en ambas pestañas,
+      sin KPIs ni contador. Caso B con `app-alert-card` como primer hijo de la celda. Se quitó el
+      aviso que era hijo directo de la grilla.
+    - **Drawers.** Registrar Anticipo y el tipo anticipo de Registrar Egreso muestran el error con
+      "Reintentar" en vez del selector y no guardan. Combustible y gastos varios siguen funcionando.
+    - **Guardrails.** Fuera de `PENDING`, `A('contabilidad/anticipos')` sin `knownBug` y fuera de la
+      línea base de ARCH-39. `indices/USAGE-MAP.md` no se tocó: sumar esta pantalla a su fila larga
+      hace fallar ARCH-33.
+    - **Validación.** `lint:arch:strict` 0 errores, `ngc --noEmit` limpio, `test:ci` 5524 en verde y
+      5 omitidos, `test-tz.mjs` 178 en verde en las tres zonas (5 specs). TDD: 27 tests del facade y
+      10 de pantalla en rojo antes del cambio; los de drawers fallaron primero junto con ajustes de
+      su arnés. 37 de 37 mutaciones detectadas.
+    - **Navegador, admin (BD real; fallas simuladas parcheando `rest.fetch` solo en la pestaña, con
+      toda escritura bloqueada).** A 1440x900, claro y oscuro: casos A y B en ambas pestañas y sin
+      scroll de página. Con cada lectura: refresco fallido y cambio de sede fallido. Reintentos con
+      falla y con éxito, y una respuesta vieja con error descartada. Ambos drawers con error, y
+      gasto y combustible habilitados con anticipos caídos. A 375x812, claro: casos A y B en ambas
+      pestañas, sin desborde. Con red normal, "Todas las sedes": $62.345 / $82.345 / $20.000, 18
+      instructores y 3 anticipos. Ninguna escritura llegó al servidor; se interceptaron además 5 RPC
+      de lectura del dashboard (`exec_dashboard_*`). En consola solo aparece el aviso de View
+      Transition por la pestaña oculta.
+    - **No probado.** El bloque X01 de Playwright. Pulsar guardar en navegador: guardado correcto con
+      refresco fallido y rechazo por caja cerrada quedan cubiertos por tests. Registrar Egreso como
+      secretaria y los drawers a 375x812. Ninguna lectura falló de verdad contra producción.
 
 - [ ] **T1.6** — Validación de la etapa
   - **DoD:**

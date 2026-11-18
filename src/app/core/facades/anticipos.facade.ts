@@ -5,7 +5,8 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
-import { toFriendlyDbMessage } from '@core/utils/db-error.utils';
+import { assertReadOk, toFriendlyDbMessage } from '@core/utils/db-error.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import type {
   AnticipoCuentaCorriente,
   AnticipoHistorial,
@@ -34,6 +35,8 @@ export function mapStatus(raw: string | null): AdvanceStatus {
   return 'pending';
 }
 
+const ERROR_CARGA = 'No se pudieron cargar los anticipos.';
+
 // ─── Facade ───────────────────────────────────────────────────────────────────
 
 @Injectable({ providedIn: 'root' })
@@ -50,10 +53,15 @@ export class AnticiposFacade {
   private readonly _instructores = signal<InstructorOption[]>([]);
   private readonly _isLoading = signal<boolean>(false);
   private readonly _isSaving = signal<boolean>(false);
+  /** Caso A: la carga de la sede vigente falló y no hay datos que mostrar. Solo lecturas. */
   private readonly _error = signal<string | null>(null);
+  /** Caso B: lo visible es de la sede vigente, pero el último refresco falló. */
+  private readonly _refreshFailed = signal<boolean>(false);
   private readonly _selectedInstructorId = signal<number | null>(null);
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
+  /** Un solo guard: carga completa y refresco compiten por los mismos signals. */
+  private readonly cargaGuard = createRequestGuard();
 
   // ── Estado público ────────────────────────────────────────────────────────
   readonly historial = this._historial.asReadonly();
@@ -62,6 +70,7 @@ export class AnticiposFacade {
   readonly isLoading = this._isLoading.asReadonly();
   readonly isSaving = this._isSaving.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly refreshFailed = this._refreshFailed.asReadonly();
   /** Instructor preseleccionado al abrir el drawer "Registrar Anticipo" desde una fila. */
   readonly selectedInstructorId = this._selectedInstructorId.asReadonly();
 
@@ -105,37 +114,100 @@ export class AnticiposFacade {
   // ── SWR Initialization ────────────────────────────────────────────────────
 
   async initialize(): Promise<void> {
-    const currentBranchId = this.getActiveBranchId();
-    if (this._initialized && currentBranchId === this._lastBranchId) {
+    const branchId = this.getActiveBranchId();
+    if (this.tieneDatosDe(branchId)) {
       void this.refreshSilently();
       return;
     }
-    this._lastBranchId = currentBranchId;
+    await this.cargarCompleta(branchId);
+  }
+
+  /**
+   * Botón "Reintentar" (spec 0060-b): con datos vigentes de la sede es un refresco sin skeleton
+   * (caso B); si no, una carga completa (caso A).
+   */
+  async reintentar(): Promise<void> {
+    const branchId = this.getActiveBranchId();
+    if (this.tieneDatosDe(branchId)) {
+      await this.refreshSilently();
+      return;
+    }
+    await this.cargarCompleta(branchId);
+  }
+
+  private tieneDatosDe(branchId: number | null): boolean {
+    return this._initialized && branchId === this._lastBranchId;
+  }
+
+  /**
+   * Carga con skeleton: primera visita, cambio de sede o reintento del caso A. Retira lo anterior
+   * al empezar: no responde a esta consulta, y los drawers no deben ofrecer instructores de otra
+   * sede mientras carga. Solo una carga exitosa deja registrada la sede.
+   */
+  private async cargarCompleta(branchId: number | null): Promise<void> {
+    const token = this.cargaGuard.next();
+    this._initialized = false;
+    this._lastBranchId = undefined;
+    this.retirarDatos();
     this._isLoading.set(true);
     this._error.set(null);
+    this._refreshFailed.set(false);
     try {
-      await this.fetchData();
-      this._initialized = true;
+      if (!(await this.fetchData(token, branchId))) return;
+      this.marcarCargada(branchId);
     } catch {
-      this._error.set('Error al cargar los anticipos.');
+      if (this.cargaGuard.isCurrent(token)) this._error.set(ERROR_CARGA);
     } finally {
-      this._isLoading.set(false);
+      if (this.cargaGuard.isCurrent(token)) this._isLoading.set(false);
     }
   }
 
   private async refreshSilently(): Promise<void> {
+    const token = this.cargaGuard.next();
+    const branchId = this.getActiveBranchId();
     try {
-      await this.fetchData();
+      if (!(await this.fetchData(token, branchId))) return;
+      this.marcarCargada(branchId);
     } catch {
-      // Swallowed — datos stale siguen visibles
+      if (!this.cargaGuard.isCurrent(token)) return;
+      if (this.tieneDatosDe(branchId)) {
+        // Caso B: lo visible responde a la misma consulta; se queda, con el aviso.
+        this._refreshFailed.set(true);
+      } else {
+        // Sin datos vigentes de esta sede: sigue siendo caso A, nunca "no hay instructores".
+        this._initialized = false;
+        this._lastBranchId = undefined;
+        this.retirarDatos();
+        this._refreshFailed.set(false);
+        this._error.set(ERROR_CARGA);
+      }
+    } finally {
+      // Si este refresco reemplazó a una carga completa, el skeleton termina con él.
+      if (this.cargaGuard.isCurrent(token)) this._isLoading.set(false);
     }
+  }
+
+  private marcarCargada(branchId: number | null): void {
+    this._initialized = true;
+    this._lastBranchId = branchId;
+    this._error.set(null);
+    this._refreshFailed.set(false);
+  }
+
+  private retirarDatos(): void {
+    this._historial.set([]);
+    this._cuentaCorriente.set([]);
+    this._instructores.set([]);
   }
 
   // ── Fetch de datos ────────────────────────────────────────────────────────
 
-  private async fetchData(): Promise<void> {
-    const branchId = this.getActiveBranchId();
-
+  /**
+   * Anticipos e instructores forman una sola carga: si una lectura falla no se aplica nada, porque
+   * sin instructores la cuenta corriente y el selector quedarían incompletos sin que se note.
+   * Devuelve `false` si una carga más nueva la reemplazó.
+   */
+  private async fetchData(token: number, branchId: number | null): Promise<boolean> {
     let advancesQuery = this.supabase.client
       .from('instructor_advances')
       .select(
@@ -155,9 +227,10 @@ export class AnticiposFacade {
 
     const [advancesRes, instructorsRes] = await Promise.all([advancesQuery, instructorsQuery]);
 
-    if (advancesRes.error) throw advancesRes.error;
+    const advances = assertReadOk(advancesRes) ?? [];
+    const instructors = assertReadOk(instructorsRes) ?? [];
 
-    const advances = advancesRes.data ?? [];
+    if (!this.cargaGuard.isCurrent(token)) return false;
 
     // ── Historial ──────────────────────────────────────────────────────────
     const historial: AnticipoHistorial[] = advances.map((adv) => {
@@ -196,7 +269,7 @@ export class AnticiposFacade {
     }
 
     // Agregar instructores sin anticipos (saldo $0, Al día)
-    for (const instr of instructorsRes.data ?? []) {
+    for (const instr of instructors) {
       if (!mapaInstructor.has(instr.id)) {
         const u = Array.isArray((instr as any).users)
           ? (instr as any).users[0]
@@ -241,10 +314,16 @@ export class AnticiposFacade {
     );
     instructorOptions.sort((a, b) => a.nombre.localeCompare(b.nombre));
     this._instructores.set(instructorOptions);
+    return true;
   }
 
   // ── Mutaciones ────────────────────────────────────────────────────────────
 
+  /**
+   * Guarda lo que escribió el usuario, no un valor calculado con lo visible: `refreshFailed` no la
+   * bloquea (la BD valida). No toca `_error`, que es solo de la carga. Si el refresco posterior
+   * falla, el anticipo igual quedó guardado: es éxito, y la pantalla pasa al caso B.
+   */
   async registrarAnticipo(payload: RegistrarAnticipoPayload): Promise<boolean> {
     const user = this.auth.currentUser();
     if (!user) {
@@ -252,7 +331,6 @@ export class AnticiposFacade {
       return false;
     }
     this._isSaving.set(true);
-    this._error.set(null);
     try {
       const { error } = await this.supabase.client.from('instructor_advances').insert({
         instructor_id: payload.instructorId,
@@ -303,7 +381,11 @@ export class AnticiposFacade {
       });
   }
 
-  /** Resuelve `instructors.id → users.id` para poder notificar al instructor. */
+  /**
+   * Resuelve `instructors.id → users.id` para poder notificar al instructor. Solo sirve al aviso
+   * posterior a un anticipo ya guardado: si esta lectura falla se omite la notificación y no se
+   * toca ni el resultado del guardado ni el estado de carga.
+   */
   private async resolveInstructorUserId(instructorId: number): Promise<number | null> {
     const { data, error } = await this.supabase.client
       .from('instructors')

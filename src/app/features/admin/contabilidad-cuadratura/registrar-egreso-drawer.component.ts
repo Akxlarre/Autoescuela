@@ -135,19 +135,40 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 <label for="egr-instructor" class="field-label">
                   INSTRUCTOR <span class="text-error">*</span>
                 </label>
-                <p-select
-                  inputId="egr-instructor"
-                  formControlName="instructorId"
-                  [options]="instructorOptions()"
-                  optionLabel="nombre"
-                  optionValue="id"
-                  placeholder="Seleccionar instructor..."
-                  styleClass="w-full"
-                  data-llm-description="Selector del instructor al que se registra el anticipo; determina la sede del egreso"
-                  [class.field-input--error]="isInvalid('instructorId')"
-                />
-                @if (isInvalid('instructorId')) {
-                  <span class="field-error">Seleccione un instructor.</span>
+                @if (anticipoBloqueado()) {
+                  <!-- spec 0060-b: una lista que no cargó no es una lista vacía -->
+                  <div class="flex flex-col gap-2 py-2 px-3 rounded-lg bg-error/8" role="alert">
+                    <p class="text-xs text-error">
+                      No se pudo cargar la lista de instructores. Reintenta antes de registrar el
+                      anticipo.
+                    </p>
+                    <button
+                      type="button"
+                      class="btn-secondary self-start flex items-center gap-2"
+                      data-llm-action="reintentar-instructores-egreso"
+                      [disabled]="instructoresCargando()"
+                      (click)="reintentarInstructores()"
+                    >
+                      <app-icon name="refresh-cw" [size]="12" />
+                      Reintentar
+                    </button>
+                  </div>
+                } @else {
+                  <p-select
+                    inputId="egr-instructor"
+                    formControlName="instructorId"
+                    [options]="instructorOptions()"
+                    [loading]="instructoresCargando()"
+                    optionLabel="nombre"
+                    optionValue="id"
+                    placeholder="Seleccionar instructor..."
+                    styleClass="w-full"
+                    data-llm-description="Selector del instructor al que se registra el anticipo; determina la sede del egreso"
+                    [class.field-input--error]="isInvalid('instructorId')"
+                  />
+                  @if (isInvalid('instructorId')) {
+                    <span class="field-error">Seleccione un instructor.</span>
+                  }
                 }
               </div>
             }
@@ -272,7 +293,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
         <button
           type="button"
           class="btn-primary flex items-center justify-center gap-2"
-          [disabled]="form.invalid || isSaving()"
+          [disabled]="form.invalid || isSaving() || anticipoBloqueado()"
           [appStableWidth]="isSaving()"
           data-llm-action="guardar-egreso-cuadratura"
           (click)="onSubmit()"
@@ -409,6 +430,7 @@ export class RegistrarEgresoDrawerComponent {
   );
 
   protected readonly instructorOptions = computed(() => this.anticiposFacade.instructores());
+  protected readonly instructoresCargando = computed(() => this.anticiposFacade.isLoading());
 
   protected readonly branchOptions = computed(() =>
     this.branchFacade.branches().map((b) => ({ label: b.name, value: b.id })),
@@ -460,6 +482,14 @@ export class RegistrarEgresoDrawerComponent {
   protected readonly isCombustible = computed(() => this.tipoValue() === 'combustible');
   protected readonly isAnticipo = computed(() => this.tipoValue() === 'anticipo');
   protected readonly isGasto = computed(() => this.tipoValue() === 'gasto');
+
+  /**
+   * spec 0060-b: sin la lista de instructores (caso A) no se puede registrar un anticipo. Solo
+   * afecta a ese tipo: combustible y gastos varios no dependen de `AnticiposFacade`.
+   */
+  protected readonly anticipoBloqueado = computed(
+    () => this.isAnticipo() && !!this.anticiposFacade.error(),
+  );
 
   /** Admin (o secretaria con acceso a ambas sedes) → puede elegir sede; secretaria → no. */
   private readonly isAdminLike = computed(() => {
@@ -532,11 +562,16 @@ export class RegistrarEgresoDrawerComponent {
     this.layoutDrawer.close();
   }
 
+  protected reintentarInstructores(): void {
+    void this.anticiposFacade.reintentar();
+  }
+
   protected async onSubmit(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
+    if (this.anticipoBloqueado()) return;
 
     this.isSaving.set(true);
     this.saveError.set(null);
