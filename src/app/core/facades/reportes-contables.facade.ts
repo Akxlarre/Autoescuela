@@ -1,4 +1,4 @@
-﻿import { Injectable, computed, inject, signal } from '@angular/core';
+﻿import { Injectable, computed, inject, signal, untracked } from '@angular/core';
 import { chileRange } from '@core/utils/chile-time.utils';
 import { PAYMENT_STATUSES_QUE_SUMAN } from '@core/utils/payment-status.utils';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -23,7 +23,6 @@ import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
-import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import {
   buildReporte,
   computeEvolucionMensual,
@@ -37,7 +36,6 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class ReportesContablesFacade {
-  private readonly sanitizer = inject(ErrorSanitizerService);
   private readonly supabase = inject(SupabaseService);
   private readonly authFacade = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
@@ -47,7 +45,13 @@ export class ReportesContablesFacade {
   private readonly _isLoading = signal(false);
   private readonly _isExporting = signal(false);
   private readonly _isRegistrando = signal(false);
+  /** Caso A del reporte: la consulta vigente no cargó y no hay datos que la respondan. */
   private readonly _error = signal<string | null>(null);
+  /** Caso A de Evolución: la ventana o la sede vigente no cargó. */
+  private readonly _evolucionError = signal<string | null>(null);
+  /** Caso B: falló un refresco de la misma consulta; lo visible se queda. */
+  private readonly _reporteRefreshFailed = signal(false);
+  private readonly _evolucionRefreshFailed = signal(false);
   private readonly _reporte = signal<ReporteContable | null>(null);
   private readonly _gastosFijos = signal<GastoFijoRow[]>([]);
   /**
@@ -65,6 +69,12 @@ export class ReportesContablesFacade {
     })(),
   );
   private _initialized = false;
+  /**
+   * Consulta que responden los datos visibles. Separa los dos casos de falla: si la consulta
+   * que falló es esta, es un refresco (caso B); si es otra, lo visible ya no corresponde (caso A).
+   */
+  private _reporteKey: string | null = null;
+  private _evolucionKey: string | null = null;
 
   /** Guard anti respuestas fuera de orden para `fetchReporte()` (regla facades §7). */
   private readonly reporteGuard = createRequestGuard();
@@ -89,6 +99,11 @@ export class ReportesContablesFacade {
   public readonly isExporting = this._isExporting.asReadonly();
   public readonly isRegistrando = this._isRegistrando.asReadonly();
   public readonly error = this._error.asReadonly();
+  public readonly evolucionError = this._evolucionError.asReadonly();
+  /** Un refresco falló: los datos visibles pueden no estar actualizados. */
+  public readonly refreshFailed = computed(
+    () => this._reporteRefreshFailed() || this._evolucionRefreshFailed(),
+  );
   public readonly filtros = this._filtros.asReadonly();
   public readonly gastosFijos = this._gastosFijos.asReadonly();
 
@@ -137,47 +152,33 @@ export class ReportesContablesFacade {
   /** SWR: primera carga con skeleton; revisitas refrescan en background. */
   async initialize(): Promise<void> {
     if (this._initialized) {
-      void this.fetchReporte();
+      void this.refreshSilently();
       return;
     }
-    this._initialized = true;
-    this._isLoading.set(true);
-    try {
-      await this.fetchReporte();
-    } finally {
-      this._isLoading.set(false);
-    }
+    await this.refreshSilently();
   }
 
   /**
-   * Aplica nuevos filtros y recarga el reporte.
-   * SWR: si ya hay datos en pantalla, el refresco es silencioso (los datos previos
-   * quedan visibles hasta que llegan los nuevos — no se muestra skeleton ni se
-   * desmonta nada). El skeleton completo solo en la primera carga (`initialize()`).
+   * Aplica nuevos filtros y recarga el reporte. Con datos en pantalla no hay skeleton: quedan
+   * visibles hasta que llega la respuesta, y se retiran si esta falla (caso A).
    */
   async aplicarFiltros(filtros: FiltrosReporte): Promise<void> {
     this._filtros.set(filtros);
-
-    if (this._reporte() !== null) {
-      await this.refreshSilently();
-      return;
-    }
-
-    this._isLoading.set(true);
-    try {
-      await this.fetchReporte();
-    } finally {
-      this._isLoading.set(false);
-    }
+    // La serie no depende del período; solo se repide si quedó con su refresco fallido.
+    await (this._evolucionRefreshFailed() ? this.refreshSilently() : this.fetchReporte());
   }
 
-  /** Refresca el reporte sin tocar `_isLoading` (SWR / post-acción). */
+  /** Vuelve a pedir el reporte y la serie de Evolución (botón "Reintentar"). */
+  async reintentar(): Promise<void> {
+    await this.refreshSilently();
+  }
+
+  /**
+   * Recarga reporte y serie. Cada uno maneja su propio error, así que nunca rechaza. Solo hay
+   * skeleton si no hay un reporte que mantener en pantalla (ver `fetchReporte()`).
+   */
   private async refreshSilently(): Promise<void> {
-    try {
-      await this.fetchReporte();
-    } catch {
-      // Fail silencioso — los datos stale siguen visibles.
-    }
+    await Promise.all([this.fetchReporte(), this.refreshEvolucionSerie()]);
   }
 
   /** Registra un gasto fijo en `fixed_expenses` y recarga el reporte. */
@@ -204,7 +205,8 @@ export class ReportesContablesFacade {
       });
       if (error) throw error;
       this.toast.success('Gasto fijo registrado correctamente.');
-      await this.fetchReporte();
+      // El gasto ya quedó guardado: si la relectura falla, se avisa como refresco fallido.
+      await this.refreshSilently();
       return true;
     } catch {
       this.toast.error('No se pudo registrar el gasto. Inténtalo de nuevo.');
@@ -258,16 +260,22 @@ export class ReportesContablesFacade {
     const requestToken = this.reporteGuard.next();
     const { desde, hasta } = this._filtros();
     const branchId = this._effectiveBranchId();
+    const key = `${desde}|${hasta}|${branchId}`;
+
+    if (key !== this._reporteKey) {
+      this._error.set(null);
+      this._reporteRefreshFailed.set(false);
+    }
+    // Sin seguimiento: esto corre dentro del effect de la pantalla, y si dependiera del reporte
+    // cada reporte nuevo dispararía otra carga.
+    if (untracked(this._reporte) === null) this._isLoading.set(true);
 
     try {
-      // La serie de Evolución se refresca por su propio camino (self-guarded): un solo
-      // lugar escribe `_evolucionSerie` y usa siempre la ventana de `_rangoEvolucion()`.
       const [payments, expensesResult, fixedResult, classCounts] = await Promise.all([
         this.fetchIngresos(desde, hasta, branchId),
         this.queryExpenses(desde, hasta, branchId),
         this.queryFixedExpenses(desde, hasta, branchId),
         this.queryClassCounts(desde, hasta, branchId),
-        this.refreshEvolucionSerie(),
       ]);
 
       if (expensesResult.error) throw expensesResult.error;
@@ -315,14 +323,25 @@ export class ReportesContablesFacade {
           operationalExpenses,
         ),
       );
+      this._reporteKey = key;
+      this._initialized = true;
       this._error.set(null);
-    } catch (err) {
-      const msg =
-        err instanceof Error
-          ? this.sanitizer.sanitize(err).message
-          : 'Error al cargar el reporte contable.';
-      this._error.set(msg);
-      this.toast.error('Error en reportes', msg);
+      this._reporteRefreshFailed.set(false);
+    } catch {
+      if (!this.reporteGuard.isCurrent(requestToken)) return;
+
+      if (key === this._reporteKey) {
+        this._reporteRefreshFailed.set(true);
+        return;
+      }
+      this._reporte.set(null);
+      this._gastosFijos.set([]);
+      this._reporteKey = null;
+      this._initialized = false;
+      this._error.set('No se pudo cargar el reporte contable.');
+    } finally {
+      // Una carga reemplazada no apaga el skeleton de la que sigue en curso.
+      if (this.reporteGuard.isCurrent(requestToken)) this._isLoading.set(false);
     }
   }
 
@@ -450,8 +469,8 @@ export class ReportesContablesFacade {
   /**
    * Cambia la opción de rango de la pestaña Evolución Mensual y repuebla SOLO su serie.
    * NO toca `_filtros` ni el reporte general (KPIs / Categorías / Rentabilidad / Gastos
-   * Fijos siguen con su propio rango) — spec 0015-m. SWR: sin skeleton (nunca toca
-   * `_isLoading`); los datos previos quedan visibles hasta que llega la nueva serie.
+   * Fijos siguen con su propio rango) — spec 0015-m. Nunca toca `_isLoading`: la serie previa
+   * queda visible hasta que llega la nueva, y se retira si esta falla (caso A).
    */
   async aplicarRangoEvolucion(rango: RangoEvolucion): Promise<void> {
     if (this._rangoEvolucion() === rango) return;
@@ -461,26 +480,46 @@ export class ReportesContablesFacade {
 
   /**
    * Repuebla `_evolucionSerie` para la ventana de `_rangoEvolucion()`. Self-guarded
-   * (regla facades §7): la llaman tanto `fetchReporte()` como `aplicarRangoEvolucion()`.
-   * Best-effort: si la fetch falla NO pisa la serie vigente con datos vacíos.
+   * (regla facades §7). Su error es propio: la serie no entra en los KPIs del período, así que
+   * una falla acá no retira el reporte, ni al revés.
    */
   private async refreshEvolucionSerie(): Promise<void> {
     const token = this.evolucionGuard.next();
-    const { desde, hasta, meses } = computeEvolucionRange(this._rangoEvolucion());
+    const rango = this._rangoEvolucion();
+    const { desde, hasta, meses } = computeEvolucionRange(rango);
     const branchId = this._effectiveBranchId();
-    const serie = await this.fetchEvolucionSerie(desde, hasta, branchId, meses);
+    const key = `${rango}|${branchId}`;
 
-    if (!this.evolucionGuard.isCurrent(token)) return;
-    // `computeEvolucionMensual(_, _, meses)` siempre devuelve `meses.length` filas; un
-    // array vacío solo puede venir de un fallo de red → no pisar la serie buena.
-    if (serie.length === 0 && meses.length > 0) return;
-    this._evolucionSerie.set(serie);
+    if (key !== this._evolucionKey) {
+      this._evolucionError.set(null);
+      this._evolucionRefreshFailed.set(false);
+    }
+
+    try {
+      const serie = await this.fetchEvolucionSerie(desde, hasta, branchId, meses);
+      if (!this.evolucionGuard.isCurrent(token)) return;
+
+      this._evolucionSerie.set(serie);
+      this._evolucionKey = key;
+      this._evolucionError.set(null);
+      this._evolucionRefreshFailed.set(false);
+    } catch {
+      if (!this.evolucionGuard.isCurrent(token)) return;
+
+      if (key === this._evolucionKey) {
+        this._evolucionRefreshFailed.set(true);
+        return;
+      }
+      this._evolucionSerie.set([]);
+      this._evolucionKey = null;
+      this._evolucionError.set('No se pudo cargar la evolución mensual.');
+    }
   }
 
   /**
    * Trae pagos + cobros singulares + gastos (operacionales y fijos) de la ventana de la
    * serie y devuelve la Evolución Mensual ya computada, rellenando `meses` con ceros.
-   * Best-effort: si algo falla, devuelve `[]` (el caller decide si pisa o conserva).
+   * Lanza si alguna lectura falla.
    */
   private async fetchEvolucionSerie(
     desde: string,
@@ -488,31 +527,28 @@ export class ReportesContablesFacade {
     branchId: number | null,
     meses: string[],
   ): Promise<EvolucionMensual[]> {
-    try {
-      const [payments, expensesResult, fixedResult] = await Promise.all([
-        this.fetchIngresos(desde, hasta, branchId),
-        this.queryExpenses(desde, hasta, branchId),
-        this.queryFixedExpenses(desde, hasta, branchId),
-      ]);
-      if (expensesResult.error) throw expensesResult.error;
-      if (fixedResult.error) throw fixedResult.error;
+    const [payments, expensesResult, fixedResult] = await Promise.all([
+      this.fetchIngresos(desde, hasta, branchId),
+      this.queryExpenses(desde, hasta, branchId),
+      this.queryFixedExpenses(desde, hasta, branchId),
+    ]);
+    if (expensesResult.error) throw expensesResult.error;
+    if (fixedResult.error) throw fixedResult.error;
 
-      const expenses: ExpenseRow[] = [
-        ...((expensesResult.data ?? []) as ExpenseRow[]),
-        ...((fixedResult.data ?? []) as { amount: number; category: string; date: string }[]).map(
-          (r) => ({ amount: r.amount, category: r.category, date: r.date }),
-        ),
-      ];
-      return computeEvolucionMensual(payments, expenses, meses);
-    } catch {
-      return [];
-    }
+    const expenses: ExpenseRow[] = [
+      ...((expensesResult.data ?? []) as ExpenseRow[]),
+      ...((fixedResult.data ?? []) as { amount: number; category: string; date: string }[]).map(
+        (r) => ({ amount: r.amount, category: r.category, date: r.date }),
+      ),
+    ];
+    return computeEvolucionMensual(payments, expenses, meses);
   }
 
   /**
    * Cuenta clases prácticas completadas por tipo de curso en el rango — insumo para
    * el prorrateo de gastos directos de la pestaña Rentabilidad (fix-237-m).
-   * Best-effort: si falla, devuelve `{}` y el prorrateo cae al fallback por ingresos.
+   * Lanza si falla: con un conteo en 0 por error, todo el gasto de vehículos se iría al otro
+   * tipo de curso y la tabla mostraría márgenes falsos.
    */
   private async queryClassCounts(
     desde: string,
@@ -520,35 +556,34 @@ export class ReportesContablesFacade {
     branchId: number | null,
   ): Promise<ClassCountsByGroup> {
     const counts: ClassCountsByGroup = {};
-    try {
-      // Clase B: sesiones completadas en el rango (join a enrollments para la sede).
-      let classB = this.supabase.client
-        .from('class_b_sessions')
-        .select('id, enrollments!inner(branch_id)', { count: 'exact', head: true })
-        .eq('status', 'completed')
-        .gte('scheduled_at', chileRange(desde, hasta).start)
-        .lt('scheduled_at', chileRange(desde, hasta).endExclusive);
-      if (branchId !== null) {
-        classB = classB.eq('enrollments.branch_id', branchId);
-      }
-      const { count: classBCount } = await classB;
-      counts['class_b'] = classBCount ?? 0;
 
-      // Profesional: las promociones viven siempre en la sede 2. Si el reporte
-      // filtra otra sede, no hay clases profesionales que contar.
-      if (branchId === null || branchId === ReportesContablesFacade.PROFESSIONAL_BRANCH_ID) {
-        const { count: profCount } = await this.supabase.client
-          .from('professional_practice_sessions')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'completed')
-          .gte('date', desde)
-          .lte('date', hasta);
-        counts['professional'] = profCount ?? 0;
-      } else {
-        counts['professional'] = 0;
-      }
-    } catch {
-      // best-effort — sin conteo, el prorrateo de vehículo usa el fallback por ingresos.
+    // Clase B: sesiones completadas en el rango (join a enrollments para la sede).
+    let classB = this.supabase.client
+      .from('class_b_sessions')
+      .select('id, enrollments!inner(branch_id)', { count: 'exact', head: true })
+      .eq('status', 'completed')
+      .gte('scheduled_at', chileRange(desde, hasta).start)
+      .lt('scheduled_at', chileRange(desde, hasta).endExclusive);
+    if (branchId !== null) {
+      classB = classB.eq('enrollments.branch_id', branchId);
+    }
+    const { count: classBCount, error: classBError } = await classB;
+    if (classBError) throw classBError;
+    counts['class_b'] = classBCount ?? 0;
+
+    // Profesional: las promociones viven siempre en la sede 2. Si el reporte
+    // filtra otra sede, no hay clases profesionales que contar.
+    if (branchId === null || branchId === ReportesContablesFacade.PROFESSIONAL_BRANCH_ID) {
+      const { count: profCount, error: profError } = await this.supabase.client
+        .from('professional_practice_sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'completed')
+        .gte('date', desde)
+        .lte('date', hasta);
+      if (profError) throw profError;
+      counts['professional'] = profCount ?? 0;
+    } else {
+      counts['professional'] = 0;
     }
     return counts;
   }
