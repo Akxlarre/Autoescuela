@@ -331,8 +331,9 @@ function formatCLP(value: number): string {
               {{ mesLabel() }}
             </span>
             <button
-              class="px-3 py-2 transition-colors cursor-pointer hover:opacity-75 text-text-secondary"
+              class="px-3 py-2 transition-colors cursor-pointer hover:opacity-75 text-text-secondary disabled:opacity-40 disabled:cursor-not-allowed"
               style="border-left:1px solid var(--border-muted)"
+              [disabled]="!puedeAvanzarMes()"
               (click)="mesSiguiente.emit()"
               aria-label="Mes siguiente"
             >
@@ -749,6 +750,8 @@ export class LiquidacionesContentComponent implements AfterViewInit {
   isExporting = input<boolean>(false);
   mesActual = input<number>(chileParts().month);
   anioActual = input<number>(chileYear());
+  /** false en el mes actual: no se navega a meses futuros (fix-079-i). */
+  puedeAvanzarMes = input<boolean>(true);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
   mesAnterior = output<void>();

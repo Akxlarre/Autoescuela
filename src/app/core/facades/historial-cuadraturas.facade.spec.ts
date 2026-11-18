@@ -63,14 +63,23 @@ describe('HistorialCuadraturasFacade', () => {
     }
   });
 
-  it('mesSiguiente should increment mesActual', () => {
+  it('mesSiguiente vuelve al mes actual desde el anterior (fix-079-i)', () => {
     const initialMes = facade.mesActual();
+    const initialAnio = facade.anioActual();
+    facade.mesAnterior();
+    expect(facade.puedeAvanzarMes()).toBe(true);
     facade.mesSiguiente();
-    if (initialMes === 12) {
-      expect(facade.mesActual()).toBe(1);
-    } else {
-      expect(facade.mesActual()).toBe(initialMes + 1);
-    }
+    expect(facade.mesActual()).toBe(initialMes);
+    expect(facade.anioActual()).toBe(initialAnio);
+  });
+
+  it('mesSiguiente no pasa del mes actual (fix-079-i, F04)', () => {
+    const initialMes = facade.mesActual();
+    const initialAnio = facade.anioActual();
+    expect(facade.puedeAvanzarMes()).toBe(false);
+    facade.mesSiguiente();
+    expect(facade.mesActual()).toBe(initialMes);
+    expect(facade.anioActual()).toBe(initialAnio);
   });
 
   // ─── spec 0002-i: ajustes de cuadratura ──────────────────────────────────

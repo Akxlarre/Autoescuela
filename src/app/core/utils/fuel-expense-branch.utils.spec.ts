@@ -1,21 +1,23 @@
 import { resolveFuelExpenseBranch } from './fuel-expense-branch.utils';
 
-describe('resolveFuelExpenseBranch (hotfix-084-b, O03)', () => {
+describe('resolveFuelExpenseBranch (fix-082-i, C07)', () => {
   const deA = { branchId: 1, bothBranches: false };
   const ambasDeA = { branchId: 1, bothBranches: true };
   const sinSede = { branchId: null, bothBranches: false };
 
-  it('vehículo "Ambas": queda en la caja de quien registra', () => {
+  it('vehículo "Ambas": queda en la caja de quien registra (hotfix-084-b)', () => {
     expect(resolveFuelExpenseBranch(ambasDeA, null, 2)).toBe(2);
     expect(resolveFuelExpenseBranch(ambasDeA, null, 1)).toBe(1);
   });
 
-  it('vehículo "Ambas" con el admin en "Todas las sedes": su sede principal', () => {
-    expect(resolveFuelExpenseBranch(ambasDeA, null, null)).toBe(1);
+  it('vehículo de otra sede: queda en la caja de quien registra', () => {
+    expect(resolveFuelExpenseBranch(deA, null, 2)).toBe(2);
+    expect(resolveFuelExpenseBranch(deA, null, 1)).toBe(1);
   });
 
-  it('vehículo de una sede: siempre su sede', () => {
-    expect(resolveFuelExpenseBranch(deA, null, 2)).toBe(1);
+  it('admin en "Todas las sedes": la sede del vehículo, para que nunca quede sin sede', () => {
+    expect(resolveFuelExpenseBranch(ambasDeA, null, null)).toBe(1);
+    expect(resolveFuelExpenseBranch(deA, null, null)).toBe(1);
   });
 
   it('vehículo legacy sin sede: la elegida en el formulario y, si no, la activa', () => {

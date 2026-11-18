@@ -21,6 +21,7 @@ import type { HistorialCierre } from '@core/models/ui/historial-cuadraturas.mode
       backRoute="../cuadratura"
       backLabel="Cuadratura"
       (mesAnterior)="facade.mesAnterior()"
+      [puedeAvanzarMes]="facade.puedeAvanzarMes()"
       (mesSiguiente)="facade.mesSiguiente()"
       (exportarMes)="facade.exportarMes($event)"
       (cierreClicked)="abrirDetalle($event)"

@@ -164,6 +164,48 @@ describe('RegistrarAjusteCuadraturaDrawerComponent', () => {
       expect(facadeSpy.registrarAjuste).not.toHaveBeenCalled();
     });
 
+    it('G05/S20: tras un intento fallido como corrección manual, cambiar a gasto olvidado deja el form válido', async () => {
+      const facadeSpy = { registrarAjuste: vi.fn().mockResolvedValue(true) };
+      TestBed.overrideProvider(HistorialCuadraturasFacade, {
+        useValue: { cierreSeleccionado: signal(mkCierre()), ...facadeSpy },
+      });
+      const component = createComponent();
+      component['form'].patchValue({
+        tipo: 'correccion_manual',
+        monto: 2000,
+        motivo: 'Corrección de conteo',
+      });
+      await component['onSubmit']();
+      expect(component['form'].invalid).toBe(true);
+
+      component['form'].patchValue({ tipo: 'gasto_olvidado', categoria: 'combustible' });
+
+      expect(component['form'].valid).toBe(true);
+      await component['onSubmit']();
+      expect(facadeSpy.registrarAjuste).toHaveBeenCalledWith(
+        expect.objectContaining({ tipo: 'gasto_olvidado', monto: -2000 }),
+      );
+    });
+
+    it('G05/S20: al volver de gasto olvidado a corrección manual, categoría deja de ser requerida', () => {
+      TestBed.overrideProvider(HistorialCuadraturasFacade, {
+        useValue: { cierreSeleccionado: signal(mkCierre()), registrarAjuste: vi.fn() },
+      });
+      const component = createComponent();
+      component['form'].patchValue({ tipo: 'gasto_olvidado' });
+      expect(component['form'].get('categoria')?.invalid).toBe(true);
+
+      component['form'].patchValue({
+        tipo: 'correccion_manual',
+        efecto: 'aumenta',
+        monto: 1000,
+        motivo: 'Sobró dinero',
+      });
+
+      expect(component['form'].get('categoria')?.invalid).toBe(false);
+      expect(component['form'].valid).toBe(true);
+    });
+
     it('efecto="reduce" envía el monto en negativo', async () => {
       const facadeSpy = { registrarAjuste: vi.fn().mockResolvedValue(true) };
       TestBed.overrideProvider(HistorialCuadraturasFacade, {

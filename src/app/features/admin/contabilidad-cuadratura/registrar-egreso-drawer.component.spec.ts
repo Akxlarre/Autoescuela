@@ -139,7 +139,20 @@ describe('RegistrarEgresoDrawerComponent', () => {
     expect(component['form'].get('branchId')?.hasError('required')).toBe(true);
   });
 
-  it('combustible: envía branchId derivado del vehículo al facade', async () => {
+  it('C07 (fix-082-i): combustible de un auto de otra sede queda en la caja de quien registra', async () => {
+    const { component, registrarEgreso } = createComponent({
+      preset: 'combustible',
+      user: { role: 'secretary', branchId: 1, canAccessBothBranches: false },
+      vehicles: [{ id: 5, brand: 'Kia', model: 'Rio', licensePlate: 'AA-11', branchId: 2 }],
+    });
+    component['form'].patchValue({ monto: 20_000, descripcion: 'Carga bencina', vehiculoId: 5 });
+    await component['onSubmit']();
+    expect(registrarEgreso).toHaveBeenCalledWith(
+      expect.objectContaining({ tipo: 'combustible', vehiculoId: 5, branchId: 1 }),
+    );
+  });
+
+  it('combustible con el admin en "Todas las sedes": usa la sede del vehículo', async () => {
     const { component, registrarEgreso } = createComponent({
       preset: 'combustible',
       vehicles: [{ id: 5, brand: 'Kia', model: 'Rio', licensePlate: 'AA-11', branchId: 2 }],

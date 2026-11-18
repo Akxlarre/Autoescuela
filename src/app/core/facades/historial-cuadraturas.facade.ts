@@ -1,3 +1,4 @@
+import { puedeAvanzarMes } from '@core/utils/month-nav.utils';
 import { chileParts, chileYear, monthDays } from '@core/utils/chile-time.utils';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
@@ -252,7 +253,11 @@ export class HistorialCuadraturasFacade {
     this.initialize();
   }
 
+  /** La flecha "Mes siguiente" solo avanza hasta el mes actual de Chile (fix-079-i, F04). */
+  readonly puedeAvanzarMes = computed(() => puedeAvanzarMes(this._anioActual(), this._mesActual()));
+
   mesSiguiente(): void {
+    if (!puedeAvanzarMes(this._anioActual(), this._mesActual())) return;
     let mes = this._mesActual();
     let anio = this._anioActual();
     if (mes === 12) {

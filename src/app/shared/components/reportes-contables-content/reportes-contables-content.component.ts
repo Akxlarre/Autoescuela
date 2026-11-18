@@ -32,6 +32,7 @@ import { EvolucionMensualChartComponent } from '@shared/components/evolucion-men
 import type { RentabilidadCurso } from '@core/models/ui/reportes-contables.model';
 import { TabsComponent, type TabOption } from '@shared/components/tabs/tabs.component';
 import {
+  RANGO_EVOLUCION_DEFAULT,
   RANGOS_EVOLUCION,
   RANGOS_REPORTE,
   computeDateRange,
@@ -278,6 +279,24 @@ type ReporteTab = 'categorias' | 'evolucion' | 'rentabilidad' | 'gastos-fijos';
                 placeholder="Hasta"
                 data-llm-description="fecha de fin del rango del reporte"
               />
+
+              @if (rangoInvertido()) {
+                <span class="w-full text-xs text-error" role="alert">
+                  La fecha Desde no puede ser posterior a Hasta.
+                </span>
+              }
+            }
+
+            @if (filtrosModificados()) {
+              <button
+                type="button"
+                class="btn-secondary h-9 flex items-center gap-1.5 text-sm"
+                data-llm-action="restablecer-filtros-reportes"
+                (click)="restablecerFiltros()"
+              >
+                <app-icon name="rotate-ccw" [size]="14" />
+                Restablecer filtros
+              </button>
             }
 
             <app-tabs
@@ -716,6 +735,12 @@ export class ReportesContablesContentComponent implements AfterViewInit {
   protected localRango = linkedSignal<RangoReporte>(() => this.filtros().rango);
   protected localDesde = linkedSignal(() => this.filtros().desde);
   protected localHasta = linkedSignal(() => this.filtros().hasta);
+  /** fix-080-i (H04): "Personalizado" con Desde posterior a Hasta → aviso, sin recargar. */
+  protected readonly rangoInvertido = computed(() => {
+    const desde = this.localDesde();
+    const hasta = this.localHasta();
+    return this.localRango() === 'personalizado' && !!desde && !!hasta && desde > hasta;
+  });
   /** spec 0015-m: eje de rango propio de la pestaña Evolución. */
   protected localRangoEvolucion = linkedSignal<RangoEvolucion>(() => this.rangoEvolucion());
 
@@ -844,6 +869,24 @@ export class ReportesContablesContentComponent implements AfterViewInit {
     const hasta = this.localHasta();
     if (desde && hasta && desde <= hasta) {
       this.emitirFiltros();
+    }
+  }
+
+  /**
+   * fix-081-i (H22): los filtros se conservan al salir y volver (viven en el Facade); este
+   * flag muestra "Restablecer filtros" cuando alguno no está en su valor inicial.
+   */
+  protected readonly filtrosModificados = computed(
+    () =>
+      this.localRango() !== 'mes_actual' || this.localRangoEvolucion() !== RANGO_EVOLUCION_DEFAULT,
+  );
+
+  /** Vuelve a "Mes actual" y a la ventana de Evolución por defecto; recarga solo lo que cambió. */
+  protected restablecerFiltros(): void {
+    if (this.localRango() !== 'mes_actual') this.onRangoChange('mes_actual');
+    if (this.localRangoEvolucion() !== RANGO_EVOLUCION_DEFAULT) {
+      this.localRangoEvolucion.set(RANGO_EVOLUCION_DEFAULT);
+      this.aplicarRangoEvolucion.emit(RANGO_EVOLUCION_DEFAULT);
     }
   }
 

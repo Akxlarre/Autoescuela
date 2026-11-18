@@ -134,6 +134,81 @@ describe('ReportesContablesContentComponent — selector por pestaña (spec 0015
     expect(component['selectValue']()).toBe('ultimos_12_meses'); // el de evolución se conservó
   });
 
+  describe('rango invertido (fix-080-i, H04)', () => {
+    it('con Desde posterior a Hasta marca el rango invertido y no emite filtros', () => {
+      const gral: unknown[] = [];
+      component.aplicarFiltros.subscribe((v) => gral.push(v));
+      component['onRangoChange']('personalizado');
+
+      component['onCustomDateChange']('desde', '2026-11-30');
+      component['onCustomDateChange']('hasta', '2026-11-01');
+
+      expect(component['rangoInvertido']()).toBe(true);
+      expect(gral).toEqual([]);
+    });
+
+    it('al corregir las fechas deja de estar invertido y emite los filtros', () => {
+      const gral: { desde: string; hasta: string }[] = [];
+      component.aplicarFiltros.subscribe((v) => gral.push(v));
+      component['onRangoChange']('personalizado');
+      component['onCustomDateChange']('desde', '2026-11-30');
+      component['onCustomDateChange']('hasta', '2026-11-01');
+
+      component['onCustomDateChange']('desde', '2026-11-01');
+      component['onCustomDateChange']('hasta', '2026-11-30');
+
+      expect(component['rangoInvertido']()).toBe(false);
+      expect(gral.at(-1)).toEqual(
+        expect.objectContaining({ desde: '2026-11-01', hasta: '2026-11-30' }),
+      );
+    });
+
+    it('fuera de "Personalizado" nunca está invertido', () => {
+      expect(component['rangoInvertido']()).toBe(false);
+    });
+  });
+
+  describe('restablecer filtros (fix-081-i, H22)', () => {
+    it('con los valores iniciales no hay nada que restablecer', () => {
+      expect(component['filtrosModificados']()).toBe(false);
+    });
+
+    it('un período distinto de "Mes actual" activa el botón y restablecer emite mes_actual', () => {
+      setFiltros('mes_anterior');
+      const gral: { rango: string }[] = [];
+      const evo: string[] = [];
+      component.aplicarFiltros.subscribe((v) => gral.push(v));
+      component.aplicarRangoEvolucion.subscribe((v) => evo.push(v));
+      expect(component['filtrosModificados']()).toBe(true);
+
+      component['restablecerFiltros']();
+
+      expect(gral).toHaveLength(1);
+      expect(gral[0].rango).toBe('mes_actual');
+      expect(evo).toEqual([]); // la ventana de Evolución ya estaba en su valor inicial
+      expect(component['localRango']()).toBe('mes_actual');
+    });
+
+    it('una ventana de Evolución distinta activa el botón y restablecer emite solo esa', () => {
+      setRangoEvolucion('anio_anterior');
+      const gral: unknown[] = [];
+      const evo: string[] = [];
+      component.aplicarFiltros.subscribe((v) => gral.push(v));
+      component.aplicarRangoEvolucion.subscribe((v) => evo.push(v));
+      expect(component['filtrosModificados']()).toBe(true);
+
+      component['restablecerFiltros']();
+
+      expect(evo).toEqual(['ultimos_6_meses']);
+      expect(gral).toEqual([]);
+    });
+
+    it('elegir "Personalizado" sin fechas completas ya cuenta como modificado', () => {
+      component['onRangoChange']('personalizado');
+      expect(component['filtrosModificados']()).toBe(true);
+    });
+  });
+
   it('la etiqueta de la ventana refleja la opción elegida', () => {
     component['setActiveTab']('evolucion');
     component['onSelectChange']('ultimos_12_meses');
