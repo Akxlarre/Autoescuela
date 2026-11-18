@@ -7,7 +7,28 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
-import { signal } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  ContentChild,
+  NO_ERRORS_SCHEMA,
+  signal,
+  TemplateRef,
+} from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { IconComponent } from '@shared/components/icon/icon.component';
+
+/** Muestra el contenido de inmediato: el loader real espera 350 ms por la animación del drawer. */
+@Component({
+  selector: 'app-drawer-content-loader',
+  imports: [NgTemplateOutlet],
+  template: `<ng-container [ngTemplateOutlet]="content ?? null" />`,
+})
+class LoaderInmediatoComponent {
+  // Decorador y no contentChild(): los tests compilan en JIT, que no ve las queries con signals.
+  @ContentChild('content') content?: TemplateRef<unknown>;
+}
 
 // ─── fix-006-i: vehicleOptions() + preset de tipo consumido al montar ─────────
 // ─── fix-243-m: campos condicionales por tipo + ruteo de anticipo ────────────
@@ -19,6 +40,7 @@ interface CreateOpts {
   branches?: { id: number; name: string }[];
   selectedBranchId?: number | null;
   user?: any;
+  anticiposError?: string | null;
 }
 
 function createComponent(opts: CreateOpts = {}) {
@@ -26,6 +48,7 @@ function createComponent(opts: CreateOpts = {}) {
     vehicles = [],
     preset = null,
     instructores = [],
+    anticiposError = null,
     branches = [
       { id: 1, name: 'Sede Centro' },
       { id: 2, name: 'Sede Norte' },
@@ -38,6 +61,10 @@ function createComponent(opts: CreateOpts = {}) {
   const registrarEgreso = vi.fn().mockResolvedValue(true);
   const registrarAnticipo = vi.fn().mockResolvedValue(true);
   const refresh = vi.fn().mockResolvedValue(undefined);
+  const reintentar = vi.fn().mockResolvedValue(undefined);
+  const instructoresSig = signal(instructores);
+  const errorSig = signal<string | null>(anticiposError);
+  const isLoadingSig = signal(false);
 
   TestBed.configureTestingModule({
     providers: [
@@ -45,7 +72,14 @@ function createComponent(opts: CreateOpts = {}) {
       { provide: FlotaFacade, useValue: { vehicles: () => vehicles, initialize: vi.fn() } },
       {
         provide: AnticiposFacade,
-        useValue: { instructores: () => instructores, initialize: vi.fn(), registrarAnticipo },
+        useValue: {
+          instructores: instructoresSig,
+          error: errorSig,
+          isLoading: isLoadingSig,
+          initialize: vi.fn(),
+          reintentar,
+          registrarAnticipo,
+        },
       },
       {
         provide: BranchFacade,
@@ -59,13 +93,22 @@ function createComponent(opts: CreateOpts = {}) {
       },
     ],
   });
+  TestBed.overrideComponent(RegistrarEgresoDrawerComponent, {
+    remove: { imports: [DrawerContentLoaderComponent, IconComponent] },
+    add: { imports: [LoaderInmediatoComponent], schemas: [NO_ERRORS_SCHEMA] },
+  });
 
   const fixture = TestBed.createComponent(RegistrarEgresoDrawerComponent);
   return {
+    fixture,
     component: fixture.componentInstance as any,
     registrarEgreso,
     registrarAnticipo,
     refresh,
+    reintentar,
+    instructoresSig,
+    errorSig,
+    isLoadingSig,
   };
 }
 
@@ -230,5 +273,120 @@ describe('RegistrarEgresoDrawerComponent', () => {
       expect.objectContaining({ instructorId: 9, amount: 15_000, paymentMethod: 'transferencia' }),
     );
     expect(refresh).toHaveBeenCalled();
+  });
+
+  // ─── spec 0060-b (T1.5): sin instructores por un error, el selector no parece vacío ───
+  describe('instructores que no cargaron (spec 0060-b)', () => {
+    const ERROR = 'No se pudieron cargar los anticipos.';
+    const SELECTOR = '[data-llm-description^="Selector del instructor"]';
+    const REINTENTAR = '[data-llm-action="reintentar-instructores-egreso"]';
+    const GUARDAR = '[data-llm-action="guardar-egreso-cuadratura"]';
+
+    function render(opts: CreateOpts) {
+      const ctx = createComponent(opts);
+      ctx.fixture.detectChanges();
+      return { ...ctx, host: ctx.fixture.nativeElement as HTMLElement };
+    }
+
+    /** El form no es un signal: con OnPush hay que marcar la vista para que se repinte. */
+    function repintar(fixture: ReturnType<typeof createComponent>['fixture']) {
+      fixture.debugElement.injector.get(ChangeDetectorRef).markForCheck();
+      fixture.detectChanges();
+    }
+
+    it('anticipo con error: muestra el aviso con "Reintentar" en vez del selector', () => {
+      const { host } = render({ preset: 'anticipo', anticiposError: ERROR });
+
+      expect(host.querySelector(SELECTOR)).toBeNull();
+      const alerta = host.querySelector('[role="alert"]');
+      expect(alerta?.textContent).toContain('No se pudo cargar la lista de instructores');
+      expect(alerta?.querySelector(REINTENTAR)?.textContent).toContain('Reintentar');
+    });
+
+    it('"Reintentar" llama a reintentar() de AnticiposFacade', () => {
+      const { host, reintentar } = render({ preset: 'anticipo', anticiposError: ERROR });
+
+      (host.querySelector(REINTENTAR) as HTMLButtonElement).click();
+
+      expect(reintentar).toHaveBeenCalledTimes(1);
+    });
+
+    it('"Reintentar" se deshabilita mientras carga', () => {
+      const { host, isLoadingSig, fixture } = render({
+        preset: 'anticipo',
+        anticiposError: ERROR,
+      });
+
+      isLoadingSig.set(true);
+      repintar(fixture);
+
+      expect((host.querySelector(REINTENTAR) as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('anticipo con error: no guarda aunque hubiera un instructor elegido', async () => {
+      const { host, component, fixture, registrarAnticipo } = render({
+        preset: 'anticipo',
+        anticiposError: ERROR,
+      });
+      component['form'].patchValue({ monto: 15_000, descripcion: 'Anticipo', instructorId: 9 });
+      repintar(fixture);
+
+      expect((host.querySelector(GUARDAR) as HTMLButtonElement).disabled).toBe(true);
+      await component['onSubmit']();
+      expect(registrarAnticipo).not.toHaveBeenCalled();
+    });
+
+    it('si el reintento sale bien vuelve el selector y se puede guardar', async () => {
+      const { host, component, fixture, errorSig, instructoresSig, registrarAnticipo } = render({
+        preset: 'anticipo',
+        anticiposError: ERROR,
+      });
+
+      errorSig.set(null);
+      instructoresSig.set([{ id: 9, nombre: 'Ana Díaz' }]);
+      component['form'].patchValue({ monto: 15_000, descripcion: 'Anticipo', instructorId: 9 });
+      repintar(fixture);
+
+      expect(host.querySelector(SELECTOR)).not.toBeNull();
+      expect(host.querySelector(REINTENTAR)).toBeNull();
+      await component['onSubmit']();
+      expect(registrarAnticipo).toHaveBeenCalledTimes(1);
+    });
+
+    it('gasto con anticipos caídos: sin aviso y se guarda normalmente', async () => {
+      const { host, component, fixture, registrarEgreso } = render({
+        anticiposError: ERROR,
+        selectedBranchId: 1,
+      });
+      component['form'].patchValue({ tipo: 'gasto', monto: 5_000, descripcion: 'Insumos' });
+      repintar(fixture);
+
+      expect(host.querySelector(REINTENTAR)).toBeNull();
+      expect((host.querySelector(GUARDAR) as HTMLButtonElement).disabled).toBe(false);
+      await component['onSubmit']();
+      expect(registrarEgreso).toHaveBeenCalledTimes(1);
+    });
+
+    it('combustible con anticipos caídos: sin aviso y se guarda normalmente', async () => {
+      const { host, component, fixture, registrarEgreso } = render({
+        preset: 'combustible',
+        anticiposError: ERROR,
+        vehicles: [{ id: 5, brand: 'Kia', model: 'Rio', licensePlate: 'AA-11', branchId: 2 }],
+      });
+      component['form'].patchValue({ monto: 20_000, descripcion: 'Bencina', vehiculoId: 5 });
+      repintar(fixture);
+
+      expect(host.querySelector(REINTENTAR)).toBeNull();
+      expect((host.querySelector(GUARDAR) as HTMLButtonElement).disabled).toBe(false);
+      await component['onSubmit']();
+      expect(registrarEgreso).toHaveBeenCalledTimes(1);
+    });
+
+    it('anticipo sin error y sin instructores no muestra un error falso', () => {
+      const { host } = render({ preset: 'anticipo' });
+
+      expect(host.querySelector(SELECTOR)).not.toBeNull();
+      expect(host.querySelector(REINTENTAR)).toBeNull();
+    });
   });
 });
