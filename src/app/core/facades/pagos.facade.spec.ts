@@ -102,6 +102,7 @@ describe('PagosFacade', () => {
             if (col.endsWith('branch_id')) state.branch = val as number;
             return b;
           },
+          in: () => b,
           gt: () => b,
           gte: () => b,
           lte: () => b,
@@ -165,7 +166,8 @@ describe('PagosFacade', () => {
   });
 
   it('should have initial empty state', () => {
-    expect(facade.ingresosHoy()).toBe(0);
+    // spec 0060-b: sin carga no hay KPI, ni siquiera $0.
+    expect(facade.ingresosHoy()).toBeNull();
     expect(facade.isLoading()).toBe(false);
     expect(facade.totalDeudores()).toBe(0);
   });
@@ -294,7 +296,14 @@ describe('PagosFacade', () => {
   // ── fix-135-m: "Pagos recientes" no debe listar matrículas con pago pendiente ──
   describe('fetchPagosRecientes (fix-135-m)', () => {
     it('excluye status=pending de la query a payments', async () => {
-      const genericMock = supabaseSpy.client.from();
+      // payments: las 5 lecturas de esa tabla resuelven vacías. Desde spec 0060-b una lectura rota
+      // (p. ej. un mock sin ) hace fallar la carga entera, así que el mock debe ser completo.
+      const genericMock: any = {};
+      for (const m of ['select', 'in', 'eq', 'gte', 'lte', 'neq', 'order', 'limit']) {
+        genericMock[m] = () => genericMock;
+      }
+      genericMock.then = (resolve: (v: unknown) => void) =>
+        resolve({ data: [], count: 0, error: null });
       const limitSpy = vi.fn().mockResolvedValue({ data: [], error: null });
       const orderSpy = vi.fn().mockReturnValue({ limit: limitSpy });
       const neqSpy = vi.fn().mockReturnValue({ order: orderSpy });
@@ -376,7 +385,14 @@ describe('PagosFacade', () => {
   // ── fix-248-m: filtros de fecha/curso/sede en la tabla de deudores ──
   describe('fetchAlumnosConDeuda — mapeo de curso/fecha/sede (fix-248-m)', () => {
     it('mapea cursoTipo, cursoNombre, fechaMatricula, sedeId y sedeNombre desde el join', async () => {
-      const genericMock = supabaseSpy.client.from();
+      // payments: sus 5 lecturas resuelven vacías. Desde spec 0060-b una lectura rota (un mock
+      // sin .in(), por ejemplo) hace fallar la carga entera, así que el mock debe estar completo.
+      const genericMock: any = {};
+      for (const m of ['select', 'in', 'eq', 'gte', 'lte', 'neq', 'order', 'limit']) {
+        genericMock[m] = () => genericMock;
+      }
+      genericMock.then = (resolve: (v: unknown) => void) =>
+        resolve({ data: [], count: 0, error: null });
       const row = {
         id: 1,
         base_price: 500000,
@@ -591,6 +607,363 @@ describe('PagosFacade', () => {
 
       expect(enrollmentState.total_paid).toBe(80000);
       expect(enrollmentState.pending_balance).toBe(220000);
+    });
+  });
+
+  // spec 0060-b (T1.1): una lectura que falla se ve como error, nunca como $0 o "sin deudores".
+  describe('lecturas fallidas (spec 0060-b)', () => {
+    type Consulta =
+      | 'ingresosHoy'
+      | 'ingresosMes'
+      | 'boletas'
+      | 'pendientes'
+      | 'deudores'
+      | 'recientes'
+      | 'metodos'
+      | 'resumen'
+      | 'historial';
+
+    let selected: number | null;
+    let fallan: Set<Consulta>;
+    let f: PagosFacade;
+    let realtimeHandler: (() => void) | null;
+
+    const ERROR = { message: 'network down', code: '' };
+
+    const deudor = (id: number, branchId: number) => ({
+      id,
+      number: id,
+      status: 'active',
+      base_price: 100000,
+      discount: 0,
+      total_paid: 20000,
+      pending_balance: 80000,
+      created_at: '2026-01-01T12:00:00Z',
+      branch_id: branchId,
+      students: { users: { first_names: 'N', paternal_last_name: 'P', rut: '1-9' } },
+      courses: { type: 'class_b', name: 'B' },
+      branches: { name: `Sede ${branchId}` },
+    });
+
+    /** Identifica cada una de las lecturas del facade por su tabla, columnas y filtros. */
+    const clasificar = (
+      table: string,
+      cols: string,
+      ops: Set<string>,
+      head: boolean,
+    ): Consulta | null => {
+      if (table === 'payments') {
+        if (head) return 'boletas';
+        if (cols.startsWith('transfer_amount')) return 'metodos';
+        if (cols.includes('document_number')) {
+          return ops.has('eq:enrollment_id') ? 'historial' : 'recientes';
+        }
+        if (cols.startsWith('total_amount')) {
+          return ops.has('eq:payment_date') ? 'ingresosHoy' : 'ingresosMes';
+        }
+      }
+      if (table === 'enrollments') {
+        if (ops.has('maybeSingle')) return 'resumen';
+        if (cols.includes('students')) return 'deudores';
+        if (cols === 'pending_balance') return 'pendientes';
+      }
+      return null;
+    };
+
+    const datosDe = (c: Consulta, branch: number | null): unknown => {
+      const sede = branch ?? 1;
+      switch (c) {
+        case 'ingresosHoy':
+        case 'ingresosMes':
+          return [{ total_amount: 1000 * sede }];
+        case 'pendientes':
+          return [{ pending_balance: 80000 }];
+        case 'deudores':
+          return [deudor(sede * 10, sede), deudor(sede * 10 + 1, sede)];
+        case 'recientes':
+          return [
+            {
+              id: sede,
+              payment_date: '2026-11-10',
+              type: 'Abono',
+              total_amount: 1000,
+              transfer_amount: 1000,
+              cash_amount: 0,
+              card_amount: 0,
+              voucher_amount: 0,
+              status: 'paid',
+              enrollments: { students: { users: { first_names: 'N', paternal_last_name: 'P' } } },
+            },
+          ];
+        case 'metodos':
+          return [{ transfer_amount: 1000, cash_amount: 0, card_amount: 0, voucher_amount: 0 }];
+        case 'resumen':
+          return {
+            id: 7,
+            base_price: 100000,
+            discount: 0,
+            total_paid: 20000,
+            pending_balance: 80000,
+            payment_status: 'partial',
+            students: { users: { first_names: 'N', paternal_last_name: 'P', rut: '1-9' } },
+            courses: { name: 'B' },
+          };
+        case 'historial':
+          return [{ id: 70, total_amount: 20000, status: 'paid' }];
+        default:
+          return [];
+      }
+    };
+
+    beforeEach(() => {
+      selected = 1;
+      fallan = new Set();
+      realtimeHandler = null;
+      const builder = (table: string) => {
+        const state = {
+          cols: '',
+          head: false,
+          branch: null as number | null,
+          ops: new Set<string>(),
+        };
+        const responder = () => {
+          const c = clasificar(table, state.cols, state.ops, state.head);
+          if (c && fallan.has(c)) return { data: null, count: null, error: ERROR };
+          if (c === 'boletas') return { data: null, count: 3, error: null };
+          return { data: c ? datosDe(c, state.branch) : [], count: null, error: null };
+        };
+        const b: any = {
+          select: (cols: string, opts?: { head?: boolean }) => {
+            state.cols = cols;
+            state.head = !!opts?.head;
+            return b;
+          },
+          eq: (col: string, val: unknown) => {
+            state.ops.add(`eq:${col}`);
+            if (col.endsWith('branch_id')) state.branch = val as number;
+            return b;
+          },
+          in: () => b,
+          gt: () => b,
+          gte: () => b,
+          lte: () => b,
+          neq: () => b,
+          not: () => b,
+          order: () => b,
+          limit: () => b,
+          maybeSingle: async () => {
+            state.ops.add('maybeSingle');
+            return responder();
+          },
+          then: (resolve: (v: unknown) => void, reject?: (e: unknown) => void) =>
+            Promise.resolve(responder()).then(resolve, reject),
+        };
+        return b;
+      };
+      const channel: any = {
+        on: (_e: string, _f: unknown, handler: () => void) => (
+          (realtimeHandler = handler),
+          channel
+        ),
+        subscribe: () => channel,
+      };
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          PagosFacade,
+          {
+            provide: SupabaseService,
+            useValue: { client: { from: builder, channel: () => channel, removeChannel: vi.fn() } },
+          },
+          { provide: ToastService, useValue: toastSpy },
+          { provide: AuthFacade, useValue: { currentUser: () => ({ role: 'admin' }) } },
+          { provide: BranchFacade, useValue: { selectedBranchId: () => selected } },
+          { provide: NotificationsFacade, useValue: { notifyUsers: vi.fn() } },
+        ],
+      });
+      f = TestBed.inject(PagosFacade);
+    });
+
+    const kpis = () => [
+      f.ingresosHoy(),
+      f.ingresosMes(),
+      f.boletasMes(),
+      f.pagosPendientesTotales(),
+    ];
+
+    it('carga sin errores: aplica los 4 KPIs y las 3 listas', async () => {
+      await f.initialize();
+      expect(kpis()).toEqual([1000, 1000, 3, 80000]);
+      expect(f.alumnosConDeuda()).toHaveLength(2);
+      expect(f.pagosRecientes()).toHaveLength(1);
+      expect(f.metodosPagoMes()).toHaveLength(1);
+      expect(f.error()).toBeNull();
+      expect(f.refreshFailed()).toBe(false);
+    });
+
+    it('caso A — primera carga con error: error propio, KPIs en null (no $0) y listas vacías', async () => {
+      fallan.add('deudores');
+      await f.initialize();
+
+      expect(f.error()).toBe('No se pudieron cargar los pagos.');
+      expect(kpis()).toEqual([null, null, null, null]);
+      expect(f.alumnosConDeuda()).toEqual([]);
+      expect(f.pagosRecientes()).toEqual([]);
+      expect(f.metodosPagoMes()).toEqual([]);
+      expect(f.isLoading()).toBe(false);
+      expect(f.refreshFailed()).toBe(false);
+    });
+
+    it.each<Consulta>([
+      'ingresosHoy',
+      'ingresosMes',
+      'boletas',
+      'pendientes',
+      'deudores',
+      'recientes',
+      'metodos',
+    ])(
+      'una sola consulta con error (%s) hace fallar la carga completa: ningún total parcial',
+      async (c) => {
+        fallan.add(c);
+        await f.initialize();
+
+        expect(f.error()).not.toBeNull();
+        expect(kpis()).toEqual([null, null, null, null]);
+        expect(f.alumnosConDeuda()).toEqual([]);
+        expect(f.pagosRecientes()).toEqual([]);
+        expect(f.metodosPagoMes()).toEqual([]);
+      },
+    );
+
+    it('caso A — cambio de sede con error: no quedan los datos de la sede anterior', async () => {
+      await f.initialize();
+      expect(f.alumnosConDeuda().map((d) => d.sedeId)).toEqual([1, 1]);
+
+      selected = 2;
+      fallan.add('metodos');
+      await f.initialize();
+
+      expect(f.error()).not.toBeNull();
+      expect(f.alumnosConDeuda()).toEqual([]);
+      expect(kpis()).toEqual([null, null, null, null]);
+      expect(f.refreshFailed()).toBe(false);
+    });
+
+    it('caso B — refresco (re-entrada SWR) con error: conserva lo visible y marca refreshFailed', async () => {
+      await f.initialize();
+      fallan.add('pendientes');
+      await f.initialize(); // misma sede: refresco silencioso
+      await flushMicrotasks();
+
+      expect(f.refreshFailed()).toBe(true);
+      expect(f.error()).toBeNull();
+      expect(kpis()).toEqual([1000, 1000, 3, 80000]);
+      expect(f.alumnosConDeuda()).toHaveLength(2);
+      expect(f.isLoading()).toBe(false);
+    });
+
+    it('caso B — un evento Realtime que no puede refrescar también deja el aviso', async () => {
+      await f.initialize();
+      fallan.add('recientes');
+      realtimeHandler!();
+      await flushMicrotasks();
+
+      expect(f.refreshFailed()).toBe(true);
+      expect(f.alumnosConDeuda()).toHaveLength(2);
+    });
+
+    it('un refresco Realtime fallido sin datos vigentes no convierte el caso A en "sin deudores + aviso"', async () => {
+      fallan.add('deudores');
+      await f.initialize();
+      realtimeHandler!();
+      await flushMicrotasks();
+
+      expect(f.error()).not.toBeNull();
+      expect(f.refreshFailed()).toBe(false);
+    });
+
+    it('reintentar() tras el caso A: carga con skeleton y limpia el error', async () => {
+      fallan.add('boletas');
+      await f.initialize();
+      expect(f.error()).not.toBeNull();
+
+      fallan.clear();
+      const loading: boolean[] = [];
+      const p = f.reintentar();
+      loading.push(f.isLoading());
+      expect(f.error()).toBeNull(); // se limpia al empezar
+      await p;
+
+      expect(loading).toEqual([true]);
+      expect(f.error()).toBeNull();
+      expect(kpis()).toEqual([1000, 1000, 3, 80000]);
+      expect(f.alumnosConDeuda()).toHaveLength(2);
+    });
+
+    it('reintentar() tras el caso B: refresca sin skeleton ni pérdida de datos y quita el aviso', async () => {
+      await f.initialize();
+      fallan.add('ingresosMes');
+      await f.initialize();
+      await flushMicrotasks();
+      expect(f.refreshFailed()).toBe(true);
+
+      fallan.clear();
+      const p = f.reintentar();
+      expect(f.isLoading()).toBe(false);
+      expect(f.alumnosConDeuda()).toHaveLength(2);
+      await p;
+
+      expect(f.refreshFailed()).toBe(false);
+      expect(f.error()).toBeNull();
+    });
+
+    it('una primera carga fallida no queda como inicializada: la siguiente visita vuelve a cargar con skeleton', async () => {
+      fallan.add('ingresosHoy');
+      await f.initialize();
+      fallan.clear();
+
+      const p = f.initialize();
+      expect(f.isLoading()).toBe(true);
+      await p;
+      expect(f.error()).toBeNull();
+      expect(f.ingresosHoy()).toBe(1000);
+    });
+
+    describe('Estado de Cuenta', () => {
+      it('caso A — si no carga, expone errorDetalle y no muestra resumen ni historial', async () => {
+        fallan.add('historial');
+        await f.cargarEstadoCuenta(7);
+
+        expect(f.errorDetalle()).toBe('No se pudo cargar el estado de cuenta.');
+        expect(f.estadoCuentaResumen()).toBeNull();
+        expect(f.estadoCuentaHistorial()).toEqual([]);
+        expect(f.isLoadingDetalle()).toBe(false);
+      });
+
+      it('caso B — recargar la misma matrícula con error conserva lo visible y marca el aviso', async () => {
+        await f.cargarEstadoCuenta(7);
+        fallan.add('resumen');
+        await f.cargarEstadoCuenta(7);
+
+        expect(f.estadoCuentaResumen()?.saldoPendiente).toBe(80000);
+        expect(f.detalleRefreshFailed()).toBe(true);
+        expect(f.errorDetalle()).toBeNull();
+      });
+
+      it('reintentarEstadoCuenta() con la red de vuelta carga y limpia error y aviso', async () => {
+        fallan.add('resumen');
+        f.seleccionarEnrollment(7);
+        await flushMicrotasks();
+        expect(f.errorDetalle()).not.toBeNull();
+
+        fallan.clear();
+        await f.reintentarEstadoCuenta();
+
+        expect(f.errorDetalle()).toBeNull();
+        expect(f.detalleRefreshFailed()).toBe(false);
+        expect(f.estadoCuentaResumen()?.enrollmentId).toBe(7);
+      });
     });
   });
 });

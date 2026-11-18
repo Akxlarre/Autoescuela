@@ -13,6 +13,8 @@ import {
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 import { esBecaCompleta } from '@core/utils/beca.utils';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 
 /**
  * AdminPagoDetalleDrawerComponent — Estado de cuenta de una matrícula.
@@ -36,6 +38,8 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     SkeletonBlockComponent,
     StatBoxComponent,
     DrawerFormComponent,
+    AlertCardComponent,
+    EmptyStateComponent,
   ],
   template: `
     <app-drawer-form [hasFooter]="false">
@@ -90,8 +94,52 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
           </div>
         }
 
+        <!-- ── Caso A (spec 0060-b): no cargó — distinto de "no existe" ──────────── -->
+        @if (!facade.isLoadingDetalle() && facade.errorDetalle()) {
+          <div class="flex items-center justify-center py-12">
+            <app-empty-state
+              icon="alert-triangle"
+              [message]="facade.errorDetalle()!"
+              subtitle="Revisa tu conexión e inténtalo de nuevo."
+              actionLabel="Reintentar"
+              actionIcon="refresh-cw"
+              (action)="facade.reintentarEstadoCuenta()"
+            />
+          </div>
+        }
+
+        <!-- ── Caso B (spec 0060-b): datos de esta matrícula, sin actualizar ─────── -->
+        @if (
+          !facade.isLoadingDetalle() &&
+          facade.detalleRefreshFailed() &&
+          facade.estadoCuentaResumen()
+        ) {
+          <app-alert-card
+            severity="error"
+            title="No se pudo actualizar el estado de cuenta"
+            role="alert"
+          >
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span class="text-compact text-text-secondary">
+                El saldo y el historial pueden no estar al día.
+              </span>
+              <button
+                type="button"
+                class="btn-secondary flex items-center gap-2 shrink-0"
+                data-llm-action="reintentar-estado-cuenta"
+                (click)="facade.reintentarEstadoCuenta()"
+              >
+                <app-icon name="refresh-cw" [size]="14" />
+                Reintentar
+              </button>
+            </div>
+          </app-alert-card>
+        }
+
         <!-- ── Sin datos ─────────────────────────────────────────────────────────── -->
-        @if (!facade.isLoadingDetalle() && !facade.estadoCuentaResumen()) {
+        @if (
+          !facade.isLoadingDetalle() && !facade.errorDetalle() && !facade.estadoCuentaResumen()
+        ) {
           <div class="flex flex-col items-center gap-3 py-12 text-center">
             <app-icon name="file-x" [size]="36" color="var(--text-muted)" />
             <p class="text-sm font-medium text-text-primary">No se encontró la matrícula</p>

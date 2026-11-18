@@ -7,6 +7,7 @@ import {
   input,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import {
@@ -129,7 +130,25 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                 <label for="pago-enrollment" class="field-label">
                   ALUMNO <span class="text-error">*</span>
                 </label>
-                @if (facade.alumnosConDeuda().length === 0) {
+                @if (facade.error()) {
+                  <!-- spec 0060-b: sin la lista no se sabe si hay deudores; no se registra "sin matrícula" -->
+                  <div class="flex flex-col gap-2 py-2 px-3 rounded-lg bg-error/8" role="alert">
+                    <p class="text-xs text-error">
+                      No se pudo cargar la lista de alumnos con saldo pendiente. Reintenta antes de
+                      registrar el pago.
+                    </p>
+                    <button
+                      type="button"
+                      class="btn-secondary self-start flex items-center gap-2"
+                      data-llm-action="reintentar-deudores-registrar-pago"
+                      [disabled]="facade.isLoading()"
+                      (click)="facade.reintentar()"
+                    >
+                      <app-icon name="refresh-cw" [size]="12" />
+                      Reintentar
+                    </button>
+                  </div>
+                } @else if (facade.alumnosConDeuda().length === 0) {
                   <p
                     class="text-xs py-2 px-3 rounded-lg text-text-muted bg-surface border border-border-muted"
                   >
@@ -229,6 +248,24 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                     <span class="micro-label">Saldo Pendiente</span>
                     <span class="font-bold text-warning">{{ clp(alumno.saldo) }}</span>
                   </div>
+                </div>
+              } @else if (facade.errorDetalle()) {
+                <!-- spec 0060-b: sin Estado de Cuenta no se conoce el saldo; el guardado espera -->
+                <div class="flex flex-col gap-2 py-2 px-3 rounded-lg bg-error/8" role="alert">
+                  <p class="text-xs text-error">
+                    {{ facade.errorDetalle() }} Reintenta para ver el saldo antes de registrar el
+                    pago.
+                  </p>
+                  <button
+                    type="button"
+                    class="btn-secondary self-start flex items-center gap-2"
+                    data-llm-action="reintentar-estado-cuenta-registrar-pago"
+                    [disabled]="facade.isLoadingDetalle()"
+                    (click)="facade.reintentarEstadoCuenta()"
+                  >
+                    <app-icon name="refresh-cw" [size]="12" />
+                    Reintentar
+                  </button>
                 </div>
               }
             }
@@ -463,7 +500,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
           loadingLabel="Guardando..."
           icon="check"
           [loading]="isSaving()"
-          [disabled]="form.invalid || saldoExcedido"
+          [disabled]="form.invalid || saldoExcedido || guardadoBloqueado()"
           (click)="onSubmit()"
         />
       </ng-container>
@@ -680,8 +717,40 @@ export class RegistrarPagoDrawerComponent {
     { validators: sumMatchesTotalValidator },
   );
 
+  /**
+   * spec 0060-b: no se registra un pago contra datos que no cargaron.
+   * - Modo global con la lista de deudores caída: "no hay deudores" no es cierto, y el pago se
+   *   guardaría sin matrícula.
+   * - Modo contextual sin Estado de Cuenta ni fila en la lista: no se conoce el saldo, así que el
+   *   tope "excede el saldo pendiente" no se puede revisar.
+   * Un refresco fallido (caso B) no bloquea: el monto lo escribe el usuario y la BD recalcula el
+   * saldo con su trigger.
+   */
+  protected readonly guardadoBloqueado = computed(() => {
+    if (this.modoGlobal()) return !!this.facade.error();
+    return !!this.facade.errorDetalle() && this.selectedFromList === null;
+  });
+
   constructor() {
     this.resetForm();
+    // spec 0060-b: si la lista llega con el drawer abierto ("Reintentar"), el alumno pasa a ser
+    // obligatorio, igual que si hubiera estado al abrirlo.
+    effect(() => {
+      const requerido = this.modoGlobal() && this.facade.alumnosConDeuda().length > 0;
+      untracked(() => this.syncEnrollmentValidator(requerido));
+    });
+  }
+
+  private syncEnrollmentValidator(requerido: boolean): void {
+    if (!this.modoGlobal()) return;
+    const ctrl = this.form.get('enrollment_id')!;
+    if (requerido === ctrl.hasValidator(Validators.required)) return;
+    if (requerido) {
+      ctrl.setValidators(Validators.required);
+    } else {
+      ctrl.clearValidators();
+    }
+    ctrl.updateValueAndValidity();
   }
 
   // ── Balance check (getter — se re-evalúa con cada CD del form) ───────────────
@@ -723,6 +792,7 @@ export class RegistrarPagoDrawerComponent {
     // fix-045-i: un Enter en un campo dispara (ngSubmit) aunque el botón esté deshabilitado;
     // sin esto, dos Enter rápidos registraban el mismo abono dos veces.
     if (this.isSaving()) return;
+    if (this.guardadoBloqueado()) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
