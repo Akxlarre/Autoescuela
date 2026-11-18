@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, it, expect, beforeEach } from 'vitest';
-import { signal } from '@angular/core';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import type { ReporteKpis } from '@core/models/ui/reportes-contables.model';
 import { ReportesContablesContentComponent } from './reportes-contables-content.component';
 
 /**
@@ -53,6 +55,117 @@ describe('ReportesContablesContentComponent — tabs', () => {
     setIsAdmin(true);
     const ids = component['tabOptions']().map((t: { id: string }) => t.id);
     expect(ids).not.toContain('detalle');
+  });
+});
+
+// ── spec 0060-b: una lectura que falla no se ve como "no hay nada" ────────────
+
+describe('ReportesContablesContentComponent — lecturas fallidas (spec 0060-b)', () => {
+  const FILTROS = { rango: 'mes_actual', desde: '2026-11-01', hasta: '2026-11-30' } as const;
+  const KPIS = {
+    totalIngresos: 1000,
+    totalGastos: 100,
+    totalNeto: 900,
+    margenGanancia: 90,
+  } as ReporteKpis;
+
+  /** Los hijos quedan como elementos sin compilar: sus inputs se leen como propiedades. */
+  type Hijo = HTMLElement & Record<string, unknown>;
+
+  function render(inputs: Record<string, unknown>) {
+    TestBed.configureTestingModule({
+      imports: [ReportesContablesContentComponent],
+      providers: [{ provide: GsapAnimationsService, useValue: { animateBentoGrid: vi.fn() } }],
+    }).overrideComponent(ReportesContablesContentComponent, {
+      set: { imports: [], schemas: [NO_ERRORS_SCHEMA] },
+    });
+    const fixture = TestBed.createComponent(ReportesContablesContentComponent);
+    for (const [name, value] of Object.entries({ filtros: FILTROS, ...inputs })) {
+      Object.defineProperty(fixture.componentInstance, name, { value: signal(value) });
+    }
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    return { fixture, el, emptyState: () => el.querySelector('app-empty-state') as Hijo | null };
+  }
+
+  it('caso A: el error reemplaza el contenido, sin KPIs, y deja cambiar el período', () => {
+    const { fixture, el, emptyState } = render({
+      error: 'No se pudo cargar el reporte contable.',
+    });
+    const reintentos: unknown[] = [];
+    fixture.componentInstance.reintentar.subscribe(() => reintentos.push(true));
+
+    expect(el.textContent).not.toContain('Ingresos por Categoría');
+    expect((el.querySelector('app-section-hero') as Hijo)['kpis']).toEqual([]);
+    expect(el.querySelector('p-select')).not.toBeNull();
+
+    const estado = emptyState()!;
+    expect(estado.closest('.bento-fill')).not.toBeNull();
+    expect(estado['message']).toBe('No se pudo cargar el reporte contable.');
+    expect(estado.getAttribute('actionLabel')).toBe('Reintentar');
+    estado.dispatchEvent(new Event('action'));
+    expect(reintentos).toHaveLength(1);
+  });
+
+  it('caso A: tampoco muestra datos en las otras pestañas', () => {
+    const { fixture, el, emptyState } = render({
+      error: 'No se pudo cargar el reporte contable.',
+    });
+    fixture.componentInstance['setActiveTab']('rentabilidad');
+    fixture.detectChanges();
+    expect(el.querySelector('app-rentabilidad-cursos')).toBeNull();
+    expect(emptyState()?.['message']).toBe('No se pudo cargar el reporte contable.');
+  });
+
+  it('caso B: el aviso va dentro de la celda .bento-fill y los datos se quedan', () => {
+    const { fixture, el } = render({ kpis: KPIS, refreshFailed: true });
+    const reintentos: unknown[] = [];
+    fixture.componentInstance.reintentar.subscribe(() => reintentos.push(true));
+    const aviso = el.querySelector('app-alert-card') as HTMLElement;
+
+    expect(aviso.closest('.bento-fill')).not.toBeNull();
+    expect(aviso.parentElement?.classList.contains('bento-grid')).toBe(false);
+    expect(el.textContent).toContain('Ingresos por Categoría');
+
+    aviso
+      .querySelector<HTMLButtonElement>('[data-llm-action="reintentar-reportes-contables"]')!
+      .click();
+    expect(reintentos).toHaveLength(1);
+  });
+
+  it('caso A: no suma el aviso de refresco, porque no quedan datos a los que referirse', () => {
+    const { el, emptyState } = render({
+      error: 'No se pudo cargar el reporte contable.',
+      refreshFailed: true,
+    });
+    expect(el.querySelector('app-alert-card')).toBeNull();
+    expect(emptyState()).not.toBeNull();
+  });
+
+  it('sin fallas no aparece ningún aviso y el vacío real se sigue diciendo', () => {
+    const { el, emptyState } = render({ kpis: KPIS });
+    expect(el.querySelector('app-alert-card')).toBeNull();
+    expect(emptyState()?.getAttribute('message')).toBe('Sin ingresos en este período');
+  });
+
+  it('un error solo de Evolución se ve en su pestaña y no en las demás', () => {
+    const mensaje = 'No se pudo cargar la evolución mensual.';
+    const { fixture, el, emptyState } = render({ kpis: KPIS, evolucionError: mensaje });
+    expect(emptyState()?.['message']).not.toBe(mensaje);
+
+    fixture.componentInstance['setActiveTab']('evolucion');
+    fixture.detectChanges();
+    expect(emptyState()?.['message']).toBe(mensaje);
+    expect(emptyState()?.getAttribute('actionLabel')).toBe('Reintentar');
+    expect(el.querySelector('app-evolucion-mensual-chart')).toBeNull();
+  });
+
+  it('una serie todavía sin cargar no dice "Sin movimientos"', () => {
+    const { fixture, el, emptyState } = render({ kpis: KPIS, evolucionMensual: [] });
+    fixture.componentInstance['setActiveTab']('evolucion');
+    fixture.detectChanges();
+    expect(emptyState()).toBeNull();
+    expect(el.querySelector('app-skeleton-block')).not.toBeNull();
   });
 });
 

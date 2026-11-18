@@ -130,11 +130,49 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
     - [ ] Las 8 lecturas (KPIs, deudores, recientes, desglose) lanzan; una que falle hace fallar la carga
     - [ ] `refreshSilently()` deja de tragar el error
 
-- [ ] **T1.2** — `reportes-contables.facade.ts` + reportes de admin y secretaria
+- [x] **T1.2** — `reportes-contables.facade.ts` + reportes de admin y secretaria
   - **AC ref:** AC3, AC4, AC6
   - **DoD:** DoD-F, más:
-    - [ ] Encontrada la causa F3 (por qué mostró "Sin ingresos en este período" en X01)
-    - [ ] Cambio de período que falla no deja el reporte del período anterior
+    - [x] Encontrada la causa F3 (por qué mostró "Sin ingresos en este período" en X01)
+    - [x] Cambio de período que falla no deja el reporte del período anterior
+  - **Cierre (2026-11-18, revisada por el autor):**
+    - **Causa F3:** el facade sí guardaba el error en `error()`, pero ninguna pantalla lo leía:
+      `admin-contabilidad-reportes` y `secretaria-contabilidad-reportes` no lo pasaban y
+      `reportes-contables-content` no tenía input de error. Con `kpis = null` e `isLoading = false`
+      el panel se dibujaba con listas vacías: "Sin ingresos en este período".
+    - **Fallas que había detrás:** `fetchReporte()` se tragaba el error, así que un período o una
+      sede que fallaban dejaban el reporte anterior bajo la etiqueta nueva. `queryClassCounts` no
+      miraba `error`: con Clase B caída y Profesional bien, todo el gasto de vehículos se cargaba a
+      Profesional en Rentabilidad. La serie de Evolución también ocultaba sus fallas.
+    - **Cambio:** el facade recuerda qué consulta responden los datos visibles (período y sede; en
+      Evolución, ventana y sede). Si falla esa misma es caso B (`refreshFailed`); si falla otra es
+      caso A (`error` o `evolucionError`, y se retiran los datos). Registrar un gasto cuya relectura
+      falla sigue informando éxito, porque el gasto quedó guardado.
+    - **Exportar no se bloquea con `refreshFailed`:** `generate-financial-report` recibe período y
+      sede y recalcula en el servidor (con los gastos fijos de `fix-077-i`); no usa lo que hay en
+      pantalla.
+    - **Verificado:** 32 tests en rojo antes del cambio, mutaciones detectadas, `lint:arch:strict`
+      0 errores, `test:ci` y `test-tz.mjs` en verde. El facade no figura en la línea base de
+      ARCH-39/ARCH-40.
+    - **Navegador, admin (1440×900, claro y oscuro, BD real, lecturas de `payments` cortadas en la
+      pestaña):** caso B con datos y aviso dentro de `.bento-fill`; caso A al cambiar de período sin
+      KPIs ni datos anteriores; "Reintentar" recupera el período. La prueba encontró que en el caso
+      A seguía el aviso de refresco de la serie: corregido, con test. Con red normal, KPIs y las
+      cuatro pestañas de noviembre iguales a `main` ($1.470.000 / $155.000 / $1.315.000).
+    - **Navegador, secretaria (mismas condiciones, sede Conductores Chillán):** casos A y B correctos
+      en claro y oscuro; "Reintentar" recupera octubre ($180.000). Con red normal, KPIs y las tres
+      pestañas de noviembre iguales a `main` ($280.000 / $0 / $280.000).
+    - **Bucle encontrado en esa prueba y corregido:** `fetchReporte()` leía `_reporte` de forma
+      síncrona dentro del `effect` de la pantalla, y cada reporte nuevo disparaba otra carga. Ahora
+      lo lee con `untracked`; el test con `effect` exige 2 lecturas de `payments` (daba 16).
+    - **Validación tras esa corrección:** 31/31 mutaciones detectadas, `lint:arch:strict` 0 errores,
+      5210 tests en verde y 5 omitidos, `test-tz.mjs` 68/68 en las tres zonas, `ngc` sin errores.
+    - **Admin repetido tras esa corrección:** 2 lecturas de `payments`, estables; casos A y B
+      correctos en claro y oscuro; "Reintentar" recupera octubre ($200.000). KPIs de noviembre sin
+      cambios ($1.470.000 / $155.000 / $1.315.000).
+    - **X01 en Playwright:** `X01: /app/secretaria/contabilidad/reportes` pasa sin `knownBug`, contra
+      el build de producción de este worktree en un puerto libre, como pide T0.4 (5 passed,
+      incluidos los 4 inicios de sesión del setup).
 
 - [ ] **T1.3** — `liquidaciones.facade.ts` + liquidaciones de admin y secretaria
   - **AC ref:** AC3, AC4, AC7

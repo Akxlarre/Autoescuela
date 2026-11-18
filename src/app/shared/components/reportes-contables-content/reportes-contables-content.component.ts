@@ -19,6 +19,7 @@ import { ClickOutsideDirective } from '@core/directives/click-outside.directive'
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -66,6 +67,7 @@ type ReporteTab = 'categorias' | 'evolucion' | 'rentabilidad' | 'gastos-fijos';
     SelectModule,
     DateInputComponent,
     EmptyStateComponent,
+    AlertCardComponent,
     BentoGridLayoutDirective,
     RentabilidadCursosComponent,
     EvolucionMensualChartComponent,
@@ -240,6 +242,26 @@ type ReporteTab = 'categorias' | 'evolucion' | 'rentabilidad' | 'gastos-fijos';
              SCSS de .bento-fill). En < lg el panel crece con su contenido y scrollea la
              página (app-like no aplica en móvil). -->
         <div class="bento-banner bento-fill card p-0 lg:overflow-hidden flex flex-col lg:h-full">
+          <!-- Caso B: un refresco falló; los datos de abajo siguen siendo de esta consulta. -->
+          @if (refreshFailed() && !error()) {
+            <div class="p-4 pb-0 shrink-0">
+              <app-alert-card severity="error" title="No se pudo actualizar el reporte">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <span>Los datos mostrados pueden no estar actualizados.</span>
+                  <button
+                    type="button"
+                    class="btn-secondary flex items-center gap-2 shrink-0"
+                    data-llm-action="reintentar-reportes-contables"
+                    (click)="reintentar.emit()"
+                  >
+                    <app-icon name="refresh-cw" [size]="14" />
+                    Reintentar
+                  </button>
+                </div>
+              </app-alert-card>
+            </div>
+          }
+
           <!-- Cabecera del panel (no scrollea): filtros + tabs.
                fix-246-m: apilada hasta lg y cada hijo contenido a su ancho para no
                desbordar el panel en móvil. -->
@@ -311,253 +333,280 @@ type ReporteTab = 'categorias' | 'evolucion' | 'rentabilidad' | 'gastos-fijos';
           <!-- Contenido de la tab activa (scrollea internamente en lg+; en móvil crece y
                scrollea la página) -->
           <div class="lg:flex-1 lg:min-h-0 flex flex-col p-4">
-            @switch (activeTab()) {
-              @case ('categorias') {
-                <!-- ── Ingresos + Gastos por Categoría ─────────────────────────────────
+            <!-- Caso A: la consulta vigente no cargó. Los filtros de arriba siguen disponibles. -->
+            @if (error(); as mensaje) {
+              <div class="flex-1 flex items-center justify-center">
+                <app-empty-state
+                  icon="alert-triangle"
+                  [message]="mensaje"
+                  subtitle="Revisa tu conexión e inténtalo de nuevo."
+                  actionLabel="Reintentar"
+                  actionIcon="refresh-cw"
+                  (action)="reintentar.emit()"
+                />
+              </div>
+            } @else {
+              @switch (activeTab()) {
+                @case ('categorias') {
+                  <!-- ── Ingresos + Gastos por Categoría ─────────────────────────────────
                      fix-242-m: en lg+ cada tarjeta llena el alto del panel (lista
                      scrolleable arriba, Total anclado abajo, empty state centrado) para
                      que no quede hueco cuando hay pocas categorías. En móvil scroll
                      nativo con alto natural. ── -->
-                <div class="lg:flex-1 lg:min-h-0 lg:overflow-visible">
-                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:h-full">
-                    <div class="card p-5 flex flex-col gap-4 lg:h-full lg:min-h-0">
-                      <div class="flex items-center gap-2 shrink-0">
-                        <span class="cat-section-dot dot--success"></span>
-                        <h2 class="font-semibold text-text-primary">Ingresos por Categoría</h2>
-                      </div>
+                  <div class="lg:flex-1 lg:min-h-0 lg:overflow-visible">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:h-full">
+                      <div class="card p-5 flex flex-col gap-4 lg:h-full lg:min-h-0">
+                        <div class="flex items-center gap-2 shrink-0">
+                          <span class="cat-section-dot dot--success"></span>
+                          <h2 class="font-semibold text-text-primary">Ingresos por Categoría</h2>
+                        </div>
 
-                      <div class="flex flex-col gap-4 lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
-                        @for (cat of ingresosCategoria(); track cat.nombre) {
-                          <div class="flex flex-col gap-1">
-                            <div class="flex items-center justify-between gap-2">
-                              <span class="text-sm font-medium text-text-primary">
-                                {{ cat.nombre }}
-                              </span>
-                              <span class="text-sm font-semibold text-success whitespace-nowrap">
-                                {{ clp(cat.monto) }}
-                              </span>
+                        <div class="flex flex-col gap-4 lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
+                          @for (cat of ingresosCategoria(); track cat.nombre) {
+                            <div class="flex flex-col gap-1">
+                              <div class="flex items-center justify-between gap-2">
+                                <span class="text-sm font-medium text-text-primary">
+                                  {{ cat.nombre }}
+                                </span>
+                                <span class="text-sm font-semibold text-success whitespace-nowrap">
+                                  {{ clp(cat.monto) }}
+                                </span>
+                              </div>
+                              <div class="cat-bar-track">
+                                <div
+                                  class="cat-bar-fill"
+                                  [style.width.%]="cat.porcentaje"
+                                  [style.background]="cat.barColor"
+                                ></div>
+                              </div>
+                              <div class="flex justify-between">
+                                <span class="text-xs text-text-muted">
+                                  {{ cat.operaciones }} operaciones
+                                </span>
+                                <span class="text-xs text-text-muted">
+                                  {{ pct(cat.porcentaje) }}
+                                </span>
+                              </div>
                             </div>
-                            <div class="cat-bar-track">
-                              <div
-                                class="cat-bar-fill"
-                                [style.width.%]="cat.porcentaje"
-                                [style.background]="cat.barColor"
-                              ></div>
+                          } @empty {
+                            <div class="flex-1 flex items-center justify-center py-8">
+                              <app-empty-state message="Sin ingresos en este período" />
                             </div>
-                            <div class="flex justify-between">
-                              <span class="text-xs text-text-muted">
-                                {{ cat.operaciones }} operaciones
-                              </span>
-                              <span class="text-xs text-text-muted">
-                                {{ pct(cat.porcentaje) }}
-                              </span>
-                            </div>
-                          </div>
-                        } @empty {
-                          <div class="flex-1 flex items-center justify-center py-8">
-                            <app-empty-state message="Sin ingresos en este período" />
+                          }
+                        </div>
+
+                        @if (ingresosCategoria().length) {
+                          <div
+                            class="flex justify-between pt-3 shrink-0"
+                            style="border-top: 1px solid var(--border-subtle)"
+                          >
+                            <span class="item-title"> Total Ingresos </span>
+                            <span class="text-sm font-bold text-success">
+                              {{ clp(totalIngresos()) }}
+                            </span>
                           </div>
                         }
                       </div>
 
-                      @if (ingresosCategoria().length) {
-                        <div
-                          class="flex justify-between pt-3 shrink-0"
-                          style="border-top: 1px solid var(--border-subtle)"
-                        >
-                          <span class="item-title"> Total Ingresos </span>
-                          <span class="text-sm font-bold text-success">
-                            {{ clp(totalIngresos()) }}
-                          </span>
+                      <div class="card p-5 flex flex-col gap-4 lg:h-full lg:min-h-0">
+                        <div class="flex items-center gap-2 shrink-0">
+                          <span class="cat-section-dot dot--error"></span>
+                          <h2 class="font-semibold text-text-primary">Gastos por Categoría</h2>
                         </div>
-                      }
-                    </div>
 
-                    <div class="card p-5 flex flex-col gap-4 lg:h-full lg:min-h-0">
-                      <div class="flex items-center gap-2 shrink-0">
-                        <span class="cat-section-dot dot--error"></span>
-                        <h2 class="font-semibold text-text-primary">Gastos por Categoría</h2>
-                      </div>
+                        <div class="flex flex-col gap-4 lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
+                          @for (cat of gastosCategoria(); track cat.nombre) {
+                            <div class="flex flex-col gap-1">
+                              <div class="flex items-center justify-between gap-2">
+                                <span class="text-sm font-medium text-text-primary">
+                                  {{ cat.nombre }}
+                                </span>
+                                <span class="text-sm font-semibold text-error whitespace-nowrap">
+                                  {{ clp(cat.monto) }}
+                                </span>
+                              </div>
+                              <div class="cat-bar-track">
+                                <div
+                                  class="cat-bar-fill bg-error"
+                                  [style.width.%]="cat.porcentaje"
+                                ></div>
+                              </div>
+                              <div class="flex justify-between">
+                                <span class="text-xs text-text-muted">
+                                  {{ cat.registros }} registros
+                                </span>
+                                <span class="text-xs text-text-muted">
+                                  {{ pct(cat.porcentaje) }}
+                                </span>
+                              </div>
+                            </div>
+                          } @empty {
+                            <div class="flex-1 flex items-center justify-center py-8">
+                              <app-empty-state message="Sin gastos en este período" />
+                            </div>
+                          }
+                        </div>
 
-                      <div class="flex flex-col gap-4 lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
-                        @for (cat of gastosCategoria(); track cat.nombre) {
-                          <div class="flex flex-col gap-1">
-                            <div class="flex items-center justify-between gap-2">
-                              <span class="text-sm font-medium text-text-primary">
-                                {{ cat.nombre }}
-                              </span>
-                              <span class="text-sm font-semibold text-error whitespace-nowrap">
-                                {{ clp(cat.monto) }}
-                              </span>
-                            </div>
-                            <div class="cat-bar-track">
-                              <div
-                                class="cat-bar-fill bg-error"
-                                [style.width.%]="cat.porcentaje"
-                              ></div>
-                            </div>
-                            <div class="flex justify-between">
-                              <span class="text-xs text-text-muted">
-                                {{ cat.registros }} registros
-                              </span>
-                              <span class="text-xs text-text-muted">
-                                {{ pct(cat.porcentaje) }}
-                              </span>
-                            </div>
-                          </div>
-                        } @empty {
-                          <div class="flex-1 flex items-center justify-center py-8">
-                            <app-empty-state message="Sin gastos en este período" />
+                        @if (gastosCategoria().length) {
+                          <div
+                            class="flex justify-between pt-3 shrink-0"
+                            style="border-top: 1px solid var(--border-subtle)"
+                          >
+                            <span class="item-title"> Total Gastos </span>
+                            <span class="text-sm font-bold text-error">
+                              {{ clp(totalGastos()) }}
+                            </span>
                           </div>
                         }
                       </div>
-
-                      @if (gastosCategoria().length) {
-                        <div
-                          class="flex justify-between pt-3 shrink-0"
-                          style="border-top: 1px solid var(--border-subtle)"
-                        >
-                          <span class="item-title"> Total Gastos </span>
-                          <span class="text-sm font-bold text-error">
-                            {{ clp(totalGastos()) }}
-                          </span>
-                        </div>
-                      }
                     </div>
                   </div>
-                </div>
-              }
-              @case ('evolucion') {
-                <!-- ── Evolución Mensual — ventana propia elegida en el selector del
+                }
+                @case ('evolucion') {
+                  <!-- ── Evolución Mensual — ventana propia elegida en el selector del
                      header (spec 0015-m; antes fija de 6 meses, fix-242-m). El gráfico
                      llena el alto del panel; meses vacíos se muestran en 0. ── -->
-                <div class="lg:flex-1 lg:min-h-0 flex flex-col">
-                  <div class="flex items-baseline justify-between gap-2 shrink-0 mb-4">
-                    <h2 class="font-semibold text-text-primary">Evolución Mensual</h2>
-                    <span class="text-xs text-text-muted">{{ evolucionRangoLabel() }}</span>
-                  </div>
-                  @if (evolucionMensual().length) {
-                    <app-evolucion-mensual-chart
-                      class="lg:flex-1 lg:min-h-0"
-                      [datos]="evolucionMensual()"
-                    />
-                  } @else {
-                    <div class="flex-1 flex items-center justify-center">
-                      <app-empty-state message="Sin movimientos para graficar" />
-                    </div>
-                  }
-                </div>
-              }
-              @case ('rentabilidad') {
-                <div class="lg:flex-1 lg:min-h-0 flex flex-col">
-                  <app-rentabilidad-cursos
-                    class="lg:flex-1 lg:min-h-0"
-                    [datos]="rentabilidadCursos()"
-                    [periodoLabel]="periodoLabel()"
-                  />
-                </div>
-              }
-              @case ('gastos-fijos') {
-                <!-- ── Gastos Fijos del Período — solo admin (fix-010-i, H-014):
-                   fixed_expenses es RLS admin-only. El tab ya está filtrado por isAdmin()
-                   en tabOptions(); el @if acá es defensa en profundidad. ── -->
-                @if (isAdmin()) {
                   <div class="lg:flex-1 lg:min-h-0 flex flex-col">
-                    <div
-                      class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 py-4 border-b shrink-0"
-                      style="border-color: var(--border-muted)"
-                    >
-                      <div class="flex items-center gap-3 min-w-0">
-                        <div
-                          class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-error/10"
-                        >
-                          <app-icon name="lock" [size]="16" color="var(--state-error)" />
-                        </div>
-                        <div>
-                          <h2 class="text-sm font-bold" style="color: var(--text-primary)">
-                            Gastos Fijos del Período
-                          </h2>
-                          <p class="text-xs" style="color: var(--text-muted)">
-                            Arriendo, sueldos, servicios y otros
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        class="btn-primary flex items-center gap-2 text-xs px-4 py-2 rounded-xl shrink-0 active:scale-[0.98] transition-transform"
-                        data-llm-action="abrir-registrar-gasto-fijo"
-                        (click)="registrarGastoClick.emit()"
-                      >
-                        <app-icon name="plus" [size]="14" />
-                        Registrar Gasto Fijo
-                      </button>
+                    <div class="flex items-baseline justify-between gap-2 shrink-0 mb-4">
+                      <h2 class="font-semibold text-text-primary">Evolución Mensual</h2>
+                      <span class="text-xs text-text-muted">{{ evolucionRangoLabel() }}</span>
                     </div>
-
-                    @if (gastosFijos().length === 0) {
-                      <div
-                        class="flex-1 flex flex-col items-center justify-center text-center gap-2 px-6 py-10"
-                      >
-                        <app-icon name="receipt" [size]="28" color="var(--text-muted)" />
-                        <p class="text-sm font-medium" style="color: var(--text-primary)">
-                          Sin gastos fijos en este período
-                        </p>
-                        <p class="text-xs" style="color: var(--text-muted)">
-                          Registra arriendo, sueldos u otros gastos estructurales para calcular el
-                          neto real.
-                        </p>
+                    @if (evolucionError(); as mensaje) {
+                      <div class="flex-1 flex items-center justify-center">
+                        <app-empty-state
+                          icon="alert-triangle"
+                          [message]="mensaje"
+                          subtitle="Revisa tu conexión e inténtalo de nuevo."
+                          actionLabel="Reintentar"
+                          actionIcon="refresh-cw"
+                          (action)="reintentar.emit()"
+                        />
                       </div>
+                    } @else if (evolucionMensual().length) {
+                      <app-evolucion-mensual-chart
+                        class="lg:flex-1 lg:min-h-0"
+                        [datos]="evolucionMensual()"
+                      />
                     } @else {
-                      <div class="lg:flex-1 lg:min-h-0 overflow-x-auto lg:overflow-auto">
-                        <table class="report-table">
-                          <thead>
-                            <tr>
-                              <th class="report-th">Fecha</th>
-                              <th class="report-th">Categoría</th>
-                              <th class="report-th">Descripción</th>
-                              <th class="report-th align-right">Monto</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            @for (gasto of gastosFijos(); track gasto.id) {
-                              <tr>
-                                <td class="report-td text-xs" style="color: var(--text-muted)">
-                                  {{ formatDate(gasto.date) }}
-                                </td>
-                                <td class="report-td">
-                                  <app-badge variant="error">{{ gasto.categoryLabel }}</app-badge>
-                                </td>
-                                <td class="report-td text-sm" style="color: var(--text-secondary)">
-                                  {{ gasto.description }}
-                                </td>
-                                <td
-                                  class="report-td align-right text-sm font-semibold"
-                                  style="color: var(--state-error)"
-                                >
-                                  {{ clp(gasto.amount) }}
-                                </td>
-                              </tr>
-                            }
-                          </tbody>
-                          <tfoot class="report-tfoot">
-                            <tr>
-                              <td
-                                class="report-td font-bold"
-                                colspan="3"
-                                style="color: var(--text-primary)"
-                              >
-                                Total Gastos Fijos
-                              </td>
-                              <td
-                                class="report-td align-right font-black"
-                                style="color: var(--state-error)"
-                              >
-                                {{ clp(totalGastosFijos()) }}
-                              </td>
-                            </tr>
-                          </tfoot>
-                        </table>
-                      </div>
+                      <!-- La serie cargada siempre trae sus meses: vacía significa "cargando". -->
+                      <app-skeleton-block class="lg:flex-1" width="100%" height="100%" />
                     }
                   </div>
+                }
+                @case ('rentabilidad') {
+                  <div class="lg:flex-1 lg:min-h-0 flex flex-col">
+                    <app-rentabilidad-cursos
+                      class="lg:flex-1 lg:min-h-0"
+                      [datos]="rentabilidadCursos()"
+                      [periodoLabel]="periodoLabel()"
+                    />
+                  </div>
+                }
+                @case ('gastos-fijos') {
+                  <!-- ── Gastos Fijos del Período — solo admin (fix-010-i, H-014):
+                   fixed_expenses es RLS admin-only. El tab ya está filtrado por isAdmin()
+                   en tabOptions(); el @if acá es defensa en profundidad. ── -->
+                  @if (isAdmin()) {
+                    <div class="lg:flex-1 lg:min-h-0 flex flex-col">
+                      <div
+                        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 py-4 border-b shrink-0"
+                        style="border-color: var(--border-muted)"
+                      >
+                        <div class="flex items-center gap-3 min-w-0">
+                          <div
+                            class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-error/10"
+                          >
+                            <app-icon name="lock" [size]="16" color="var(--state-error)" />
+                          </div>
+                          <div>
+                            <h2 class="text-sm font-bold" style="color: var(--text-primary)">
+                              Gastos Fijos del Período
+                            </h2>
+                            <p class="text-xs" style="color: var(--text-muted)">
+                              Arriendo, sueldos, servicios y otros
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          class="btn-primary flex items-center gap-2 text-xs px-4 py-2 rounded-xl shrink-0 active:scale-[0.98] transition-transform"
+                          data-llm-action="abrir-registrar-gasto-fijo"
+                          (click)="registrarGastoClick.emit()"
+                        >
+                          <app-icon name="plus" [size]="14" />
+                          Registrar Gasto Fijo
+                        </button>
+                      </div>
+
+                      @if (gastosFijos().length === 0) {
+                        <div
+                          class="flex-1 flex flex-col items-center justify-center text-center gap-2 px-6 py-10"
+                        >
+                          <app-icon name="receipt" [size]="28" color="var(--text-muted)" />
+                          <p class="text-sm font-medium" style="color: var(--text-primary)">
+                            Sin gastos fijos en este período
+                          </p>
+                          <p class="text-xs" style="color: var(--text-muted)">
+                            Registra arriendo, sueldos u otros gastos estructurales para calcular el
+                            neto real.
+                          </p>
+                        </div>
+                      } @else {
+                        <div class="lg:flex-1 lg:min-h-0 overflow-x-auto lg:overflow-auto">
+                          <table class="report-table">
+                            <thead>
+                              <tr>
+                                <th class="report-th">Fecha</th>
+                                <th class="report-th">Categoría</th>
+                                <th class="report-th">Descripción</th>
+                                <th class="report-th align-right">Monto</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (gasto of gastosFijos(); track gasto.id) {
+                                <tr>
+                                  <td class="report-td text-xs" style="color: var(--text-muted)">
+                                    {{ formatDate(gasto.date) }}
+                                  </td>
+                                  <td class="report-td">
+                                    <app-badge variant="error">{{ gasto.categoryLabel }}</app-badge>
+                                  </td>
+                                  <td
+                                    class="report-td text-sm"
+                                    style="color: var(--text-secondary)"
+                                  >
+                                    {{ gasto.description }}
+                                  </td>
+                                  <td
+                                    class="report-td align-right text-sm font-semibold"
+                                    style="color: var(--state-error)"
+                                  >
+                                    {{ clp(gasto.amount) }}
+                                  </td>
+                                </tr>
+                              }
+                            </tbody>
+                            <tfoot class="report-tfoot">
+                              <tr>
+                                <td
+                                  class="report-td font-bold"
+                                  colspan="3"
+                                  style="color: var(--text-primary)"
+                                >
+                                  Total Gastos Fijos
+                                </td>
+                                <td
+                                  class="report-td align-right font-black"
+                                  style="color: var(--state-error)"
+                                >
+                                  {{ clp(totalGastosFijos()) }}
+                                </td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                      }
+                    </div>
+                  }
                 }
               }
             }
@@ -625,8 +674,15 @@ export class ReportesContablesContentComponent implements AfterViewInit {
   readonly filtros = input.required<FiltrosReporte>();
   /** spec 0015-m: opción de rango vigente de la pestaña Evolución (eje independiente de `filtros`). */
   readonly rangoEvolucion = input<RangoEvolucion>('ultimos_6_meses');
+  /** Caso A (spec 0060-b): el reporte vigente no cargó; reemplaza el contenido de las pestañas. */
+  readonly error = input<string | null>(null);
+  /** Caso A solo de la serie: se muestra en la pestaña Evolución. */
+  readonly evolucionError = input<string | null>(null);
+  /** Caso B: un refresco falló y lo visible puede estar desactualizado. */
+  readonly refreshFailed = input<boolean>(false);
 
   // ── Outputs ────────────────────────────────────────────────────────────────
+  readonly reintentar = output<void>();
   readonly aplicarFiltros = output<FiltrosReporte>();
   /** spec 0015-m: cambio de ventana de la pestaña Evolución (NO recarga el reporte general). */
   readonly aplicarRangoEvolucion = output<RangoEvolucion>();
