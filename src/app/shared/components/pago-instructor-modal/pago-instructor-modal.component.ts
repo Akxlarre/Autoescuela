@@ -11,6 +11,7 @@ import {
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { LiquidacionesFacade } from '@core/facades/liquidaciones.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { PagoInstructorPayload } from '@core/models/ui/liquidaciones.model';
@@ -31,9 +32,16 @@ function formatCLP(value: number): string {
   selector: 'app-pago-instructor-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, StatBoxComponent, DrawerFormComponent],
+  imports: [IconComponent, StatBoxComponent, DrawerFormComponent, AlertCardComponent],
   template: `
     <app-drawer-form>
+      @if (aviso(); as mensaje) {
+        <div class="mb-5">
+          <app-alert-card severity="warning" title="No se puede confirmar este pago">
+            {{ mensaje }}
+          </app-alert-card>
+        </div>
+      }
       @if (row(); as r) {
         <!-- ── Subtítulo Contextual ── -->
         <div class="mb-5 pb-5 border-b border-border-muted">
@@ -192,6 +200,7 @@ function formatCLP(value: number): string {
         <button
           type="button"
           class="btn-primary flex items-center gap-2"
+          [disabled]="!puedeConfirmar()"
           (click)="confirmar()"
           data-llm-action="confirmar-pago-instructor"
           aria-label="Confirmar pago"
@@ -213,10 +222,30 @@ export class PagoInstructorModalComponent {
   protected readonly transferCode = signal<string>('');
   protected readonly showTransferError = signal(false);
 
+  /** Un refresco reemplaza la fila por la vigente: el formulario solo se limpia si cambia quién. */
+  private readonly instructorId = computed(() => this.row()?.instructorId ?? null);
+
+  protected readonly puedeConfirmar = computed(
+    () =>
+      this.row()?.status === 'pending' &&
+      this.facade.puedeRegistrarPago() &&
+      !this.facade.isSaving(),
+  );
+
+  protected readonly aviso = computed<string | null>(() => {
+    const row = this.row();
+    if (!row) return 'Esta liquidación ya no está disponible. Cierra y elígela de nuevo.';
+    if (row.status === 'paid') return 'Esta liquidación ya figura como pagada.';
+    if (!this.facade.puedeRegistrarPago()) {
+      return 'Los montos no están actualizados. Reintenta la carga de liquidaciones.';
+    }
+    return null;
+  });
+
   constructor() {
     // Resetear estado interno al cambiar el instructor seleccionado
     effect(() => {
-      const row = this.row();
+      this.instructorId();
       this.paymentMethod.set('cash');
       this.transferCode.set('');
       this.showTransferError.set(false);
@@ -232,6 +261,8 @@ export class PagoInstructorModalComponent {
   }
 
   protected async confirmar(): Promise<void> {
+    if (!this.puedeConfirmar()) return;
+
     if (this.paymentMethod() === 'transfer' && !this.transferCode().trim()) {
       this.showTransferError.set(true);
       return;

@@ -2,7 +2,9 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { ToastService } from '@core/services/ui/toast.service';
+import { assertReadOk } from '@core/utils/db-error.utils';
 import type { BranchPayrollConfig } from '@core/models/dto/branch-payroll-config.model';
+import type { PayrollRateLookup } from '@core/models/ui/liquidaciones.model';
 
 /**
  * Tarifa CLP por hora equivalente usada cuando una sede no tiene fila en
@@ -77,6 +79,20 @@ export class PayrollConfigFacade {
     }
   }
 
+  /**
+   * Lectura para quien calcula un monto: lanza si falla, para que un error nunca se confunda con
+   * una sede sin fila (esa sí usa `PAYROLL_RATE_FALLBACK`). No toca el estado del Facade, que es
+   * el que está editando el drawer de tarifas.
+   */
+  async readRates(): Promise<PayrollRateLookup> {
+    const rows = assertReadOk(
+      await this.supabase.client.from('branch_payroll_config').select('branch_id, amount_per_hour'),
+    ) as Pick<BranchPayrollConfig, 'branch_id' | 'amount_per_hour'>[];
+    const rates = new Map(rows.map((row) => [row.branch_id, row.amount_per_hour]));
+    return (branchId) =>
+      (branchId == null ? undefined : rates.get(branchId)) ?? PAYROLL_RATE_FALLBACK;
+  }
+
   private async fetchConfig(): Promise<void> {
     const { data, error } = await this.supabase.client
       .from('branch_payroll_config')
@@ -89,6 +105,7 @@ export class PayrollConfigFacade {
       return;
     }
     this._config.set((data ?? []) as BranchPayrollConfig[]);
+    this._error.set(null);
   }
 
   // ── Mutación ──────────────────────────────────────────────────────────────

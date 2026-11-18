@@ -491,7 +491,7 @@ const X01_SCREENS: X01Screen[] = [
   // Etapa 1 — Dinero
   S('pagos'),
   S('contabilidad/reportes'),
-  S('contabilidad/liquidaciones', '0060-b etapa 1'),
+  S('contabilidad/liquidaciones'),
   A('contabilidad/anticipos', '0060-b etapa 1'),
   // Etapa 2 — Lecturas que alimentan una escritura o una decisión
   S('contabilidad/cursos', '0060-b etapa 2'),

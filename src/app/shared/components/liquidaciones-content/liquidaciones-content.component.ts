@@ -16,6 +16,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { ClickOutsideDirective } from '@core/directives/click-outside.directive';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -61,6 +63,8 @@ function formatCLP(value: number): string {
     IconComponent,
     SkeletonBlockComponent,
     SectionHeroComponent,
+    EmptyStateComponent,
+    AlertCardComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
   ],
@@ -153,8 +157,12 @@ function formatCLP(value: number): string {
         transition: background 0.15s;
         white-space: nowrap;
       }
-      .btn-pagar:hover {
+      .btn-pagar:hover:not(:disabled) {
         background: color-mix(in srgb, var(--state-success) 18%, var(--bg-surface));
+      }
+      .btn-pagar:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
 
       .btn-pagado {
@@ -275,6 +283,7 @@ function formatCLP(value: number): string {
           icon="banknote"
           density="slim"
           [kpis]="heroKpis()"
+          [loadingKpiCount]="3"
           [loading]="isLoading()"
           [actions]="heroActions()"
           (actionClick)="onHeroAction($event)"
@@ -341,401 +350,450 @@ function formatCLP(value: number): string {
             </button>
           </div>
 
-          <!-- Buscador -->
-          <div class="relative w-64">
-            <app-icon
-              name="search"
-              [size]="15"
-              class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted"
-            />
-            <input
-              type="text"
-              placeholder="Buscar por nombre o RUT..."
-              class="w-full h-9 pl-8 pr-8 text-sm rounded-lg border outline-none transition-colors border-border-default bg-surface text-text-primary"
-              [value]="query()"
-              (input)="query.set($any($event.target).value)"
-              data-llm-description="Search filter for instructor liquidations by name or RUT"
-              aria-label="Buscar instructor"
-            />
-            @if (query()) {
-              <button
-                class="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer text-text-muted"
-                (click)="query.set('')"
-                aria-label="Limpiar búsqueda"
-              >
-                <app-icon name="x" [size]="13" />
-              </button>
-            }
-          </div>
+          <!-- Buscador: sin carga vigente no hay filas que filtrar -->
+          @if (!error()) {
+            <div class="relative w-64">
+              <app-icon
+                name="search"
+                [size]="15"
+                class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted"
+              />
+              <input
+                type="text"
+                placeholder="Buscar por nombre o RUT..."
+                class="w-full h-9 pl-8 pr-8 text-sm rounded-lg border outline-none transition-colors border-border-default bg-surface text-text-primary"
+                [value]="query()"
+                (input)="query.set($any($event.target).value)"
+                data-llm-description="Search filter for instructor liquidations by name or RUT"
+                aria-label="Buscar instructor"
+              />
+              @if (query()) {
+                <button
+                  class="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer text-text-muted"
+                  (click)="query.set('')"
+                  aria-label="Limpiar búsqueda"
+                >
+                  <app-icon name="x" [size]="13" />
+                </button>
+              }
+            </div>
+          }
         </div>
 
-        <!-- Contadores de estado -->
-        <div class="flex items-center gap-4 justify-end shrink-0">
-          <span class="flex items-center gap-1.5 text-xs font-semibold text-warning">
-            <span style="width:8px;height:8px;border-radius:50%;background:currentColor"></span>
-            {{ contadores().pendientes }} Pendientes
-          </span>
-          <span class="flex items-center gap-1.5 text-xs font-semibold text-brand">
-            <span style="width:8px;height:8px;border-radius:50%;background:currentColor"></span>
-            {{ contadores().pagados }} Pagados
-          </span>
-        </div>
+        <!-- Contadores de estado: sin carga vigente no hay nada que contar -->
+        @if (!error()) {
+          <div class="flex items-center gap-4 justify-end shrink-0">
+            <span class="flex items-center gap-1.5 text-xs font-semibold text-warning">
+              <span style="width:8px;height:8px;border-radius:50%;background:currentColor"></span>
+              {{ contadores().pendientes }} Pendientes
+            </span>
+            <span class="flex items-center gap-1.5 text-xs font-semibold text-brand">
+              <span style="width:8px;height:8px;border-radius:50%;background:currentColor"></span>
+              {{ contadores().pagados }} Pagados
+            </span>
+          </div>
+        }
       </div>
 
       <div
         style="border:1px solid var(--border-color); border-radius:var(--radius-lg,10px); container-type:inline-size; container-name:liq-container"
         class="bento-banner bento-fill shadow-sm bg-surface overflow-hidden flex flex-col h-full"
       >
-        <!-- VISTA TABLA (Solo escritorio y drawer cerrado) -->
-        @if (!isDrawerOpen()) {
-          <div class="hidden md:block w-full flex-1 min-h-0 overflow-y-auto">
-            <table
-              class="w-full liq-table"
-              [class.compact-mode]="isDrawerOpen()"
-              role="table"
-              aria-label="Tabla de liquidaciones de instructores"
-            >
-              <thead>
-                <tr class="bg-elevated">
-                  <th class="text-left">Instructor</th>
-                  <th class="text-right">Clases Impartidas</th>
-                  <th class="text-right">Horas Equivalentes</th>
-                  <th class="text-right">Base (Ganado)</th>
-                  <th class="text-right">Anticipos (Descuento)</th>
-                  <th class="text-right">Total a Pagar</th>
-                  <th class="text-center" style="width:180px">Acciones</th>
-                </tr>
-              </thead>
+        <!-- Caso B: un refresco falló; las filas de abajo siguen siendo de esta consulta. -->
+        @if (refreshFailed() && !error()) {
+          <div class="p-4 pb-0 shrink-0">
+            <app-alert-card severity="error" title="No se pudieron actualizar las liquidaciones">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span>Los montos pueden no estar al día. Registrar pagos queda bloqueado.</span>
+                <button
+                  type="button"
+                  class="btn-secondary flex items-center gap-2 shrink-0"
+                  [disabled]="reintentando()"
+                  data-llm-action="reintentar-liquidaciones"
+                  (click)="reintentar.emit()"
+                >
+                  <app-icon name="refresh-cw" [size]="14" />
+                  Reintentar
+                </button>
+              </div>
+            </app-alert-card>
+          </div>
+        }
 
-              <tbody>
-                @if (isLoading()) {
-                  @for (i of skeletonRows; track i) {
-                    <tr>
-                      <td>
-                        <div class="flex items-center gap-3">
-                          <app-skeleton-block variant="circle" width="38px" height="38px" />
-                          <div class="flex flex-col gap-1.5">
-                            <app-skeleton-block variant="text" width="130px" height="13px" />
-                            <app-skeleton-block variant="text" width="80px" height="11px" />
-                          </div>
-                        </div>
-                      </td>
-                      @for (j of [1, 2, 3, 4, 5, 6]; track j) {
-                        <td><app-skeleton-block variant="text" width="75%" height="13px" /></td>
-                      }
-                    </tr>
-                  }
-                } @else if (filtradas().length === 0) {
-                  <tr>
-                    <td colspan="7" class="py-12 text-center text-sm text-text-muted border-none">
-                      @if (query()) {
-                        No se encontraron instructores para "{{ query() }}".
-                      } @else {
-                        No hay instructores registrados para este período.
-                      }
-                    </td>
+        <!-- Caso A: la consulta vigente no cargó. La navegación de mes sigue disponible. -->
+        @if (error(); as mensaje) {
+          <div class="flex-1 flex items-center justify-center">
+            <app-empty-state
+              icon="alert-triangle"
+              [message]="mensaje"
+              subtitle="Revisa tu conexión e inténtalo de nuevo."
+              actionLabel="Reintentar"
+              actionIcon="refresh-cw"
+              (action)="reintentar.emit()"
+            />
+          </div>
+        } @else {
+          <!-- VISTA TABLA (Solo escritorio y drawer cerrado) -->
+          @if (!isDrawerOpen()) {
+            <div class="hidden md:block w-full flex-1 min-h-0 overflow-y-auto">
+              <table
+                class="w-full liq-table"
+                [class.compact-mode]="isDrawerOpen()"
+                role="table"
+                aria-label="Tabla de liquidaciones de instructores"
+              >
+                <thead>
+                  <tr class="bg-elevated">
+                    <th class="text-left">Instructor</th>
+                    <th class="text-right">Clases Impartidas</th>
+                    <th class="text-right">Horas Equivalentes</th>
+                    <th class="text-right">Base (Ganado)</th>
+                    <th class="text-right">Anticipos (Descuento)</th>
+                    <th class="text-right">Total a Pagar</th>
+                    <th class="text-center" style="width:180px">Acciones</th>
                   </tr>
-                } @else {
-                  @for (row of filtradas(); track row.instructorId) {
-                    <tr>
-                      <!-- Instructor -->
-                      <td>
-                        <div class="flex items-center gap-3">
-                          <div
-                            class="shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm"
-                            style="width:38px;height:38px;border-radius:50%;background:{{
-                              row.avatarColor
-                            }}"
-                            aria-hidden="true"
-                          >
-                            {{ row.initials }}
-                          </div>
-                          <div class="min-w-0">
-                            <p class="item-title leading-tight truncate max-w-30 lg:max-w-50">
-                              {{ row.nombre }}
-                            </p>
-                            <p
-                              class="text-xs text-text-muted mt-0.5 truncate"
-                              [pTooltip]="row.rut"
-                              tooltipPosition="top"
-                            >
-                              {{ row.rut }}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
+                </thead>
 
-                      <!-- Clases impartidas -->
+                <tbody>
+                  @if (isLoading()) {
+                    @for (i of skeletonRows; track i) {
+                      <tr>
+                        <td>
+                          <div class="flex items-center gap-3">
+                            <app-skeleton-block variant="circle" width="38px" height="38px" />
+                            <div class="flex flex-col gap-1.5">
+                              <app-skeleton-block variant="text" width="130px" height="13px" />
+                              <app-skeleton-block variant="text" width="80px" height="11px" />
+                            </div>
+                          </div>
+                        </td>
+                        @for (j of [1, 2, 3, 4, 5, 6]; track j) {
+                          <td><app-skeleton-block variant="text" width="75%" height="13px" /></td>
+                        }
+                      </tr>
+                    }
+                  } @else if (filtradas().length === 0) {
+                    <tr>
+                      <td colspan="7" class="py-12 text-center text-sm text-text-muted border-none">
+                        @if (query()) {
+                          No se encontraron instructores para "{{ query() }}".
+                        } @else {
+                          No hay instructores registrados para este período.
+                        }
+                      </td>
+                    </tr>
+                  } @else {
+                    @for (row of filtradas(); track row.instructorId) {
+                      <tr>
+                        <!-- Instructor -->
+                        <td>
+                          <div class="flex items-center gap-3">
+                            <div
+                              class="shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm"
+                              style="width:38px;height:38px;border-radius:50%;background:{{
+                                row.avatarColor
+                              }}"
+                              aria-hidden="true"
+                            >
+                              {{ row.initials }}
+                            </div>
+                            <div class="min-w-0">
+                              <p class="item-title leading-tight truncate max-w-30 lg:max-w-50">
+                                {{ row.nombre }}
+                              </p>
+                              <p
+                                class="text-xs text-text-muted mt-0.5 truncate"
+                                [pTooltip]="row.rut"
+                                tooltipPosition="top"
+                              >
+                                {{ row.rut }}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <!-- Clases impartidas -->
+                        <td class="text-right tabular-nums">
+                          <span class="item-title">{{ row.practicalSessions }}</span>
+                          <span class="text-xs text-text-muted ml-1">{{
+                            row.practicalSessions === 1 ? 'clase' : 'clases'
+                          }}</span>
+                        </td>
+
+                        <!-- Horas equivalentes -->
+                        <td class="text-right tabular-nums">
+                          <span class="text-sm font-semibold text-brand">{{ row.totalHours }}</span>
+                          <span class="text-xs text-text-muted ml-1">hrs</span>
+                        </td>
+
+                        <!-- Base ganado -->
+                        <td class="text-right tabular-nums">
+                          <span class="text-sm font-semibold text-success">
+                            {{ formatCLP(row.totalBaseAmount) }}
+                          </span>
+                        </td>
+
+                        <!-- Anticipos -->
+                        <td class="text-right">
+                          @if (row.totalAdvances > 0) {
+                            <div class="flex flex-col items-end gap-1">
+                              <span class="anticipo-box">{{ formatCLP(row.totalAdvances) }}</span>
+                              <span class="text-xs font-medium tabular-nums text-error">
+                                - {{ formatCLP(row.totalAdvances) }}
+                              </span>
+                            </div>
+                          } @else {
+                            <span class="text-sm text-text-muted">—</span>
+                          }
+                        </td>
+
+                        <!-- Total a pagar -->
+                        <td class="text-right tabular-nums">
+                          <span class="item-title">{{ formatCLP(row.finalPaymentAmount) }}</span>
+                        </td>
+
+                        <!-- Acciones -->
+                        <td class="text-center">
+                          @if (row.status === 'paid') {
+                            <div class="flex items-center justify-center gap-2">
+                              <span class="btn-pagado">
+                                <app-icon
+                                  name="check-circle"
+                                  [size]="13"
+                                  color="var(--state-success)"
+                                />
+                                Pagado
+                              </span>
+                              <button
+                                class="btn-deshacer shadow-sm"
+                                (click)="onDeshacer(row)"
+                                [attr.aria-label]="'Deshacer pago de ' + row.nombre"
+                                data-llm-action="deshacer-pago-instructor"
+                              >
+                                <app-icon name="rotate-ccw" [size]="11" />
+                                Deshacer
+                              </button>
+                            </div>
+                          } @else {
+                            <button
+                              class="btn-pagar shadow-sm"
+                              [disabled]="!puedeRegistrarPago()"
+                              [attr.title]="puedeRegistrarPago() ? null : PAGO_BLOQUEADO"
+                              (click)="abrirModal(row)"
+                              [attr.aria-label]="'Registrar pago para ' + row.nombre"
+                              data-llm-action="pagar-instructor"
+                            >
+                              <app-icon name="banknote" [size]="13" />
+                              Pagar
+                            </button>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+
+                <!-- Fila de totales escritorio -->
+                @if (!isLoading() && filtradas().length > 0) {
+                  <tfoot>
+                    <tr>
+                      <td class="text-xs font-bold text-text-secondary uppercase tracking-wide">
+                        TOTALES — {{ filtradas().length }}
+                        {{ filtradas().length === 1 ? 'instructor' : 'instructores' }}
+                      </td>
                       <td class="text-right tabular-nums">
-                        <span class="item-title">{{ row.practicalSessions }}</span>
+                        <span class="item-title">{{ totales().clases }}</span>
                         <span class="text-xs text-text-muted ml-1">{{
-                          row.practicalSessions === 1 ? 'clase' : 'clases'
+                          totales().clases === 1 ? 'clase' : 'clases'
                         }}</span>
                       </td>
-
-                      <!-- Horas equivalentes -->
                       <td class="text-right tabular-nums">
-                        <span class="text-sm font-semibold text-brand">{{ row.totalHours }}</span>
+                        <span class="text-sm font-bold text-brand">{{ totales().horas }}</span>
                         <span class="text-xs text-text-muted ml-1">hrs</span>
                       </td>
-
-                      <!-- Base ganado -->
                       <td class="text-right tabular-nums">
-                        <span class="text-sm font-semibold text-success">
-                          {{ formatCLP(row.totalBaseAmount) }}
+                        <span class="text-sm font-bold text-success">
+                          {{ formatCLP(totales().base) }}
                         </span>
                       </td>
-
-                      <!-- Anticipos -->
                       <td class="text-right">
-                        @if (row.totalAdvances > 0) {
-                          <div class="flex flex-col items-end gap-1">
-                            <span class="anticipo-box">{{ formatCLP(row.totalAdvances) }}</span>
-                            <span class="text-xs font-medium tabular-nums text-error">
-                              - {{ formatCLP(row.totalAdvances) }}
-                            </span>
-                          </div>
+                        @if (totales().anticipos > 0) {
+                          <span class="anticipo-box">{{ formatCLP(totales().anticipos) }}</span>
                         } @else {
                           <span class="text-sm text-text-muted">—</span>
                         }
                       </td>
-
-                      <!-- Total a pagar -->
                       <td class="text-right tabular-nums">
-                        <span class="item-title">{{ formatCLP(row.finalPaymentAmount) }}</span>
+                        <span class="font-bold text-brand">{{ formatCLP(totales().total) }}</span>
                       </td>
-
-                      <!-- Acciones -->
-                      <td class="text-center">
-                        @if (row.status === 'paid') {
-                          <div class="flex items-center justify-center gap-2">
-                            <span class="btn-pagado">
-                              <app-icon
-                                name="check-circle"
-                                [size]="13"
-                                color="var(--state-success)"
-                              />
-                              Pagado
-                            </span>
-                            <button
-                              class="btn-deshacer shadow-sm"
-                              (click)="onDeshacer(row)"
-                              [attr.aria-label]="'Deshacer pago de ' + row.nombre"
-                              data-llm-action="deshacer-pago-instructor"
-                            >
-                              <app-icon name="rotate-ccw" [size]="11" />
-                              Deshacer
-                            </button>
-                          </div>
-                        } @else {
-                          <button
-                            class="btn-pagar shadow-sm"
-                            (click)="abrirModal(row)"
-                            [attr.aria-label]="'Registrar pago para ' + row.nombre"
-                            data-llm-action="pagar-instructor"
-                          >
-                            <app-icon name="banknote" [size]="13" />
-                            Pagar
-                          </button>
-                        }
-                      </td>
+                      <td></td>
                     </tr>
-                  }
+                  </tfoot>
                 }
-              </tbody>
-
-              <!-- Fila de totales escritorio -->
-              @if (!isLoading() && filtradas().length > 0) {
-                <tfoot>
-                  <tr>
-                    <td class="text-xs font-bold text-text-secondary uppercase tracking-wide">
-                      TOTALES — {{ filtradas().length }}
-                      {{ filtradas().length === 1 ? 'instructor' : 'instructores' }}
-                    </td>
-                    <td class="text-right tabular-nums">
-                      <span class="item-title">{{ totales().clases }}</span>
-                      <span class="text-xs text-text-muted ml-1">{{
-                        totales().clases === 1 ? 'clase' : 'clases'
-                      }}</span>
-                    </td>
-                    <td class="text-right tabular-nums">
-                      <span class="text-sm font-bold text-brand">{{ totales().horas }}</span>
-                      <span class="text-xs text-text-muted ml-1">hrs</span>
-                    </td>
-                    <td class="text-right tabular-nums">
-                      <span class="text-sm font-bold text-success">
-                        {{ formatCLP(totales().base) }}
-                      </span>
-                    </td>
-                    <td class="text-right">
-                      @if (totales().anticipos > 0) {
-                        <span class="anticipo-box">{{ formatCLP(totales().anticipos) }}</span>
-                      } @else {
-                        <span class="text-sm text-text-muted">—</span>
-                      }
-                    </td>
-                    <td class="text-right tabular-nums">
-                      <span class="font-bold text-brand">{{ formatCLP(totales().total) }}</span>
-                    </td>
-                    <td></td>
-                  </tr>
-                </tfoot>
-              }
-            </table>
-          </div>
-        }
-
-        <!-- VISTA ADAPTATIVA (Móvil o Desktop con Drawer Abierto) -->
-        <div
-          [class.md:hidden]="!isDrawerOpen()"
-          class="flex flex-col gap-4 p-4 bg-elevated"
-          [class.adaptive-grid]="isDrawerOpen()"
-        >
-          @if (isLoading()) {
-            @for (i of skeletonRows; track i) {
-              <div class="p-5 rounded-xl border border-border-muted bg-surface">
-                <div class="flex items-center gap-3 mb-4">
-                  <app-skeleton-block variant="circle" width="38px" height="38px" />
-                  <div class="flex flex-col gap-2 flex-1">
-                    <app-skeleton-block variant="text" width="60%" height="14px" />
-                    <app-skeleton-block variant="text" width="40%" height="12px" />
-                  </div>
-                </div>
-                <app-skeleton-block variant="text" width="100%" height="40px" />
-              </div>
-            }
-          } @else if (filtradas().length === 0) {
-            <div class="py-10 text-center text-sm text-text-muted">
-              @if (query()) {
-                No se encontraron instructores para "{{ query() }}".
-              } @else {
-                No hay instructores registrados para este período.
-              }
-            </div>
-          } @else {
-            @for (row of filtradas(); track row.instructorId) {
-              <div class="card-mobile-liq shadow-sm">
-                <!-- Header Card (Instructor info) -->
-                <div class="flex justify-between items-start mb-4">
-                  <div class="flex items-center gap-3">
-                    <div
-                      class="shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm"
-                      style="width:42px;height:42px;border-radius:50%;background:{{
-                        row.avatarColor
-                      }}"
-                      aria-hidden="true"
-                    >
-                      {{ row.initials }}
-                    </div>
-                    <div>
-                      <h3 class="item-title leading-tight">
-                        {{ row.nombre }}
-                      </h3>
-                      <p class="text-xs text-text-muted mt-0.5">{{ row.rut }}</p>
-                    </div>
-                  </div>
-
-                  @if (row.status === 'paid') {
-                    <span class="badge-liq text-success bg-success/12">
-                      <app-icon name="check-circle" [size]="12" /> Pagado
-                    </span>
-                  } @else {
-                    <span class="badge-liq text-warning bg-warning/12"> Pendiente </span>
-                  }
-                </div>
-
-                <!-- Content Card (Metrics) -->
-                <div class="grid grid-cols-2 gap-3 mb-4 p-3 rounded-lg bg-elevated">
-                  <div class="flex flex-col gap-1">
-                    <span class="text-2xs uppercase font-bold text-text-muted">Base (Ganado)</span>
-                    <span class="text-compact font-bold text-success">
-                      {{ formatCLP(row.totalBaseAmount) }}
-                    </span>
-                  </div>
-                  <div class="flex flex-col gap-1">
-                    <span class="text-2xs uppercase font-bold text-text-muted"
-                      >Horas Equivalentes</span
-                    >
-                    <div class="text-compact font-bold tabular-nums text-brand">
-                      {{ row.totalHours }}
-                      <span class="font-normal text-text-muted">hrs</span>
-                      <span class="text-2xs font-normal text-text-muted ml-1"
-                        >({{ row.practicalSessions }}
-                        {{ row.practicalSessions === 1 ? 'clase' : 'clases' }})</span
-                      >
-                    </div>
-                  </div>
-                  <div
-                    class="flex flex-col gap-1 col-span-2 border-t pt-2 mt-1 border-border-muted"
-                  >
-                    <div class="flex justify-between items-center w-full">
-                      <span class="text-2xs uppercase font-bold text-text-muted"
-                        >Anticipos Emitidos</span
-                      >
-                      <span class="text-compact font-bold tabular-nums text-error">
-                        {{ row.totalAdvances > 0 ? '-' + formatCLP(row.totalAdvances) : '—' }}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="flex flex-col gap-1 col-span-2 border-t pt-2 border-border-muted">
-                    <div class="flex justify-between items-center w-full">
-                      <span class="text-2xs uppercase font-black text-text-primary">A Pagar</span>
-                      <span class="text-lg font-black tracking-tight text-brand">
-                        {{ formatCLP(row.finalPaymentAmount) }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Actions Card -->
-                <div class="flex flex-col sm:flex-row justify-end gap-2 mt-2">
-                  @if (row.status === 'paid') {
-                    <button
-                      class="btn-deshacer w-full sm:w-auto justify-center py-2.5 shadow-sm"
-                      (click)="onDeshacer(row)"
-                    >
-                      <app-icon name="rotate-ccw" [size]="14" />
-                      Deshacer Pago
-                    </button>
-                  } @else {
-                    <button
-                      class="btn-pagar w-full sm:w-auto justify-center py-2.5 text-sm shadow-sm"
-                      (click)="abrirModal(row)"
-                    >
-                      <app-icon name="banknote" [size]="15" />
-                      Registrar Pago
-                    </button>
-                  }
-                </div>
-              </div>
-            }
-
-            <!-- Mobile Totals Summary -->
-            <div class="mt-4 p-4 rounded-xl border-2 border-brand/30 bg-brand/5">
-              <h4 class="text-2xs uppercase font-black tracking-widest text-text-primary mb-3">
-                Resumen de Totales
-              </h4>
-              <div class="flex justify-between items-center mb-2">
-                <span class="text-xs text-text-muted font-medium">Bases Registradas</span>
-                <span class="text-sm font-bold tabular-nums text-success">{{
-                  formatCLP(totales().base)
-                }}</span>
-              </div>
-              <div class="flex justify-between items-center mb-2">
-                <span class="text-xs text-text-muted font-medium">Anticipos a Descontar</span>
-                <span class="text-sm font-bold tabular-nums text-error"
-                  >- {{ formatCLP(totales().anticipos) }}</span
-                >
-              </div>
-              <div class="flex justify-between items-center pt-2 mt-2 border-t border-brand/20">
-                <span class="text-xs font-black uppercase text-text-primary">Total Final</span>
-                <span class="text-lg font-black tabular-nums tracking-tight text-brand">{{
-                  formatCLP(totales().total)
-                }}</span>
-              </div>
+              </table>
             </div>
           }
-        </div>
+
+          <!-- VISTA ADAPTATIVA (Móvil o Desktop con Drawer Abierto) -->
+          <div
+            [class.md:hidden]="!isDrawerOpen()"
+            class="flex flex-col gap-4 p-4 bg-elevated"
+            [class.adaptive-grid]="isDrawerOpen()"
+          >
+            @if (isLoading()) {
+              @for (i of skeletonRows; track i) {
+                <div class="p-5 rounded-xl border border-border-muted bg-surface">
+                  <div class="flex items-center gap-3 mb-4">
+                    <app-skeleton-block variant="circle" width="38px" height="38px" />
+                    <div class="flex flex-col gap-2 flex-1">
+                      <app-skeleton-block variant="text" width="60%" height="14px" />
+                      <app-skeleton-block variant="text" width="40%" height="12px" />
+                    </div>
+                  </div>
+                  <app-skeleton-block variant="text" width="100%" height="40px" />
+                </div>
+              }
+            } @else if (filtradas().length === 0) {
+              <div class="py-10 text-center text-sm text-text-muted">
+                @if (query()) {
+                  No se encontraron instructores para "{{ query() }}".
+                } @else {
+                  No hay instructores registrados para este período.
+                }
+              </div>
+            } @else {
+              @for (row of filtradas(); track row.instructorId) {
+                <div class="card-mobile-liq shadow-sm">
+                  <!-- Header Card (Instructor info) -->
+                  <div class="flex justify-between items-start mb-4">
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm"
+                        style="width:42px;height:42px;border-radius:50%;background:{{
+                          row.avatarColor
+                        }}"
+                        aria-hidden="true"
+                      >
+                        {{ row.initials }}
+                      </div>
+                      <div>
+                        <h3 class="item-title leading-tight">
+                          {{ row.nombre }}
+                        </h3>
+                        <p class="text-xs text-text-muted mt-0.5">{{ row.rut }}</p>
+                      </div>
+                    </div>
+
+                    @if (row.status === 'paid') {
+                      <span class="badge-liq text-success bg-success/12">
+                        <app-icon name="check-circle" [size]="12" /> Pagado
+                      </span>
+                    } @else {
+                      <span class="badge-liq text-warning bg-warning/12"> Pendiente </span>
+                    }
+                  </div>
+
+                  <!-- Content Card (Metrics) -->
+                  <div class="grid grid-cols-2 gap-3 mb-4 p-3 rounded-lg bg-elevated">
+                    <div class="flex flex-col gap-1">
+                      <span class="text-2xs uppercase font-bold text-text-muted"
+                        >Base (Ganado)</span
+                      >
+                      <span class="text-compact font-bold text-success">
+                        {{ formatCLP(row.totalBaseAmount) }}
+                      </span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <span class="text-2xs uppercase font-bold text-text-muted"
+                        >Horas Equivalentes</span
+                      >
+                      <div class="text-compact font-bold tabular-nums text-brand">
+                        {{ row.totalHours }}
+                        <span class="font-normal text-text-muted">hrs</span>
+                        <span class="text-2xs font-normal text-text-muted ml-1"
+                          >({{ row.practicalSessions }}
+                          {{ row.practicalSessions === 1 ? 'clase' : 'clases' }})</span
+                        >
+                      </div>
+                    </div>
+                    <div
+                      class="flex flex-col gap-1 col-span-2 border-t pt-2 mt-1 border-border-muted"
+                    >
+                      <div class="flex justify-between items-center w-full">
+                        <span class="text-2xs uppercase font-bold text-text-muted"
+                          >Anticipos Emitidos</span
+                        >
+                        <span class="text-compact font-bold tabular-nums text-error">
+                          {{ row.totalAdvances > 0 ? '-' + formatCLP(row.totalAdvances) : '—' }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="flex flex-col gap-1 col-span-2 border-t pt-2 border-border-muted">
+                      <div class="flex justify-between items-center w-full">
+                        <span class="text-2xs uppercase font-black text-text-primary">A Pagar</span>
+                        <span class="text-lg font-black tracking-tight text-brand">
+                          {{ formatCLP(row.finalPaymentAmount) }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Actions Card -->
+                  <div class="flex flex-col sm:flex-row justify-end gap-2 mt-2">
+                    @if (row.status === 'paid') {
+                      <button
+                        class="btn-deshacer w-full sm:w-auto justify-center py-2.5 shadow-sm"
+                        (click)="onDeshacer(row)"
+                        [attr.aria-label]="'Deshacer pago de ' + row.nombre"
+                        data-llm-action="deshacer-pago-instructor"
+                      >
+                        <app-icon name="rotate-ccw" [size]="14" />
+                        Deshacer Pago
+                      </button>
+                    } @else {
+                      <button
+                        class="btn-pagar w-full sm:w-auto justify-center py-2.5 text-sm shadow-sm"
+                        [disabled]="!puedeRegistrarPago()"
+                        [attr.title]="puedeRegistrarPago() ? null : PAGO_BLOQUEADO"
+                        (click)="abrirModal(row)"
+                        [attr.aria-label]="'Registrar pago para ' + row.nombre"
+                        data-llm-action="pagar-instructor"
+                      >
+                        <app-icon name="banknote" [size]="15" />
+                        Registrar Pago
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- Mobile Totals Summary -->
+              <div class="mt-4 p-4 rounded-xl border-2 border-brand/30 bg-brand/5">
+                <h4 class="text-2xs uppercase font-black tracking-widest text-text-primary mb-3">
+                  Resumen de Totales
+                </h4>
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-xs text-text-muted font-medium">Bases Registradas</span>
+                  <span class="text-sm font-bold tabular-nums text-success">{{
+                    formatCLP(totales().base)
+                  }}</span>
+                </div>
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-xs text-text-muted font-medium">Anticipos a Descontar</span>
+                  <span class="text-sm font-bold tabular-nums text-error"
+                    >- {{ formatCLP(totales().anticipos) }}</span
+                  >
+                </div>
+                <div class="flex justify-between items-center pt-2 mt-2 border-t border-brand/20">
+                  <span class="text-xs font-black uppercase text-text-primary">Total Final</span>
+                  <span class="text-lg font-black tabular-nums tracking-tight text-brand">{{
+                    formatCLP(totales().total)
+                  }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        }
       </div>
 
       <!-- El modal ha sido migrado a LayoutDrawer -->
@@ -745,8 +803,16 @@ function formatCLP(value: number): string {
 export class LiquidacionesContentComponent implements AfterViewInit {
   // ── Inputs ──────────────────────────────────────────────────────────────────
   liquidaciones = input.required<LiquidacionRow[]>();
-  kpis = input.required<LiquidacionesKpis>();
+  /** null sin una carga vigente: el hero no muestra valores. */
+  kpis = input.required<LiquidacionesKpis | null>();
   isLoading = input<boolean>(false);
+  /** Caso A (spec 0060-b): la consulta vigente no cargó; reemplaza la lista y los KPIs. */
+  error = input<string | null>(null);
+  /** Caso B: un refresco falló y lo visible puede estar desactualizado. */
+  refreshFailed = input<boolean>(false);
+  reintentando = input<boolean>(false);
+  /** false si la última carga no terminó bien: esos montos no sirven para guardar un pago. */
+  puedeRegistrarPago = input<boolean>(true);
   isExporting = input<boolean>(false);
   mesActual = input<number>(chileParts().month);
   anioActual = input<number>(chileYear());
@@ -754,6 +820,7 @@ export class LiquidacionesContentComponent implements AfterViewInit {
   puedeAvanzarMes = input<boolean>(true);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
+  reintentar = output<void>();
   mesAnterior = output<void>();
   mesSiguiente = output<void>();
   deshacer = output<LiquidacionRow>();
@@ -772,6 +839,7 @@ export class LiquidacionesContentComponent implements AfterViewInit {
 
   // ── Constantes ───────────────────────────────────────────────────────────────
   protected readonly skeletonRows = Array.from({ length: 5 });
+  protected readonly PAGO_BLOQUEADO = 'Actualiza las liquidaciones para registrar pagos.';
 
   ngAfterViewInit(): void {
     const el = this.pageRef()?.nativeElement;
@@ -793,6 +861,7 @@ export class LiquidacionesContentComponent implements AfterViewInit {
 
   protected readonly heroKpis = computed((): SectionHeroKpi[] => {
     const k = this.kpis();
+    if (!k || this.error()) return [];
     const pct =
       k.totalInstructores > 0 ? Math.round((k.totalPagados / k.totalInstructores) * 100) : 0;
     return [
@@ -843,8 +912,8 @@ export class LiquidacionesContentComponent implements AfterViewInit {
   });
 
   protected readonly progresoPagos = computed(() => {
-    const total = this.kpis().totalInstructores;
-    return total > 0 ? (this.kpis().totalPagados / total) * 100 : 0;
+    const k = this.kpis();
+    return k && k.totalInstructores > 0 ? (k.totalPagados / k.totalInstructores) * 100 : 0;
   });
 
   protected readonly totales = computed(() => {
@@ -867,6 +936,7 @@ export class LiquidacionesContentComponent implements AfterViewInit {
   }
 
   protected abrirModal(row: LiquidacionRow): void {
+    if (!this.puedeRegistrarPago()) return;
     this.pagar.emit(row);
   }
 

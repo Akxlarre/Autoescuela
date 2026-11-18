@@ -1,10 +1,9 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject } from '@angular/core';
 import { LiquidacionesFacade } from '@core/facades/liquidaciones.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { PagoInstructorModalComponent } from '@shared/components/pago-instructor-modal/pago-instructor-modal.component';
 import { LiquidacionesContentComponent } from '@shared/components/liquidaciones-content/liquidaciones-content.component';
-import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
-import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import type { LiquidacionRow } from '@core/models/ui/liquidaciones.model';
 
 @Component({
@@ -17,6 +16,11 @@ import type { LiquidacionRow } from '@core/models/ui/liquidaciones.model';
       [isLoading]="facade.isLoading()"
       [isExporting]="facade.isExporting()"
       [kpis]="facade.kpis()"
+      [error]="facade.error()"
+      [refreshFailed]="facade.refreshFailed()"
+      [reintentando]="facade.reintentando()"
+      [puedeRegistrarPago]="facade.puedeRegistrarPago()"
+      (reintentar)="facade.reintentar()"
       [mesActual]="facade.mesActual()"
       [anioActual]="facade.anioActual()"
       [isDrawerOpen]="layoutDrawer.isOpen()"
@@ -29,14 +33,20 @@ import type { LiquidacionRow } from '@core/models/ui/liquidaciones.model';
     />
   `,
 })
-export class SecretariaContabilidadLiquidacionesComponent implements OnInit {
+export class SecretariaContabilidadLiquidacionesComponent {
   protected readonly facade = inject(LiquidacionesFacade);
+  private readonly branchFacade = inject(BranchFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly destroyRef = inject(DestroyRef);
 
-  ngOnInit(): void {
+  constructor() {
     this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
-    void this.facade.initialize();
+
+    // Con acceso a ambas sedes (spec 0017) la secretaria también cambia de sede.
+    effect(() => {
+      this.branchFacade.selectedBranchId();
+      void this.facade.initialize();
+    });
   }
 
   protected onPagar(row: LiquidacionRow): void {

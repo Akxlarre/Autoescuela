@@ -113,6 +113,18 @@ describe('PayrollConfigFacade', () => {
       expect(facade.isLoading()).toBe(false);
     });
 
+    it('spec 0060-b: un refresco que sale bien borra el error anterior', async () => {
+      supabaseSpy.client = buildSelectChain(null, { message: 'PG down' });
+      await facade.load();
+      expect(facade.error()).toBe('PG down');
+
+      supabaseSpy.client = buildSelectChain(mockRows);
+      await facade.load();
+
+      expect(facade.error()).toBeNull();
+      expect(facade.rateForBranch(2)).toBe(6500);
+    });
+
     it('SWR: segunda llamada NO vuelve a prender isLoading', async () => {
       supabaseSpy.client = buildSelectChain(mockRows);
 
@@ -138,6 +150,57 @@ describe('PayrollConfigFacade', () => {
       resolveQuery({ data: mockRows, error: null });
       await p;
       expect(facade.isLoading()).toBe(false);
+    });
+  });
+
+  // spec 0060-b: quien calcula un monto necesita distinguir "sede sin fila" de "no se pudo leer".
+  describe('readRates()', () => {
+    it('devuelve la tarifa de cada sede leída', async () => {
+      supabaseSpy.client = buildSelectChain(mockRows);
+
+      const rate = await facade.readRates();
+
+      expect(rate(1)).toBe(5000);
+      expect(rate(2)).toBe(6500);
+    });
+
+    it('una sede realmente sin fila sigue usando el respaldo', async () => {
+      supabaseSpy.client = buildSelectChain(mockRows);
+
+      const rate = await facade.readRates();
+
+      expect(rate(99)).toBe(PAYROLL_RATE_FALLBACK);
+      expect(rate(null)).toBe(PAYROLL_RATE_FALLBACK);
+    });
+
+    it('si la lectura falla, lanza: nunca devuelve el respaldo', async () => {
+      const dbError = { message: 'PG down' };
+      supabaseSpy.client = buildSelectChain(null, dbError);
+
+      await expect(facade.readRates()).rejects.toBe(dbError);
+    });
+
+    it('una falla no toca lo que usa el drawer de tarifas', async () => {
+      supabaseSpy.client = buildSelectChain(mockRows);
+      await facade.load();
+      supabaseSpy.client = buildSelectChain(null, { message: 'PG down' });
+
+      await expect(facade.readRates()).rejects.toBeDefined();
+
+      expect(facade.rateForBranch(2)).toBe(6500);
+      expect(facade.error()).toBeNull();
+      expect(toastSpy.error).not.toHaveBeenCalled();
+    });
+
+    it('una lectura correcta tampoco pisa la configuración en edición', async () => {
+      supabaseSpy.client = buildSelectChain(mockRows);
+      await facade.load();
+      supabaseSpy.client = buildSelectChain([{ branch_id: 2, amount_per_hour: 9000 }]);
+
+      const rate = await facade.readRates();
+
+      expect(rate(2)).toBe(9000);
+      expect(facade.rateForBranch(2)).toBe(6500);
     });
   });
 
