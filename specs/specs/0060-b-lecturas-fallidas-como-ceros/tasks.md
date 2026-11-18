@@ -236,6 +236,29 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
   - **DoD:** DoD-F, más:
     - [ ] `hoursRes`, `advancesRes` y `paymentsRes` se revisan (hoy solo `instrRes`)
     - [ ] "Registrar pago" queda bloqueado si las horas o los anticipos no cargaron
+  - **Avance (2026-11-18), pendiente de revisión.** La tarea sigue abierta.
+    - **Facade.** Instructores, horas, anticipos, pagos y tarifa forman una sola carga: si una falla
+      no se aplica nada. La tarifa se lee con `PayrollConfigFacade.readRates()`, que lanza; el valor
+      de respaldo queda solo para una sede sin fila. `createRequestGuard` descarta respuestas viejas.
+    - **Casos A y B.** Primera carga y cambio de mes o sede retiran filas, selección y KPIs. Re-entrada,
+      Realtime y refresco tras guardar conservan los datos y prenden `refreshFailed`.
+    - **Pago.** `puedeRegistrarPago` bloquea facade, botones de escritorio y móvil, y confirmación del
+      drawer. La fila debe pertenecer a la carga vigente. `deshacerPago` sigue disponible en el caso
+      B: no guarda montos calculados. Los errores de escritura ya no se ven como errores de carga.
+    - **Hallazgos corregidos.** Con el drawer abierto, cambiar de mes guardaba la fila antigua en el
+      período nuevo; el aviso de pago leía el mes después de los `await`; la secretaria con acceso a
+      ambas sedes no recargaba al cambiar de sede.
+    - **Validación.** `lint:arch:strict` sin errores, `ngc` limpio, `test:ci` 5465 en verde,
+      `test-tz` en 3 zonas sobre los 6 specs tocados y 21 mutaciones detectadas y revertidas.
+    - **Navegador, secretaria.** Con escrituras bloqueadas en la pestaña y fallas simuladas en
+      `rest.fetch`: caso A con cada una de las 5 lecturas, cambio de mes, reintento, caso B con drawer
+      abierto y sin él, a 1440x900 en claro; casos A y B en oscuro y en móvil (375x812).
+    - **Navegador, admin.** Con las mismas protecciones: caso A con cada una de las 5 lecturas, cambio
+      de mes y de sede con falla, reintento, caso B con drawer abierto y sin él, y una respuesta vieja
+      con error que llega tarde y se descarta, a 1440x900 en claro; casos A y B en oscuro y en móvil
+      (375x812). Ninguna escritura intentada.
+    - **Sin probar en navegador.** El cambio de sede de una secretaria con acceso a ambas sedes (solo
+      tests de componente) y el bloque X01 de Playwright.
 
 - [x] **T1.4** — `dashboard.facade.ts` + `secretaria-dashboard`
   - **AC ref:** AC3, AC5

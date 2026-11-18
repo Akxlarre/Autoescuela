@@ -1,6 +1,6 @@
 {
   "$schema": "Línea base de los trinquetes de scripts/check-qa-guardrails.mjs. Se regenera con --update-qa-baseline. Un valor solo debería bajar: si sube, el diff de este archivo lo muestra en el PR.",
-  "generatedAt": "2026-11-16T15:12:22.848Z",
+  "generatedAt": "2026-11-18T20:53:50.271Z",
   "compactRecovery": {
     "$nota": "Techo de lo que compact-recovery.js inyecta al contexto. El hook inyecta un mapa de los índices, no su contenido.",
     "maxBytes": 60000,
@@ -8,8 +8,8 @@
   },
   "indexRows": {
     "indices/COMPONENTS.md": {
-      "count": 59,
-      "chars": 115076
+      "count": 57,
+      "chars": 112548
     },
     "indices/DATABASE.md": {
       "count": 18,
@@ -17,15 +17,15 @@
     },
     "indices/FACADES.md": {
       "count": 31,
-      "chars": 87582
+      "chars": 87544
     },
     "indices/SERVICES.md": {
       "count": 27,
-      "chars": 50177
+      "chars": 50341
     },
     "indices/USAGE-MAP.md": {
       "count": 12,
-      "chars": 31150
+      "chars": 31193
     }
   },
   "credentials": {
@@ -60,7 +60,6 @@
       "src/app/core/facades/cuadratura.facade.ts",
       "src/app/core/facades/cursos-singulares.facade.ts",
       "src/app/core/facades/historial-cuadraturas.facade.ts",
-      "src/app/core/facades/liquidaciones.facade.ts",
       "src/app/core/facades/promociones.facade.ts",
       "src/app/core/facades/tasks.facade.ts"
     ],

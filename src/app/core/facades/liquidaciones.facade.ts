@@ -1,6 +1,6 @@
 import { puedeAvanzarMes } from '@core/utils/month-nav.utils';
 import { chileParts, chileYear, monthDays } from '@core/utils/chile-time.utils';
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal, untracked } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -8,7 +8,8 @@ import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
-import { assertWriteOk } from '@core/utils/db-error.utils';
+import { assertReadOk, assertWriteOk } from '@core/utils/db-error.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { getLiquidacionAvatarColor } from '@core/utils/liquidaciones-avatar-colors';
 import { PayrollConfigFacade } from '@core/facades/payroll-config.facade';
@@ -44,13 +45,21 @@ export class LiquidacionesFacade {
   private readonly _isLoading = signal<boolean>(false);
   private readonly _isSaving = signal<boolean>(false);
   private readonly _isExporting = signal<boolean>(false);
+  /** Caso A: la consulta vigente no cargó y no hay datos que la respondan. */
   private readonly _error = signal<string | null>(null);
+  /** Caso B: falló un refresco de la misma consulta; lo visible se queda. */
+  private readonly _refreshFailed = signal<boolean>(false);
+  private readonly _reintentando = signal<boolean>(false);
 
   // ── SWR State ────────────────────────────────────────────────────────────
   private _initialized = false;
-  private _lastMonth: number | null = null;
-  private _lastYear: number | null = null;
-  private _lastBranchId: number | null = null;
+  /**
+   * Consulta (mes, año y sede) que responden las filas visibles; null si no hay ninguna vigente.
+   * Separa los dos casos de falla: si falla esta misma es un refresco (B), si falla otra es A.
+   */
+  private readonly _datosDe = signal<string | null>(null);
+  /** Guard anti respuestas fuera de orden (regla facades §7). */
+  private readonly cargaGuard = createRequestGuard();
 
   // ── Navegación de mes ─────────────────────────────────────────────────────
   private readonly _mesActual = signal<number>(chileParts().month);
@@ -65,12 +74,17 @@ export class LiquidacionesFacade {
   readonly isSaving = this._isSaving.asReadonly();
   readonly isExporting = this._isExporting.asReadonly();
   readonly error = this._error.asReadonly();
+  /** Un refresco falló: las filas visibles pueden no estar actualizadas. */
+  readonly refreshFailed = this._refreshFailed.asReadonly();
+  readonly reintentando = this._reintentando.asReadonly();
   readonly mesActual = this._mesActual.asReadonly();
   readonly anioActual = this._anioActual.asReadonly();
   readonly selectedRow = signal<LiquidacionRow | null>(null);
 
   // ── Computed KPIs ─────────────────────────────────────────────────────────
-  readonly kpis = computed<LiquidacionesKpis>(() => {
+  /** null sin una carga vigente: nunca se muestra un $0 que no salió de los datos. */
+  readonly kpis = computed<LiquidacionesKpis | null>(() => {
+    if (this._datosDe() === null) return null;
     const rows = this._liquidaciones();
     return {
       totalNomina: rows.reduce((s, r) => s + r.totalBaseAmount, 0),
@@ -79,6 +93,20 @@ export class LiquidacionesFacade {
       totalInstructores: rows.length,
     };
   });
+
+  /**
+   * El pago guarda montos calculados con estas lecturas (base, anticipos y líquido) y marca los
+   * anticipos del mes como descontados: solo se permite si la última carga de la consulta vigente
+   * terminó bien. Deshacer no depende de esto: borra por instructor y período, sin usar montos.
+   */
+  readonly puedeRegistrarPago = computed(
+    () =>
+      !this._isLoading() &&
+      !this._refreshFailed() &&
+      this._error() === null &&
+      this._datosDe() !== null &&
+      this._datosDe() === this.contextoActual().key,
+  );
 
   // ── Navegación ────────────────────────────────────────────────────────────
 
@@ -175,58 +203,45 @@ export class LiquidacionesFacade {
     );
   }
 
-  // ── Carga de datos ────────────────────────────────────────────────────────
-
-  /**
-   * SWR Initialization:
-   * First call triggers isLoading(true). Subsequent calls refresh silently.
-   */
-  async initialize(): Promise<void> {
+  private contextoActual() {
     const mes = this._mesActual();
     const anio = this._anioActual();
     const branchId = this.getActiveBranchId();
+    return { mes, anio, branchId, key: `${anio}-${mes}|${branchId}` };
+  }
 
-    // Aseguramos suscripción realtime una sola vez
-    this.setupRealtime();
+  // ── Carga de datos ────────────────────────────────────────────────────────
 
-    const isSameContext =
-      this._initialized &&
-      mes === this._lastMonth &&
-      anio === this._lastYear &&
-      branchId === this._lastBranchId;
+  /**
+   * SWR: con datos vigentes de la misma consulta refresca en silencio; si no, carga con skeleton.
+   * Sin seguimiento: corre dentro del effect de la pantalla, que solo debe depender de la sede.
+   */
+  async initialize(): Promise<void> {
+    return untracked(() => {
+      // Aseguramos suscripción realtime una sola vez
+      this.setupRealtime();
 
-    if (isSameContext) {
-      void this.refreshSilently();
-      return;
-    }
+      if (this._initialized && this._datosDe() === this.contextoActual().key) {
+        void this.refreshSilently();
+        return Promise.resolve();
+      }
+      return this.cargar();
+    });
+  }
 
-    this._isLoading.set(true);
-    this._error.set(null);
+  /** Botón "Reintentar": caso B sin skeleton, caso A con carga completa. */
+  async reintentar(): Promise<void> {
+    this._reintentando.set(true);
     try {
-      await this.fetchLiquidacionesData(mes, anio, branchId);
-      this._initialized = true;
-      this._lastMonth = mes;
-      this._lastYear = anio;
-      this._lastBranchId = branchId;
-    } catch {
-      this._error.set('Error en la carga inicial de liquidaciones.');
+      await this.cargar();
     } finally {
-      this._isLoading.set(false);
+      this._reintentando.set(false);
     }
   }
 
+  /** Re-entrada SWR, Realtime y después de guardar. Si falla, queda en `refreshFailed`. */
   private async refreshSilently(): Promise<void> {
-    try {
-      const mes = this._mesActual();
-      const anio = this._anioActual();
-      const branchId = this.getActiveBranchId();
-      await this.fetchLiquidacionesData(mes, anio, branchId);
-      this._lastMonth = mes;
-      this._lastYear = anio;
-      this._lastBranchId = branchId;
-    } catch {
-      // Swallowed
-    }
+    await this.cargar();
   }
 
   /** Legacy wrapper */
@@ -234,115 +249,175 @@ export class LiquidacionesFacade {
     return this.initialize();
   }
 
+  /**
+   * Única puerta de carga; nunca rechaza. Si lo visible responde a esta misma consulta se mantiene
+   * mientras tanto y una falla es caso B. Si no, se retira de inmediato y una falla es caso A.
+   */
+  private async cargar(): Promise<void> {
+    const contexto = this.contextoActual();
+    const token = this.cargaGuard.next();
+    const mismaConsulta = this._initialized && this._datosDe() === contexto.key;
+
+    if (!mismaConsulta) {
+      this.retirarDatos();
+      this._error.set(null);
+      this._refreshFailed.set(false);
+      this._isLoading.set(true);
+    }
+
+    try {
+      const rows = await this.fetchLiquidacionesData(
+        contexto.mes,
+        contexto.anio,
+        contexto.branchId,
+      );
+      if (!this.cargaGuard.isCurrent(token)) return;
+
+      this._liquidaciones.set(rows);
+      this._datosDe.set(contexto.key);
+      this._initialized = true;
+      this._error.set(null);
+      this._refreshFailed.set(false);
+      this.sincronizarSeleccion(rows);
+    } catch {
+      if (!this.cargaGuard.isCurrent(token)) return;
+
+      if (mismaConsulta) {
+        this._refreshFailed.set(true);
+      } else {
+        this._error.set('No se pudieron cargar las liquidaciones.');
+      }
+    } finally {
+      // Una carga reemplazada no apaga el skeleton de la que sigue en curso.
+      if (this.cargaGuard.isCurrent(token)) this._isLoading.set(false);
+    }
+  }
+
+  private retirarDatos(): void {
+    this._liquidaciones.set([]);
+    this._datosDe.set(null);
+    this._initialized = false;
+    this.selectedRow.set(null);
+  }
+
+  /** El drawer de pago abierto debe mostrar y pagar los montos de la carga vigente. */
+  private sincronizarSeleccion(rows: LiquidacionRow[]): void {
+    const seleccionada = this.selectedRow();
+    if (!seleccionada) return;
+    this.selectedRow.set(rows.find((r) => r.instructorId === seleccionada.instructorId) ?? null);
+  }
+
+  /** Lanza si falla cualquiera de las lecturas: todas forman los mismos montos. */
   private async fetchLiquidacionesData(
     mes: number,
     anio: number,
     branchId: number | null,
-  ): Promise<void> {
-    try {
-      const mm = String(mes).padStart(2, '0');
-      const lastDay = monthDays(anio, mes);
-      const fechaInicio = `${anio}-${mm}-01`;
-      const fechaFin = `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`;
+  ): Promise<LiquidacionRow[]> {
+    const mm = String(mes).padStart(2, '0');
+    const lastDay = monthDays(anio, mes);
+    const fechaInicio = `${anio}-${mm}-01`;
+    const fechaFin = `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`;
 
-      const [instrRes, hoursRes, advancesRes, paymentsRes] = await Promise.all([
-        this.supabase.client
-          .from('instructors')
-          .select('id, user_id, users(id, first_names, paternal_last_name, rut, branch_id)'),
-        this.supabase.client
-          .from('instructor_monthly_hours')
-          .select('instructor_id, practical_sessions, total_equivalent')
-          .eq('period', `${anio}-${mm}`),
-        this.supabase.client
-          .from('instructor_advances')
-          .select('instructor_id, amount')
-          .gte('date', fechaInicio)
-          .lte('date', fechaFin),
-        this.supabase.client
-          .from('instructor_monthly_payments')
-          .select('*')
-          .eq('period', `${anio}-${mm}`),
-        // spec 0014-m: tarifa por hora por sede (global por sede, no por instructor)
-        this.payrollConfig.load(),
-      ]);
+    const [instrRes, hoursRes, advancesRes, paymentsRes, rateForBranch] = await Promise.all([
+      this.supabase.client
+        .from('instructors')
+        .select('id, user_id, users(id, first_names, paternal_last_name, rut, branch_id)'),
+      this.supabase.client
+        .from('instructor_monthly_hours')
+        .select('instructor_id, practical_sessions, total_equivalent')
+        .eq('period', `${anio}-${mm}`),
+      this.supabase.client
+        .from('instructor_advances')
+        .select('instructor_id, amount')
+        .gte('date', fechaInicio)
+        .lte('date', fechaFin),
+      this.supabase.client
+        .from('instructor_monthly_payments')
+        .select('*')
+        .eq('period', `${anio}-${mm}`),
+      // spec 0014-m: tarifa por hora por sede (global por sede, no por instructor).
+      // Lanza si no se pudo leer: el valor de respaldo es solo para una sede sin fila.
+      this.payrollConfig.readRates(),
+    ]);
 
-      if (instrRes.error) throw instrRes.error;
+    const instructors = assertReadOk(instrRes);
+    const hours = assertReadOk(hoursRes);
+    const advances = assertReadOk(advancesRes);
+    const payments = assertReadOk(paymentsRes);
 
-      const hoursMap = new Map<number, number>(
-        (hoursRes.data ?? []).map((h) => [h.instructor_id, h.total_equivalent ?? 0]),
-      );
+    const hoursMap = new Map<number, number>(
+      hours.map((h) => [h.instructor_id, h.total_equivalent ?? 0]),
+    );
 
-      const sessionsMap = new Map<number, number>(
-        (hoursRes.data ?? []).map((h) => [h.instructor_id, h.practical_sessions ?? 0]),
-      );
+    const sessionsMap = new Map<number, number>(
+      hours.map((h) => [h.instructor_id, h.practical_sessions ?? 0]),
+    );
 
-      const advancesMap = new Map<number, number>();
-      for (const adv of advancesRes.data ?? []) {
-        advancesMap.set(adv.instructor_id, (advancesMap.get(adv.instructor_id) ?? 0) + adv.amount);
-      }
-
-      const paymentsMap = new Map<number, any>(
-        (paymentsRes.data ?? []).map((p) => [p.instructor_id, p]),
-      );
-
-      const rows: LiquidacionRow[] = (instrRes.data ?? [])
-        .filter((instr) => {
-          const u = instr.users as any;
-          const bId = Array.isArray(u) ? u[0]?.branch_id : u?.branch_id;
-          if (branchId && bId !== branchId) return false;
-
-          const totalHours = hoursMap.get(instr.id) ?? 0;
-          const totalAdvances = advancesMap.get(instr.id) ?? 0;
-          const payment = paymentsMap.get(instr.id);
-
-          return totalHours > 0 || totalAdvances > 0 || !!payment;
-        })
-        .map((instr) => {
-          const rawU = instr.users as any;
-          const u = Array.isArray(rawU) ? rawU[0] : rawU;
-          const nombre = `${u?.first_names ?? ''} ${u?.paternal_last_name ?? ''}`.trim() || '—';
-          const totalHours = Math.round((hoursMap.get(instr.id) ?? 0) * 10) / 10;
-          const practicalSessions = sessionsMap.get(instr.id) ?? 0;
-          const totalAdvances = advancesMap.get(instr.id) ?? 0;
-          const payment = paymentsMap.get(instr.id);
-          // spec 0014-m: tarifa resuelta por la sede del instructor (no un valor único).
-          // "Todas las escuelas" sigue calculando bien cada fila con la tarifa de su sede.
-          const amountPerHour = this.payrollConfig.rateForBranch(u?.branch_id ?? null);
-          const totalBaseAmount = Math.round(totalHours * amountPerHour);
-          const finalPaymentAmount = Math.max(0, totalBaseAmount - totalAdvances);
-
-          return {
-            instructorId: instr.id,
-            userId: u?.id ?? 0,
-            nombre,
-            rut: u?.rut ?? '—',
-            initials: getInitials(nombre),
-            avatarColor: getLiquidacionAvatarColor(nombre),
-            practicalSessions,
-            totalHours,
-            amountPerHour,
-            totalBaseAmount,
-            totalAdvances,
-            finalPaymentAmount,
-            status: payment?.payment_status === 'paid' ? 'paid' : 'pending',
-            paymentId: payment?.id,
-            paymentDate: payment?.paid_at ?? undefined,
-          };
-        });
-
-      this._liquidaciones.set(rows);
-    } catch (err) {
-      const msg =
-        err instanceof Error
-          ? this.sanitizer.sanitize(err).message
-          : 'Error al cargar liquidaciones.';
-      this._error.set(msg);
-      this.toast.error(msg);
-      throw err;
+    const advancesMap = new Map<number, number>();
+    for (const adv of advances) {
+      advancesMap.set(adv.instructor_id, (advancesMap.get(adv.instructor_id) ?? 0) + adv.amount);
     }
+
+    const paymentsMap = new Map<number, any>(payments.map((p) => [p.instructor_id, p]));
+
+    return instructors
+      .filter((instr) => {
+        const u = instr.users as any;
+        const bId = Array.isArray(u) ? u[0]?.branch_id : u?.branch_id;
+        if (branchId && bId !== branchId) return false;
+
+        const totalHours = hoursMap.get(instr.id) ?? 0;
+        const totalAdvances = advancesMap.get(instr.id) ?? 0;
+        const payment = paymentsMap.get(instr.id);
+
+        return totalHours > 0 || totalAdvances > 0 || !!payment;
+      })
+      .map((instr): LiquidacionRow => {
+        const rawU = instr.users as any;
+        const u = Array.isArray(rawU) ? rawU[0] : rawU;
+        const nombre = `${u?.first_names ?? ''} ${u?.paternal_last_name ?? ''}`.trim() || '—';
+        const totalHours = Math.round((hoursMap.get(instr.id) ?? 0) * 10) / 10;
+        const practicalSessions = sessionsMap.get(instr.id) ?? 0;
+        const totalAdvances = advancesMap.get(instr.id) ?? 0;
+        const payment = paymentsMap.get(instr.id);
+        // spec 0014-m: tarifa resuelta por la sede del instructor (no un valor único).
+        // "Todas las escuelas" sigue calculando bien cada fila con la tarifa de su sede.
+        const amountPerHour = rateForBranch(u?.branch_id ?? null);
+        const totalBaseAmount = Math.round(totalHours * amountPerHour);
+        const finalPaymentAmount = Math.max(0, totalBaseAmount - totalAdvances);
+
+        return {
+          instructorId: instr.id,
+          userId: u?.id ?? 0,
+          nombre,
+          rut: u?.rut ?? '—',
+          initials: getInitials(nombre),
+          avatarColor: getLiquidacionAvatarColor(nombre),
+          practicalSessions,
+          totalHours,
+          amountPerHour,
+          totalBaseAmount,
+          totalAdvances,
+          finalPaymentAmount,
+          status: payment?.payment_status === 'paid' ? 'paid' : 'pending',
+          paymentId: payment?.id,
+          paymentDate: payment?.paid_at ?? undefined,
+        };
+      });
   }
 
   // ── Mutaciones ────────────────────────────────────────────────────────────
+  // Un error de escritura se informa por toast: `error` y `refreshFailed` son solo de la carga.
+
+  /**
+   * Solo una fila de la carga vigente: una foto anterior puede traer otros montos, otro período u
+   * otra sede. Las filas pagadas no se vuelven a registrar porque el upsert pisaría ese pago.
+   */
+  private puedePagarFila(row: LiquidacionRow): boolean {
+    return (
+      this.puedeRegistrarPago() && row.status === 'pending' && this._liquidaciones().includes(row)
+    );
+  }
 
   async registrarPago(row: LiquidacionRow, payload: PagoInstructorPayload): Promise<boolean> {
     const user = this.auth.currentUser();
@@ -350,9 +425,12 @@ export class LiquidacionesFacade {
       this.toast.error('No hay sesión activa.');
       return false;
     }
+    if (!this.puedePagarFila(row)) {
+      this.toast.warning('No se puede registrar el pago: actualiza las liquidaciones primero.');
+      return false;
+    }
 
     this._isSaving.set(true);
-    this._error.set(null);
 
     try {
       const mes = this._mesActual();
@@ -389,15 +467,15 @@ export class LiquidacionesFacade {
           .lte('date', `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`),
       );
 
-      this.notifyLiquidacionPagada(row);
+      this.notifyLiquidacionPagada(row, mes, anio);
 
       this.toast.success(`Liquidación de ${row.nombre} registrada correctamente.`);
+      // El pago ya quedó guardado: si la relectura falla es éxito, con el aviso del caso B.
       await this.refreshSilently();
       return true;
     } catch (err) {
       const msg =
         err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al registrar el pago.';
-      this._error.set(msg);
       this.toast.error(msg);
       return false;
     } finally {
@@ -444,11 +522,14 @@ export class LiquidacionesFacade {
     }
   }
 
+  /**
+   * Sigue disponible con un refresco fallido: no guarda ningún monto calculado. Exige una fila de
+   * la lista vigente porque el período que borra es el del mes en pantalla.
+   */
   async deshacerPago(row: LiquidacionRow): Promise<boolean> {
-    if (!row.paymentId) return false;
+    if (!row.paymentId || !this._liquidaciones().includes(row)) return false;
 
     this._isSaving.set(true);
-    this._error.set(null);
 
     try {
       const mes = this._mesActual();
@@ -481,7 +562,6 @@ export class LiquidacionesFacade {
     } catch (err) {
       const msg =
         err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al revertir el pago.';
-      this._error.set(msg);
       this.toast.error(msg);
       return false;
     } finally {
@@ -492,13 +572,12 @@ export class LiquidacionesFacade {
   /**
    * Notifica al instructor que su liquidación fue pagada (spec 0025, AC5).
    * `row.userId` ya viene resuelto desde `fetchLiquidacionesData()` — sin query extra.
+   * Recibe el período pagado: el mes en pantalla pudo cambiar mientras se guardaba.
    * Fire-and-forget: un fallo nunca revierte el pago ya registrado.
    */
-  private notifyLiquidacionPagada(row: LiquidacionRow): void {
+  private notifyLiquidacionPagada(row: LiquidacionRow, mes: number, anio: number): void {
     if (!row.userId) return;
 
-    const mes = this._mesActual();
-    const anio = this._anioActual();
     const periodo = `${mes}/${anio}`;
 
     this.notifications

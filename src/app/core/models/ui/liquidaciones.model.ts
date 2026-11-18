@@ -20,6 +20,9 @@ export interface LiquidacionRow {
   transferCode?: string | null;
 }
 
+/** Tarifa CLP por hora de una sede, según una lectura de configuración que terminó bien. */
+export type PayrollRateLookup = (branchId: number | null | undefined) => number;
+
 /** KPIs agregados de la nómina mensual. */
 export interface LiquidacionesKpis {
   totalNomina: number;
