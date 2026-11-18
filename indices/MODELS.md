@@ -47,7 +47,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `UploadedDocument` | `enrollment-documents.model.ts` | Documento subido: tipo, File, nombre y fecha de emisión opcional |
 | `HvcValidation` | `enrollment-documents.model.ts` | Validación de Hoja de Vida del Conductor: expiración >30 días (RF-082.3) |
 | `DocumentRequirement` | `enrollment-documents.model.ts` | Config de un documento requerido: tipo, label, hint, obligatoriedad, formatos, tamaño máx. Constante: `PROFESSIONAL_DOCUMENTS` |
-| `EnrollmentPaymentData` | `enrollment-payment.model.ts` | Paso 4 del Wizard: modelo compuesto con pricing breakdown (precio base, depósito/completo según paso 2), descuento opcional (monto + motivo), total a pagar, método de pago seleccionado, alerta de curso singular |
+| `EnrollmentPaymentData` | `enrollment-payment.model.ts` | Paso 4 del Wizard: modelo compuesto con pricing breakdown (precio base, depósito/completo según paso 2), descuento opcional (monto + motivo), total a pagar, método de pago seleccionado, alerta de curso singular, y estados de carga y error de los datos del pago y de los descuentos |
 | `PricingBreakdown` | `enrollment-payment.model.ts` | Desglose de precio: label del curso, clases prácticas incluidas, precio base, flag isDeposit (mitad o completo según paso 2), monto a pagar ahora |
 | `DiscountData` | `enrollment-payment.model.ts` | Datos del descuento: habilitado, monto CLP, motivo (queda en log de auditoría) |
 | `PaymentMethodOption` | `enrollment-payment.model.ts` | Opción de método de pago: efectivo, transferencia, tarjeta, pendiente. Constante: `PAYMENT_METHODS` con iconos Lucide |

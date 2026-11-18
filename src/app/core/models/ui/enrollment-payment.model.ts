@@ -84,6 +84,13 @@ export interface EnrollmentPaymentData {
   singularAlert: SingularPaymentAlert;
   /** N° de documento de respaldo del pago (boleta, comprobante, etc.) — opcional (fix-036-i) */
   documentNumber: string | null;
-  /** pricing !== null && paymentMethod !== null */
+  /** pricing !== null && paymentMethod !== null, y sin lecturas que bloqueen el pago */
   canAdvance: boolean;
+  /** No cargaron el pago y el descuento guardados en el borrador: no se muestran montos. */
+  paymentDataError: string | null;
+  /** Se están leyendo el pago y el descuento guardados en el borrador. */
+  paymentDataLoading: boolean;
+  /** No cargó la lista de descuentos; distinto de una lista vacía. */
+  discountsError: string | null;
+  discountsLoading: boolean;
 }

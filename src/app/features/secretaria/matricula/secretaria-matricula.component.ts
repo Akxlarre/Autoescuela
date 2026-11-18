@@ -178,8 +178,9 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       }
 
       // Paso de Pago (fix-034-i: ahora es la posición 4, antes 5): recalcula pricing
-      // (reactivo a cambio de paymentMode)
-      if (step === 4 && pd) {
+      // (reactivo a cambio de paymentMode). spec 0060-b: no sobre un borrador cuyo pago no cargó;
+      // leer el bloqueo aquí hace que se recalcule cuando un reintento lo levanta.
+      if (step === 4 && pd && !this.payment.isPaymentDataBlocked()) {
         const course = this.enrollment.courseOptions().find((c) => c.type === pd.courseType);
         const paymentMode = this.enrollment.paymentMode();
         // Fallback al base_price del enrollment en BD por si courseOptions aún no cargó
@@ -241,9 +242,17 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
    * Error que muestra el banner del wizard (fix-059-i). Antes solo leía `enrollment.error()`:
    * un fallo del paso Pago (ej. caja cerrada, fix-051-i) o de Documentos quedaba en su propio
    * facade y la pantalla no decía nada.
+   *
+   * spec 0060-b: los datos del pago que no cargaron se muestran dentro del paso Pago, con su
+   * "Reintentar"; en los demás pasos este banner es lo único que lo avisa.
    */
   readonly wizardError = computed<string | null>(
-    () => this.enrollment.error() ?? this.payment.error() ?? this.docs.error() ?? null,
+    () =>
+      this.enrollment.error() ??
+      this.payment.error() ??
+      (this.enrollment.currentStep() !== 4 ? this.payment.rehydrationError() : null) ??
+      this.docs.error() ??
+      null,
   );
 
   // ── Datos computados por paso (desde facades) ─────────────────────────────
@@ -358,6 +367,10 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       singularAlert: { visible: false, message: '' },
       documentNumber: this.payment.documentNumber(),
       canAdvance: this.payment.canConfirmPayment(),
+      paymentDataError: this.payment.rehydrationError(),
+      paymentDataLoading: this.payment.isRehydrating(),
+      discountsError: this.payment.discountsError(),
+      discountsLoading: this.payment.isLoadingDiscounts(),
     };
   });
 
@@ -623,6 +636,9 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
         this._step1Form.set(pd);
         this._step1Saved.set(pd);
       }
+      // spec 0060-b: sin esto, al reanudar en Pago o después la lista quedaba vacía sin haberse
+      // pedido, y se veía igual que "no hay descuentos".
+      if (this.enrollment.currentStep() >= 4) this.loadStep4Discounts();
       this._viewMode.set('wizard');
     } else {
       // Fallback: volver a la lista de drafts
@@ -850,6 +866,8 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       if (enrollmentId) await this.docs.markDocsComplete(enrollmentId, true);
       // fix-034-i: el siguiente paso es Pago (posición 4) — precargar descuentos elegibles
       // antes de que se renderice (antes se cargaban al salir de Contrato, que ahora va después).
+      // Se entra de nuevo al paso: el error de un intento de pago anterior ya no aplica.
+      this.payment.clearError();
       this.loadStep4Discounts();
       this.enrollment.goToStep(4);
     } finally {

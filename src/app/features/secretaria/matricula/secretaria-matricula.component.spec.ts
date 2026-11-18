@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SecretariaMatriculaComponent } from './secretaria-matricula.component';
@@ -405,9 +408,15 @@ describe('SecretariaMatriculaComponent — error al subir foto carnet inválida 
 // fix-059-i: el banner del wizard solo leía enrollment.error(); los errores del pago (ej. caja
 // cerrada) y de documentos quedaban mudos.
 describe('SecretariaMatriculaComponent — banner de errores del wizard (fix-059-i)', () => {
-  function crear(errores: { wizard?: string | null; pago?: string | null; docs?: string | null }) {
+  function crear(errores: {
+    wizard?: string | null;
+    pago?: string | null;
+    docs?: string | null;
+    datosPago?: string | null;
+    paso?: number;
+  }) {
     const enrollmentFacadeSpy: any = {
-      currentStep: vi.fn().mockReturnValue(4),
+      currentStep: vi.fn().mockReturnValue(errores.paso ?? 4),
       personalData: vi.fn().mockReturnValue(null),
       courseOptions: vi.fn().mockReturnValue([]),
       paymentMode: vi.fn().mockReturnValue('full'),
@@ -452,13 +461,28 @@ describe('SecretariaMatriculaComponent — banner de errores del wizard (fix-059
         },
         {
           provide: EnrollmentPaymentFacade,
-          useValue: { reset: vi.fn(), error: vi.fn().mockReturnValue(errores.pago ?? null) },
+          useValue: {
+            reset: vi.fn(),
+            error: vi.fn().mockReturnValue(errores.pago ?? null),
+            rehydrationError: vi.fn().mockReturnValue(errores.datosPago ?? null),
+            isPaymentDataBlocked: vi.fn().mockReturnValue(false),
+          },
         },
         { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn(), info: vi.fn() } },
       ],
     });
     return TestBed.runInInjectionContext(() => new SecretariaMatriculaComponent()) as any;
   }
+
+  // spec 0060-b: en el paso Pago el error se ve en el paso, con su Reintentar. Fuera de él, el
+  // banner es lo único que avisa que los datos del pago no están.
+  it('los datos del pago que no cargaron no duplican el aviso dentro del paso Pago', () => {
+    expect(crear({ datosPago: 'No cargó' }).wizardError()).toBeNull();
+  });
+
+  it('fuera del paso Pago, los datos del pago que no cargaron van al banner', () => {
+    expect(crear({ datosPago: 'No cargó', paso: 5 }).wizardError()).toBe('No cargó');
+  });
 
   it('muestra el error del pago (ej. caja cerrada)', () => {
     const c = crear({ pago: 'Error al registrar pago: La caja del 18-10-2026 ya está cerrada.' });
@@ -478,6 +502,150 @@ describe('SecretariaMatriculaComponent — banner de errores del wizard (fix-059
     );
     TestBed.resetTestingModule();
     expect(crear({}).wizardError()).toBeNull();
+  });
+});
+
+// spec 0060-b (T1.5): el paso Pago no recalcula un precio sobre datos que no cargaron, y al
+// reanudar en Pago pide los descuentos (antes la lista quedaba vacía sin que nadie la pidiera).
+describe('SecretariaMatriculaComponent — paso Pago con lecturas fallidas (spec 0060-b)', () => {
+  function crear(opciones: { paso?: number } = {}) {
+    const bloqueado = signal(false);
+    const enrollment: any = {
+      currentStep: signal(opciones.paso ?? 4),
+      personalData: signal({
+        courseType: 'class_b',
+        courseCategory: 'non-professional',
+        birthDate: '2000-01-01',
+      }),
+      courseOptions: signal([
+        { id: 9, type: 'class_b', label: 'Clase B', basePrice: 200_000, practicalHours: 9 },
+      ]),
+      paymentMode: signal('total'),
+      enrollmentBasePrice: signal(0),
+      selectedInstructorId: signal(null),
+      scheduleGrid: signal(null),
+      studentSummary: signal(null),
+      activeDrafts: signal([]),
+      docsComplete: signal(true),
+      draft: signal({ enrollmentId: 77, studentId: 1 }),
+      error: signal(null),
+      resumeDraft: vi.fn().mockResolvedValue(true),
+      loadCourses: vi.fn().mockResolvedValue(undefined),
+      loadInstructors: vi.fn().mockResolvedValue(undefined),
+      goToStep: vi.fn(),
+      reset: vi.fn(),
+    };
+    const payment: any = {
+      pricing: signal(null),
+      discount: signal({ enabled: false, amount: null, reason: '' }),
+      totalToPay: signal(0),
+      paymentMethod: signal(null),
+      availableDiscounts: signal([]),
+      selectedDiscountId: signal(null),
+      documentNumber: signal(null),
+      canConfirmPayment: signal(false),
+      error: signal(null),
+      rehydrationError: signal('No cargó'),
+      isRehydrating: signal(false),
+      discountsError: signal('Sin descuentos'),
+      isLoadingDiscounts: signal(true),
+      isPaymentDataBlocked: bloqueado,
+      computePricing: vi.fn(),
+      loadAvailableDiscounts: vi.fn().mockResolvedValue(undefined),
+      clearError: vi.fn(),
+      reset: vi.fn(),
+    };
+    const docs: any = {
+      reset: vi.fn(),
+      error: signal(null),
+      markDocsComplete: vi.fn().mockResolvedValue(undefined),
+    };
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: LayoutDrawerFacadeService,
+          useValue: { setActions: vi.fn(), setBadge: vi.fn(), component: vi.fn() },
+        },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
+        {
+          provide: AuthFacade,
+          useValue: {
+            currentUser: vi.fn().mockReturnValue({ role: 'secretaria', branchId: 2, dbId: 1 }),
+            whenReady: Promise.resolve(),
+          },
+        },
+        BranchFacade,
+        { provide: SupabaseService, useValue: { client: {} } },
+        {
+          provide: ErrorSanitizerService,
+          useValue: { sanitize: (e: Error) => ({ message: e.message }) },
+        },
+        { provide: EnrollmentFacade, useValue: enrollment },
+        { provide: EnrollmentDocumentsFacade, useValue: docs },
+        { provide: EnrollmentPaymentFacade, useValue: payment },
+        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn(), info: vi.fn() } },
+      ],
+    });
+    const c = TestBed.runInInjectionContext(() => new SecretariaMatriculaComponent()) as any;
+    return { c, payment, bloqueado };
+  }
+
+  it('la plantilla conecta los dos "Reintentar" del paso Pago con el facade', () => {
+    const html = readFileSync(resolve(__dirname, 'secretaria-matricula.component.html'), 'utf-8');
+    expect(html).toContain('(retryPaymentData)="payment.reintentarDatosPago()"');
+    expect(html).toContain('(retryDiscounts)="payment.reintentarDescuentos()"');
+  });
+
+  it('no recalcula el precio mientras los datos del pago están bloqueados', () => {
+    const { payment, bloqueado } = crear();
+    bloqueado.set(true);
+    TestBed.tick();
+    expect(payment.computePricing).not.toHaveBeenCalled();
+  });
+
+  it('cuando el reintento desbloquea, recalcula el precio igual que al entrar al paso', () => {
+    const { payment, bloqueado } = crear();
+    bloqueado.set(true);
+    TestBed.tick();
+
+    bloqueado.set(false);
+    TestBed.tick();
+
+    expect(payment.computePricing).toHaveBeenCalledWith(
+      expect.objectContaining({ basePrice: 200_000, isDeposit: false }),
+    );
+  });
+
+  it('entrega al paso Pago los estados de carga y error', () => {
+    const { c } = crear();
+    expect(c.step4Data()).toEqual(
+      expect.objectContaining({
+        paymentDataError: 'No cargó',
+        paymentDataLoading: false,
+        discountsError: 'Sin descuentos',
+        discountsLoading: true,
+      }),
+    );
+  });
+
+  it('al reanudar en Pago pide los descuentos del curso y la sede', async () => {
+    const { c, payment } = crear({ paso: 4 });
+    await c.onResumeDraft(77);
+    expect(payment.loadAvailableDiscounts).toHaveBeenCalledWith('class_b', 9, 2);
+  });
+
+  it('al reanudar antes de Pago no los pide todavía', async () => {
+    const { c, payment } = crear({ paso: 3 });
+    await c.onResumeDraft(77);
+    expect(payment.loadAvailableDiscounts).not.toHaveBeenCalled();
+  });
+
+  it('al entrar a Pago desde Documentos limpia el error del intento anterior', async () => {
+    const { c, payment } = crear({ paso: 3 });
+    await c.onStep3Next();
+    expect(payment.clearError).toHaveBeenCalled();
+    expect(payment.loadAvailableDiscounts).toHaveBeenCalled();
   });
 });
 
