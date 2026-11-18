@@ -6,6 +6,7 @@ import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { createRequestGuard } from '@core/utils/request-guard.utils';
+import { assertReadOk, toFriendlyDbMessage } from '@core/utils/db-error.utils';
 import type {
   AlumnoDeudor,
   EstadoCuentaHistorialItem,
@@ -96,20 +97,27 @@ export class PagosFacade {
   }
 
   // ── 1. ESTADO REACTIVO (Privado) ────────────────────────────────────────────
-  private readonly _ingresosHoy = signal<number>(0);
-  private readonly _ingresosMes = signal<number>(0);
-  private readonly _boletasMes = signal<number>(0);
-  private readonly _pagosPendientesTotales = signal<number>(0);
+  // KPIs en `null` mientras no haya una carga vigente (spec 0060-b): una carga fallida nunca se
+  // muestra como $0.
+  private readonly _ingresosHoy = signal<number | null>(null);
+  private readonly _ingresosMes = signal<number | null>(null);
+  private readonly _boletasMes = signal<number | null>(null);
+  private readonly _pagosPendientesTotales = signal<number | null>(null);
   private readonly _alumnosConDeuda = signal<AlumnoDeudor[]>([]);
   private readonly _pagosRecientes = signal<PagoReciente[]>([]);
   private readonly _metodosPagoMes = signal<MetodoPago[]>([]);
   private readonly _isLoading = signal<boolean>(false);
+  /** Caso A: la carga de la sede vigente falló y no hay datos que mostrar. */
   private readonly _error = signal<string | null>(null);
+  /** Caso B: lo visible es de la consulta vigente, pero el último refresco falló. */
+  private readonly _refreshFailed = signal<boolean>(false);
 
   private readonly _enrollmentSeleccionado = signal<number | null>(null);
   private readonly _estadoCuentaResumen = signal<EstadoCuentaResumen | null>(null);
   private readonly _estadoCuentaHistorial = signal<EstadoCuentaHistorialItem[]>([]);
   private readonly _isLoadingDetalle = signal<boolean>(false);
+  private readonly _errorDetalle = signal<string | null>(null);
+  private readonly _detalleRefreshFailed = signal<boolean>(false);
 
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
@@ -133,12 +141,15 @@ export class PagosFacade {
   readonly metodosPagoMes = this._metodosPagoMes.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly refreshFailed = this._refreshFailed.asReadonly();
   readonly totalDeudores = computed(() => this._alumnosConDeuda().length);
 
   readonly enrollmentSeleccionado = this._enrollmentSeleccionado.asReadonly();
   readonly estadoCuentaResumen = this._estadoCuentaResumen.asReadonly();
   readonly estadoCuentaHistorial = this._estadoCuentaHistorial.asReadonly();
   readonly isLoadingDetalle = this._isLoadingDetalle.asReadonly();
+  readonly errorDetalle = this._errorDetalle.asReadonly();
+  readonly detalleRefreshFailed = this._detalleRefreshFailed.asReadonly();
 
   // ── 3. MÉTODOS DE ACCIÓN ─────────────────────────────────────────────────────
 
@@ -181,17 +192,40 @@ export class PagosFacade {
       void this.refreshSilently();
       return;
     }
+    await this.cargarCompleta(branchId);
+  }
 
+  /**
+   * Reintento del botón "Reintentar" (spec 0060-b). Con datos vigentes de la misma sede es un
+   * refresco sin skeleton (caso B); si no, una carga completa (caso A).
+   */
+  async reintentar(): Promise<void> {
+    const branchId = this.getActiveBranchId();
+    if (this._initialized && branchId === this._lastBranchId) {
+      await this.refreshSilently();
+      return;
+    }
+    await this.cargarCompleta(branchId);
+  }
+
+  /** Carga con skeleton: primera visita, cambio de sede o reintento del caso A. */
+  private async cargarCompleta(branchId: number | null): Promise<void> {
     const token = this.pagosGuard.next();
+    this._initialized = false;
+    this._lastBranchId = undefined;
     this._isLoading.set(true);
     this._error.set(null);
+    this._refreshFailed.set(false);
     try {
-      await this.fetchAll(token);
-      if (!this.pagosGuard.isCurrent(token)) return;
+      const applied = await this.fetchAll(token);
+      if (!applied) return;
       this._initialized = true;
       this._lastBranchId = branchId;
-    } catch {
-      if (this.pagosGuard.isCurrent(token)) this._error.set('Error al cargar datos financieros.');
+    } catch (err) {
+      if (!this.pagosGuard.isCurrent(token)) return;
+      // Caso A: lo que hubiera en memoria es de otra consulta (u otra sede); no se muestra.
+      this.resetDatos();
+      this._error.set(toFriendlyDbMessage(err, 'No se pudieron cargar los pagos.'));
     } finally {
       if (this.pagosGuard.isCurrent(token)) this._isLoading.set(false);
     }
@@ -201,57 +235,88 @@ export class PagosFacade {
     const token = this.pagosGuard.next();
     const branchId = this.getActiveBranchId();
     try {
-      await this.fetchAll(token);
-      if (this.pagosGuard.isCurrent(token)) this._lastBranchId = branchId;
-    } catch {
-      // Swallowed
+      const applied = await this.fetchAll(token);
+      if (!applied) return;
+      this._initialized = true;
+      this._lastBranchId = branchId;
+      this._refreshFailed.set(false);
+      this._error.set(null);
+    } catch (err) {
+      if (!this.pagosGuard.isCurrent(token)) return;
+      if (this._initialized && branchId === this._lastBranchId) {
+        // Caso B: lo visible responde a la misma consulta; se queda con el aviso.
+        this._refreshFailed.set(true);
+      } else {
+        // Sin datos vigentes (este refresco reemplazó a una carga completa, o la anterior falló):
+        // sigue siendo el caso A, nunca "sin deudores" con un aviso encima.
+        this.resetDatos();
+        this._error.set(toFriendlyDbMessage(err, 'No se pudieron cargar los pagos.'));
+      }
     } finally {
       // Si este refresco reemplazó a una carga completa de otra sede, el skeleton es suyo.
       if (this.pagosGuard.isCurrent(token)) this._isLoading.set(false);
     }
   }
 
-  private async fetchAll(token: number): Promise<void> {
+  private resetDatos(): void {
+    this._ingresosHoy.set(null);
+    this._ingresosMes.set(null);
+    this._boletasMes.set(null);
+    this._pagosPendientesTotales.set(null);
+    this._alumnosConDeuda.set([]);
+    this._pagosRecientes.set([]);
+    this._metodosPagoMes.set([]);
+  }
+
+  /**
+   * Las 7 lecturas de la pantalla. Se aplican juntas y solo si todas salieron bien (spec 0060-b,
+   * regla de carga combinada): una que falla hace fallar la carga y ningún KPI queda armado con
+   * una parte de los datos. Devuelve `false` si una carga más nueva la reemplazó.
+   */
+  private async fetchAll(token: number): Promise<boolean> {
     const today = chileToday();
     const firstOfMonth = startOfMonthIso(today);
     const lastOfMonth = endOfMonthIso(today);
     const branchId = this.getActiveBranchId();
 
-    await Promise.all([
-      this.fetchIngresosHoy(token, today, branchId),
-      this.fetchIngresosMes(token, firstOfMonth, lastOfMonth, branchId),
-      this.fetchBoletasMes(token, firstOfMonth, lastOfMonth, branchId),
-      this.fetchPagosPendientes(token, branchId),
-      this.fetchAlumnosConDeuda(token, branchId),
-      this.fetchPagosRecientes(token, branchId),
-      this.fetchMetodosPagoMes(token, firstOfMonth, lastOfMonth, branchId),
-    ]);
+    const [ingresosHoy, ingresosMes, boletas, pendientes, deudores, recientes, metodos] =
+      await Promise.all([
+        this.fetchIngresosHoy(today, branchId),
+        this.fetchIngresosMes(firstOfMonth, lastOfMonth, branchId),
+        this.fetchBoletasMes(firstOfMonth, lastOfMonth, branchId),
+        this.fetchPagosPendientes(branchId),
+        this.fetchAlumnosConDeuda(branchId),
+        this.fetchPagosRecientes(branchId),
+        this.fetchMetodosPagoMes(firstOfMonth, lastOfMonth, branchId),
+      ]);
+    if (!this.pagosGuard.isCurrent(token)) return false;
+
+    this._ingresosHoy.set(ingresosHoy);
+    this._ingresosMes.set(ingresosMes);
+    this._boletasMes.set(boletas);
+    this._pagosPendientesTotales.set(pendientes);
+    this._alumnosConDeuda.set(deudores);
+    this._pagosRecientes.set(recientes);
+    this._metodosPagoMes.set(metodos);
+    return true;
   }
 
-  private async fetchIngresosHoy(
-    token: number,
-    today: string,
-    branchId: number | null,
-  ): Promise<void> {
+  private async fetchIngresosHoy(today: string, branchId: number | null): Promise<number> {
     let q: any = this.supabase.client
       .from('payments')
       .select('total_amount, enrollments!inner(branch_id)')
       .in('status', [...PAYMENT_STATUSES_QUE_SUMAN])
       .eq('payment_date', today);
     if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
-    const { data } = await q;
-    if (!this.pagosGuard.isCurrent(token)) return;
-    this._ingresosHoy.set(
-      (data ?? []).reduce((acc: number, r: any) => acc + (r.total_amount ?? 0), 0),
-    );
+    const rows = assertReadOk(await q) as any[] | null;
+    return (rows ?? []).reduce((acc: number, r: any) => acc + (r.total_amount ?? 0), 0);
   }
 
   private async fetchIngresosMes(
-    token: number,
     first: string,
     last: string,
     branchId: number | null,
-  ): Promise<void> {
+  ): Promise<number> {
     let q: any = this.supabase.client
       .from('payments')
       .select('total_amount, enrollments!inner(branch_id)')
@@ -259,19 +324,15 @@ export class PagosFacade {
       .gte('payment_date', first)
       .lte('payment_date', last);
     if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
-    const { data } = await q;
-    if (!this.pagosGuard.isCurrent(token)) return;
-    this._ingresosMes.set(
-      (data ?? []).reduce((acc: number, r: any) => acc + (r.total_amount ?? 0), 0),
-    );
+    const rows = assertReadOk(await q) as any[] | null;
+    return (rows ?? []).reduce((acc: number, r: any) => acc + (r.total_amount ?? 0), 0);
   }
 
   private async fetchBoletasMes(
-    token: number,
     first: string,
     last: string,
     branchId: number | null,
-  ): Promise<void> {
+  ): Promise<number> {
     let q: any = this.supabase.client
       .from('payments')
       .select('id, enrollments!inner(branch_id)', { count: 'exact', head: true })
@@ -279,12 +340,12 @@ export class PagosFacade {
       .gte('payment_date', first)
       .lte('payment_date', last);
     if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
-    const { count } = await q;
-    if (!this.pagosGuard.isCurrent(token)) return;
-    this._boletasMes.set(count ?? 0);
+    const { count, error } = await q;
+    if (error) throw error;
+    return count ?? 0;
   }
 
-  private async fetchPagosPendientes(token: number, branchId: number | null): Promise<void> {
+  private async fetchPagosPendientes(branchId: number | null): Promise<number> {
     let q: any = this.supabase.client
       .from('enrollments')
       .select('pending_balance')
@@ -293,14 +354,11 @@ export class PagosFacade {
       // vencidos con consentimientos y las online vencidas sin pago quedan canceladas.
       .not('status', 'in', '("draft","cancelled")');
     if (branchId !== null) q = q.eq('branch_id', branchId);
-    const { data } = await q;
-    if (!this.pagosGuard.isCurrent(token)) return;
-    this._pagosPendientesTotales.set(
-      (data ?? []).reduce((acc: number, r: any) => acc + (r.pending_balance ?? 0), 0),
-    );
+    const rows = assertReadOk(await q) as any[] | null;
+    return (rows ?? []).reduce((acc: number, r: any) => acc + (r.pending_balance ?? 0), 0);
   }
 
-  private async fetchAlumnosConDeuda(token: number, branchId: number | null): Promise<void> {
+  private async fetchAlumnosConDeuda(branchId: number | null): Promise<AlumnoDeudor[]> {
     let q: any = this.supabase.client
       .from('enrollments')
       .select(
@@ -314,11 +372,10 @@ export class PagosFacade {
       // recorte deja fuera a los deudores más chicos, que son los menos accionables.
       .limit(200);
     if (branchId !== null) q = q.eq('branch_id', branchId);
-    const { data } = await q;
-    if (!this.pagosGuard.isCurrent(token)) return;
+    const rows = assertReadOk(await q) as any[] | null;
 
-    this._alumnosConDeuda.set(
-      (data ?? []).map((row: any) => ({
+    return (rows ?? []).map(
+      (row: any): AlumnoDeudor => ({
         enrollmentId: row.id,
         alumno: buildStudentDisplayName({
           firstNames: row.students?.users?.first_names,
@@ -336,11 +393,11 @@ export class PagosFacade {
         estadoMatricula: row.status ?? null,
         sedeId: row.branch_id,
         sedeNombre: row.branches?.name ?? '—',
-      })),
+      }),
     );
   }
 
-  private async fetchPagosRecientes(token: number, branchId: number | null): Promise<void> {
+  private async fetchPagosRecientes(branchId: number | null): Promise<PagoReciente[]> {
     let q: any = this.supabase.client
       .from('payments')
       .select(
@@ -354,38 +411,34 @@ export class PagosFacade {
       .order('created_at', { ascending: false })
       .limit(50);
     if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
-    const { data } = await q;
-    if (!this.pagosGuard.isCurrent(token)) return;
+    const rows = assertReadOk(await q) as any[] | null;
 
-    this._pagosRecientes.set(
-      (data ?? []).map((row: any) => {
-        const { metodo, icono } = resolveMetodo(row);
-        return {
-          id: row.id,
-          fecha: row.payment_date,
-          alumno: buildStudentDisplayName({
-            firstNames: row.enrollments?.students?.users?.first_names,
-            paternalLastName: row.enrollments?.students?.users?.paternal_last_name,
-            maternalLastName: row.enrollments?.students?.users?.maternal_last_name,
-          }),
-          concepto: mapConcepto(row.type),
-          monto: row.total_amount ?? 0,
-          metodo,
-          metodoIcono: icono,
-          nroDocumento: row.document_number,
-          estado: mapEstado(row.status),
-          anulacion: mapAnulacionPago(row),
-        };
-      }),
-    );
+    return (rows ?? []).map((row: any): PagoReciente => {
+      const { metodo, icono } = resolveMetodo(row);
+      return {
+        id: row.id,
+        fecha: row.payment_date,
+        alumno: buildStudentDisplayName({
+          firstNames: row.enrollments?.students?.users?.first_names,
+          paternalLastName: row.enrollments?.students?.users?.paternal_last_name,
+          maternalLastName: row.enrollments?.students?.users?.maternal_last_name,
+        }),
+        concepto: mapConcepto(row.type),
+        monto: row.total_amount ?? 0,
+        metodo,
+        metodoIcono: icono,
+        nroDocumento: row.document_number,
+        estado: mapEstado(row.status),
+        anulacion: mapAnulacionPago(row),
+      };
+    });
   }
 
   private async fetchMetodosPagoMes(
-    token: number,
     first: string,
     last: string,
     branchId: number | null,
-  ): Promise<void> {
+  ): Promise<MetodoPago[]> {
     let q: any = this.supabase.client
       .from('payments')
       .select(
@@ -395,26 +448,23 @@ export class PagosFacade {
       .gte('payment_date', first)
       .lte('payment_date', last);
     if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
-    const { data } = await q;
-    if (!this.pagosGuard.isCurrent(token)) return;
+    const rows = assertReadOk(await q) as any[] | null;
     const totals = METODOS_CONFIG.map((cfg) => ({
       ...cfg,
-      total: (data ?? []).reduce((acc: number, r: any) => acc + (r[cfg.key] ?? 0), 0),
+      total: (rows ?? []).reduce((acc: number, r: any) => acc + (r[cfg.key] ?? 0), 0),
     }));
     const porcentajes = roundPercentagesTo100(totals.map((m) => m.total));
 
-    this._metodosPagoMes.set(
-      totals
-        .map((m, i) => ({
-          metodo: m.metodo,
-          total: m.total,
-          porcentaje: porcentajes[i],
-          color: m.color,
-          icono: m.icono,
-        }))
-        .filter((m) => m.total > 0)
-        .sort((a, b) => b.porcentaje - a.porcentaje),
-    );
+    return totals
+      .map((m, i) => ({
+        metodo: m.metodo,
+        total: m.total,
+        porcentaje: porcentajes[i],
+        color: m.color,
+        icono: m.icono,
+      }))
+      .filter((m) => m.total > 0)
+      .sort((a, b) => b.porcentaje - a.porcentaje);
   }
 
   /**
@@ -505,34 +555,69 @@ export class PagosFacade {
       void this.cargarEstadoCuenta(enrollmentId);
     } else {
       this._estadoCuentaResumen.set(null);
+      this._errorDetalle.set(null);
+      this._detalleRefreshFailed.set(false);
     }
   }
 
+  /**
+   * Carga el Estado de Cuenta de una matrícula (spec 0060-b). Si ya se mostraba esa misma matrícula
+   * y la recarga falla (p. ej. después de registrar un pago), lo visible se queda con el aviso
+   * `detalleRefreshFailed` (caso B); si es otra matrícula, se retira y queda `errorDetalle` (caso A).
+   */
   async cargarEstadoCuenta(enrollmentId: number): Promise<void> {
     // fix-049-i: si se elige otro alumno antes de que esta carga termine, su respuesta se descarta.
     const token = this.estadoCuentaGuard.next();
+    const mismaMatricula = this._estadoCuentaResumen()?.enrollmentId === enrollmentId;
     this._isLoadingDetalle.set(true);
+    this._errorDetalle.set(null);
     try {
-      await Promise.all([
-        this.fetchEstadoCuentaResumen(enrollmentId, token),
-        this.fetchEstadoCuentaHistorial(enrollmentId, token),
+      const [resumen, historial] = await Promise.all([
+        this.fetchEstadoCuentaResumen(enrollmentId),
+        this.fetchEstadoCuentaHistorial(enrollmentId),
       ]);
+      if (!this.estadoCuentaGuard.isCurrent(token)) return;
+      this._estadoCuentaResumen.set(resumen);
+      this._estadoCuentaHistorial.set(historial);
+      this._detalleRefreshFailed.set(false);
+    } catch (err) {
+      if (!this.estadoCuentaGuard.isCurrent(token)) return;
+      if (mismaMatricula) {
+        this._detalleRefreshFailed.set(true);
+      } else {
+        this._estadoCuentaResumen.set(null);
+        this._estadoCuentaHistorial.set([]);
+        this._detalleRefreshFailed.set(false);
+        this._errorDetalle.set(toFriendlyDbMessage(err, 'No se pudo cargar el estado de cuenta.'));
+      }
     } finally {
       if (this.estadoCuentaGuard.isCurrent(token)) this._isLoadingDetalle.set(false);
     }
   }
 
-  private async fetchEstadoCuentaResumen(enrollmentId: number, token: number): Promise<void> {
-    const { data } = await this.supabase.client
-      .from('enrollments')
-      .select(
-        'id, base_price, discount, total_paid, pending_balance, payment_status, students!inner(users!inner(first_names, paternal_last_name, maternal_last_name, rut, email, phone)), courses!inner(name)',
-      )
-      .eq('id', enrollmentId)
-      .maybeSingle();
-    if (!data || !this.estadoCuentaGuard.isCurrent(token)) return;
-    const user = (data as any).students?.users;
-    this._estadoCuentaResumen.set({
+  /** "Reintentar" del Estado de Cuenta: recarga la matrícula seleccionada. */
+  async reintentarEstadoCuenta(): Promise<void> {
+    const enrollmentId = this._enrollmentSeleccionado();
+    if (enrollmentId === null) return;
+    await this.cargarEstadoCuenta(enrollmentId);
+  }
+
+  private async fetchEstadoCuentaResumen(
+    enrollmentId: number,
+  ): Promise<EstadoCuentaResumen | null> {
+    const data = assertReadOk(
+      await this.supabase.client
+        .from('enrollments')
+        .select(
+          'id, base_price, discount, total_paid, pending_balance, payment_status, students!inner(users!inner(first_names, paternal_last_name, maternal_last_name, rut, email, phone)), courses!inner(name)',
+        )
+        .eq('id', enrollmentId)
+        .maybeSingle(),
+    ) as any;
+    // Sin fila (borrada o fuera de la RLS): el drawer dice "No se encontró la matrícula".
+    if (!data) return null;
+    const user = data.students?.users;
+    return {
       enrollmentId: data.id,
       alumno: buildStudentDisplayName({
         firstNames: user?.first_names,
@@ -542,42 +627,43 @@ export class PagosFacade {
       rut: user?.rut ?? '—',
       email: user?.email,
       telefono: user?.phone,
-      curso: (data as any).courses?.name,
+      curso: data.courses?.name,
       basePrice: data.base_price ?? 0,
       descuento: data.discount ?? 0,
       totalACurso: (data.base_price ?? 0) - (data.discount ?? 0),
       totalPagado: data.total_paid ?? 0,
       saldoPendiente: data.pending_balance ?? 0,
       paymentStatus: data.payment_status,
-    });
+    };
   }
 
-  private async fetchEstadoCuentaHistorial(enrollmentId: number, token: number): Promise<void> {
+  private async fetchEstadoCuentaHistorial(
+    enrollmentId: number,
+  ): Promise<EstadoCuentaHistorialItem[]> {
     // payments-all-statuses: historial del estado de cuenta; los anulados se muestran tachados.
-    const { data } = await this.supabase.client
-      .from('payments')
-      .select(
-        `id, payment_date, type, total_amount, transfer_amount, cash_amount, card_amount, voucher_amount, document_number, status, ${PAYMENT_ANULACION_SELECT}`,
-      )
-      .eq('enrollment_id', enrollmentId)
-      .order('created_at', { ascending: false });
-    if (!this.estadoCuentaGuard.isCurrent(token)) return;
-    this._estadoCuentaHistorial.set(
-      (data ?? []).map((row: any) => {
-        const { metodo, icono } = resolveMetodo(row);
-        return {
-          id: row.id,
-          fecha: row.payment_date,
-          concepto: mapConcepto(row.type),
-          metodo,
-          metodoIcono: icono,
-          nroDocumento: row.document_number,
-          monto: row.total_amount,
-          estado: mapEstado(row.status),
-          anulacion: mapAnulacionPago(row),
-        };
-      }),
-    );
+    const rows = assertReadOk(
+      await this.supabase.client
+        .from('payments')
+        .select(
+          `id, payment_date, type, total_amount, transfer_amount, cash_amount, card_amount, voucher_amount, document_number, status, ${PAYMENT_ANULACION_SELECT}`,
+        )
+        .eq('enrollment_id', enrollmentId)
+        .order('created_at', { ascending: false }),
+    ) as any[] | null;
+    return (rows ?? []).map((row: any): EstadoCuentaHistorialItem => {
+      const { metodo, icono } = resolveMetodo(row);
+      return {
+        id: row.id,
+        fecha: row.payment_date,
+        concepto: mapConcepto(row.type),
+        metodo,
+        metodoIcono: icono,
+        nroDocumento: row.document_number,
+        monto: row.total_amount,
+        estado: mapEstado(row.status),
+        anulacion: mapAnulacionPago(row),
+      };
+    });
   }
 
   // ── Generación de reporte PDF ────────────────────────────────────────────────

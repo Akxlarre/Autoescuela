@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component';
 import { PagosFacade } from '@core/facades/pagos.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -19,6 +20,8 @@ describe('RegistrarPagoDrawerComponent', () => {
       enrollmentSeleccionado: vi.fn().mockReturnValue(opts?.enrollmentSeleccionado ?? null),
       alumnosConDeuda: vi.fn().mockReturnValue(opts?.alumnosConDeuda ?? []),
       estadoCuentaResumen: vi.fn().mockReturnValue(opts?.estadoCuentaResumen ?? null),
+      error: vi.fn().mockReturnValue(null),
+      errorDetalle: vi.fn().mockReturnValue(null),
       registrarNuevoPago: vi.fn().mockResolvedValue(undefined),
       showSuccess: vi.fn(),
     };
@@ -224,5 +227,95 @@ describe('RegistrarPagoDrawerComponent', () => {
 
     expect(sanitizerSpy.sanitize).toHaveBeenCalledWith(dbError);
     expect((component as any).saveError()).toBe('Error sanitizado');
+  });
+
+  // ── spec 0060-b (T1.1): un pago no se registra contra datos que no cargaron ──
+  describe('lecturas fallidas (spec 0060-b)', () => {
+    let error: ReturnType<typeof signal<string | null>>;
+    let errorDetalle: ReturnType<typeof signal<string | null>>;
+    let alumnos: ReturnType<typeof signal<unknown[]>>;
+    let seleccionado: ReturnType<typeof signal<number | null>>;
+
+    const alumno = { enrollmentId: 7, alumno: 'Ana', rut: '1-9', pagado: 0, saldo: 80000 };
+
+    function setupSignals(opts: {
+      enrollmentSeleccionado: number | null;
+      error?: string | null;
+      errorDetalle?: string | null;
+      alumnosConDeuda?: unknown[];
+    }): void {
+      error = signal(opts.error ?? null);
+      errorDetalle = signal(opts.errorDetalle ?? null);
+      alumnos = signal(opts.alumnosConDeuda ?? []);
+      seleccionado = signal(opts.enrollmentSeleccionado);
+      facadeSpy = {
+        enrollmentSeleccionado: seleccionado,
+        alumnosConDeuda: alumnos,
+        estadoCuentaResumen: signal(null),
+        error,
+        errorDetalle,
+        isLoading: signal(false),
+        isLoadingDetalle: signal(false),
+        reintentar: vi.fn(),
+        reintentarEstadoCuenta: vi.fn(),
+        registrarNuevoPago: vi.fn().mockResolvedValue(undefined),
+        showSuccess: vi.fn(),
+      };
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          RegistrarPagoDrawerComponent,
+          { provide: PagosFacade, useValue: facadeSpy },
+          { provide: LayoutDrawerFacadeService, useValue: { back: vi.fn() } },
+          { provide: ErrorSanitizerService, useValue: { sanitize: vi.fn() } },
+        ],
+      });
+      component = TestBed.inject(RegistrarPagoDrawerComponent);
+      TestBed.tick();
+    }
+
+    const llenar = () =>
+      (component as any).form.patchValue({ type: 'Abono', total_amount: 1000, cash_amount: 1000 });
+
+    it('modo global con la lista de deudores caída: bloquea el guardado (no lo registra "sin matrícula")', async () => {
+      setupSignals({ enrollmentSeleccionado: null, error: 'No se pudieron cargar los pagos.' });
+      llenar();
+
+      expect((component as any).guardadoBloqueado()).toBe(true);
+      await (component as any).onSubmit();
+      expect(facadeSpy.registrarNuevoPago).not.toHaveBeenCalled();
+    });
+
+    it('modo contextual sin Estado de Cuenta ni fila en la lista: bloquea (no conoce el saldo)', async () => {
+      setupSignals({
+        enrollmentSeleccionado: 7,
+        errorDetalle: 'No se pudo cargar el estado de cuenta.',
+      });
+      llenar();
+
+      expect((component as any).guardadoBloqueado()).toBe(true);
+      await (component as any).onSubmit();
+      expect(facadeSpy.registrarNuevoPago).not.toHaveBeenCalled();
+    });
+
+    it('modo contextual sin Estado de Cuenta pero con la fila en la lista: no bloquea (saldo conocido)', () => {
+      setupSignals({
+        enrollmentSeleccionado: 7,
+        errorDetalle: 'No se pudo cargar el estado de cuenta.',
+        alumnosConDeuda: [alumno],
+      });
+      expect((component as any).guardadoBloqueado()).toBe(false);
+    });
+
+    it('tras "Reintentar" con éxito, el alumno pasa a ser obligatorio en modo global', () => {
+      setupSignals({ enrollmentSeleccionado: null, error: 'No se pudieron cargar los pagos.' });
+      error.set(null);
+      alumnos.set([alumno]);
+      TestBed.tick();
+      llenar();
+
+      expect((component as any).guardadoBloqueado()).toBe(false);
+      expect((component as any).form.get('enrollment_id')?.hasError('required')).toBe(true);
+    });
   });
 });
