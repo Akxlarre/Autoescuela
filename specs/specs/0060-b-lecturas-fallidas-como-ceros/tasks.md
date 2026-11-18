@@ -301,11 +301,14 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
       cambia sus consultas ni sus cálculos. El cambio de sede con error se cubre solo con tests,
       porque secretaria no cambia de sede y admin no usa este facade.
 
-- [ ] **T1.5** — `enrollment-payment.facade.ts` y `anticipos.facade.ts`
+- [x] **T1.5** — `enrollment-payment.facade.ts` y `anticipos.facade.ts`
   - **AC ref:** AC3, AC7
   - **DoD:** DoD-F
-  - **Avance (2026-11-18), solo `enrollment-payment.facade.ts`, pendiente de revisión.** La tarea
-    sigue abierta: falta `anticipos.facade.ts`, que no se tocó porque choca con la spec 0012-i.
+  - **Cerrada (2026-11-18), con el visto bueno del autor:** mergeada en los PR #426
+    (`enrollment-payment.facade.ts`) y #429 (`anticipos.facade.ts`, con CI en verde). Anticipos ya
+    no lleva `knownBug` en X01, pero ese bloque no se ejecutó en esta tarea. Las pruebas de navegador
+    y las mutaciones son las de las notas de abajo; no se repitieron al cerrar.
+  - **Avance (2026-11-18), solo `enrollment-payment.facade.ts`:**
     - **Rehidratación.** Las 3 lecturas lanzan y se aplican juntas, solo si las 3 salieron bien. Si
       una falla, el estado queda vacío y `canConfirmPayment` (y por él `recordPayment`) sigue en
       false hasta que `reintentarDatosPago()` salga bien. También bloquea mientras carga. Un
@@ -363,8 +366,7 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
       previos a `fix-050-i`), `maybeSingle()` da error: antes se ignoraba y ahora bloquea, y
       reintentar no lo resuelve. No se consultó producción para saber si existen. (2) El `DELETE` de
       la RPC no filtra `status`, así que también borraría un pago anulado del borrador.
-  - **Avance (2026-11-18), `anticipos.facade.ts` y sus pantallas, pendiente de revisión.** Con esto
-    están las dos partes de la tarea; sigue sin marcar hasta que se revise.
+  - **Avance (2026-11-18), `anticipos.facade.ts` y sus pantallas:**
     - **Facade.** `instructor_advances` e `instructors` son una sola carga: si una falla no se aplica
       nada. `createRequestGuard` con `isCurrent()` después del `throw`. Caso A (primera carga, cambio
       de sede o refresco sin datos de la sede activa): datos retirados, `error` y sin `_initialized`;
