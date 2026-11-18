@@ -26,19 +26,30 @@ describe('RecentActivityDrawerComponent', () => {
   let router: { navigateByUrl: ReturnType<typeof vi.fn> };
   let drawer: { close: ReturnType<typeof vi.fn> };
 
-  async function montar() {
+  let facade: {
+    fetchActivityHistory: ReturnType<typeof vi.fn>;
+    resolveStudentIdForActivity: ReturnType<typeof vi.fn>;
+  };
+
+  async function asentar(fixture: { detectChanges(): void }) {
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    fixture.detectChanges();
+  }
+
+  async function montar(
+    historial: () => Promise<unknown> = () => Promise.resolve(actividad),
+    alumno: () => Promise<number | null> = () => Promise.resolve(77),
+  ) {
     router = { navigateByUrl: vi.fn() };
     drawer = { close: vi.fn() };
+    facade = {
+      fetchActivityHistory: vi.fn(historial),
+      resolveStudentIdForActivity: vi.fn(alumno),
+    };
     TestBed.configureTestingModule({
       imports: [RecentActivityDrawerComponent],
       providers: [
-        {
-          provide: DashboardFacade,
-          useValue: {
-            fetchActivityHistory: vi.fn().mockResolvedValue(actividad),
-            resolveStudentIdForActivity: vi.fn().mockResolvedValue(77),
-          },
-        },
+        { provide: DashboardFacade, useValue: facade },
         { provide: AuthFacade, useValue: { currentUser: signal({ role: 'secretaria' }) } },
         { provide: LayoutDrawerFacadeService, useValue: drawer },
         { provide: Router, useValue: router },
@@ -92,6 +103,40 @@ describe('RecentActivityDrawerComponent', () => {
       expect(eliminada.getAttribute('role')).toBeNull();
       expect(eliminada.getAttribute('tabindex')).toBeNull();
       expect(eliminada.getAttribute('data-llm-action')).toBeNull();
+    });
+  });
+
+  describe('lectura fallida (spec 0060-b T1.4)', () => {
+    const fallo = () => Promise.reject(new Error('Failed to fetch'));
+
+    it('si el historial no carga muestra el error con Reintentar, no "sin actividad"', async () => {
+      const { fixture } = await montar(fallo);
+      const host = fixture.nativeElement as HTMLElement;
+
+      const vacio = host.querySelector('app-empty-state') as HTMLElement;
+      expect(vacio.getAttribute('actionLabel')).toBe('Reintentar');
+      expect(host.textContent).not.toContain('No hay actividad reciente');
+    });
+
+    it('Reintentar vuelve a pedir el historial y muestra la lista', async () => {
+      const { fixture } = await montar(fallo);
+      const host = fixture.nativeElement as HTMLElement;
+      facade.fetchActivityHistory.mockResolvedValue(actividad);
+
+      host.querySelector('app-empty-state')!.dispatchEvent(new CustomEvent('action'));
+      await asentar(fixture);
+
+      expect(facade.fetchActivityHistory).toHaveBeenCalledTimes(2);
+      expect(host.querySelector('app-empty-state')).toBeNull();
+      expect(host.querySelectorAll('li')).toHaveLength(3);
+    });
+
+    it('si no se resuelve el alumno, la lista sigue visible y ese evento no es enlace', async () => {
+      const { items } = await montar(undefined, fallo);
+
+      expect(items).toHaveLength(3);
+      expect(items[0].getAttribute('role')).toBeNull();
+      expect(items[1].getAttribute('role')).toBe('button'); // Pagos no necesita resolver alumno
     });
   });
 });

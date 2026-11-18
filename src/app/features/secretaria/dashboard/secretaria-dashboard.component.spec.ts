@@ -63,7 +63,10 @@ describe('SecretariaDashboardComponent', () => {
               liveClasses: [],
             }),
             error: signal<string | null>(null),
+            refreshFailed: signal(false),
+            refreshing: signal(false),
             initialize: vi.fn(),
+            reintentar: vi.fn(),
             destroyRealtime: vi.fn(),
             // Distinto de 0: el dashboard ya recibió eventos antes de montarse (re-entrada).
             liveUpdates: signal(3),
@@ -164,7 +167,7 @@ describe('SecretariaDashboardComponent', () => {
     it('"Reintentar" vuelve a cargar el dashboard y las alertas', () => {
       component.retry();
 
-      expect(dashboard().initialize).toHaveBeenCalledTimes(1);
+      expect(dashboard().reintentar).toHaveBeenCalledTimes(1);
       expect(alerts().initialize).toHaveBeenCalledTimes(1);
     });
 
@@ -365,7 +368,10 @@ describe('SecretariaDashboardComponent', () => {
                 liveClasses: [],
               }),
               error: signal<string | null>(null),
+              refreshFailed: dashboardRefreshFailed,
+              refreshing: signal(false),
               initialize: vi.fn(),
+              reintentar: dashboardReintentar,
               destroyRealtime: vi.fn(),
               liveUpdates: signal(0),
             },
@@ -393,8 +399,12 @@ describe('SecretariaDashboardComponent', () => {
     }
 
     let alertasMock: any;
+    let dashboardRefreshFailed: ReturnType<typeof signal<boolean>>;
+    let dashboardReintentar: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
+      dashboardRefreshFailed = signal(false);
+      dashboardReintentar = vi.fn();
       alertasMock = {
         initialize: vi.fn(),
         refreshSilently: vi.fn(),
@@ -468,6 +478,150 @@ describe('SecretariaDashboardComponent', () => {
       expect(text).toContain('Alerta 1');
       expect(text).toContain('No se pudieron revisar todas las alertas.');
       expect(text).not.toContain('Todo en orden');
+    });
+
+    it('el aviso del dashboard y el de las alertas conviven, cada uno con su reintento', () => {
+      dashboardRefreshFailed.set(true);
+      alertasMock.activeAlerts.set([buildAlert(1)]);
+      alertasMock.refreshFailed.set(true);
+      const host = mountDom().nativeElement as HTMLElement;
+
+      expect(host.querySelectorAll('app-alert-card')).toHaveLength(2);
+      (
+        host.querySelector('[data-llm-action="reintentar-alertas-secretaria"]') as HTMLElement
+      ).click();
+      expect(alertasMock.reintentar).toHaveBeenCalledTimes(1);
+      expect(dashboardReintentar).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── spec 0060-b T1.4: la carga del panel, casos A y B en pantalla ──────────
+  describe('carga del panel: Caso A y Caso B (spec 0060-b T1.4)', () => {
+    const KPIS = [
+      { id: 'revenue', label: 'Ingresos Mes', value: 1_234_567, prefix: '$' },
+      { id: 'users', label: 'Alumnos Activos', value: 12 },
+    ];
+    const DATOS = {
+      hero: { userName: 'Lola', date: 'Hoy', classesToday: 2 },
+      kpis: KPIS,
+      activities: [buildActivity(1)],
+      quickActions: [{ id: 'qa1', icon: 'plus', label: 'Matricular' }],
+      liveClasses: [],
+    };
+    let facade: any;
+    let alertas: any;
+
+    function montar(estado: { data: unknown; error?: string; refreshFailed?: boolean }) {
+      facade = {
+        loading: signal(false),
+        data: signal(estado.data),
+        error: signal(estado.error ?? null),
+        refreshFailed: signal(estado.refreshFailed ?? false),
+        refreshing: signal(false),
+        initialize: vi.fn(),
+        reintentar: vi.fn(),
+        destroyRealtime: vi.fn(),
+        liveUpdates: signal(0),
+      };
+      alertas = {
+        initialize: vi.fn(),
+        refreshSilently: vi.fn(),
+        reintentar: vi.fn(),
+        activeAlerts: signal([buildAlert(1)]),
+        alertCount: signal(1),
+        isLoading: signal(false),
+        loadProblem: signal<string | null>(null),
+        refreshFailed: signal(false),
+        dismissAlert: vi.fn(),
+      };
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [SecretariaDashboardComponent],
+        providers: [
+          { provide: DashboardFacade, useValue: facade },
+          { provide: DashboardAlertsFacade, useValue: alertas },
+          { provide: AuthFacade, useValue: { currentUser: signal({ name: 'Lola' }) } },
+          { provide: BranchFacade, useValue: { selectedBranchId: branchSig } },
+          { provide: LayoutDrawerFacadeService, useValue: layoutDrawerSpy },
+          { provide: LayoutService, useValue: { tier: tierSig } },
+          { provide: GsapAnimationsService, useValue: { animateBentoGrid: vi.fn() } },
+          { provide: AgendaFacade, useValue: { setSelectedSlot: vi.fn() } },
+          { provide: AsistenciaClaseBFacade, useValue: { selectPractica: vi.fn() } },
+          { provide: PagosFacade, useValue: pagosFacadeSpy },
+          { provide: CuadraturaFacade, useValue: cuadraturaFacadeSpy },
+        ],
+      }).overrideComponent(SecretariaDashboardComponent, {
+        set: { imports: [], schemas: [NO_ERRORS_SCHEMA] },
+      });
+      const dom = TestBed.createComponent(SecretariaDashboardComponent);
+      dom.detectChanges();
+      return {
+        dom,
+        cmp: dom.componentInstance,
+        host: dom.nativeElement as HTMLElement,
+        grid: dom.nativeElement.querySelector('.bento-grid') as HTMLElement,
+      };
+    }
+
+    const tagsDeLaGrilla = (grid: HTMLElement) =>
+      Array.from(grid.children).map((c) => c.tagName.toLowerCase());
+
+    it('Caso A: estado de error con Reintentar, sin KPIs, chips ni paneles', () => {
+      const { cmp, host, grid } = montar({ data: null, error: 'Error al cargar' });
+
+      const vacio = grid.querySelector('.bento-fill app-empty-state') as any;
+      expect(vacio.getAttribute('actionLabel')).toBe('Reintentar');
+      expect(cmp.heroKpis()).toEqual([]);
+      expect(cmp.heroChips()).toEqual([]);
+      expect(host.querySelector('app-live-classes-panel')).toBeNull();
+      expect(host.textContent).not.toContain('Sin actividad reciente');
+      expect(host.textContent).not.toContain('Todo en orden');
+
+      vacio.dispatchEvent(new CustomEvent('action'));
+      expect(facade.reintentar).toHaveBeenCalledTimes(1);
+      expect(alertas.initialize).toHaveBeenCalled();
+    });
+
+    it('Caso A: la celda ocupa las dos filas de la grilla', () => {
+      const { grid } = montar({ data: null, error: 'Error al cargar' });
+
+      const celda = grid.querySelector('.bento-fill') as HTMLElement;
+      expect(celda.getAttribute('data-row-span')).toBe('2');
+      expect(celda.getAttribute('data-row-span-md')).toBe('2');
+    });
+
+    it('Caso B: el aviso va dentro de una celda .bento-fill y los KPIs se quedan', () => {
+      const { cmp, grid } = montar({ data: DATOS, refreshFailed: true });
+
+      const aviso = grid.querySelector('app-live-classes-panel.bento-fill app-alert-card');
+      expect(aviso).not.toBeNull();
+      expect(tagsDeLaGrilla(grid)).not.toContain('app-alert-card');
+      expect(grid.children).toHaveLength(4); // hero + clases + actividad + alertas
+      expect(cmp.heroKpis().map((k) => k.value)).toEqual(['1.234.567', '12']);
+      expect(grid.querySelector('app-empty-state[actionLabel="Reintentar"]')).toBeNull();
+    });
+
+    it('Caso B: "Reintentar" llama a reintentar() y se bloquea mientras refresca', () => {
+      const { dom, host } = montar({ data: DATOS, refreshFailed: true });
+      const boton = host.querySelector(
+        'app-alert-card button[data-llm-action="reintentar-dashboard-secretaria"]',
+      ) as HTMLButtonElement;
+
+      boton.click();
+      expect(facade.reintentar).toHaveBeenCalledTimes(1);
+      expect(alertas.initialize).toHaveBeenCalled();
+
+      facade.refreshing.set(true);
+      dom.detectChanges();
+      expect(boton.disabled).toBe(true);
+    });
+
+    it('con la carga bien no hay aviso ni estado de error', () => {
+      const { host } = montar({ data: DATOS });
+
+      expect(host.querySelector('app-alert-card')).toBeNull();
+      expect(host.querySelector('[data-llm-action="reintentar-dashboard-secretaria"]')).toBeNull();
+      expect(host.querySelector('app-empty-state[actionLabel="Reintentar"]')).toBeNull();
     });
   });
 });

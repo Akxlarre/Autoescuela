@@ -1,6 +1,15 @@
+import { ChangeDetectionStrategy, Component, NO_ERRORS_SCHEMA } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { LiveClassesPanelComponent } from './live-classes-panel.component';
 import type { LiveClassModel } from '@core/models/ui/dashboard.model';
+
+@Component({
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [LiveClassesPanelComponent],
+  template: `<app-live-classes-panel><div liveClassesNotice>Aviso</div></app-live-classes-panel>`,
+})
+class LiveClassesPanelHostComponent {}
 
 function makeLiveClass(over: Partial<LiveClassModel> = {}): LiveClassModel {
   return {
@@ -35,6 +44,25 @@ describe('LiveClassesPanelComponent', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  // ─── spec 0060-b T1.4: el aviso del contenedor queda dentro de la celda ─────
+  it('proyecta [liveClassesNotice] entre el título y la lista', () => {
+    TestBed.resetTestingModule();
+    // Vitest no compila los inputs de señal de los hijos (app-icon): basta el template del panel.
+    const fixture = TestBed.configureTestingModule({
+      imports: [LiveClassesPanelHostComponent],
+    })
+      .overrideComponent(LiveClassesPanelComponent, {
+        set: { imports: [], schemas: [NO_ERRORS_SCHEMA] },
+      })
+      .createComponent(LiveClassesPanelHostComponent);
+    fixture.detectChanges();
+
+    const panel = fixture.nativeElement.querySelector('app-live-classes-panel') as HTMLElement;
+    const aviso = panel.querySelector('[liveClassesNotice]') as HTMLElement;
+    expect(aviso.textContent).toContain('Aviso');
+    expect(aviso.previousElementSibling?.textContent).toContain('Clases Actuales');
   });
 
   // ─── fix-414-m: cada fila dice qué hace y se identifica para agentes ───────

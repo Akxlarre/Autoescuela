@@ -126,6 +126,7 @@ describe('DashboardFacade — KPI "Ingresos Mes" incluye servicios especiales (f
 function crearFacadeConCliente(
   respuesta: (tabla: string, n: number) => Record<string, unknown> = () => ({}),
   user: Record<string, unknown> = { name: 'Test' },
+  sedeSeleccionada: () => number | null = () => null,
 ) {
   const builders: Record<string, any[]> = {};
   const client = {
@@ -143,6 +144,7 @@ function crearFacadeConCliente(
         'not',
         'order',
         'limit',
+        'maybeSingle',
       ]) {
         b[m] = vi.fn(() => b);
       }
@@ -166,7 +168,7 @@ function crearFacadeConCliente(
       DashboardFacade,
       { provide: SupabaseService, useValue: { client } },
       { provide: AuthFacade, useValue: { currentUser: vi.fn(() => user) } },
-      { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(() => null) } },
+      { provide: BranchFacade, useValue: { selectedBranchId: vi.fn(sedeSeleccionada) } },
     ],
   });
   return { facade: TestBed.inject(DashboardFacade), builders, client };
@@ -374,6 +376,373 @@ describe('DashboardFacade — errores de consulta (fix-405-m)', () => {
 
     expect(facade.data()?.hero?.classesToday).toBe(3);
     expect(facade.error()).toBeNull();
+  });
+});
+
+describe('DashboardFacade — lecturas fallidas, casos A y B (spec 0060-b T1.4)', () => {
+  const fallo = { data: null, count: null, error: { message: 'Failed to fetch' } };
+  const MENSAJE = 'Error al cargar datos del dashboard';
+  /** Deja terminar un refresco lanzado con `void` (re-entrada SWR, evento Realtime). */
+  const asentar = () => new Promise((resolve) => setTimeout(resolve));
+
+  /** [tabla, posición dentro de la carga, consultas de esa tabla por carga]. */
+  const CONSULTAS: [string, number, number][] = [
+    ['enrollments', 0, 2],
+    ['enrollments', 1, 2],
+    ['class_b_sessions', 0, 4],
+    ['class_b_sessions', 1, 4],
+    ['class_b_sessions', 2, 4],
+    ['class_b_sessions', 3, 4],
+    ['payments', 0, 2],
+    ['payments', 1, 2],
+    ['special_service_sales', 0, 2],
+    ['special_service_sales', 1, 2],
+    ['vehicles', 0, 1],
+    ['audit_log', 0, 1],
+  ];
+
+  function escenario() {
+    const estado = {
+      sede: 1 as number | null,
+      clases: 3,
+      pagos: 1_000,
+      roto: (_tabla: string, _n: number): boolean => false,
+    };
+    const { facade, builders } = crearFacadeConCliente(
+      (tabla, n) => {
+        if (estado.roto(tabla, n)) return fallo;
+        if (tabla === 'class_b_sessions' && n % 4 === 0) return { count: estado.clases };
+        if (tabla === 'payments' && n % 2 === 0) return { data: [{ total_amount: estado.pagos }] };
+        return {};
+      },
+      { id: 'uid-1', name: 'Admin', role: 'admin' },
+      () => estado.sede,
+    );
+    const romperTodo = () => (estado.roto = () => true);
+    const reparar = () => (estado.roto = () => false);
+    const ingresos = () => facade.data()?.kpis.find((k) => k.id === 'revenue')?.value;
+    return { facade, builders, estado, romperTodo, reparar, ingresos };
+  }
+
+  describe('caso A: no hay datos de esta consulta que mostrar', () => {
+    it('primera carga con error: sin datos, con mensaje, sin aviso de refresco', async () => {
+      const { facade, romperTodo } = escenario();
+      romperTodo();
+
+      await facade.initialize();
+
+      expect(facade.data()).toBeNull();
+      expect(facade.error()).toBe(MENSAJE);
+      expect(facade.refreshFailed()).toBe(false);
+      expect(facade.loading()).toBe(false);
+    });
+
+    it('cambio de sede con error: retira los KPIs de la sede anterior', async () => {
+      const { facade, estado, romperTodo } = escenario();
+      await facade.initialize();
+      expect(facade.data()).not.toBeNull();
+
+      estado.sede = 2;
+      romperTodo();
+      await facade.initialize();
+
+      expect(facade.data()).toBeNull();
+      expect(facade.error()).toBe(MENSAJE);
+      expect(facade.refreshFailed()).toBe(false);
+    });
+
+    it('volver a la sede anterior tras ese error carga con skeleton, no como re-entrada', async () => {
+      const { facade, estado, romperTodo, reparar } = escenario();
+      await facade.initialize();
+      estado.sede = 2;
+      romperTodo();
+      await facade.initialize();
+
+      estado.sede = 1;
+      reparar();
+      const carga = facade.initialize();
+
+      expect(facade.loading()).toBe(true);
+      await carga;
+      expect(facade.error()).toBeNull();
+      expect(facade.data()?.hero?.classesToday).toBe(3);
+    });
+
+    it('reintentar() con skeleton sale bien: datos nuevos y sin error', async () => {
+      const { facade, romperTodo, reparar } = escenario();
+      romperTodo();
+      await facade.initialize();
+
+      reparar();
+      const reintento = facade.reintentar();
+
+      expect(facade.loading()).toBe(true);
+      expect(facade.error()).toBeNull();
+      await reintento;
+      expect(facade.loading()).toBe(false);
+      expect(facade.data()?.hero?.classesToday).toBe(3);
+    });
+
+    it('un evento Realtime que falla sin datos a la vista sigue siendo caso A', async () => {
+      const { facade, romperTodo } = escenario();
+      romperTodo();
+      await facade.initialize();
+
+      await (facade as any).refreshSilently();
+
+      expect(facade.data()).toBeNull();
+      expect(facade.error()).toBe(MENSAJE);
+      expect(facade.refreshFailed()).toBe(false);
+    });
+
+    it('un refresco de otra sede que falla retira los datos y obliga a cargar de nuevo', async () => {
+      const { facade, estado, romperTodo, reparar } = escenario();
+      await facade.initialize();
+
+      estado.sede = 2; // el evento llega antes de que la pantalla pida la sede nueva
+      romperTodo();
+      await (facade as any).refreshSilently();
+      expect(facade.data()).toBeNull();
+      expect(facade.error()).toBe(MENSAJE);
+
+      estado.sede = 1;
+      reparar();
+      const carga = facade.initialize();
+
+      expect(facade.loading()).toBe(true);
+      await carga;
+      expect(facade.data()?.hero?.classesToday).toBe(3);
+    });
+
+    it('un evento Realtime que trae datos saca al facade del caso A', async () => {
+      const { facade, romperTodo, reparar } = escenario();
+      romperTodo();
+      await facade.initialize();
+
+      reparar();
+      await (facade as any).refreshSilently();
+
+      expect(facade.error()).toBeNull();
+      expect(facade.data()?.hero?.classesToday).toBe(3);
+
+      // Ya cuenta como cargado: volver a la pantalla no muestra skeleton.
+      void facade.initialize();
+      expect(facade.loading()).toBe(false);
+    });
+  });
+
+  describe('una de varias consultas falla', () => {
+    it.each(CONSULTAS)(
+      'primera carga: %s nº %i hace fallar todo (nunca KPIs parciales)',
+      async (tabla, posicion, porCarga) => {
+        const { facade, estado } = escenario();
+        estado.roto = (t, n) => t === tabla && n % porCarga === posicion;
+
+        await facade.initialize();
+
+        expect(facade.data()).toBeNull();
+        expect(facade.error()).toBe(MENSAJE);
+      },
+    );
+
+    it.each(CONSULTAS)(
+      'refresco: %s nº %i deja intactos todos los KPIs anteriores',
+      async (tabla, posicion, porCarga) => {
+        const { facade, estado, ingresos } = escenario();
+        await facade.initialize();
+        const antes = facade.data();
+
+        estado.pagos = 9_999;
+        estado.clases = 9;
+        estado.roto = (t, n) => t === tabla && n % porCarga === posicion;
+        await (facade as any).refreshSilently();
+
+        expect(facade.data()).toBe(antes);
+        expect(ingresos()).toBe(1_000);
+        expect(facade.refreshFailed()).toBe(true);
+      },
+    );
+  });
+
+  describe('caso B: lo visible responde a la misma consulta', () => {
+    it('un refresco con error conserva los datos y levanta refreshFailed, sin skeleton', async () => {
+      const { facade, romperTodo } = escenario();
+      await facade.initialize();
+      const antes = facade.data();
+      romperTodo();
+
+      const refresco = (facade as any).refreshSilently();
+      expect(facade.loading()).toBe(false);
+      await refresco;
+
+      expect(facade.data()).toBe(antes);
+      expect(facade.refreshFailed()).toBe(true);
+      expect(facade.error()).toBeNull();
+    });
+
+    it('la re-entrada SWR que falla también es caso B', async () => {
+      const { facade, romperTodo } = escenario();
+      await facade.initialize();
+      romperTodo();
+
+      void facade.initialize();
+      expect(facade.loading()).toBe(false);
+      await asentar();
+
+      expect(facade.data()?.hero?.classesToday).toBe(3);
+      expect(facade.refreshFailed()).toBe(true);
+    });
+
+    it('un evento Realtime que falla es caso B y no avisa a las alertas', async () => {
+      const { facade, romperTodo } = escenario();
+      await facade.initialize();
+      romperTodo();
+
+      (facade as any).onRealtimeChange();
+      await asentar();
+
+      expect(facade.refreshFailed()).toBe(true);
+      expect(facade.liveUpdates()).toBe(0);
+    });
+
+    it('reintentar() que sale bien actualiza y limpia el aviso, sin skeleton', async () => {
+      const { facade, estado, romperTodo, reparar } = escenario();
+      await facade.initialize();
+      romperTodo();
+      await (facade as any).refreshSilently();
+
+      reparar();
+      estado.clases = 7;
+      const reintento = facade.reintentar();
+
+      expect(facade.loading()).toBe(false);
+      expect(facade.refreshing()).toBe(true);
+      await reintento;
+      expect(facade.refreshing()).toBe(false);
+      expect(facade.refreshFailed()).toBe(false);
+      expect(facade.data()?.hero?.classesToday).toBe(7);
+    });
+
+    it('reintentar() que vuelve a fallar deja datos y aviso', async () => {
+      const { facade, romperTodo } = escenario();
+      await facade.initialize();
+      romperTodo();
+      await (facade as any).refreshSilently();
+
+      await facade.reintentar();
+
+      expect(facade.data()?.hero?.classesToday).toBe(3);
+      expect(facade.refreshFailed()).toBe(true);
+      expect(facade.refreshing()).toBe(false);
+    });
+
+    it('cambiar de sede con éxito borra el aviso de la sede anterior', async () => {
+      const { facade, estado, romperTodo, reparar } = escenario();
+      await facade.initialize();
+      romperTodo();
+      await (facade as any).refreshSilently();
+
+      estado.sede = 2;
+      reparar();
+      const carga = facade.initialize();
+
+      expect(facade.refreshFailed()).toBe(false);
+      await carga;
+      expect(facade.refreshFailed()).toBe(false);
+    });
+
+    it('otro usuario en la pestaña no hereda el aviso', async () => {
+      const user = { id: 'uid-1', name: 'Uno' };
+      let roto = false;
+      const { facade } = crearFacadeConCliente(() => (roto ? fallo : {}), user);
+      await facade.initialize();
+      roto = true;
+      await (facade as any).refreshSilently();
+      expect(facade.refreshFailed()).toBe(true);
+
+      roto = false;
+      user.id = 'uid-2';
+      await facade.initialize();
+
+      expect(facade.refreshFailed()).toBe(false);
+    });
+  });
+
+  describe('refreshLiveClassesOnly (después de iniciar o cerrar una clase)', () => {
+    const fallanClases = (t: string) => t === 'class_b_sessions';
+
+    it('si falla conserva el panel y levanta el aviso', async () => {
+      const { facade, estado } = escenario();
+      await facade.initialize();
+      const antes = facade.data();
+      estado.roto = fallanClases;
+
+      await facade.refreshLiveClassesOnly();
+
+      expect(facade.data()).toBe(antes);
+      expect(facade.refreshFailed()).toBe(true);
+    });
+
+    it('sin dashboard cargado (admin desde Asistencia) falla sin dejar aviso', async () => {
+      const { facade, estado } = escenario();
+      estado.roto = fallanClases;
+
+      await facade.refreshLiveClassesOnly();
+
+      expect(facade.refreshFailed()).toBe(false);
+      expect(facade.error()).toBeNull();
+    });
+
+    it('si sale bien no borra un aviso de KPIs que siguen viejos', async () => {
+      const { facade, romperTodo, reparar } = escenario();
+      await facade.initialize();
+      romperTodo();
+      await (facade as any).refreshSilently();
+
+      reparar();
+      await facade.refreshLiveClassesOnly();
+
+      expect(facade.refreshFailed()).toBe(true);
+    });
+
+    it('si la sede cambió mientras esperaba, ni aplica sus clases ni avisa', async () => {
+      const { facade, estado } = escenario();
+      await facade.initialize();
+      const antes = facade.data();
+      estado.roto = fallanClases;
+
+      const refresco = facade.refreshLiveClassesOnly();
+      estado.sede = 2;
+      await refresco;
+
+      expect(facade.data()).toBe(antes);
+      expect(facade.refreshFailed()).toBe(false);
+    });
+  });
+
+  describe('lecturas de los drawers', () => {
+    it('fetchActivityHistory lanza si audit_log falla (no es "sin actividad")', async () => {
+      const { facade, estado } = escenario();
+      estado.roto = (t) => t === 'audit_log';
+
+      await expect(facade.fetchActivityHistory(50)).rejects.toEqual(fallo.error);
+    });
+
+    it.each([
+      ['enrollments', 'enrollments'],
+      ['class_b_sessions', 'class_b_sessions'],
+    ])('resolveStudentIdForActivity(%s) lanza si la lectura falla', async (entidad, tabla) => {
+      const { facade, estado } = escenario();
+      estado.roto = (t) => t === tabla;
+
+      await expect(facade.resolveStudentIdForActivity(entidad, 1)).rejects.toEqual(fallo.error);
+    });
+
+    it('resolveStudentIdForActivity sigue devolviendo null si la fila ya no existe', async () => {
+      const { facade } = escenario();
+
+      await expect(facade.resolveStudentIdForActivity('enrollments', 1)).resolves.toBeNull();
+    });
   });
 });
 
@@ -715,6 +1084,49 @@ describe('DashboardFacade', () => {
       await newCall;
       expect(dashFacade.loading()).toBe(false);
       expect(dashFacade.error()).toBeNull();
+    });
+
+    describe('refresco reemplazado o seguido de otro (spec 0060-b T1.4)', () => {
+      const asentar = () => new Promise((resolve) => setTimeout(resolve));
+
+      it('un refresco viejo que falla después de un cambio de sede no levanta el aviso', async () => {
+        const { mock, dashFacade } = facadeConCarrera(3);
+        const carga = dashFacade.initialize();
+        mock.resolveBatch(0, 100);
+        await carga;
+
+        const refresco = (dashFacade as any).refreshSilently(); // batch 1, en curso
+        (dashFacade as any)._lastBranchId = 99;
+        const otraSede = dashFacade.initialize(); // batch 2
+        mock.resolveBatch(2, 300);
+        await otraSede;
+
+        mock.rejectBatch(1, new Error('network fail'));
+        await refresco;
+
+        expect(dashFacade.refreshFailed()).toBe(false);
+        expect(dashFacade.error()).toBeNull();
+        expect(dashFacade.data()?.hero?.classesToday).toBe(300);
+      });
+
+      it('un evento llegado durante un refresco que falla se atiende y puede limpiar el aviso', async () => {
+        const { mock, dashFacade } = facadeConCarrera(3);
+        const carga = dashFacade.initialize();
+        mock.resolveBatch(0, 100);
+        await carga;
+
+        const refresco = (dashFacade as any).refreshSilently(); // batch 1, en curso
+        void (dashFacade as any).refreshSilently(); // queda anotado
+
+        mock.rejectBatch(1, new Error('network fail'));
+        await asentar();
+        expect(dashFacade.refreshFailed()).toBe(true);
+
+        mock.resolveBatch(2, 300);
+        await refresco;
+        expect(dashFacade.refreshFailed()).toBe(false);
+        expect(dashFacade.data()?.hero?.classesToday).toBe(300);
+      });
     });
   });
 

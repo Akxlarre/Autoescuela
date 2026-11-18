@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
@@ -11,7 +12,13 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 @Component({
   selector: 'app-recent-activity-drawer',
   standalone: true,
-  imports: [CommonModule, IconComponent, SkeletonBlockComponent, DrawerFormComponent],
+  imports: [
+    CommonModule,
+    EmptyStateComponent,
+    IconComponent,
+    SkeletonBlockComponent,
+    DrawerFormComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-drawer-form [hasFooter]="false">
@@ -53,6 +60,17 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 </li>
               }
             </ul>
+          </div>
+        } @else if (loadFailed()) {
+          <div class="flex-1 flex items-center justify-center" role="alert">
+            <app-empty-state
+              icon="triangle-alert"
+              message="No se pudo cargar la actividad"
+              subtitle="Revisa tu conexión y vuelve a intentarlo."
+              actionLabel="Reintentar"
+              actionIcon="refresh-cw"
+              (action)="cargar()"
+            />
           </div>
         } @else {
           <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar">
@@ -126,18 +144,26 @@ export class RecentActivityDrawerComponent implements OnInit {
 
   readonly activities = signal<any[]>([]);
   readonly loading = signal(true);
+  /** El historial no cargó: es distinto de "no hay actividad" (spec 0060-b). */
+  readonly loadFailed = signal(false);
 
-  /** Cache de `item.id` -> `students.id` resuelto (o `null` si la fila ya no existe). */
+  /** Cache de `item.id` -> `students.id` resuelto (o `null` si no hay a dónde llevar). */
   private readonly resolvedStudentIds = signal<Map<string, number | null>>(new Map());
 
-  async ngOnInit() {
+  ngOnInit(): void {
+    void this.cargar();
+  }
+
+  async cargar(): Promise<void> {
     this.loading.set(true);
+    this.loadFailed.set(false);
     try {
       const data = await this.dashboardFacade.fetchActivityHistory(50);
       this.activities.set(data);
       await this.resolveStudentLinkedItems(data);
-    } catch (err) {
-      console.error('Error fetching activity history:', err);
+    } catch {
+      this.activities.set([]);
+      this.loadFailed.set(true);
     } finally {
       this.loading.set(false);
     }
@@ -161,6 +187,9 @@ export class RecentActivityDrawerComponent implements OnInit {
       candidates.map((item) =>
         this.dashboardFacade
           .resolveStudentIdForActivity(item.entity, item.entityId)
+          // Sin este dato solo se pierde el enlace del evento: la lista sigue siendo correcta,
+          // así que no se avisa ni se descarta el historial que ya cargó.
+          .catch(() => null)
           .then((studentId) => [item.id, studentId] as const),
       ),
     );
