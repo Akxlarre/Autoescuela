@@ -12,250 +12,300 @@
       </p>
     </div>
 
-    <div class="p-6 space-y-8">
-      <!-- Resumen Informativo de Opciones -->
-      <div class="bg-info-subtle border border-info-border rounded-xl p-4 flex gap-3 text-info">
-        <app-icon name="info" [size]="20" class="mt-0.5 shrink-0" />
-        <div class="space-y-2">
-          <p class="text-sm font-bold">Opciones de pago disponibles</p>
-          <ul class="text-xs space-y-1 list-disc pl-4 opacity-90 text-text-secondary">
-            <li>
-              <strong class="text-text-primary">Total:</strong> Pago completo del curso (Efectivo,
-              Transf, Tarjeta).
-            </li>
-            <li>
-              <strong class="text-text-primary">Parcial:</strong> Abono inicial; el saldo queda como
-              deuda pendiente.
-            </li>
-            <li>
-              <strong class="text-text-primary">Pendiente:</strong> Registro sin pago inmediato (por
-              cobrar).
-            </li>
-          </ul>
-        </div>
+    <!-- spec 0060-b: sin el pago y el descuento guardados no se muestra ningún monto -->
+    @if (data().paymentDataError; as paymentDataError) {
+      <div class="p-6">
+        <app-empty-state
+          icon="alert-triangle"
+          [message]="paymentDataError"
+          subtitle="El pago queda detenido hasta cargarlos, para no registrar un monto equivocado."
+          actionLabel="Reintentar"
+          actionIcon="refresh-cw"
+          (action)="retryPaymentData.emit()"
+        />
       </div>
-
-      <!-- Desglose de Precios -->
-      <div class="space-y-4">
-        <label class="micro-label">Resumen Financiero</label>
-
-        <div class="card-tinted rounded-2xl p-6 relative overflow-hidden shadow-xl">
-          <div class="absolute right-0 top-0 p-8 opacity-10">
-            <app-icon name="banknote" [size]="64" />
+    } @else if (data().paymentDataLoading) {
+      <div class="p-6 space-y-4" aria-busy="true">
+        <app-skeleton-block variant="rect" width="100%" height="140px" />
+        <app-skeleton-block variant="rect" width="100%" height="96px" />
+      </div>
+    } @else {
+      <div class="p-6 space-y-8">
+        <!-- Resumen Informativo de Opciones -->
+        <div class="bg-info-subtle border border-info-border rounded-xl p-4 flex gap-3 text-info">
+          <app-icon name="info" [size]="20" class="mt-0.5 shrink-0" />
+          <div class="space-y-2">
+            <p class="text-sm font-bold">Opciones de pago disponibles</p>
+            <ul class="text-xs space-y-1 list-disc pl-4 opacity-90 text-text-secondary">
+              <li>
+                <strong class="text-text-primary">Total:</strong> Pago completo del curso (Efectivo,
+                Transf, Tarjeta).
+              </li>
+              <li>
+                <strong class="text-text-primary">Parcial:</strong> Abono inicial; el saldo queda
+                como deuda pendiente.
+              </li>
+              <li>
+                <strong class="text-text-primary">Pendiente:</strong> Registro sin pago inmediato
+                (por cobrar).
+              </li>
+            </ul>
           </div>
+        </div>
 
-          <div class="space-y-3 relative z-10">
-            <div class="flex justify-between items-center">
-              <span class="text-sm text-text-secondary">Valor Base del Curso</span>
-              <span class="text-lg font-medium text-text-primary">{{
-                data().pricing.basePrice | currency: 'CLP' : '$' : '1.0-0'
-              }}</span>
+        <!-- Desglose de Precios -->
+        <div class="space-y-4">
+          <label class="micro-label">Resumen Financiero</label>
+
+          <div class="card-tinted rounded-2xl p-6 relative overflow-hidden shadow-xl">
+            <div class="absolute right-0 top-0 p-8 opacity-10">
+              <app-icon name="banknote" [size]="64" />
             </div>
 
-            @if (data().discount.enabled) {
-              <div class="flex justify-between items-center text-success">
-                <span class="text-sm">{{ data().discount.reason || 'Descuento Aplicado' }}</span>
-                <span class="text-sm font-bold"
-                  >- {{ data().discount.amount | currency: 'CLP' : '$' : '1.0-0' }}</span
+            <div class="space-y-3 relative z-10">
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-text-secondary">Valor Base del Curso</span>
+                <span class="text-lg font-medium text-text-primary">{{
+                  data().pricing.basePrice | currency: 'CLP' : '$' : '1.0-0'
+                }}</span>
+              </div>
+
+              @if (data().discount.enabled) {
+                <div class="flex justify-between items-center text-success">
+                  <span class="text-sm">{{ data().discount.reason || 'Descuento Aplicado' }}</span>
+                  <span class="text-sm font-bold"
+                    >- {{ data().discount.amount | currency: 'CLP' : '$' : '1.0-0' }}</span
+                  >
+                </div>
+              }
+
+              <div class="pt-4 border-t border-border-subtle flex justify-between items-end">
+                <div>
+                  <p class="text-xs text-brand font-bold uppercase tracking-tighter">
+                    Total Final a Pagar
+                  </p>
+                  <p class="kpi-value">
+                    {{ data().totalToPay | currency: 'CLP' : '$' : '1.0-0' }}
+                  </p>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs text-text-muted italic">IVA incluido</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Descuentos -->
+        <div class="space-y-4">
+          <label class="micro-label">Descuentos</label>
+
+          @if (data().discountsError; as discountsError) {
+            <app-alert-card severity="warning" [title]="discountsError">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span>
+                  @if (data().selectedDiscountId !== null) {
+                    No se puede confirmar este descuento sin la lista. Reintenta o quita el
+                    descuento.
+                  } @else {
+                    Puedes continuar sin descuento o aplicar uno manual.
+                  }
+                </span>
+                <button
+                  type="button"
+                  class="btn-secondary flex items-center gap-2 shrink-0"
+                  data-llm-action="reintentar-descuentos"
+                  (click)="retryDiscounts.emit()"
                 >
+                  <app-icon name="refresh-cw" [size]="14" />
+                  Reintentar
+                </button>
               </div>
-            }
+            </app-alert-card>
+          }
 
-            <div class="pt-4 border-t border-border-subtle flex justify-between items-end">
-              <div>
-                <p class="text-xs text-brand font-bold uppercase tracking-tighter">
-                  Total Final a Pagar
-                </p>
-                <p class="kpi-value">
-                  {{ data().totalToPay | currency: 'CLP' : '$' : '1.0-0' }}
-                </p>
+          @if (data().discount.enabled) {
+            <div
+              class="flex items-center justify-between p-4 bg-success-subtle border border-success-border rounded-xl"
+            >
+              <div class="flex items-center gap-3">
+                <app-icon name="tag" [size]="18" class="text-success shrink-0" />
+                <div>
+                  <p class="text-sm font-bold text-success">Descuento aplicado</p>
+                  <p class="text-xs text-text-secondary">{{ appliedDiscountLabel() }}</p>
+                </div>
               </div>
-              <div class="text-right">
-                <p class="text-xs text-text-muted italic">IVA incluido</p>
+              <div class="flex items-center gap-3">
+                <span class="text-sm font-black text-success">
+                  - {{ data().discount.amount | currency: 'CLP' : '$' : '1.0-0' }}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Quitar descuento"
+                  (click)="clearDiscount()"
+                  data-llm-action="remove-discount"
+                  class="cursor-pointer px-3 py-1.5 bg-surface border border-border-default text-error text-xs font-medium rounded-lg hover:bg-error-subtle transition-all flex items-center gap-1.5"
+                >
+                  <app-icon name="trash-2" [size]="12" />
+                  Quitar
+                </button>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Descuentos -->
-      <div class="space-y-4">
-        <label class="micro-label">Descuentos</label>
-
-        @if (data().discount.enabled) {
-          <div
-            class="flex items-center justify-between p-4 bg-success-subtle border border-success-border rounded-xl"
-          >
-            <div class="flex items-center gap-3">
-              <app-icon name="tag" [size]="18" class="text-success shrink-0" />
-              <div>
-                <p class="text-sm font-bold text-success">Descuento aplicado</p>
-                <p class="text-xs text-text-secondary">{{ appliedDiscountLabel() }}</p>
+          } @else {
+            <div class="p-4 bg-base border border-border-default rounded-xl space-y-3">
+              <!-- Descuentos predefinidos desde la BD -->
+              @if (data().availableDiscounts.length > 0) {
+                <div class="space-y-2">
+                  <p class="micro-label">Descuentos disponibles</p>
+                  <div class="flex flex-wrap gap-2">
+                    @for (disc of data().availableDiscounts; track disc.id) {
+                      <button
+                        type="button"
+                        (click)="selectPredefinedDiscount(disc.id)"
+                        class="cursor-pointer px-3 py-1.5 text-xs font-bold rounded-lg border-2 transition-all"
+                        [class.border-brand]="data().selectedDiscountId === disc.id"
+                        [class.bg-brand]="data().selectedDiscountId === disc.id"
+                        [class.text-surface]="data().selectedDiscountId === disc.id"
+                        [class.border-border-default]="data().selectedDiscountId !== disc.id"
+                        [class.bg-surface]="data().selectedDiscountId !== disc.id"
+                        [class.text-text-primary]="data().selectedDiscountId !== disc.id"
+                      >
+                        {{ disc.name }}
+                        ({{
+                          disc.discountType === 'percentage'
+                            ? disc.value + '%'
+                            : '$' + disc.value.toLocaleString('es-CL')
+                        }})
+                      </button>
+                    }
+                  </div>
+                  <div class="border-t border-border-subtle pt-3">
+                    <p class="text-xs text-text-muted">O aplica un descuento manual:</p>
+                  </div>
+                </div>
+              } @else if (data().discountsLoading) {
+                <p class="flex items-center gap-1.5 text-xs text-text-muted">
+                  <app-icon name="loader-circle" [size]="12" class="animate-spin" />
+                  Cargando descuentos…
+                </p>
+              } @else {
+                <p class="text-xs text-text-muted">
+                  Aplica un descuento manual al monto del curso.
+                </p>
+              }
+              <!-- Descuento manual -->
+              <div class="grid sm:grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  [ngModel]="discountAmountInput()"
+                  (ngModelChange)="discountAmountInput.set($event)"
+                  placeholder="Monto $"
+                  min="0"
+                  data-llm-description="manual discount amount in CLP"
+                  class="h-10 px-3 bg-surface border border-border-default rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:ring-2 focus:ring-brand outline-none transition-all"
+                />
+                <input
+                  type="text"
+                  [ngModel]="discountReason()"
+                  (ngModelChange)="discountReason.set($event)"
+                  placeholder="Motivo del descuento"
+                  data-llm-description="reason for manual discount"
+                  class="h-10 px-3 bg-surface border border-border-default rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:ring-2 focus:ring-brand outline-none transition-all"
+                />
               </div>
-            </div>
-            <div class="flex items-center gap-3">
-              <span class="text-sm font-black text-success">
-                - {{ data().discount.amount | currency: 'CLP' : '$' : '1.0-0' }}
-              </span>
+              @if (discountError()) {
+                <p class="flex items-center gap-1.5 text-xs text-error">
+                  <app-icon name="circle-alert" [size]="12" class="shrink-0" />
+                  {{ discountError() }}
+                </p>
+              }
               <button
                 type="button"
-                aria-label="Quitar descuento"
-                (click)="clearDiscount()"
-                data-llm-action="remove-discount"
-                class="cursor-pointer px-3 py-1.5 bg-surface border border-border-default text-error text-xs font-medium rounded-lg hover:bg-error-subtle transition-all flex items-center gap-1.5"
+                (click)="applyManualDiscount()"
+                [disabled]="!discountAmountInput() || !discountReason()"
+                data-llm-action="apply-discount"
+                class="w-full h-10 bg-subtle text-text-primary text-xs font-bold rounded-lg hover:bg-base border border-border-default transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
               >
-                <app-icon name="trash-2" [size]="12" />
-                Quitar
+                <app-icon name="tag" [size]="14" />
+                Aplicar Descuento
               </button>
+            </div>
+          }
+        </div>
+
+        <!-- fix-057-i: con total $0 (beca que cubre todo) no hay medio de pago que elegir -->
+        @if (data().totalToPay === 0) {
+          <div
+            class="card flex items-center gap-3 p-4"
+            data-llm-description="El descuento cubre el total: la matrícula no registra pago"
+          >
+            <app-icon name="graduation-cap" [size]="20" />
+            <div>
+              <p class="item-title">Beca 100 %</p>
+              <p class="text-xs text-text-secondary">
+                El descuento cubre el total: no hay monto a cobrar. Puedes continuar al contrato.
+              </p>
             </div>
           </div>
         } @else {
-          <div class="p-4 bg-base border border-border-default rounded-xl space-y-3">
-            <!-- Descuentos predefinidos desde la BD -->
-            @if (data().availableDiscounts.length > 0) {
-              <div class="space-y-2">
-                <p class="micro-label">Descuentos disponibles</p>
-                <div class="flex flex-wrap gap-2">
-                  @for (disc of data().availableDiscounts; track disc.id) {
-                    <button
-                      type="button"
-                      (click)="selectPredefinedDiscount(disc.id)"
-                      class="cursor-pointer px-3 py-1.5 text-xs font-bold rounded-lg border-2 transition-all"
-                      [class.border-brand]="data().selectedDiscountId === disc.id"
-                      [class.bg-brand]="data().selectedDiscountId === disc.id"
-                      [class.text-surface]="data().selectedDiscountId === disc.id"
-                      [class.border-border-default]="data().selectedDiscountId !== disc.id"
-                      [class.bg-surface]="data().selectedDiscountId !== disc.id"
-                      [class.text-text-primary]="data().selectedDiscountId !== disc.id"
-                    >
-                      {{ disc.name }}
-                      ({{
-                        disc.discountType === 'percentage'
-                          ? disc.value + '%'
-                          : '$' + disc.value.toLocaleString('es-CL')
-                      }})
-                    </button>
-                  }
-                </div>
-                <div class="border-t border-border-subtle pt-3">
-                  <p class="text-xs text-text-muted">O aplica un descuento manual:</p>
-                </div>
-              </div>
-            } @else {
-              <p class="text-xs text-text-muted">Aplica un descuento manual al monto del curso.</p>
-            }
-            <!-- Descuento manual -->
+          <!-- Seleccionar Método de Pago -->
+          <div class="space-y-4">
+            <label class="micro-label">Selecciona el Método de Pago</label>
             <div class="grid sm:grid-cols-2 gap-3">
-              <input
-                type="number"
-                [ngModel]="discountAmountInput()"
-                (ngModelChange)="discountAmountInput.set($event)"
-                placeholder="Monto $"
-                min="0"
-                data-llm-description="manual discount amount in CLP"
-                class="h-10 px-3 bg-surface border border-border-default rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:ring-2 focus:ring-brand outline-none transition-all"
-              />
-              <input
-                type="text"
-                [ngModel]="discountReason()"
-                (ngModelChange)="discountReason.set($event)"
-                placeholder="Motivo del descuento"
-                data-llm-description="reason for manual discount"
-                class="h-10 px-3 bg-surface border border-border-default rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:ring-2 focus:ring-brand outline-none transition-all"
-              />
+              @for (option of paymentMethodOptions; track option.value) {
+                <button
+                  type="button"
+                  (click)="setPaymentMethod(option.value)"
+                  [disabled]="option.value === 'pendiente' && data().isSingularCourse"
+                  class="flex items-center gap-4 p-4 border-2 rounded-xl transition-all text-left group cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  [class.border-brand]="data().paymentMethod === option.value"
+                  [class.bg-brand-muted]="data().paymentMethod === option.value"
+                  [class.border-border-default]="data().paymentMethod !== option.value"
+                >
+                  <div
+                    class="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm"
+                    [class.bg-brand]="data().paymentMethod === option.value"
+                    [class.text-surface]="data().paymentMethod === option.value"
+                    [class.bg-surface]="data().paymentMethod !== option.value"
+                    [class.text-text-muted]="data().paymentMethod !== option.value"
+                  >
+                    <app-icon [name]="option.icon" [size]="20" />
+                  </div>
+                  <div>
+                    <p
+                      class="text-sm font-bold transition-colors"
+                      [class.text-brand]="data().paymentMethod === option.value"
+                      [class.text-text-primary]="data().paymentMethod !== option.value"
+                    >
+                      {{ option.label }}
+                    </p>
+                    <p class="text-xs text-text-muted uppercase tracking-tight">
+                      {{ option.description }}
+                    </p>
+                  </div>
+                </button>
+              }
             </div>
-            @if (discountError()) {
-              <p class="flex items-center gap-1.5 text-xs text-error">
-                <app-icon name="circle-alert" [size]="12" class="shrink-0" />
-                {{ discountError() }}
-              </p>
-            }
-            <button
-              type="button"
-              (click)="applyManualDiscount()"
-              [disabled]="!discountAmountInput() || !discountReason()"
-              data-llm-action="apply-discount"
-              class="w-full h-10 bg-subtle text-text-primary text-xs font-bold rounded-lg hover:bg-base border border-border-default transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
-            >
-              <app-icon name="tag" [size]="14" />
-              Aplicar Descuento
-            </button>
+          </div>
+        }
+
+        <!-- N° de Documento (opcional) — fix-036-i -->
+        @if (data().paymentMethod && data().paymentMethod !== 'pendiente') {
+          <div class="flex flex-col gap-1.5">
+            <label for="pago-matricula-doc" class="micro-label">N° Documento (opcional)</label>
+            <input
+              id="pago-matricula-doc"
+              type="text"
+              [ngModel]="data().documentNumber"
+              (ngModelChange)="onDocumentNumberChange($event)"
+              placeholder="Ej: REC-01234, TRF-00482"
+              data-llm-description="Número de documento de respaldo del pago (boleta, comprobante de transferencia, etc.)"
+              class="h-10 px-3 bg-surface border border-border-default rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:ring-2 focus:ring-brand outline-none transition-all"
+            />
           </div>
         }
       </div>
-
-      <!-- fix-057-i: con total $0 (beca que cubre todo) no hay medio de pago que elegir -->
-      @if (data().totalToPay === 0) {
-        <div
-          class="card flex items-center gap-3 p-4"
-          data-llm-description="El descuento cubre el total: la matrícula no registra pago"
-        >
-          <app-icon name="graduation-cap" [size]="20" />
-          <div>
-            <p class="item-title">Beca 100 %</p>
-            <p class="text-xs text-text-secondary">
-              El descuento cubre el total: no hay monto a cobrar. Puedes continuar al contrato.
-            </p>
-          </div>
-        </div>
-      } @else {
-        <!-- Seleccionar Método de Pago -->
-        <div class="space-y-4">
-          <label class="micro-label">Selecciona el Método de Pago</label>
-          <div class="grid sm:grid-cols-2 gap-3">
-            @for (option of paymentMethodOptions; track option.value) {
-              <button
-                type="button"
-                (click)="setPaymentMethod(option.value)"
-                [disabled]="option.value === 'pendiente' && data().isSingularCourse"
-                class="flex items-center gap-4 p-4 border-2 rounded-xl transition-all text-left group cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                [class.border-brand]="data().paymentMethod === option.value"
-                [class.bg-brand-muted]="data().paymentMethod === option.value"
-                [class.border-border-default]="data().paymentMethod !== option.value"
-              >
-                <div
-                  class="w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm"
-                  [class.bg-brand]="data().paymentMethod === option.value"
-                  [class.text-surface]="data().paymentMethod === option.value"
-                  [class.bg-surface]="data().paymentMethod !== option.value"
-                  [class.text-text-muted]="data().paymentMethod !== option.value"
-                >
-                  <app-icon [name]="option.icon" [size]="20" />
-                </div>
-                <div>
-                  <p
-                    class="text-sm font-bold transition-colors"
-                    [class.text-brand]="data().paymentMethod === option.value"
-                    [class.text-text-primary]="data().paymentMethod !== option.value"
-                  >
-                    {{ option.label }}
-                  </p>
-                  <p class="text-xs text-text-muted uppercase tracking-tight">
-                    {{ option.description }}
-                  </p>
-                </div>
-              </button>
-            }
-          </div>
-        </div>
-      }
-
-      <!-- N° de Documento (opcional) — fix-036-i -->
-      @if (data().paymentMethod && data().paymentMethod !== 'pendiente') {
-        <div class="flex flex-col gap-1.5">
-          <label for="pago-matricula-doc" class="micro-label">N° Documento (opcional)</label>
-          <input
-            id="pago-matricula-doc"
-            type="text"
-            [ngModel]="data().documentNumber"
-            (ngModelChange)="onDocumentNumberChange($event)"
-            placeholder="Ej: REC-01234, TRF-00482"
-            data-llm-description="Número de documento de respaldo del pago (boleta, comprobante de transferencia, etc.)"
-            class="h-10 px-3 bg-surface border border-border-default rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:ring-2 focus:ring-brand outline-none transition-all"
-          />
-        </div>
-      }
-    </div>
+    }
 
     <!-- Acciones Inferiores -->
     <div class="p-6 bg-base border-t border-border-subtle flex items-center justify-between">

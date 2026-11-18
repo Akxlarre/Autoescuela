@@ -1,5 +1,7 @@
 ﻿import { computed, inject, Injectable, signal } from '@angular/core';
 import { formatCLP, todayIso } from '@core/utils/date.utils';
+import { assertReadOk } from '@core/utils/db-error.utils';
+import { createRequestGuard } from '@core/utils/request-guard.utils';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
@@ -30,6 +32,15 @@ interface AvailableDiscount {
   applicableTo: string;
 }
 
+interface DiscountsQuery {
+  courseType: string;
+  courseId: number;
+  branchId: number;
+}
+
+const INITIAL_DISCOUNT: DiscountData = { enabled: false, amount: null, reason: '' };
+const MANUAL_DISCOUNT_REASON = 'Descuento Manual';
+
 /**
  * EnrollmentPaymentFacade — Maneja Step 4 del wizard de matrícula.
  *
@@ -53,11 +64,7 @@ export class EnrollmentPaymentFacade {
 
   private readonly _pricing = signal<PricingBreakdown | null>(null);
   private readonly _paymentMethod = signal<PaymentMethod | null>(null);
-  private readonly _discount = signal<DiscountData>({
-    enabled: false,
-    amount: null,
-    reason: '',
-  });
+  private readonly _discount = signal<DiscountData>(INITIAL_DISCOUNT);
   private readonly _selectedDiscountId = signal<number | null>(null);
   private readonly _availableDiscounts = signal<AvailableDiscount[]>([]);
   /** N° de documento de respaldo del pago (boleta, comprobante, etc.) — opcional (fix-036-i) */
@@ -65,7 +72,20 @@ export class EnrollmentPaymentFacade {
 
   // ── UI state ──
   private readonly _isProcessing = signal(false);
+  /** Solo el guardado del pago. Cada lectura tiene su error: uno no borra al otro. */
   private readonly _error = signal<string | null>(null);
+
+  // ── Rehidratación de un borrador ──
+  private readonly _isRehydrating = signal(false);
+  private readonly _rehydrationError = signal<string | null>(null);
+  private readonly rehydrationGuard = createRequestGuard();
+  private rehydrationEnrollmentId: number | null = null;
+
+  // ── Descuentos disponibles ──
+  private readonly _isLoadingDiscounts = signal(false);
+  private readonly _discountsError = signal<string | null>(null);
+  private readonly discountsGuard = createRequestGuard();
+  private discountsQuery: DiscountsQuery | null = null;
 
   // ══════════════════════════════════════════════════════════════════════════════
   // 2. ESTADO EXPUESTO (Público, solo lectura)
@@ -79,6 +99,15 @@ export class EnrollmentPaymentFacade {
   readonly documentNumber = this._documentNumber.asReadonly();
   readonly isProcessing = this._isProcessing.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly isRehydrating = this._isRehydrating.asReadonly();
+  readonly rehydrationError = this._rehydrationError.asReadonly();
+  readonly isLoadingDiscounts = this._isLoadingDiscounts.asReadonly();
+  readonly discountsError = this._discountsError.asReadonly();
+
+  /** True mientras no se sabe qué pago y descuento tiene guardados el borrador. */
+  readonly isPaymentDataBlocked = computed<boolean>(
+    () => this._isRehydrating() || this._rehydrationError() !== null,
+  );
 
   // ── Computed: total to pay after discount ──
   readonly totalToPay = computed<number>(() => {
@@ -91,7 +120,13 @@ export class EnrollmentPaymentFacade {
 
   // ── Computed: can confirm payment ──
   // fix-057-i: con total $0 (beca que cubre todo) no hay nada que cobrar: no se pide medio de pago.
+  // spec 0060-b: la RPC reemplaza el pago y el descuento guardados, así que confirmar sin haberlos
+  // leído podría borrarlos. Si la lista de descuentos no cargó, se puede seguir sin descuento o con
+  // uno manual; uno predefinido ya aplicado no se puede contrastar con la lista de este curso y
+  // sede, y queda detenido hasta reintentar o quitarlo.
   readonly canConfirmPayment = computed<boolean>(() => {
+    if (this.isPaymentDataBlocked()) return false;
+    if (this._discountsError() !== null && this._selectedDiscountId() !== null) return false;
     if (this._pricing() === null) return false;
     return this.totalToPay() === 0 || this._paymentMethod() !== null;
   });
@@ -160,53 +195,73 @@ export class EnrollmentPaymentFacade {
   /** Limpia el descuento seleccionado. */
   clearDiscount(): void {
     this._selectedDiscountId.set(null);
-    this._discount.set({ enabled: false, amount: null, reason: '' });
+    this._discount.set(INITIAL_DISCOUNT);
   }
 
   /**
    * Carga descuentos activos vigentes para la sede y el curso actuales.
    * `courseId`/`branchId` acotan descuentos "curso específico" (incl. CONV) o "sede
    * específica"; `null` en la fila de BD = sin esa restricción (aplica igual).
+   *
+   * La lista anterior se retira al empezar: puede ser de otro curso o sede, y no debe poder
+   * elegirse mientras carga ni quedar visible si esta lectura falla.
    */
   async loadAvailableDiscounts(
     courseType: string,
     courseId: number,
     branchId: number,
   ): Promise<void> {
-    this._error.set(null);
+    const requestToken = this.discountsGuard.next();
+    this.discountsQuery = { courseType, courseId, branchId };
+    this._availableDiscounts.set([]);
+    this._discountsError.set(null);
+    this._isLoadingDiscounts.set(true);
 
     const today = todayIso();
     const applicableFilter = courseType.startsWith('professional') ? 'professional' : 'class_b';
 
-    const { data, error } = await this.supabase.client
-      .from('discounts')
-      .select('id, name, discount_type, value, applicable_to, branch_id, course_id')
-      .eq('status', 'active')
-      .gte('valid_from', '0001-01-01')
-      .or(`valid_until.is.null,valid_until.gte.${today}`)
-      .or(`branch_id.is.null,branch_id.eq.${branchId}`)
-      .order('name');
+    try {
+      const rows = assertReadOk(
+        await this.supabase.client
+          .from('discounts')
+          .select('id, name, discount_type, value, applicable_to, branch_id, course_id')
+          .eq('status', 'active')
+          .gte('valid_from', '0001-01-01')
+          .or(`valid_until.is.null,valid_until.gte.${today}`)
+          .or(`branch_id.is.null,branch_id.eq.${branchId}`)
+          .order('name'),
+      );
 
-    if (error) {
-      this._error.set('Error al cargar descuentos: ' + this.sanitizer.sanitize(error).message);
-      return;
+      if (!this.discountsGuard.isCurrent(requestToken)) return;
+
+      const discounts: AvailableDiscount[] = (rows ?? [])
+        .filter((row: any) =>
+          row.course_id
+            ? row.course_id === courseId
+            : row.applicable_to === 'all' || row.applicable_to === applicableFilter,
+        )
+        .map((row: any) => ({
+          id: row.id,
+          name: row.name,
+          discountType: row.discount_type as 'percentage' | 'fixed_amount',
+          value: row.value,
+          applicableTo: row.applicable_to ?? 'all',
+        }));
+
+      this._availableDiscounts.set(discounts);
+    } catch {
+      if (!this.discountsGuard.isCurrent(requestToken)) return;
+      this._discountsError.set('No se pudieron cargar los descuentos.');
+    } finally {
+      if (this.discountsGuard.isCurrent(requestToken)) this._isLoadingDiscounts.set(false);
     }
+  }
 
-    const discounts: AvailableDiscount[] = (data ?? [])
-      .filter((row: any) =>
-        row.course_id
-          ? row.course_id === courseId
-          : row.applicable_to === 'all' || row.applicable_to === applicableFilter,
-      )
-      .map((row: any) => ({
-        id: row.id,
-        name: row.name,
-        discountType: row.discount_type as 'percentage' | 'fixed_amount',
-        value: row.value,
-        applicableTo: row.applicable_to ?? 'all',
-      }));
-
-    this._availableDiscounts.set(discounts);
+  /** Repite la última carga de descuentos (mismo curso y sede). */
+  async reintentarDescuentos(): Promise<void> {
+    const query = this.discountsQuery;
+    if (!query) return;
+    await this.loadAvailableDiscounts(query.courseType, query.courseId, query.branchId);
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -297,6 +352,8 @@ export class EnrollmentPaymentFacade {
       .select('students!inner(user_id)')
       .eq('id', enrollmentId)
       .single();
+    // A propósito no lanza: esta lectura corre con el pago ya guardado y solo sirve para avisar al
+    // alumno. Si falla se omite el aviso; informar un error haría creer que el pago no quedó.
     if (error || !data) return null;
     const students = (data as any).students;
     const student = Array.isArray(students) ? students[0] : students;
@@ -310,77 +367,123 @@ export class EnrollmentPaymentFacade {
   /**
    * Rehidrata el estado de pago desde un enrollment existente en la BD.
    * Carga el payment record y discount_applications para reconstruir los signals.
+   *
+   * spec 0060-b: las tres lecturas se aplican juntas y solo si las tres salieron bien. Si alguna
+   * falla, el estado queda vacío y `canConfirmPayment` en false hasta que un reintento salga bien:
+   * `record_enrollment_payment` borra el pago y el descuento guardados y los reemplaza por lo que
+   * recibe, así que confirmar sin haberlos leído perdería el descuento y cobraría de más.
+   * Un `maybeSingle()` sin fila no es falla: "sin pago" y "sin descuento" son estados válidos.
+   * No lanza: reanudar el borrador sigue, y el error se muestra en el paso Pago.
    */
   async rehydrateFromEnrollment(enrollmentId: number): Promise<void> {
-    this._error.set(null);
+    const requestToken = this.rehydrationGuard.next();
+    if (enrollmentId !== this.rehydrationEnrollmentId) this._error.set(null);
+    this.rehydrationEnrollmentId = enrollmentId;
+    this._isRehydrating.set(true);
+    this._rehydrationError.set(null);
+    this.clearPaymentState();
 
-    // Cargar enrollment para pricing data
-    const { data: enrollment } = await this.supabase.client
-      .from('enrollments')
-      .select(
-        'base_price, discount, total_paid, pending_balance, payment_status, payment_mode, courses!inner(name, practical_hours)',
-      )
-      .eq('id', enrollmentId)
-      .single();
+    try {
+      const [enrollmentResult, paymentResult, discountResult] = await Promise.all([
+        // Cargar enrollment para pricing data
+        this.supabase.client
+          .from('enrollments')
+          .select(
+            'base_price, discount, total_paid, pending_balance, payment_status, payment_mode, courses!inner(name, practical_hours)',
+          )
+          .eq('id', enrollmentId)
+          .single(),
+        // Cargar payment record
+        this.supabase.client
+          .from('payments')
+          .select('*')
+          .eq('enrollment_id', enrollmentId)
+          .eq('type', 'enrollment')
+          // Un pago anulado sigue en la tabla: sin este filtro, uno anulado más uno nuevo son dos
+          // filas y maybeSingle() falla (spec 0025-m). 'pending' sí entra: es el "Cobrar después".
+          .neq('status', 'anulado')
+          .maybeSingle(),
+        // Cargar discount application
+        this.supabase.client
+          .from('discount_applications')
+          .select('discount_id, discount_amount, discounts!inner(name)')
+          .eq('enrollment_id', enrollmentId)
+          .maybeSingle(),
+      ]);
 
-    if (!enrollment) return;
+      const enrollment = assertReadOk(enrollmentResult);
+      const payment = assertReadOk(paymentResult);
+      const discApp = assertReadOk(discountResult);
 
-    const course = (enrollment as any).courses;
-    // payment_mode es la fuente canónica (persiste desde paso 2 antes de registrar pago).
-    // payment_status === 'partial' es el fallback para drafts previos a esta migración.
-    const isDeposit =
-      (enrollment as any).payment_mode === 'partial' || enrollment.payment_status === 'partial';
-    const basePrice = enrollment.base_price ?? 0;
-    const amountDue = isDeposit ? Math.round(basePrice / 2) : basePrice;
-    const practicalClasses = course?.practical_hours
-      ? Math.round((course.practical_hours * 60) / 45)
-      : 0;
+      if (!this.rehydrationGuard.isCurrent(requestToken)) return;
 
-    this._pricing.set({
-      courseLabel: course?.name ?? '',
-      basePrice,
-      practicalClassesIncluded: practicalClasses,
-      isDeposit,
-      amountDue,
-    });
+      const course = (enrollment as any).courses;
+      // payment_mode es la fuente canónica (persiste desde paso 2 antes de registrar pago).
+      // payment_status === 'partial' es el fallback para drafts previos a esta migración.
+      const isDeposit =
+        (enrollment as any).payment_mode === 'partial' || enrollment.payment_status === 'partial';
+      const basePrice = enrollment.base_price ?? 0;
+      const amountDue = isDeposit ? Math.round(basePrice / 2) : basePrice;
+      const practicalClasses = course?.practical_hours
+        ? Math.round((course.practical_hours * 60) / 45)
+        : 0;
 
-    // Cargar payment record
-    const { data: payment } = await this.supabase.client
-      .from('payments')
-      .select('*')
-      .eq('enrollment_id', enrollmentId)
-      .eq('type', 'enrollment')
-      // Un pago anulado sigue en la tabla: sin este filtro, uno anulado más uno nuevo son dos
-      // filas y maybeSingle() falla (spec 0025-m). 'pending' sí entra: es el "Cobrar después".
-      .neq('status', 'anulado')
-      .maybeSingle();
-
-    if (payment) {
-      // Determinar método de pago desde los montos
-      let method: PaymentMethod = 'pendiente';
-      if (payment.cash_amount > 0) method = 'efectivo';
-      else if (payment.transfer_amount > 0) method = 'transferencia';
-      else if (payment.card_amount > 0) method = 'tarjeta';
-      else if (payment.status === 'pending') method = 'pendiente';
-      this._paymentMethod.set(method);
-      this._documentNumber.set(payment.document_number ?? null);
-    }
-
-    // Cargar discount application
-    const { data: discApp } = await this.supabase.client
-      .from('discount_applications')
-      .select('discount_id, discount_amount, discounts!inner(name)')
-      .eq('enrollment_id', enrollmentId)
-      .maybeSingle();
-
-    if (discApp) {
-      this._selectedDiscountId.set(discApp.discount_id);
-      this._discount.set({
-        enabled: true,
-        amount: discApp.discount_amount,
-        reason: (discApp as any).discounts?.name ?? '',
+      this._pricing.set({
+        courseLabel: course?.name ?? '',
+        basePrice,
+        practicalClassesIncluded: practicalClasses,
+        isDeposit,
+        amountDue,
       });
+
+      if (payment) {
+        // Determinar método de pago desde los montos
+        let method: PaymentMethod = 'pendiente';
+        if (payment.cash_amount > 0) method = 'efectivo';
+        else if (payment.transfer_amount > 0) method = 'transferencia';
+        else if (payment.card_amount > 0) method = 'tarjeta';
+        else if (payment.status === 'pending') method = 'pendiente';
+        this._paymentMethod.set(method);
+        this._documentNumber.set(payment.document_number ?? null);
+      }
+
+      if (discApp) {
+        this._selectedDiscountId.set(discApp.discount_id);
+        this._discount.set({
+          enabled: true,
+          amount: discApp.discount_amount,
+          reason: (discApp as any).discounts?.name ?? '',
+        });
+      } else if (enrollment.discount > 0) {
+        // fix-253-b: un descuento manual no tiene discount_id, así que la RPC solo guarda su monto
+        // en enrollments.discount. Sin recuperarlo, confirmar lo dejaría en 0. La BD no guarda su
+        // motivo. Llegar aquí implica que discount_applications se leyó bien y no tiene fila.
+        this._discount.set({
+          enabled: true,
+          amount: enrollment.discount,
+          reason: MANUAL_DISCOUNT_REASON,
+        });
+      }
+    } catch {
+      if (!this.rehydrationGuard.isCurrent(requestToken)) return;
+      this._rehydrationError.set('No se pudieron cargar los datos del pago de esta matrícula.');
+    } finally {
+      if (this.rehydrationGuard.isCurrent(requestToken)) this._isRehydrating.set(false);
     }
+  }
+
+  /** Repite la rehidratación de la matrícula cuyos datos de pago no cargaron. */
+  async reintentarDatosPago(): Promise<void> {
+    if (this.rehydrationEnrollmentId === null) return;
+    await this.rehydrateFromEnrollment(this.rehydrationEnrollmentId);
+  }
+
+  private clearPaymentState(): void {
+    this._pricing.set(null);
+    this._paymentMethod.set(null);
+    this._discount.set(INITIAL_DISCOUNT);
+    this._selectedDiscountId.set(null);
+    this._documentNumber.set(null);
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -388,14 +491,19 @@ export class EnrollmentPaymentFacade {
   // ══════════════════════════════════════════════════════════════════════════════
 
   reset(): void {
-    this._pricing.set(null);
-    this._paymentMethod.set(null);
-    this._discount.set({ enabled: false, amount: null, reason: '' });
-    this._selectedDiscountId.set(null);
+    // Invalida las lecturas en curso: su respuesta ya no corresponde a este wizard.
+    this.rehydrationGuard.next();
+    this.discountsGuard.next();
+    this.rehydrationEnrollmentId = null;
+    this.discountsQuery = null;
+    this.clearPaymentState();
     this._availableDiscounts.set([]);
-    this._documentNumber.set(null);
     this._isProcessing.set(false);
     this._error.set(null);
+    this._isRehydrating.set(false);
+    this._rehydrationError.set(null);
+    this._isLoadingDiscounts.set(false);
+    this._discountsError.set(null);
   }
 
   clearError(): void {

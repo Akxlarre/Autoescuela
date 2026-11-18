@@ -278,6 +278,65 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
 - [ ] **T1.5** — `enrollment-payment.facade.ts` y `anticipos.facade.ts`
   - **AC ref:** AC3, AC7
   - **DoD:** DoD-F
+  - **Avance (2026-11-18), solo `enrollment-payment.facade.ts`, pendiente de revisión.** La tarea
+    sigue abierta: falta `anticipos.facade.ts`, que no se tocó porque choca con la spec 0012-i.
+    - **Rehidratación.** Las 3 lecturas lanzan y se aplican juntas, solo si las 3 salieron bien. Si
+      una falla, el estado queda vacío y `canConfirmPayment` (y por él `recordPayment`) sigue en
+      false hasta que `reintentarDatosPago()` salga bien. También bloquea mientras carga. Un
+      `maybeSingle()` sin fila es válido. Guard de orden, y `reset()` invalida lo que esté en curso.
+      `enrollment.facade.ts` no cambió: `rehydrateFromEnrollment` no lanza y reanudar sigue.
+    - **Cuánto daño hacía (revisado sin ejecutar nada).** El `effect` del wizard llama a
+      `computePricing()` al entrar al paso 4 si hay precio de lista, y pisa el precio rehidratado.
+      Por eso una falla de `enrollments` no dejaba `pricing` en null: el pago quedaba habilitado, y
+      como esa falla cortaba antes de leer pago y descuento, se perdían los dos. Según las
+      migraciones (última definición en `20261016180000_fix057i`; no contrastada con producción),
+      `record_enrollment_payment` fija `enrollments.discount` con lo recibido y borra
+      `discount_applications` y el pago de matrícula antes de insertar. Confirmar sin el descuento
+      leído lo eliminaba y registraba el monto mayor. Ahora el `effect` no recalcula con el pago
+      bloqueado, y recalcula cuando un reintento lo levanta.
+    - **Descuentos.** Error propio, lista retirada al empezar cada carga, guard de orden y
+      `reintentarDescuentos()`. **Bloqueo:** sin descuento o con uno manual no bloquea (no dependen
+      de la lista). Con uno predefinido aplicado sí, hasta reintentar o quitarlo: sin la lista no se
+      puede saber si corresponde al curso y sede actuales. Al reanudar en Pago o después ahora se
+      piden; antes la lista quedaba vacía sin haberse pedido.
+    - **Errores.** `error()` queda solo para el guardado; `rehydrationError()` y `discountsError()`
+      son aparte. Reintentar no borra el error del guardado; abrir otra matrícula o volver a entrar
+      desde Documentos sí. Fuera del paso Pago, `rehydrationError()` sale en el banner del wizard.
+    - **Alumno a notificar.** Su falla sigue sin afectar el pago ya guardado; el criterio quedó en
+      un comentario.
+    - **Pantalla.** Sin datos del pago, `app-empty-state` con "Reintentar" en vez de montos. Sin
+      lista de descuentos, `app-alert-card` con "Reintentar" (`reintentar-descuentos`).
+    - **Guardrails.** Fuera de `PENDING`; no figuraba en la línea base de ARCH-39/40.
+    - **Validación.** TDD con 40 tests en rojo antes del cambio. `lint:arch:strict` 0 errores, `ngc
+      --noEmit` limpio, `test:ci` 5380 en verde y 5 omitidos, `test-tz.mjs` 209 en verde en las tres
+      zonas (4 specs), ya con `fix-253-b` integrado. Mutaciones, corridas antes de integrarlo: 41 de
+      42 detectadas; la restante (no revisar `error` de `enrollments`) es equivalente, porque sin
+      `data` la lectura igual termina en el `catch`.
+    - **Navegador (simulado, 1440x900).** Sesión de secretaria iniciada por el usuario, en una sede
+      sin borradores. El paso Pago se montó en memoria con una matrícula ficticia, respuestas
+      simuladas y toda escritura bloqueada en la pestaña: 0 escrituras intentadas, consola sin
+      errores. Con falla de `enrollments`, `payments` o `discount_applications`: estado de error sin
+      montos, "Registrar Pago" deshabilitado y sin desborde; "Reintentar" sigue bloqueado si la falla
+      persiste y recupera el total si no. Con `discounts` caído: el predefinido bloquea, quitarlo
+      desbloquea, sin descuento y con uno manual se puede continuar, y "Reintentar" limpia el aviso.
+      Fuera del paso Pago sale el banner, y desaparece al volver. Los dos estados de error se
+      miraron en claro y oscuro. El precio ficticio de la matrícula fue reemplazado por el de lista
+      al entrar al paso, lo que confirma en vivo lo revisado en el código.
+    - **No probado.** Reanudar un borrador real de punta a punta: `resumeDraft` escribe `expires_at`
+      y la sede no tiene borradores; queda cubierto por tests. Ninguna lectura falló contra
+      producción de verdad: las fallas son simuladas. "Registrar Pago" no se pulsó. E2E:
+      `matricula-paso2.spec.ts` siembra y borra datos con cliente admin contra la BD real, no se
+      corrió.
+    - **Integrado en esta rama: `fix-253-b`.** Un descuento manual no crea fila en
+      `discount_applications`; al rehidratar ahora se recupera desde `enrollments.discount`, con el
+      motivo genérico "Descuento Manual" porque la BD no guarda el original. Solo se aplica si las
+      tres lecturas salieron bien: una falla de `discount_applications` bloquea y no convierte un
+      predefinido en manual. Cubierto por tests; la simulación en navegador fue anterior a este
+      cambio y no lo incluye.
+    - **Visto y fuera de alcance.** (1) Con dos pagos vivos de matrícula en un borrador (duplicados
+      previos a `fix-050-i`), `maybeSingle()` da error: antes se ignoraba y ahora bloquea, y
+      reintentar no lo resuelve. No se consultó producción para saber si existen. (2) El `DELETE` de
+      la RPC no filtra `status`, así que también borraría un pago anulado del borrador.
 
 - [ ] **T1.6** — Validación de la etapa
   - **DoD:**

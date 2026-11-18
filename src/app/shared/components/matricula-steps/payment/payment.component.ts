@@ -3,6 +3,9 @@ import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import {
   EnrollmentPaymentData,
   PAYMENT_METHODS,
@@ -11,7 +14,15 @@ import {
 
 @Component({
   selector: 'app-payment-step',
-  imports: [FormsModule, CurrencyPipe, IconComponent, AsyncBtnComponent],
+  imports: [
+    FormsModule,
+    CurrencyPipe,
+    IconComponent,
+    AsyncBtnComponent,
+    AlertCardComponent,
+    EmptyStateComponent,
+    SkeletonBlockComponent,
+  ],
   templateUrl: './payment.component.html',
   styleUrl: './payment.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -24,6 +35,8 @@ export class PaymentComponent {
   dataChange = output<EnrollmentPaymentData>();
   next = output<void>();
   back = output<void>();
+  retryPaymentData = output<void>();
+  retryDiscounts = output<void>();
 
   discountAmountInput = signal('');
   discountReason = signal('');

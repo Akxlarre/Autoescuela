@@ -129,6 +129,113 @@ describe('EnrollmentPaymentFacade', () => {
     });
   });
 
+  // ── Rehidratación del descuento (fix-253-b) ──
+
+  describe('rehydrateFromEnrollment — descuento (fix-253-b)', () => {
+    function mockBorrador(opts: {
+      discount: number | null;
+      discountApplication: unknown;
+      discountApplicationError?: unknown;
+    }): void {
+      const rows: Record<string, unknown> = {
+        enrollments: {
+          base_price: 300_000,
+          discount: opts.discount,
+          total_paid: 250_000,
+          pending_balance: 0,
+          payment_status: 'paid_full',
+          payment_mode: 'total',
+          courses: { name: 'Clase B', practical_hours: 12 },
+        },
+        payments: {
+          cash_amount: 250_000,
+          transfer_amount: 0,
+          card_amount: 0,
+          status: 'paid',
+          document_number: null,
+        },
+        discount_applications: opts.discountApplication,
+      };
+      mockSupabase.client.from.mockImplementation((table: string) =>
+        createMockQueryBuilder(
+          rows[table] ?? null,
+          table === 'discount_applications' ? (opts.discountApplicationError ?? null) : null,
+        ),
+      );
+    }
+
+    it('un descuento manual conserva monto y total, sin confundirse con uno predefinido', async () => {
+      mockBorrador({ discount: 50_000, discountApplication: null });
+
+      await facade.rehydrateFromEnrollment(77);
+
+      expect(facade.discount()).toEqual({
+        enabled: true,
+        amount: 50_000,
+        reason: 'Descuento Manual',
+      });
+      expect(facade.selectedDiscountId()).toBeNull();
+      expect(facade.totalToPay()).toBe(250_000);
+    });
+
+    it('confirmar tras reanudar reenvía el descuento manual a la RPC', async () => {
+      mockBorrador({ discount: 50_000, discountApplication: null });
+      await facade.rehydrateFromEnrollment(77);
+
+      await facade.recordPayment(77, null);
+
+      expect(mockSupabase.client.rpc).toHaveBeenCalledWith(
+        'record_enrollment_payment',
+        expect.objectContaining({
+          p_total_amount: 250_000,
+          p_discount_id: null,
+          p_discount_amount: 50_000,
+        }),
+      );
+    });
+
+    it('un descuento predefinido conserva su id y su nombre', async () => {
+      mockBorrador({
+        discount: 30_000,
+        discountApplication: {
+          discount_id: 4,
+          discount_amount: 30_000,
+          discounts: { name: 'Convenio' },
+        },
+      });
+
+      await facade.rehydrateFromEnrollment(77);
+
+      expect(facade.selectedDiscountId()).toBe(4);
+      expect(facade.discount()).toEqual({ enabled: true, amount: 30_000, reason: 'Convenio' });
+      expect(facade.totalToPay()).toBe(270_000);
+    });
+
+    it.each([0, null])('sin descuento guardado (%s) no inventa uno', async (discount) => {
+      mockBorrador({ discount, discountApplication: null });
+
+      await facade.rehydrateFromEnrollment(77);
+
+      expect(facade.discount().enabled).toBe(false);
+      expect(facade.selectedDiscountId()).toBeNull();
+      expect(facade.totalToPay()).toBe(300_000);
+    });
+
+    it('si falla discount_applications no toma un predefinido por manual y bloquea', async () => {
+      mockBorrador({
+        discount: 30_000,
+        discountApplication: null,
+        discountApplicationError: { message: 'sin red' },
+      });
+
+      await facade.rehydrateFromEnrollment(77);
+
+      expect(facade.discount().enabled).toBe(false);
+      expect(facade.rehydrationError()).not.toBeNull();
+      expect(facade.canConfirmPayment()).toBe(false);
+    });
+  });
+
   // ── Pricing Breakdown ──
 
   describe('Pricing', () => {
@@ -283,7 +390,9 @@ describe('EnrollmentPaymentFacade', () => {
       mockSupabase.client.from = vi.fn().mockReturnValue(builder);
 
       await facade.loadAvailableDiscounts('class_b', 1, 1);
-      expect(facade.error()).toContain('Error al cargar descuentos');
+      // spec 0060-b: esta lectura tiene su propio signal; error() queda para el guardado.
+      expect(facade.discountsError()).toContain('No se pudieron cargar los descuentos');
+      expect(facade.error()).toBeNull();
     });
 
     it('excluye un descuento de curso específico que no coincide con el curso actual', async () => {
@@ -528,6 +637,540 @@ describe('EnrollmentPaymentFacade', () => {
           'record_enrollment_payment',
           expect.objectContaining({ p_document_number: null }),
         );
+      });
+    });
+  });
+
+  // ── Lecturas fallidas (spec 0060-b, T1.5) ──
+
+  describe('lecturas fallidas (spec 0060-b T1.5)', () => {
+    type Res = { data: unknown; error: unknown };
+    const OK_ENROLLMENT: Res = {
+      data: {
+        base_price: 200_000,
+        discount: 30_000,
+        total_paid: 0,
+        pending_balance: 170_000,
+        payment_status: 'pending',
+        payment_mode: 'total',
+        courses: { name: 'Clase B', practical_hours: 9 },
+      },
+      error: null,
+    };
+    const ENROLLMENT_SIN_DESCUENTO: Res = {
+      data: { ...(OK_ENROLLMENT.data as object), discount: 0, pending_balance: 200_000 },
+      error: null,
+    };
+    const OK_PAYMENT: Res = {
+      data: {
+        cash_amount: 170_000,
+        transfer_amount: 0,
+        card_amount: 0,
+        status: 'paid',
+        document_number: 'REC-7',
+      },
+      error: null,
+    };
+    const OK_DISCOUNT: Res = {
+      data: { discount_id: 4, discount_amount: 30_000, discounts: { name: 'Hermanos' } },
+      error: null,
+    };
+    const FALLA: Res = { data: null, error: { message: 'red caída' } };
+    const SIN_FILA: Res = { data: null, error: null };
+
+    /** Responde por tabla; un valor puede ser una promesa para controlar el orden de llegada. */
+    function responderPorTabla(tablas: Record<string, Res | Promise<Res>>) {
+      mockSupabase.client.from = vi.fn().mockImplementation((tabla: string) => {
+        const builder = createMockQueryBuilder();
+        const respuesta = () => Promise.resolve(tablas[tabla]);
+        builder.single = vi.fn().mockImplementation(respuesta);
+        builder.maybeSingle = vi.fn().mockImplementation(respuesta);
+        builder.order = vi.fn().mockImplementation(respuesta);
+        return builder;
+      });
+    }
+
+    const lecturasOk = () => ({
+      enrollments: OK_ENROLLMENT,
+      payments: OK_PAYMENT,
+      discount_applications: OK_DISCOUNT,
+    });
+
+    function diferido<T>() {
+      let resolve!: (value: T) => void;
+      const promise = new Promise<T>((r) => (resolve = r));
+      return { promise, resolve };
+    }
+
+    const fila = (id: number, name: string, courseId: number | null = null) => ({
+      id,
+      name,
+      discount_type: 'fixed_amount',
+      value: 10_000,
+      applicable_to: 'all',
+      branch_id: null,
+      course_id: courseId,
+    });
+
+    const conPrecio = () =>
+      facade.computePricing({
+        courseLabel: 'Clase B',
+        basePrice: 200_000,
+        practicalClassesIncluded: 12,
+        isDeposit: false,
+      });
+
+    describe('rehydrateFromEnrollment', () => {
+      it.each(['enrollments', 'payments', 'discount_applications'])(
+        'si falla %s no aplica nada y no se puede confirmar',
+        async (tabla) => {
+          responderPorTabla({ ...lecturasOk(), [tabla]: FALLA });
+
+          await facade.rehydrateFromEnrollment(77);
+
+          expect(facade.rehydrationError()).toContain('No se pudieron cargar');
+          expect(facade.isPaymentDataBlocked()).toBe(true);
+          expect(facade.pricing()).toBeNull();
+          expect(facade.paymentMethod()).toBeNull();
+          expect(facade.documentNumber()).toBeNull();
+          expect(facade.discount().enabled).toBe(false);
+          expect(facade.selectedDiscountId()).toBeNull();
+
+          // Aunque alguien fije precio y medio de pago, el pago sigue bloqueado.
+          conPrecio();
+          facade.setPaymentMethod('efectivo');
+          expect(facade.canConfirmPayment()).toBe(false);
+          expect(await facade.recordPayment(77, 1)).toBe(false);
+          expect(mockSupabase.client.rpc).not.toHaveBeenCalled();
+        },
+      );
+
+      it('una falla retira lo que hubiera de otro borrador', async () => {
+        conPrecio();
+        facade.setPaymentMethod('tarjeta');
+        facade.setDocumentNumber('VIEJO');
+        facade.setDiscount({ enabled: true, amount: 5_000, reason: 'Viejo' });
+        responderPorTabla({ ...lecturasOk(), payments: FALLA });
+
+        await facade.rehydrateFromEnrollment(77);
+
+        expect(facade.pricing()).toBeNull();
+        expect(facade.paymentMethod()).toBeNull();
+        expect(facade.documentNumber()).toBeNull();
+        expect(facade.discount().enabled).toBe(false);
+      });
+
+      it('con las 3 lecturas bien aplica precio, pago y descuento y no bloquea', async () => {
+        responderPorTabla(lecturasOk());
+
+        await facade.rehydrateFromEnrollment(77);
+
+        expect(facade.rehydrationError()).toBeNull();
+        expect(facade.isPaymentDataBlocked()).toBe(false);
+        expect(facade.pricing()?.basePrice).toBe(200_000);
+        expect(facade.paymentMethod()).toBe('efectivo');
+        expect(facade.documentNumber()).toBe('REC-7');
+        expect(facade.selectedDiscountId()).toBe(4);
+        expect(facade.totalToPay()).toBe(170_000);
+        expect(facade.canConfirmPayment()).toBe(true);
+      });
+
+      it('el reintento que sale bien desbloquea y conserva el descuento en la RPC', async () => {
+        responderPorTabla({ ...lecturasOk(), discount_applications: FALLA });
+        await facade.rehydrateFromEnrollment(77);
+        expect(facade.canConfirmPayment()).toBe(false);
+
+        responderPorTabla(lecturasOk());
+        await facade.reintentarDatosPago();
+
+        expect(facade.rehydrationError()).toBeNull();
+        expect(facade.canConfirmPayment()).toBe(true);
+        expect(await facade.recordPayment(77, 1)).toBe(true);
+        expect(mockSupabase.client.rpc).toHaveBeenCalledWith(
+          'record_enrollment_payment',
+          expect.objectContaining({
+            p_enrollment_id: 77,
+            p_total_amount: 170_000,
+            p_discount_id: 4,
+            p_discount_amount: 30_000,
+          }),
+        );
+      });
+
+      it('si el reintento vuelve a fallar, sigue bloqueado', async () => {
+        responderPorTabla({ ...lecturasOk(), enrollments: FALLA });
+        await facade.rehydrateFromEnrollment(77);
+
+        await facade.reintentarDatosPago();
+
+        expect(facade.rehydrationError()).not.toBeNull();
+        expect(facade.canConfirmPayment()).toBe(false);
+      });
+
+      it('reintentar sin una rehidratación previa no consulta nada', async () => {
+        await facade.reintentarDatosPago();
+        expect(mockSupabase.client.from).not.toHaveBeenCalled();
+      });
+
+      it('sin pago ni descuento es un estado válido: no bloquea', async () => {
+        responderPorTabla({
+          enrollments: ENROLLMENT_SIN_DESCUENTO,
+          payments: SIN_FILA,
+          discount_applications: SIN_FILA,
+        });
+
+        await facade.rehydrateFromEnrollment(77);
+
+        expect(facade.rehydrationError()).toBeNull();
+        expect(facade.isPaymentDataBlocked()).toBe(false);
+        expect(facade.paymentMethod()).toBeNull();
+        expect(facade.discount().enabled).toBe(false);
+        expect(facade.totalToPay()).toBe(200_000);
+        facade.setPaymentMethod('efectivo');
+        expect(facade.canConfirmPayment()).toBe(true);
+      });
+
+      it('sin pago ni descuento no deja los del borrador anterior', async () => {
+        responderPorTabla(lecturasOk());
+        await facade.rehydrateFromEnrollment(77);
+
+        responderPorTabla({
+          enrollments: ENROLLMENT_SIN_DESCUENTO,
+          payments: SIN_FILA,
+          discount_applications: SIN_FILA,
+        });
+        await facade.rehydrateFromEnrollment(78);
+
+        expect(facade.paymentMethod()).toBeNull();
+        expect(facade.documentNumber()).toBeNull();
+        expect(facade.selectedDiscountId()).toBeNull();
+        expect(facade.discount().enabled).toBe(false);
+      });
+
+      it('mientras carga no se puede confirmar', async () => {
+        const pendiente = diferido<Res>();
+        responderPorTabla({ ...lecturasOk(), payments: pendiente.promise });
+
+        const carga = facade.rehydrateFromEnrollment(77);
+        expect(facade.isRehydrating()).toBe(true);
+        conPrecio();
+        facade.setPaymentMethod('efectivo');
+        expect(facade.canConfirmPayment()).toBe(false);
+
+        pendiente.resolve(OK_PAYMENT);
+        await carga;
+        expect(facade.isRehydrating()).toBe(false);
+        expect(facade.canConfirmPayment()).toBe(true);
+      });
+
+      it('descarta la respuesta de una rehidratación reemplazada', async () => {
+        const vieja = diferido<Res>();
+        responderPorTabla({ ...lecturasOk(), payments: vieja.promise });
+        const primera = facade.rehydrateFromEnrollment(77);
+
+        responderPorTabla({ ...lecturasOk(), payments: SIN_FILA });
+        await facade.rehydrateFromEnrollment(78);
+
+        vieja.resolve(OK_PAYMENT);
+        await primera;
+        expect(facade.paymentMethod()).toBeNull();
+        expect(facade.isRehydrating()).toBe(false);
+      });
+
+      it('una respuesta vieja no levanta el bloqueo de la rehidratación en curso', async () => {
+        const vieja = diferido<Res>();
+        const vigente = diferido<Res>();
+        responderPorTabla({ ...lecturasOk(), payments: vieja.promise });
+        const primera = facade.rehydrateFromEnrollment(77);
+        responderPorTabla({ ...lecturasOk(), payments: vigente.promise });
+        const segunda = facade.rehydrateFromEnrollment(78);
+
+        vieja.resolve(OK_PAYMENT);
+        await primera;
+        expect(facade.isRehydrating()).toBe(true);
+        expect(facade.isPaymentDataBlocked()).toBe(true);
+
+        vigente.resolve(SIN_FILA);
+        await segunda;
+        expect(facade.isRehydrating()).toBe(false);
+      });
+
+      it('la falla de una rehidratación reemplazada no bloquea la vigente', async () => {
+        const vieja = diferido<Res>();
+        responderPorTabla({ ...lecturasOk(), payments: vieja.promise });
+        const primera = facade.rehydrateFromEnrollment(77);
+
+        responderPorTabla(lecturasOk());
+        await facade.rehydrateFromEnrollment(78);
+
+        vieja.resolve(FALLA);
+        await primera;
+        expect(facade.rehydrationError()).toBeNull();
+        expect(facade.isPaymentDataBlocked()).toBe(false);
+      });
+
+      it('reset() invalida una rehidratación en curso y quita el bloqueo', async () => {
+        const pendiente = diferido<Res>();
+        responderPorTabla({ ...lecturasOk(), payments: pendiente.promise });
+        const carga = facade.rehydrateFromEnrollment(77);
+
+        facade.reset();
+        pendiente.resolve(OK_PAYMENT);
+        await carga;
+
+        expect(facade.pricing()).toBeNull();
+        expect(facade.paymentMethod()).toBeNull();
+        expect(facade.isRehydrating()).toBe(false);
+        expect(facade.isPaymentDataBlocked()).toBe(false);
+      });
+
+      it('reset() limpia el error y olvida la matrícula a reintentar', async () => {
+        responderPorTabla({ ...lecturasOk(), payments: FALLA });
+        await facade.rehydrateFromEnrollment(77);
+
+        facade.reset();
+        expect(facade.rehydrationError()).toBeNull();
+
+        const llamadas = mockSupabase.client.from.mock.calls.length;
+        await facade.reintentarDatosPago();
+        expect(mockSupabase.client.from.mock.calls.length).toBe(llamadas);
+      });
+    });
+
+    describe('loadAvailableDiscounts', () => {
+      it('una falla retira la lista anterior y deja su propio error', async () => {
+        responderPorTabla({ discounts: { data: [fila(1, 'Curso A')], error: null } });
+        await facade.loadAvailableDiscounts('class_b', 1, 1);
+        expect(facade.availableDiscounts()).toHaveLength(1);
+
+        responderPorTabla({ discounts: FALLA });
+        await facade.loadAvailableDiscounts('class_b', 2, 2);
+
+        expect(facade.availableDiscounts()).toEqual([]);
+        expect(facade.discountsError()).toContain('No se pudieron cargar los descuentos');
+        expect(facade.error()).toBeNull();
+        expect(facade.isLoadingDiscounts()).toBe(false);
+      });
+
+      it('"no hay descuentos" no es un error', async () => {
+        responderPorTabla({ discounts: { data: [], error: null } });
+        await facade.loadAvailableDiscounts('class_b', 1, 1);
+        expect(facade.availableDiscounts()).toEqual([]);
+        expect(facade.discountsError()).toBeNull();
+      });
+
+      it('no muestra la lista de otro curso mientras carga la nueva', async () => {
+        responderPorTabla({ discounts: { data: [fila(1, 'Curso A')], error: null } });
+        await facade.loadAvailableDiscounts('class_b', 1, 1);
+
+        const pendiente = diferido<Res>();
+        responderPorTabla({ discounts: pendiente.promise });
+        const carga = facade.loadAvailableDiscounts('class_b', 2, 1);
+
+        expect(facade.availableDiscounts()).toEqual([]);
+        expect(facade.isLoadingDiscounts()).toBe(true);
+        pendiente.resolve({ data: [], error: null });
+        await carga;
+      });
+
+      it('sin descuento aplicado, la falla no bloquea el pago', async () => {
+        conPrecio();
+        facade.setPaymentMethod('efectivo');
+        responderPorTabla({ discounts: FALLA });
+
+        await facade.loadAvailableDiscounts('class_b', 1, 1);
+
+        expect(facade.canConfirmPayment()).toBe(true);
+      });
+
+      it('con un descuento manual, la falla no bloquea: no depende de la lista', async () => {
+        conPrecio();
+        facade.setPaymentMethod('efectivo');
+        facade.setDiscount({ enabled: true, amount: 5_000, reason: 'Manual' });
+        responderPorTabla({ discounts: FALLA });
+
+        await facade.loadAvailableDiscounts('class_b', 1, 1);
+
+        expect(facade.canConfirmPayment()).toBe(true);
+      });
+
+      it('con un descuento predefinido aplicado bloquea hasta reintentar o quitarlo', async () => {
+        conPrecio();
+        facade.setPaymentMethod('efectivo');
+        responderPorTabla({ discounts: { data: [fila(1, 'Curso A')], error: null } });
+        await facade.loadAvailableDiscounts('class_b', 1, 1);
+        facade.applyPredefinedDiscount(1);
+
+        responderPorTabla({ discounts: FALLA });
+        await facade.loadAvailableDiscounts('class_b', 2, 1);
+        expect(facade.canConfirmPayment()).toBe(false);
+        expect(await facade.recordPayment(77, 1)).toBe(false);
+        expect(mockSupabase.client.rpc).not.toHaveBeenCalled();
+
+        facade.clearDiscount();
+        expect(facade.canConfirmPayment()).toBe(true);
+      });
+
+      it('el reintento repite la última consulta y limpia el error', async () => {
+        responderPorTabla({ discounts: FALLA });
+        await facade.loadAvailableDiscounts('class_b', 9, 1);
+        expect(facade.discountsError()).not.toBeNull();
+
+        responderPorTabla({
+          discounts: { data: [fila(1, 'Del curso', 9), fila(2, 'De otro', 8)], error: null },
+        });
+        await facade.reintentarDescuentos();
+
+        expect(facade.discountsError()).toBeNull();
+        expect(facade.availableDiscounts().map((d) => d.id)).toEqual([1]);
+      });
+
+      it('reintentar sin una carga previa no consulta nada', async () => {
+        await facade.reintentarDescuentos();
+        expect(mockSupabase.client.from).not.toHaveBeenCalled();
+      });
+
+      it('descarta la respuesta vieja si cambió el curso o la sede', async () => {
+        const vieja = diferido<Res>();
+        responderPorTabla({ discounts: vieja.promise });
+        const primera = facade.loadAvailableDiscounts('class_b', 1, 1);
+
+        responderPorTabla({ discounts: { data: [fila(2, 'Vigente')], error: null } });
+        await facade.loadAvailableDiscounts('class_b', 2, 1);
+
+        vieja.resolve({ data: [fila(1, 'Vieja')], error: null });
+        await primera;
+        expect(facade.availableDiscounts().map((d) => d.id)).toEqual([2]);
+        expect(facade.isLoadingDiscounts()).toBe(false);
+      });
+
+      it('una respuesta vieja no apaga el indicador de la carga en curso', async () => {
+        const vieja = diferido<Res>();
+        const vigente = diferido<Res>();
+        responderPorTabla({ discounts: vieja.promise });
+        const primera = facade.loadAvailableDiscounts('class_b', 1, 1);
+        responderPorTabla({ discounts: vigente.promise });
+        const segunda = facade.loadAvailableDiscounts('class_b', 2, 1);
+
+        vieja.resolve({ data: [], error: null });
+        await primera;
+        expect(facade.isLoadingDiscounts()).toBe(true);
+
+        vigente.resolve({ data: [], error: null });
+        await segunda;
+        expect(facade.isLoadingDiscounts()).toBe(false);
+      });
+
+      it('descarta la falla vieja: no borra la lista vigente', async () => {
+        const vieja = diferido<Res>();
+        responderPorTabla({ discounts: vieja.promise });
+        const primera = facade.loadAvailableDiscounts('class_b', 1, 1);
+
+        responderPorTabla({ discounts: { data: [fila(2, 'Vigente')], error: null } });
+        await facade.loadAvailableDiscounts('class_b', 2, 1);
+
+        vieja.resolve(FALLA);
+        await primera;
+        expect(facade.discountsError()).toBeNull();
+        expect(facade.availableDiscounts()).toHaveLength(1);
+      });
+
+      it('reset() descarta una carga en curso', async () => {
+        const pendiente = diferido<Res>();
+        responderPorTabla({ discounts: pendiente.promise });
+        const carga = facade.loadAvailableDiscounts('class_b', 1, 1);
+
+        facade.reset();
+        pendiente.resolve({ data: [fila(1, 'Tardía')], error: null });
+        await carga;
+
+        expect(facade.availableDiscounts()).toEqual([]);
+        expect(facade.isLoadingDiscounts()).toBe(false);
+      });
+    });
+
+    describe('errores separados', () => {
+      async function conErrorDeGuardado() {
+        conPrecio();
+        facade.setPaymentMethod('efectivo');
+        mockSupabase.client.rpc = vi
+          .fn()
+          .mockResolvedValue({ data: null, error: { message: 'caja cerrada' } });
+        await facade.recordPayment(77, 1);
+        expect(facade.error()).toContain('Error al registrar pago');
+      }
+
+      it('cargar descuentos no borra el error del guardado', async () => {
+        await conErrorDeGuardado();
+        responderPorTabla({ discounts: { data: [], error: null } });
+
+        await facade.loadAvailableDiscounts('class_b', 1, 1);
+
+        expect(facade.error()).toContain('Error al registrar pago');
+      });
+
+      it('reintentar la misma matrícula no borra el error del guardado', async () => {
+        responderPorTabla(lecturasOk());
+        await facade.rehydrateFromEnrollment(77);
+        await conErrorDeGuardado();
+
+        await facade.reintentarDatosPago();
+
+        expect(facade.error()).toContain('Error al registrar pago');
+      });
+
+      it('abrir otra matrícula sí limpia el error del guardado anterior', async () => {
+        responderPorTabla(lecturasOk());
+        await facade.rehydrateFromEnrollment(77);
+        await conErrorDeGuardado();
+
+        await facade.rehydrateFromEnrollment(78);
+
+        expect(facade.error()).toBeNull();
+      });
+
+      it('un guardado no borra el error de los descuentos', async () => {
+        conPrecio();
+        facade.setPaymentMethod('efectivo');
+        responderPorTabla({ discounts: FALLA });
+        await facade.loadAvailableDiscounts('class_b', 1, 1);
+
+        expect(await facade.recordPayment(77, 1)).toBe(true);
+
+        expect(facade.discountsError()).not.toBeNull();
+      });
+    });
+
+    describe('alumno a notificar', () => {
+      beforeEach(() => {
+        conPrecio();
+        facade.setPaymentMethod('efectivo');
+      });
+
+      it('si la lectura falla, el pago ya guardado sigue bien y no se notifica', async () => {
+        responderPorTabla({ enrollments: FALLA });
+
+        const ok = await facade.recordPayment(10, 1);
+        await flushMicrotasks();
+
+        expect(ok).toBe(true);
+        expect(facade.error()).toBeNull();
+        expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+      });
+
+      it('si la lectura se rechaza, el pago tampoco se ve afectado', async () => {
+        mockSupabase.client.from = vi.fn().mockImplementation(() => {
+          const builder = createMockQueryBuilder();
+          builder.single = vi.fn().mockRejectedValue(new Error('sin red'));
+          return builder;
+        });
+
+        const ok = await facade.recordPayment(10, 1);
+        await flushMicrotasks();
+
+        expect(ok).toBe(true);
+        expect(facade.error()).toBeNull();
+        expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
       });
     });
   });

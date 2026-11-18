@@ -2173,6 +2173,15 @@
 - **Fuente:** `specs/madurez-qa/002-entorno-de-pruebas-aislado.md` (evidencia y plan para separar
   los entornos).
 
+### DG-130 — Un descuento manual de matrícula existe solo en `enrollments.discount`
+- **Trampa:** tomar `discount_applications` como la lista completa de descuentos de una matrícula.
+- **Realidad:** esa tabla exige `discount_id`, así que solo registra descuentos predefinidos.
+  `record_enrollment_payment` guarda el monto de cualquier descuento en `enrollments.discount`, y
+  el motivo escrito para uno manual no se guarda en ninguna parte.
+- **Aplica cuando:** leas, reconstruyas o reportes descuentos de una matrícula. El monto sale de
+  `enrollments.discount`; `discount_applications` solo dice cuál predefinido fue.
+- **Fuente:** `specs/fixes/fix-253-b-descuento-manual-se-pierde-al-reanudar-borrador`.
+
 ## Convención para agregar una entrada nueva
 
 Un gotcha califica para este índice si cumple **todas**:
