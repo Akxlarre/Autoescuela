@@ -401,11 +401,54 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
       refresco fallido y rechazo por caja cerrada quedan cubiertos por tests. Registrar Egreso como
       secretaria y los drawers a 375x812. Ninguna lectura falló de verdad contra producción.
 
-- [ ] **T1.6** — Validación de la etapa
+- [x] **T1.6** — Validación de la etapa
   - **DoD:**
-    - [ ] `/verify`: casos A y B en claro y oscuro; la página sigue app-like con el aviso visible
-    - [ ] X01 de las pantallas de la etapa en verde contra el build de producción
-    - [ ] `npm run lint:arch`, `npm run test:ci`, `node scripts/test-tz.mjs` de los specs tocados
+    - [x] `/verify`: casos A y B en claro y oscuro; la página sigue app-like con el aviso visible
+    - [x] X01 de las pantallas de la etapa en verde contra el build de producción
+    - [x] `npm run lint:arch`, `npm run test:ci`, `node scripts/test-tz.mjs` de los specs tocados
+  - **Resultado de la validación (2026-11-18), sobre `main` en `bb453518`; con el visto bueno
+    del autor:**
+    - **Comandos.** `lint:arch:strict` 0 errores y 184 advertencias. `test:ci` 5550 en verde y 5
+      omitidos. `test-tz.mjs` con los 30 specs de la etapa: 825 en verde en UTC, Asia/Tokyo y
+      America/Santiago.
+    - **X01 contra `ng serve --configuration production` de este worktree:** 26 pasaron, incluidos
+      los 4 logins del setup. Sin `knownBug` y en verde: secretaria pagos, reportes, liquidaciones
+      y dashboard, y admin anticipos. Los 5 `knownBug` son de etapas posteriores. No se corrió
+      ningún otro E2E. Repetido sobre `main` en `b3e349e3`, ya con `hotfix-190-b`: 26 pasaron, con las
+      mismas 5 pantallas de la etapa sin `knownBug` y los mismos 5 `knownBug`.
+    - **Navegador (servidor de desarrollo, BD real, fallas simuladas parcheando `rest.fetch` solo
+      en la pestaña y toda escritura bloqueada).** A 1440x900, claro y oscuro, casos A y B en admin
+      pagos, reportes, liquidaciones y anticipos (pestaña Cuenta Corriente), y en secretaria
+      dashboard, pagos, reportes y liquidaciones. Caso A: error con "Reintentar" dentro de
+      `.bento-fill`, sin KPIs ni filas viejas; en admin también al fallar un cambio de sede. Caso B:
+      datos visibles y aviso dentro de `.bento-fill`. Sin scroll del documento ni desborde. Reintentar
+      recupera. Con red normal ninguna lectura falló y la consola solo tiene el aviso de View
+      Transition por pestaña oculta. Ninguna escritura llegó al servidor; se interceptaron las RPC
+      de lectura `exec_dashboard_*` del dashboard de admin.
+    - **Paso Pago.** Montado en memoria sin borrador, sin escribir, claro y oscuro: con los datos del
+      pago caídos sale el error sin montos y "Registrar Pago" deshabilitado; con descuentos caídos
+      sale el aviso y "Reintentar" lo limpia.
+    - **Drawers.** Registrar Anticipo (admin) y Registrar Egreso tipo anticipo (secretaria, abierto
+      desde el dashboard): con la lista caída muestran "Reintentar" y no dejan guardar, y con red
+      normal vuelve el selector (Egreso: 8 instructores de su sede). Sin desborde a 375x812, en claro.
+      Egreso también a 1440x900. Guardar no se pulsó.
+    - **Hallazgo 1, corregido en `hotfix-190-b` (PR #432, integrado).** Dashboard de
+      secretaria, caso B de alertas: la lista "Alertas importantes" pasaba de 91px a **0px**, porque
+      el aviso de 126px ocupaba la celda de 255px. El aviso pasó a la cabecera de la celda, con su
+      misma altura de 24px, con "Sin actualizar" y un botón de ícono con nombre accesible
+      "Reintentar". Medido con la corrección: 91-92px con y sin aviso a 1440x900, claro y oscuro; 15px
+      con y sin aviso a 1280x800; a 375x812 las 3 alertas se ven completas; "Reintentar" recupera.
+    - **Hallazgo 3, previo y sin corregir.** A 1280x800 la lista de alertas mide 15px **sin ningún
+      aviso**, y a 1440x900 solo muestra una alerta completa: la celda es baja por el reparto de
+      filas del dashboard, no por la falla de lectura.
+    - **Hallazgo 2, menor.** El aviso de 126px deja poca lista en pagos (admin 310→168px, una fila
+      completa y otra cortada; secretaria 381→239px) y en reportes (258→116px por panel). Liquidaciones
+      (488→346px) y anticipos (458→316px) quedan cómodas. No corregido.
+    - **No probado.** Cambio de sede de una secretaria con acceso a ambas: solo hubo una cuenta de una
+      sede. Liquidaciones de secretaria en caso B con filas: su sede no tiene horas, anticipos ni
+      pagos en noviembre, así que la tabla ya estaba vacía; con filas se vio en admin. Pestaña
+      Historial de anticipos en esta validación. Drawers en oscuro a 375x812. Ninguna lectura falló de
+      verdad contra producción.
 
 ---
 
