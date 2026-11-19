@@ -1,6 +1,15 @@
 import { formatChileDate } from '@core/utils/chile-time.utils';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { todayIso } from '@core/utils/date.utils';
+import { vincularInstructorAnticipo } from '../contabilidad-anticipos/vincular-instructor-anticipo';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { merge } from 'rxjs';
@@ -293,7 +302,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
         <button
           type="button"
           class="btn-primary flex items-center justify-center gap-2"
-          [disabled]="form.invalid || isSaving() || anticipoBloqueado()"
+          [disabled]="form.invalid || isSaving() || instructorAnticipo.bloqueado()"
           [appStableWidth]="isSaving()"
           data-llm-action="guardar-egreso-cuadratura"
           (click)="onSubmit()"
@@ -436,9 +445,31 @@ export class RegistrarEgresoDrawerComponent {
     this.branchFacade.branches().map((b) => ({ label: b.name, value: b.id })),
   );
 
+  /** hotfix-189-b: solo el tipo anticipo depende de la lista de instructores. */
+  protected readonly instructorAnticipo = vincularInstructorAnticipo({
+    control: this.form.controls.instructorId,
+    valorVacio: null,
+    aplica: computed(() => this.tipoValue() === 'anticipo'),
+    lista: computed(() => ({
+      instructores: this.anticiposFacade.instructores(),
+      cargando: this.anticiposFacade.isLoading(),
+      conError: !!this.anticiposFacade.error(),
+    })),
+  });
+
   constructor() {
     void this.flotaFacade.initialize();
     void this.anticiposFacade.initialize();
+
+    // Este drawer se abre también fuera de la página de Anticipos, donde nadie más recarga la
+    // lista: sin esto seguiría ofreciendo los instructores de la sede anterior.
+    let sedeCargada = this.forcedBranchId();
+    effect(() => {
+      const sede = this.forcedBranchId();
+      if (sede === sedeCargada) return;
+      sedeCargada = sede;
+      untracked(() => void this.anticiposFacade.initialize());
+    });
 
     // Preset de tipo (ej: "combustible" desde el atajo del dashboard) — se consume una sola vez.
     const preset = this.facade.egresoTipoPreset();
@@ -567,11 +598,12 @@ export class RegistrarEgresoDrawerComponent {
   }
 
   protected async onSubmit(): Promise<void> {
+    const instructorConfirmado = this.instructorAnticipo.confirmar();
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
-    if (this.anticipoBloqueado()) return;
+    if (!instructorConfirmado) return;
 
     this.isSaving.set(true);
     this.saveError.set(null);

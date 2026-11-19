@@ -65,6 +65,8 @@ function createComponent(opts: CreateOpts = {}) {
   const instructoresSig = signal(instructores);
   const errorSig = signal<string | null>(anticiposError);
   const isLoadingSig = signal(false);
+  const selectedBranchSig = signal<number | null>(selectedBranchId);
+  const initializeAnticipos = vi.fn().mockResolvedValue(undefined);
 
   TestBed.configureTestingModule({
     providers: [
@@ -76,14 +78,14 @@ function createComponent(opts: CreateOpts = {}) {
           instructores: instructoresSig,
           error: errorSig,
           isLoading: isLoadingSig,
-          initialize: vi.fn(),
+          initialize: initializeAnticipos,
           reintentar,
           registrarAnticipo,
         },
       },
       {
         provide: BranchFacade,
-        useValue: { branches: () => branches, selectedBranchId: () => selectedBranchId },
+        useValue: { branches: () => branches, selectedBranchId: selectedBranchSig },
       },
       { provide: AuthFacade, useValue: { currentUser: () => user } },
       { provide: LayoutDrawerFacadeService, useValue: { close: vi.fn() } },
@@ -109,6 +111,8 @@ function createComponent(opts: CreateOpts = {}) {
     instructoresSig,
     errorSig,
     isLoadingSig,
+    selectedBranchSig,
+    initializeAnticipos,
   };
 }
 
@@ -387,6 +391,192 @@ describe('RegistrarEgresoDrawerComponent', () => {
 
       expect(host.querySelector(SELECTOR)).not.toBeNull();
       expect(host.querySelector(REINTENTAR)).toBeNull();
+    });
+  });
+
+  // ─── hotfix-189-b: un instructor de otra sede no sobrevive al cambio de sede ───
+  describe('cambio de sede con el drawer abierto (hotfix-189-b)', () => {
+    const ERROR = 'No se pudieron cargar los anticipos.';
+    const GUARDAR = '[data-llm-action="guardar-egreso-cuadratura"]';
+    const ANA = { id: 9, nombre: 'Ana Díaz' };
+    const BETO = { id: 10, nombre: 'Beto Soto' };
+
+    function anticipoAbierto(opts: CreateOpts = {}) {
+      const ctx = createComponent({ preset: 'anticipo', instructores: [ANA], ...opts });
+      ctx.fixture.detectChanges();
+      ctx.component['form'].patchValue({
+        monto: 15_000,
+        descripcion: 'Anticipo',
+        instructorId: ANA.id,
+      });
+      ctx.fixture.debugElement.injector.get(ChangeDetectorRef).markForCheck();
+      ctx.fixture.detectChanges();
+      const host = ctx.fixture.nativeElement as HTMLElement;
+      return {
+        ...ctx,
+        host,
+        instructorId: () => ctx.component['form'].controls.instructorId.value,
+        guardar: () => host.querySelector(GUARDAR) as HTMLButtonElement,
+        empiezaCarga: () => {
+          ctx.isLoadingSig.set(true);
+          ctx.instructoresSig.set([]);
+          ctx.fixture.detectChanges();
+        },
+        terminaCarga: (lista: { id: number; nombre: string }[]) => {
+          ctx.instructoresSig.set(lista);
+          ctx.isLoadingSig.set(false);
+          ctx.errorSig.set(null);
+          ctx.fixture.detectChanges();
+        },
+      };
+    }
+
+    it('al cambiar de sede pide la lista de la sede nueva', () => {
+      const { fixture, selectedBranchSig, initializeAnticipos } = anticipoAbierto({
+        selectedBranchId: 1,
+      });
+      expect(initializeAnticipos).toHaveBeenCalledTimes(1);
+
+      selectedBranchSig.set(2);
+      fixture.detectChanges();
+
+      expect(initializeAnticipos).toHaveBeenCalledTimes(2);
+    });
+
+    it('no vuelve a pedir la lista si la sede no cambió', () => {
+      const { fixture, initializeAnticipos } = anticipoAbierto({ selectedBranchId: 1 });
+
+      fixture.detectChanges();
+
+      expect(initializeAnticipos).toHaveBeenCalledTimes(1);
+    });
+
+    it('una secretaria anclada a su sede no recarga por el selector', () => {
+      const { fixture, selectedBranchSig, initializeAnticipos } = anticipoAbierto({
+        user: { role: 'secretary', branchId: 1, canAccessBothBranches: false },
+        selectedBranchId: 1,
+      });
+
+      selectedBranchSig.set(2);
+      fixture.detectChanges();
+
+      expect(initializeAnticipos).toHaveBeenCalledTimes(1);
+    });
+
+    it('mientras carga conserva el valor, pero no se puede guardar', async () => {
+      const { component, instructorId, guardar, empiezaCarga, registrarAnticipo } =
+        anticipoAbierto();
+
+      empiezaCarga();
+
+      expect(instructorId()).toBe(ANA.id);
+      expect(guardar().disabled).toBe(true);
+      await component['onSubmit']();
+      expect(registrarAnticipo).not.toHaveBeenCalled();
+    });
+
+    it('si el instructor no está en la lista nueva limpia el campo y lo avisa', async () => {
+      const ctx = anticipoAbierto();
+      ctx.empiezaCarga();
+
+      ctx.terminaCarga([BETO]);
+
+      expect(ctx.instructorId()).toBeNull();
+      expect(ctx.host.textContent).toContain('Seleccione un instructor.');
+      expect(ctx.guardar().disabled).toBe(true);
+      await ctx.component['onSubmit']();
+      expect(ctx.registrarAnticipo).not.toHaveBeenCalled();
+    });
+
+    it('si sigue en la lista lo conserva y se puede guardar', async () => {
+      const ctx = anticipoAbierto();
+      ctx.empiezaCarga();
+
+      ctx.terminaCarga([BETO, ANA]);
+
+      expect(ctx.instructorId()).toBe(ANA.id);
+      expect(ctx.guardar().disabled).toBe(false);
+      await ctx.component['onSubmit']();
+      expect(ctx.registrarAnticipo).toHaveBeenCalledWith(
+        expect.objectContaining({ instructorId: ANA.id }),
+      );
+    });
+
+    it('con error mantiene el valor y, tras un reintento exitoso, aplica la regla', () => {
+      const ctx = anticipoAbierto();
+      ctx.empiezaCarga();
+      ctx.isLoadingSig.set(false);
+      ctx.errorSig.set(ERROR);
+      ctx.fixture.detectChanges();
+
+      expect(ctx.instructorId()).toBe(ANA.id);
+      expect(ctx.guardar().disabled).toBe(true);
+
+      ctx.terminaCarga([BETO]);
+
+      expect(ctx.instructorId()).toBeNull();
+    });
+
+    it('un refresco silencioso que saca al instructor también deshabilita el guardado', () => {
+      const ctx = anticipoAbierto();
+
+      ctx.instructoresSig.set([BETO]);
+      ctx.fixture.detectChanges();
+
+      expect(ctx.instructorId()).toBeNull();
+      expect(ctx.guardar().disabled).toBe(true);
+    });
+
+    it('onSubmit lo comprueba aunque la vista todavía no se haya actualizado', async () => {
+      const ctx = anticipoAbierto();
+
+      ctx.instructoresSig.set([BETO]);
+      await ctx.component['onSubmit']();
+
+      expect(ctx.registrarAnticipo).not.toHaveBeenCalled();
+      expect(ctx.instructorId()).toBeNull();
+    });
+
+    it('gasto: una carga de instructores en curso no bloquea ni toca el formulario', async () => {
+      const ctx = anticipoAbierto({ selectedBranchId: 1 });
+      ctx.component['form'].patchValue({ tipo: 'gasto', descripcion: 'Insumos' });
+      ctx.fixture.debugElement.injector.get(ChangeDetectorRef).markForCheck();
+      ctx.fixture.detectChanges();
+
+      ctx.empiezaCarga();
+
+      expect(ctx.guardar().disabled).toBe(false);
+      await ctx.component['onSubmit']();
+      expect(ctx.registrarEgreso).toHaveBeenCalledTimes(1);
+      expect(ctx.registrarAnticipo).not.toHaveBeenCalled();
+    });
+
+    it('combustible: una lista nueva no bloquea el guardado', async () => {
+      const ctx = anticipoAbierto({
+        vehicles: [{ id: 5, brand: 'Kia', model: 'Rio', licensePlate: 'AA-11', branchId: 2 }],
+      });
+      ctx.component['form'].patchValue({ tipo: 'combustible', vehiculoId: 5 });
+      ctx.fixture.debugElement.injector.get(ChangeDetectorRef).markForCheck();
+      ctx.fixture.detectChanges();
+
+      ctx.terminaCarga([BETO]);
+
+      expect(ctx.guardar().disabled).toBe(false);
+      await ctx.component['onSubmit']();
+      expect(ctx.registrarEgreso).toHaveBeenCalledTimes(1);
+    });
+
+    it('al volver al tipo anticipo limpia un instructor que ya no está en la lista', () => {
+      const ctx = anticipoAbierto({ selectedBranchId: 1 });
+      ctx.component['form'].patchValue({ tipo: 'gasto' });
+      ctx.fixture.detectChanges();
+      ctx.terminaCarga([BETO]);
+      expect(ctx.instructorId()).toBe(ANA.id);
+
+      ctx.component['form'].patchValue({ tipo: 'anticipo' });
+      ctx.fixture.detectChanges();
+
+      expect(ctx.instructorId()).toBeNull();
     });
   });
 });

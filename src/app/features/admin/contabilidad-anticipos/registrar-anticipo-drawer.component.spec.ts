@@ -125,4 +125,112 @@ describe('RegistrarAnticipoDrawerComponent — instructores que no cargaron (spe
     expect(host.querySelector(SELECTOR)).not.toBeNull();
     expect(host.querySelector(REINTENTAR)).toBeNull();
   });
+
+  // ─── hotfix-189-b: un instructor de otra sede no sobrevive al cambio de sede ───
+  describe('cambio de sede con el drawer abierto (hotfix-189-b)', () => {
+    const ANA = { id: 7, nombre: 'Ana Díaz' };
+    const BETO = { id: 8, nombre: 'Beto Soto' };
+
+    function abierto(preseleccionado: number | null = null) {
+      const ctx = setup({ instructores: [ANA], preseleccionado });
+      ctx.completar();
+      return {
+        ...ctx,
+        guardar: () => ctx.host.querySelector(GUARDAR) as HTMLButtonElement,
+        /** Lo que hace el facade al empezar la carga de otra sede. */
+        empiezaCarga: () => {
+          ctx.facade.isLoading.set(true);
+          ctx.facade.instructores.set([]);
+          ctx.fixture.detectChanges();
+        },
+        terminaCarga: (lista: { id: number; nombre: string }[]) => {
+          ctx.facade.instructores.set(lista);
+          ctx.facade.isLoading.set(false);
+          ctx.facade.error.set(null);
+          ctx.fixture.detectChanges();
+        },
+      };
+    }
+
+    it('mientras carga conserva el valor, pero no se puede guardar', async () => {
+      const { cmp, facade, guardar, empiezaCarga } = abierto();
+
+      empiezaCarga();
+
+      expect(cmp.form.controls.instructorId.value).toBe(7);
+      expect(guardar().disabled).toBe(true);
+      await cmp.onSubmit();
+      expect(facade.registrarAnticipo).not.toHaveBeenCalled();
+    });
+
+    it('si el instructor no está en la lista nueva limpia el campo y lo avisa', async () => {
+      const { cmp, host, facade, guardar, empiezaCarga, terminaCarga } = abierto();
+      empiezaCarga();
+
+      terminaCarga([BETO]);
+
+      expect(cmp.form.controls.instructorId.value).toBe('');
+      expect(host.textContent).toContain('Seleccione un instructor.');
+      expect(guardar().disabled).toBe(true);
+      await cmp.onSubmit();
+      expect(facade.registrarAnticipo).not.toHaveBeenCalled();
+    });
+
+    it('si sigue en la lista lo conserva y se puede guardar', async () => {
+      const { cmp, facade, guardar, empiezaCarga, terminaCarga } = abierto();
+      empiezaCarga();
+
+      terminaCarga([BETO, ANA]);
+
+      expect(cmp.form.controls.instructorId.value).toBe(7);
+      expect(guardar().disabled).toBe(false);
+      await cmp.onSubmit();
+      expect(facade.registrarAnticipo).toHaveBeenCalledWith(
+        expect.objectContaining({ instructorId: 7 }),
+      );
+    });
+
+    it('conserva el instructor precargado desde una fila si sigue en la lista', () => {
+      const { cmp, empiezaCarga, terminaCarga } = abierto(7);
+      empiezaCarga();
+
+      terminaCarga([ANA]);
+
+      expect(cmp.form.controls.instructorId.value).toBe(7);
+    });
+
+    it('limpia el precargado, sin volver a él, si ya no está en la lista', () => {
+      const { cmp, empiezaCarga, terminaCarga } = abierto(7);
+      empiezaCarga();
+
+      terminaCarga([BETO]);
+
+      expect(cmp.form.controls.instructorId.value).toBe('');
+    });
+
+    it('con error mantiene el valor y, tras un reintento exitoso, aplica la regla', () => {
+      const { cmp, facade, fixture, guardar, empiezaCarga, terminaCarga } = abierto();
+      empiezaCarga();
+      facade.isLoading.set(false);
+      facade.error.set(ERROR);
+      fixture.detectChanges();
+
+      expect(cmp.form.controls.instructorId.value).toBe(7);
+      expect(guardar().disabled).toBe(true);
+
+      terminaCarga([BETO]);
+
+      expect(cmp.form.controls.instructorId.value).toBe('');
+    });
+
+    it('onSubmit lo comprueba aunque la vista todavía no se haya actualizado', async () => {
+      const { cmp, facade } = abierto();
+
+      facade.instructores.set([BETO]);
+      await cmp.onSubmit();
+
+      expect(facade.registrarAnticipo).not.toHaveBeenCalled();
+      expect(cmp.form.controls.instructorId.value).toBe('');
+    });
+  });
 });
