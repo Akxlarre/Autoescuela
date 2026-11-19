@@ -449,22 +449,41 @@ describe('SecretariaDashboardComponent', () => {
       expect(text).not.toContain('Todo en orden');
     });
 
-    it('Caso B en DOM: con refreshFailed y alertas visibles muestra app-alert-card con Reintentar', () => {
+    it('Caso B en DOM: el aviso va en la cabecera de la celda y no le quita alto a la lista', () => {
       alertasMock.activeAlerts.set([buildAlert(1)]);
       alertasMock.alertCount.set(1);
       alertasMock.refreshFailed.set(true);
-      const dom = mountDom();
-      const text = dom.nativeElement.textContent as string;
-      const alertCard = dom.nativeElement.querySelector('app-alert-card');
-      const retryBtn = dom.nativeElement.querySelector(
+      const host = mountDom().nativeElement as HTMLElement;
+      const titulo = Array.from(host.querySelectorAll('h2')).find((h) =>
+        h.textContent?.includes('Alertas Importantes'),
+      );
+      const cabecera = titulo?.parentElement?.parentElement;
+      const aviso = cabecera?.querySelector('[role="alert"]');
+      const retryBtn = cabecera?.querySelector(
         '[data-llm-action="reintentar-alertas-secretaria"]',
       ) as HTMLButtonElement | null;
 
-      expect(text).toContain('Alerta 1');
-      expect(alertCard).not.toBeNull();
-      expect(retryBtn).not.toBeNull();
+      expect(host.textContent).toContain('Alerta 1');
+      expect(aviso?.textContent).toContain('No se pudieron actualizar');
+      expect(host.querySelector('app-alert-card')).toBeNull();
+      expect(retryBtn?.getAttribute('aria-label')).toBe('Reintentar');
       retryBtn?.click();
       expect(alertasMock.reintentar).toHaveBeenCalledTimes(1);
+    });
+
+    it('sin refresco fallido la cabecera de alertas no muestra el aviso', () => {
+      alertasMock.activeAlerts.set([buildAlert(1)]);
+      alertasMock.alertCount.set(1);
+      const host = mountDom().nativeElement as HTMLElement;
+
+      expect(host.querySelector('[data-llm-action="reintentar-alertas-secretaria"]')).toBeNull();
+    });
+
+    it('sin alertas visibles el refresco fallido no muestra el aviso de la cabecera', () => {
+      alertasMock.refreshFailed.set(true);
+      const host = mountDom().nativeElement as HTMLElement;
+
+      expect(host.querySelector('[data-llm-action="reintentar-alertas-secretaria"]')).toBeNull();
     });
 
     it('fix-405-m en DOM: con revisiones incompletas y alertas activas muestra las alertas y loadProblem()', () => {
@@ -486,7 +505,10 @@ describe('SecretariaDashboardComponent', () => {
       alertasMock.refreshFailed.set(true);
       const host = mountDom().nativeElement as HTMLElement;
 
-      expect(host.querySelectorAll('app-alert-card')).toHaveLength(2);
+      expect(host.querySelectorAll('app-alert-card')).toHaveLength(1);
+      expect(
+        host.querySelector('[data-llm-action="reintentar-dashboard-secretaria"]'),
+      ).not.toBeNull();
       (
         host.querySelector('[data-llm-action="reintentar-alertas-secretaria"]') as HTMLElement
       ).click();
