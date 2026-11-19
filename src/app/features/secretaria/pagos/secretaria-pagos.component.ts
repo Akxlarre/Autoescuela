@@ -97,24 +97,22 @@ function toCompact(amount: number): { value: number; suffix: string } {
         [class.deudores-compact]="layoutDrawer.isOpen()"
         appCardHover
       >
-        <!-- Caso B (spec 0060-b): dentro de la celda, nunca como hijo directo de la grilla -->
+        <!-- Caso B (spec 0060-b): dentro de la celda, nunca como hijo directo de la grilla.
+             Compacto (fix-254-b): una franja, para no quitarle alto a la lista. -->
         @if (facade.refreshFailed()) {
-          <div class="p-4 pb-0 shrink-0" role="alert">
-            <app-alert-card severity="error" title="No se pudieron actualizar los pagos">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <span class="text-compact text-text-secondary">
-                  Los montos y la lista pueden no estar al día.
-                </span>
-                <button
-                  type="button"
-                  class="btn-secondary flex items-center gap-2 shrink-0"
-                  data-llm-action="reintentar-pagos"
-                  (click)="facade.reintentar()"
-                >
-                  <app-icon name="refresh-cw" [size]="14" />
-                  Reintentar
-                </button>
-              </div>
+          <div class="px-4 pt-3 shrink-0">
+            <app-alert-card compact severity="error" title="No se pudieron actualizar los pagos">
+              Los montos y la lista pueden no estar al día.
+              <button
+                alertAction
+                type="button"
+                class="btn-secondary flex items-center gap-2 shrink-0"
+                data-llm-action="reintentar-pagos"
+                (click)="facade.reintentar()"
+              >
+                <app-icon name="refresh-cw" [size]="14" />
+                Reintentar
+              </button>
             </app-alert-card>
           </div>
         }

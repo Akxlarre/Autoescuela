@@ -245,20 +245,20 @@ type ReporteTab = 'categorias' | 'evolucion' | 'rentabilidad' | 'gastos-fijos';
         <div class="bento-banner bento-fill card p-0 lg:overflow-hidden flex flex-col lg:h-full">
           <!-- Caso B: un refresco falló; los datos de abajo siguen siendo de esta consulta. -->
           @if (refreshFailed() && !error()) {
-            <div class="p-4 pb-0 shrink-0">
-              <app-alert-card severity="error" title="No se pudo actualizar el reporte">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <span>Los datos mostrados pueden no estar actualizados.</span>
-                  <button
-                    type="button"
-                    class="btn-secondary flex items-center gap-2 shrink-0"
-                    data-llm-action="reintentar-reportes-contables"
-                    (click)="reintentar.emit()"
-                  >
-                    <app-icon name="refresh-cw" [size]="14" />
-                    Reintentar
-                  </button>
-                </div>
+            <!-- Compacto (fix-254-b): una franja, para no quitarle alto a los paneles. -->
+            <div class="px-4 pt-3 shrink-0">
+              <app-alert-card compact severity="error" title="No se pudo actualizar el reporte">
+                Los datos mostrados pueden no estar actualizados.
+                <button
+                  alertAction
+                  type="button"
+                  class="btn-secondary flex items-center gap-2 shrink-0"
+                  data-llm-action="reintentar-reportes-contables"
+                  (click)="reintentar.emit()"
+                >
+                  <app-icon name="refresh-cw" [size]="14" />
+                  Reintentar
+                </button>
               </app-alert-card>
             </div>
           }

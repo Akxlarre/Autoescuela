@@ -344,7 +344,9 @@ describe('SecretariaPagosComponent — lecturas fallidas (spec 0060-b)', () => {
         { provide: LayoutService, useValue: { tier: signal('desktop') } },
         { provide: GsapAnimationsService, useValue: { animateBentoGrid: vi.fn() } },
       ],
-    }).overrideComponent(SecretariaPagosComponent, { set: { imports: [ChileDatePipe], schemas: [NO_ERRORS_SCHEMA] } });
+    }).overrideComponent(SecretariaPagosComponent, {
+      set: { imports: [ChileDatePipe], schemas: [NO_ERRORS_SCHEMA] },
+    });
     fixture = TestBed.createComponent(SecretariaPagosComponent);
     fixture.detectChanges();
   }
@@ -361,6 +363,17 @@ describe('SecretariaPagosComponent — lecturas fallidas (spec 0060-b)', () => {
     expect(hijos).not.toContain('app-alert-card');
     expect(grid().children).toHaveLength(2); // hero + celda
     expect(fill().textContent).toContain('Alumno 1');
+  });
+
+  it('caso B: el aviso es compacto, primer hijo de la celda, con "Reintentar" en su ranura (fix-254-b)', () => {
+    setup({ error: null, refreshFailed: true, conDatos: true });
+    const aviso = fill().querySelector('app-alert-card') as HTMLElement;
+
+    expect(aviso.hasAttribute('compact')).toBe(true);
+    expect(fill().firstElementChild).toBe(aviso.parentElement);
+    expect(aviso.parentElement!.classList.contains('shrink-0')).toBe(true);
+    const boton = aviso.querySelector(':scope > button[alertAction]');
+    expect(boton?.getAttribute('data-llm-action')).toBe('reintentar-pagos');
   });
 
   it('caso B: "Reintentar" del aviso llama a reintentar() y lleva data-llm-action', () => {
