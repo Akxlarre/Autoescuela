@@ -32,6 +32,8 @@ class LoaderInmediatoComponent {
 // ─── fix-006-i: vehicleOptions() + preset de tipo consumido al montar ─────────
 // ─── fix-243-m: campos condicionales por tipo ─────────────────────────────────
 // ─── spec 0012-i AC15: sin tipo "Anticipo" (el anticipo ya no es de la caja) ──
+// hotfix-189-b cubría el instructor del tipo "Anticipo" de este drawer; ese tipo ya no existe
+// aquí. Su protección sigue en registrar-anticipo-drawer.
 
 interface CreateOpts {
   vehicles?: any[];

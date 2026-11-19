@@ -96,6 +96,7 @@
 | `src/app/core/utils/image-optimizer.ts` | `OptimizeOptions`, `optimizeImage` |
 | `src/app/core/utils/image.utils.ts` | `normalizePhoto` |
 | `src/app/core/utils/inasistencia.utils.ts` | `canJustificarInasistencia` |
+| `src/app/core/utils/instructor-anticipo.utils.ts` | `ListaInstructoresAnticipo`, `RevisionInstructorAnticipo`, `revisarInstructorAnticipo` |
 | `src/app/core/utils/instructor-create-branch.utils.ts` | `InstructorCreateBranch`, `resolveInstructorCreateBranch` |
 | `src/app/core/utils/instructor-deactivation.utils.ts` | `instructorDeactivationNotices`, `instructorBranchChangeNotice` |
 | `src/app/core/utils/instructor-doc-types.util.ts` | `INSTRUCTOR_DOC_TYPES` |
