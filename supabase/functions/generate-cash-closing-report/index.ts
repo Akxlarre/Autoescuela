@@ -141,15 +141,7 @@ Deno.serve(async (req: Request) => {
       .order('created_at', { ascending: true });
     if (branchId !== null) expQ = expQ.eq('branch_id', branchId);
 
-    // `instructor_advances` no tiene branch_id: la sede es la del instructor (fix-243-m).
-    let advQ = adminClient
-      .from('instructor_advances')
-      .select(
-        'id, reason, description, amount, created_at, payment_method, instructors!inner(users!inner(branch_id))',
-      )
-      .eq('date', date)
-      .order('created_at', { ascending: true });
-    if (branchId !== null) advQ = advQ.eq('instructors.users.branch_id', branchId);
+    // Los anticipos a instructores ya no son parte de la caja (spec 0012-i AC15): no se leen.
 
     // La fila del día, cerrada o borrador: el borrador trae el fondo que se ve en pantalla.
     let cierreQ = adminClient
@@ -165,15 +157,14 @@ Deno.serve(async (req: Request) => {
       .eq('date', date);
     if (branchId !== null) cierreQ = cierreQ.eq('branch_id', branchId);
 
-    const [payRes, singRes, servRes, expRes, advRes, cierreRes] = await Promise.all([
+    const [payRes, singRes, servRes, expRes, cierreRes] = await Promise.all([
       paymentsQ,
       singularsQ,
       servicesQ,
       expQ,
-      advQ,
       cierreQ.maybeSingle(),
     ]);
-    for (const r of [payRes, singRes, servRes, expRes, advRes, cierreRes]) {
+    for (const r of [payRes, singRes, servRes, expRes, cierreRes]) {
       if (r.error) throw r.error;
     }
 
@@ -230,14 +221,6 @@ Deno.serve(async (req: Request) => {
           tipo: 'Gasto' as const,
           monto: e.amount ?? 0,
           metodoPago: e.payment_method ?? 'efectivo',
-        })),
-        ...(advRes.data ?? []).map((a: any) => ({
-          hora: formatTimeCL(a.created_at),
-          registradoEn: a.created_at ?? null,
-          descripcion: a.reason ?? a.description ?? 'Anticipo instructor',
-          tipo: 'Anticipo' as const,
-          monto: a.amount ?? 0,
-          metodoPago: a.payment_method ?? 'efectivo',
         })),
       ],
       closedAt,
@@ -325,7 +308,7 @@ interface EgresoRow {
   hora: string;
   registradoEn: string | null;
   descripcion: string;
-  tipo: 'Gasto' | 'Anticipo';
+  tipo: 'Gasto';
   monto: number;
   metodoPago: string;
 }
@@ -758,7 +741,7 @@ function buildPdf(data: ReportData): Uint8Array {
   if (data.egresos.length > 0) {
     need(40, 'Egresos');
     y -= 6;
-    sectionBar(`Egresos y Anticipos del Día (${data.egresos.length} registros)`);
+    sectionBar(`Egresos del Día (${data.egresos.length} registros)`);
     y -= 4;
 
     const eCols = [34, 250, 70, 77, 84];

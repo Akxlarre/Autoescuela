@@ -13,6 +13,7 @@ import { createRequestGuard } from '@core/utils/request-guard.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { getLiquidacionAvatarColor } from '@core/utils/liquidaciones-avatar-colors';
 import { PayrollConfigFacade } from '@core/facades/payroll-config.facade';
+import { roundPayrollHours } from '@core/utils/payroll-hours.utils';
 import type {
   LiquidacionRow,
   LiquidacionesKpis,
@@ -376,7 +377,8 @@ export class LiquidacionesFacade {
         const rawU = instr.users as any;
         const u = Array.isArray(rawU) ? rawU[0] : rawU;
         const nombre = `${u?.first_names ?? ''} ${u?.paternal_last_name ?? ''}`.trim() || '—';
-        const totalHours = Math.round((hoursMap.get(instr.id) ?? 0) * 10) / 10;
+        // spec 0012-i AC17: horas exactas (3 clases = 2,25 h), dos decimales.
+        const totalHours = roundPayrollHours(hoursMap.get(instr.id) ?? 0);
         const practicalSessions = sessionsMap.get(instr.id) ?? 0;
         const totalAdvances = advancesMap.get(instr.id) ?? 0;
         const payment = paymentsMap.get(instr.id);

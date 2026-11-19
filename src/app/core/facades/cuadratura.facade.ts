@@ -24,7 +24,6 @@ import type {
 } from '@core/models/ui/cuadratura.model';
 import type { Payment } from '@core/models/dto/payment.model';
 import type { Expense } from '@core/models/dto/expense.model';
-import type { InstructorAdvance } from '@core/models/dto/instructor-advance.model';
 import type { CashClosing } from '@core/models/dto/cash-closing.model';
 
 // ─── Helpers puros ────────────────────────────────────────────────────────────
@@ -144,17 +143,6 @@ function mapExpenseToEgreso(e: Expense): EgresoRow {
   };
 }
 
-function mapAdvanceToEgreso(a: InstructorAdvance): EgresoRow {
-  return {
-    id: a.id,
-    tipo: 'advance',
-    category: null,
-    descripcion: a.reason ?? a.description ?? 'Anticipo instructor',
-    monto: a.amount,
-    paymentMethod: a.payment_method,
-  };
-}
-
 // ─── Facade ───────────────────────────────────────────────────────────────────
 
 @Injectable({ providedIn: 'root' })
@@ -223,9 +211,10 @@ export class CuadraturaFacade {
   readonly cargaFallida = this._cargaFallida.asReadonly();
 
   /**
-   * Quitar un pago de matrícula o un anticipo es solo del admin (fix-044-i): la RLS ya solo le
-   * permite a él borrar `payments` e `instructor_advances`. La UI de la secretaria no muestra esos
-   * botones; gastos, cursos singulares y servicios especiales siguen abiertos a ambos roles.
+   * Quitar un pago de matrícula es solo del admin (fix-044-i): la RLS ya solo le permite a él
+   * borrar `payments`. La UI de la secretaria no muestra ese botón; gastos, cursos singulares y
+   * servicios especiales siguen abiertos a ambos roles. Los anticipos ya no están en la Caja
+   * (spec 0012-i AC15).
    */
   readonly puedeEliminarRestringidos = computed(() => this.auth.currentUser()?.role === 'admin');
 
@@ -299,11 +288,6 @@ export class CuadraturaFacade {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'expenses' },
-        () => void this.refreshSilently(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'instructor_advances' },
         () => void this.refreshSilently(),
       )
       .on(
@@ -399,7 +383,7 @@ export class CuadraturaFacade {
     const branchId = this.getActiveBranchId();
     await Promise.all([
       this.fetchPayments(today, branchId),
-      this.fetchExpensesAndAdvances(today, branchId),
+      this.fetchExpenses(today, branchId),
       this.checkCajaStatus(today, branchId),
     ]);
   }
@@ -516,29 +500,19 @@ export class CuadraturaFacade {
     );
   }
 
-  private async fetchExpensesAndAdvances(today: string, branchId: number | null): Promise<void> {
+  /**
+   * Egresos del día: solo `expenses`. Los anticipos a instructores ya no son parte de la caja
+   * (spec 0012-i AC15, decisión I07): se ven en Anticipos y se descuentan en Liquidaciones.
+   */
+  private async fetchExpenses(today: string, branchId: number | null): Promise<void> {
     let expQuery: any = this.supabase.client.from('expenses').select('*').eq('date', today);
     if (branchId) {
       expQuery = expQuery.eq('branch_id', branchId);
     }
 
-    // `instructor_advances` no tiene `branch_id` propio — la sede sale del instructor
-    // (`instructors.users.branch_id`), mismo patrón que `AnticiposFacade.fetchData()`.
-    // Sin esto, una cuadratura de sede específica sumaba anticipos de TODAS las sedes (fix-243-m).
-    let advQuery: any = this.supabase.client
-      .from('instructor_advances')
-      .select('*, instructors!inner(users!inner(branch_id))')
-      .eq('date', today);
-    if (branchId) {
-      advQuery = advQuery.eq('instructors.users.branch_id', branchId);
-    }
-
-    const [expRes, advRes] = await Promise.all([expQuery, advQuery]);
+    const expRes = await expQuery;
     if (expRes.error) throw expRes.error;
-    if (advRes.error) throw advRes.error;
-    const gastos = (expRes.data ?? []).map(mapExpenseToEgreso);
-    const anticipos = (advRes.data ?? []).map(mapAdvanceToEgreso);
-    this._gastosHoy.set([...gastos, ...anticipos]);
+    this._gastosHoy.set((expRes.data ?? []).map(mapExpenseToEgreso));
   }
 
   /**
@@ -674,15 +648,9 @@ export class CuadraturaFacade {
   }
 
   async eliminarEgreso(row: EgresoRow): Promise<boolean> {
-    if (row.tipo === 'advance' && !this.puedeEliminarRestringidos()) {
-      this.toast.error('Solo un administrador puede quitar un anticipo.');
-      return false;
-    }
-
     this._isSaving.set(true);
     try {
-      const tabla = row.tipo === 'expense' ? 'expenses' : 'instructor_advances';
-      assertWriteOk(await this.supabase.client.from(tabla).delete().eq('id', row.id).select('id'), {
+      assertWriteOk(await this.supabase.client.from('expenses').delete().eq('id', row.id).select('id'), {
         requireRows: true,
       });
       this.toast.success('Egreso eliminado correctamente.');
@@ -699,9 +667,8 @@ export class CuadraturaFacade {
   /**
    * Registra un egreso de tipo `gasto` o `combustible` en `expenses`.
    *
-   * El tipo `anticipo` NO se maneja acá — el componente lo enruta a
-   * `AnticiposFacade.registrarAnticipo()` (necesita `instructor_id`, y `instructor_advances`
-   * no tiene columna `branch_id`). Ver fix-243-m.
+   * Los anticipos no se registran desde la Caja (spec 0012-i AC15): van por Anticipos o por
+   * el botón "Dar anticipo" de Liquidaciones.
    *
    * `datos.branchId` es obligatorio y NUNCA puede ser `null`: para `gasto` lo elige el usuario,
    * para `combustible` sale de la sede del vehículo (o se elige si es un vehículo legacy sin
@@ -712,10 +679,6 @@ export class CuadraturaFacade {
     const user = this.auth.currentUser();
     if (!user) return false;
 
-    if (datos.tipo === 'anticipo') {
-      this.toast.error('Los anticipos se registran por el flujo de instructor.');
-      return false;
-    }
     if (datos.tipo === 'combustible' && !datos.vehiculoId) {
       this.toast.error('Selecciona el vehículo del egreso de combustible.');
       return false;

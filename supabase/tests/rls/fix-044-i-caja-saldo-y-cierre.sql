@@ -42,7 +42,8 @@ BEGIN
     'trg_update_balance', 'trg_payments_caja_cerrada', 'trg_expenses_caja_cerrada',
     'trg_instructor_advances_caja_cerrada', 'trg_cash_closings_cierre_definitivo');
   v_rows := v_rows || jsonb_build_object('n', 1, 'caso', 'Triggers instalados',
-    'esperado', 'trg_cash_closings_cierre_definitivo, trg_expenses_caja_cerrada, trg_instructor_advances_caja_cerrada, trg_payments_caja_cerrada, trg_update_balance',
+    -- spec 0012-i (20261119120000): el anticipo ya no es de la caja; su candado se quitó.
+    'esperado', 'trg_cash_closings_cierre_definitivo, trg_expenses_caja_cerrada, trg_payments_caja_cerrada, trg_update_balance',
     'obtenido', v_txt);
 
   -- ── AC-1: borrar un pago recalcula el saldo en la BD ──────────────────────

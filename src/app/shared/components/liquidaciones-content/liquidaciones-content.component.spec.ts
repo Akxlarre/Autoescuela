@@ -212,6 +212,62 @@ describe('LiquidacionesContentComponent — lecturas fallidas (spec 0060-b)', ()
     });
   });
 
+  describe('horas exactas (spec 0012-i AC17)', () => {
+    const CON_DECIMALES = [
+      { ...PENDIENTE, totalHours: 2.25 },
+      { ...PAGADA, totalHours: 2.25 },
+      { ...PENDIENTE, instructorId: 30, totalHours: 2.25 },
+      { ...PENDIENTE, instructorId: 40, totalHours: 3 },
+    ];
+
+    it('cada fila muestra las horas con dos decimales y coma', () => {
+      const { el } = render({ liquidaciones: CON_DECIMALES });
+
+      expect(el.querySelector('table')?.textContent).toContain('2,25');
+      expect(el.querySelector('table')?.textContent).toContain('3,00');
+      expect(el.querySelector('.card-mobile-liq')?.textContent).toContain('2,25');
+    });
+
+    it('el pie suma las horas exactas (9,75, no 9,9)', () => {
+      const { fixture } = render({ liquidaciones: CON_DECIMALES });
+
+      expect(fixture.componentInstance['totales']().horas).toBe(9.75);
+      expect(
+        fixture.nativeElement.querySelector('tfoot')?.textContent ??
+          fixture.nativeElement.textContent,
+      ).toContain('9,75');
+    });
+  });
+
+  describe('Dar anticipo por fila (spec 0012-i AC16)', () => {
+    const botones = (el: HTMLElement) => [
+      ...el.querySelectorAll<HTMLButtonElement>('[data-llm-action="dar-anticipo-instructor"]'),
+    ];
+
+    it('cada fila, pendiente o pagada, tiene el botón en escritorio y móvil', () => {
+      const { el } = render({});
+
+      // 2 filas × (tabla + tarjeta móvil)
+      expect(botones(el)).toHaveLength(4);
+    });
+
+    it('emite la fila del instructor elegido', () => {
+      const { fixture, el } = render({});
+      const eventos: LiquidacionRow[] = [];
+      fixture.componentInstance.darAnticipo.subscribe((row) => eventos.push(row));
+
+      botones(el).forEach((b) => b.click());
+
+      expect(eventos.map((r) => r.instructorId)).toEqual([10, 20, 10, 20]);
+    });
+
+    it('sigue disponible aunque el registro de pagos esté bloqueado', () => {
+      const { el } = render({ puedeRegistrarPago: false, refreshFailed: true });
+
+      expect(botones(el).every((b) => !b.disabled)).toBe(true);
+    });
+  });
+
   it('durante la carga sin KPIs conserva el esqueleto de 3 KPIs', () => {
     const { hero } = render({ kpis: null, liquidaciones: [], isLoading: true });
 

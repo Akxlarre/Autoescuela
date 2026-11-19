@@ -1,6 +1,6 @@
 # Spec 0012-i — Anticipos y liquidaciones: tope, descuento sin negativos y pago registrado por la secretaria
 
-> **Status:** draft
+> **Status:** approved
 > **Created:** 2026-11-10
 > **Owner:** Ignacio
 > **Priority:** P1
@@ -103,13 +103,34 @@ montos negativos ni anticipos perdidos, y cada pago queda auditado con autor y m
 - **AC-E3**: Given dos pestañas pagan la misma liquidación, Then queda un solo pago (no se pisan
   los montos).
 
+### Decisiones del 2026-11-17/18 (checklist I07, I05, J02, H05)
+
+- **AC15 (I07)**: Given un anticipo registrado hoy, When se mira la Caja Diaria, Then no aparece
+  en la lista de egresos, ni en el total de egresos, ni en el efectivo esperado, ni en el cierre,
+  ni en el Excel/PDF del cierre. El tipo "Anticipo" ya no se ofrece en "Agregar Egreso" de la
+  Caja: los anticipos se registran desde Anticipos o desde Liquidaciones (AC16). Un anticipo se
+  puede registrar aunque la caja de su fecha esté cerrada. Los cierres ya guardados no se tocan.
+- **AC16 (I05)**: Given la lista de Liquidaciones, When se mira cualquier fila de instructor
+  (también los "Al día"), Then tiene un botón "Dar anticipo" que abre el registro de anticipo con
+  ese instructor ya elegido.
+- **AC17 (J02)**: Given un instructor con 3 clases prácticas completadas en el mes a $5.000/h,
+  When se mira su liquidación, Then muestra 2,25 h y base $11.250 (horas exactas, 0,75 por clase,
+  dos decimales); el pie suma las horas exactas; el Excel y el PDF muestran lo mismo.
+- **AC18 (H05)**: Given una liquidación de noviembre pagada (base $100.000, anticipos descontados
+  $30.000, líquido $70.000), When se mira Reportes de noviembre, Then suma $100.000 como gasto de
+  sueldos en noviembre (el mes trabajado, aunque se pague en diciembre). Los anticipos no cuentan
+  como gasto por separado. Igual en el Excel/PDF de Reportes.
+
 ---
 
 ## 4. Out of scope
 
 - ❌ Portal del instructor para ver su liquidación (fuera del piloto).
-- ❌ Que el pago de una liquidación en efectivo salga como egreso de la Caja Diaria (J17, sin decidir).
-- ❌ Pagar clases profesionales o teóricas en la liquidación (J12, sin decidir).
+- ❌ Que el pago de una liquidación salga como egreso de la Caja Diaria (J17, decidido: no; el
+  admin paga aparte).
+- ❌ Pagar clases profesionales o teóricas en la liquidación (J12, decidido: solo prácticas de
+  Clase B completadas).
+- ❌ Configurar el tope de anticipos desde Ajustes (decidido: fijo en $300.000).
 - ❌ Cambiar la tarifa por hora por sede (spec 0014-m).
 
 ---
@@ -157,10 +178,13 @@ montos negativos ni anticipos perdidos, y cada pago queda auditado con autor y m
 
 ## 9. Notas / decisiones abiertas
 
-- [ ] **Horas:** ¿se pagan exactas (3 clases = 2,25 h = $11.250) o redondeadas a 1 decimal
-  (2,3 h = $11.500, como hoy)? (checklist J02)
-- [ ] **Reportes:** ¿los anticipos cuentan como gasto del mes en Reportes Contables? (checklist H05)
-- [ ] ¿El tope de $300.000 se configura en Ajustes o queda fijo?
+- [x] **Horas:** exactas, dos decimales (J02) → AC17.
+- [x] **Reportes:** cuentan las liquidaciones pagadas por su sueldo completo, en el mes trabajado;
+  los anticipos no (H05) → AC18.
+- [x] **Tope:** fijo en $300.000 (2026-11-18).
+- [x] **"Anticipo" en Agregar Egreso de la Caja:** se quita (2026-11-18) → AC15.
+- **Orden de entrega** (cada fase se sube a main al terminar): 1) AC15–17; 2) AC1–7 y AC-E1/E2/E3;
+  3) AC8–11; 4) AC12–14 y AC18.
 - Decisiones ya tomadas por Ignacio (2026-11-09): tope $300.000 por **total del mes** con
   justificación para superarlo; la secretaria ve y exporta su sede, marca pagado y no deshace;
   auditoría obligatoria del pago; aviso de meses sin marcar.
@@ -172,3 +196,4 @@ montos negativos ni anticipos perdidos, y cada pago queda auditado con autor y m
 ## Changelog
 
 - 2026-11-10 — draft inicial por Ignacio (con Claude), a partir de `fix-073-i`.
+- 2026-11-18 — AC15–18 y decisiones de la §9 (I07, I05, J02, H05, tope fijo, sin "Anticipo" en la Caja); aprobada.

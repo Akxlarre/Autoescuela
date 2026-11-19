@@ -57,6 +57,7 @@
 | `src/app/core/utils/cuadratura-hero-kpis.utils.ts` | `CuadraturaHeroKpiInput`, `buildCuadraturaHeroKpis` |
 | `src/app/core/utils/cuadratura-medio-pago.utils.ts` | `medioDePagoLabel` |
 | `src/app/core/utils/historial-cuadraturas.utils.ts` | `groupCierresByFecha` — cierres del mes agrupados por fecha (uno por sede con "Todas las sedes", fix-078-i) |
+| `src/app/core/utils/payroll-hours.utils.ts` | `roundPayrollHours`, `sumPayrollHours`, `formatPayrollHours` — horas de nómina exactas a 2 decimales ("2,25"); espejo de `supabase/functions/_shared/payroll-totals.ts` (spec 0012-i AC17) |
 | `src/app/core/utils/month-nav.utils.ts` | `puedeAvanzarMes(anio, mes, now)` — true solo si (anio, mes) es anterior al mes actual de Chile; tope de la flecha "Mes siguiente" en historial de cierres y Liquidaciones (fix-079-i) |
 | `src/app/core/utils/daily-schedule-timeline.utils.ts` | `filterRemainingBlocks`, `shouldShowEmptyDayState` |
 | `src/app/core/utils/date.utils.ts` | `todayIso`, `notAfterTodayValidator`, `monthsAgoIso`, `formatDayMonthYear`, `isoToDate`, `to24hTime`, `addMinutesToTime`, `formatChileanDate`, `capitalize`, `buildDayLabel`, `formatCLP` |

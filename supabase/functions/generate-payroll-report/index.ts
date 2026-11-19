@@ -18,6 +18,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
   calcPayrollBaseAmount,
+  formatPayrollHours,
   roundPayrollHours,
   sumPayrollHours,
 } from '../_shared/payroll-totals.ts';
@@ -533,7 +534,7 @@ function buildPdf(data: ReportData): Uint8Array {
     const maxNombre = row.nombre.length > 20 ? row.nombre.slice(0, 19) + '.' : row.nombre;
     T(cols.nombre.x, y - 10, maxNombre, 8);
     T(cols.rut.x, y - 10, row.rut, 8);
-    T(cols.horas.x, y - 10, String(row.totalHours), 8);
+    T(cols.horas.x, y - 10, formatPayrollHours(row.totalHours), 8);
     T(cols.base.x, y - 10, clp(row.totalBaseAmount), 8);
 
     if (row.totalAdvances > 0) {
@@ -566,7 +567,7 @@ function buildPdf(data: ReportData): Uint8Array {
   resetColor();
   ops.push('0.1 0.22 0.38 rg');
   T(cols.nombre.x, y - 10, `TOTALES (${data.rows.length} instructores)`, 8, true);
-  T(cols.horas.x, y - 10, String(data.totalHoras), 8, true);
+  T(cols.horas.x, y - 10, formatPayrollHours(data.totalHoras), 8, true);
   T(cols.base.x, y - 10, clp(data.totalNomina), 8, true);
   T(cols.anticipos.x, y - 10, clp(data.totalAnticipos), 8, true);
   T(cols.total.x, y - 10, clp(data.totalAPagar), 8, true);

@@ -5,6 +5,8 @@ import { SecretariaContabilidadLiquidacionesComponent } from './secretaria-conta
 import { LiquidacionesFacade } from '@core/facades/liquidaciones.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { AnticiposFacade } from '@core/facades/anticipos.facade';
+import { RegistrarAnticipoDrawerComponent } from '../../admin/contabilidad-anticipos/registrar-anticipo-drawer.component';
 import type { LiquidacionRow, LiquidacionesKpis } from '@core/models/ui/liquidaciones.model';
 
 const FILA = { instructorId: 10, nombre: 'Ana Sur', status: 'pending' } as LiquidacionRow;
@@ -45,12 +47,15 @@ function setup(estado: {
     seleccionarParaPago: vi.fn(),
   };
   const selectedBranchId = signal<number | null>(1);
+  const anticipos = { selectInstructor: vi.fn(), initialize: vi.fn().mockResolvedValue(undefined) };
+  const drawer = { isOpen: signal(false), open: vi.fn() };
   TestBed.configureTestingModule({
     imports: [SecretariaContabilidadLiquidacionesComponent],
     providers: [
       { provide: LiquidacionesFacade, useValue: facade },
       { provide: BranchFacade, useValue: { selectedBranchId } },
-      { provide: LayoutDrawerFacadeService, useValue: { isOpen: signal(false), open: vi.fn() } },
+      { provide: AnticiposFacade, useValue: anticipos },
+      { provide: LayoutDrawerFacadeService, useValue: drawer },
     ],
   }).overrideComponent(SecretariaContabilidadLiquidacionesComponent, {
     set: { imports: [], schemas: [NO_ERRORS_SCHEMA] },
@@ -60,8 +65,24 @@ function setup(estado: {
   const content = (fixture.nativeElement as HTMLElement).querySelector(
     'app-liquidaciones-content',
   ) as HTMLElement & Record<string, unknown>;
-  return { facade, selectedBranchId, fixture, content };
+  return { facade, anticipos, drawer, selectedBranchId, fixture, content };
 }
+
+describe('SecretariaContabilidadLiquidacionesComponent — Dar anticipo (spec 0012-i AC16)', () => {
+  it('abre el registro de anticipo con el instructor de la fila ya elegido', async () => {
+    const { anticipos, drawer, content } = setup({});
+
+    content.dispatchEvent(Object.assign(new Event('darAnticipo'), { instructorId: 10 }));
+
+    await vi.waitFor(() => expect(anticipos.selectInstructor).toHaveBeenCalledWith(10));
+    expect(anticipos.initialize).toHaveBeenCalledOnce();
+    expect(drawer.open).toHaveBeenCalledWith(
+      RegistrarAnticipoDrawerComponent,
+      'Registrar Anticipo',
+      'banknote',
+    );
+  });
+});
 
 describe('SecretariaContabilidadLiquidacionesComponent — lecturas fallidas (spec 0060-b)', () => {
   it('caso A: entrega el error, sin filas ni KPIs, y bloquea el pago', () => {

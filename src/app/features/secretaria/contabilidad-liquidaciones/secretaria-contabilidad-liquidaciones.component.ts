@@ -5,6 +5,8 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { PagoInstructorModalComponent } from '@shared/components/pago-instructor-modal/pago-instructor-modal.component';
 import { LiquidacionesContentComponent } from '@shared/components/liquidaciones-content/liquidaciones-content.component';
 import type { LiquidacionRow } from '@core/models/ui/liquidaciones.model';
+import { AnticiposFacade } from '@core/facades/anticipos.facade';
+import { RegistrarAnticipoDrawerComponent } from '../../admin/contabilidad-anticipos/registrar-anticipo-drawer.component';
 
 @Component({
   selector: 'app-secretaria-contabilidad-liquidaciones',
@@ -29,6 +31,7 @@ import type { LiquidacionRow } from '@core/models/ui/liquidaciones.model';
       (mesSiguiente)="facade.mesSiguiente()"
       (deshacer)="facade.deshacerPago($event)"
       (pagar)="onPagar($event)"
+      (darAnticipo)="onDarAnticipo($event)"
       (exportRequested)="facade.exportar($event)"
     />
   `,
@@ -37,6 +40,7 @@ export class SecretariaContabilidadLiquidacionesComponent {
   protected readonly facade = inject(LiquidacionesFacade);
   private readonly branchFacade = inject(BranchFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly anticiposFacade = inject(AnticiposFacade);
   private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
@@ -52,5 +56,12 @@ export class SecretariaContabilidadLiquidacionesComponent {
   protected onPagar(row: LiquidacionRow): void {
     this.facade.seleccionarParaPago(row);
     this.layoutDrawer.open(PagoInstructorModalComponent, 'Registrar Pago Instructor', 'banknote');
+  }
+
+  /** spec 0012-i AC16: ver el mismo método en la página del admin. */
+  protected async onDarAnticipo(row: LiquidacionRow): Promise<void> {
+    await this.anticiposFacade.initialize();
+    this.anticiposFacade.selectInstructor(row.instructorId);
+    this.layoutDrawer.open(RegistrarAnticipoDrawerComponent, 'Registrar Anticipo', 'banknote');
   }
 }

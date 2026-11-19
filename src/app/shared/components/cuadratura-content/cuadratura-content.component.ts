@@ -594,19 +594,15 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                             >
                               {{ clp(egreso.monto) }}
                             </span>
-                            @if (puedeEliminarEgreso(egreso)) {
-                              <button
-                                class="flex items-center justify-center w-7 h-7 rounded-md text-text-muted opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all focus-visible:opacity-100 cursor-pointer"
-                                data-llm-action="eliminar-egreso-cuadratura"
-                                [disabled]="cajaYaCerrada()"
-                                aria-label="Eliminar egreso"
-                                (click)="onEliminarEgreso(egreso)"
-                              >
-                                <app-icon name="x" [size]="14" />
-                              </button>
-                            } @else {
-                              <span></span>
-                            }
+                            <button
+                              class="flex items-center justify-center w-7 h-7 rounded-md text-text-muted opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all focus-visible:opacity-100 cursor-pointer"
+                              data-llm-action="eliminar-egreso-cuadratura"
+                              [disabled]="cajaYaCerrada()"
+                              aria-label="Eliminar egreso"
+                              (click)="onEliminarEgreso(egreso)"
+                            >
+                              <app-icon name="x" [size]="14" />
+                            </button>
                           </div>
                         }
                       </div>
@@ -648,17 +644,15 @@ import type { EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
                               }
                               <span class="item-title">{{ egreso.descripcion }}</span>
                             </span>
-                            @if (puedeEliminarEgreso(egreso)) {
-                              <button
-                                class="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error transition-colors cursor-pointer shrink-0"
-                                data-llm-action="eliminar-egreso-cuadratura"
-                                [disabled]="cajaYaCerrada()"
-                                aria-label="Eliminar egreso"
-                                (click)="onEliminarEgreso(egreso)"
-                              >
-                                <app-icon name="x" [size]="14" />
-                              </button>
-                            }
+                            <button
+                              class="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error transition-colors cursor-pointer shrink-0"
+                              data-llm-action="eliminar-egreso-cuadratura"
+                              [disabled]="cajaYaCerrada()"
+                              aria-label="Eliminar egreso"
+                              (click)="onEliminarEgreso(egreso)"
+                            >
+                              <app-icon name="x" [size]="14" />
+                            </button>
                           </div>
                           <div
                             class="flex items-center justify-between mt-2 pt-2 border-t border-border-muted/30"
@@ -945,8 +939,9 @@ export class CuadraturaContentComponent implements AfterViewInit {
   /** La última carga del día falló (fix-044-i): muestra el aviso con "Reintentar". */
   readonly cargaFallida = input<boolean>(false);
   /**
-   * Puede quitar pagos de matrícula y anticipos (fix-044-i): solo admin. Sin esto esas filas no
-   * muestran el botón; gastos, cursos singulares y servicios especiales sí.
+   * Puede quitar pagos de matrícula (fix-044-i): solo admin. Sin esto esas filas no muestran el
+   * botón; gastos, cursos singulares y servicios especiales sí. Los anticipos ya no están en la
+   * Caja (spec 0012-i AC15).
    */
   readonly puedeEliminarRestringidos = input<boolean>(false);
 
@@ -1037,13 +1032,13 @@ export class CuadraturaContentComponent implements AfterViewInit {
     gasto: 'receipt',
   };
 
-  /** Etiqueta legible de la categoría del egreso (fix-006-i) — null si no aplica (ej. anticipos). */
+  /** Etiqueta legible de la categoría del egreso (fix-006-i) — null si no aplica. */
   protected categoryLabel(egreso: EgresoRow): string | null {
     if (!egreso.category) return null;
     return CuadraturaContentComponent.CATEGORY_LABELS[egreso.category] ?? egreso.category;
   }
 
-  /** Ícono de categoría del egreso (hotfix-001-i) — null si no aplica (ej. anticipos). */
+  /** Ícono de categoría del egreso (hotfix-001-i) — null si no aplica. */
   protected categoryIcon(egreso: EgresoRow): string | null {
     if (!egreso.category) return null;
     return CuadraturaContentComponent.CATEGORY_ICONS[egreso.category] ?? 'tag';
@@ -1119,11 +1114,6 @@ export class CuadraturaContentComponent implements AfterViewInit {
   protected readonly resumenIngresos = computed(() =>
     resumenConAnulados(this.pagosHoy(), 'ingreso', 'ingresos'),
   );
-
-  /** Un anticipo solo lo quita el admin (la RLS de instructor_advances); un gasto, ambos roles. */
-  protected puedeEliminarEgreso(egreso: EgresoRow): boolean {
-    return egreso.tipo !== 'advance' || this.puedeEliminarRestringidos();
-  }
 
   protected onEliminarIngreso(fila: IngresoRow, event: Event): void {
     event.stopPropagation();

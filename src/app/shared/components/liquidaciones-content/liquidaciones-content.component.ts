@@ -23,6 +23,7 @@ import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import type { LiquidacionRow, LiquidacionesKpis } from '@core/models/ui/liquidaciones.model';
+import { formatPayrollHours, sumPayrollHours } from '@core/utils/payroll-hours.utils';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -180,7 +181,8 @@ function formatCLP(value: number): string {
         white-space: nowrap;
       }
 
-      .btn-deshacer {
+      .btn-deshacer,
+      .btn-anticipo {
         display: inline-flex;
         align-items: center;
         gap: 4px;
@@ -201,6 +203,10 @@ function formatCLP(value: number): string {
         color: var(--state-error);
         border-color: color-mix(in srgb, var(--state-error) 30%, transparent);
         background: color-mix(in srgb, var(--state-error) 6%, transparent);
+      }
+      .btn-anticipo:hover {
+        color: var(--text-primary);
+        background: var(--bg-surface-elevated);
       }
 
       .card-mobile-liq {
@@ -522,7 +528,9 @@ function formatCLP(value: number): string {
 
                         <!-- Horas equivalentes -->
                         <td class="text-right tabular-nums">
-                          <span class="text-sm font-semibold text-brand">{{ row.totalHours }}</span>
+                          <span class="text-sm font-semibold text-brand">{{
+                            formatHoras(row.totalHours)
+                          }}</span>
                           <span class="text-xs text-text-muted ml-1">hrs</span>
                         </td>
 
@@ -554,39 +562,50 @@ function formatCLP(value: number): string {
 
                         <!-- Acciones -->
                         <td class="text-center">
-                          @if (row.status === 'paid') {
-                            <div class="flex items-center justify-center gap-2">
-                              <span class="btn-pagado">
-                                <app-icon
-                                  name="check-circle"
-                                  [size]="13"
-                                  color="var(--state-success)"
-                                />
-                                Pagado
-                              </span>
-                              <button
-                                class="btn-deshacer shadow-sm"
-                                (click)="onDeshacer(row)"
-                                [attr.aria-label]="'Deshacer pago de ' + row.nombre"
-                                data-llm-action="deshacer-pago-instructor"
-                              >
-                                <app-icon name="rotate-ccw" [size]="11" />
-                                Deshacer
-                              </button>
-                            </div>
-                          } @else {
+                          <div class="flex items-center justify-center gap-2">
                             <button
-                              class="btn-pagar shadow-sm"
-                              [disabled]="!puedeRegistrarPago()"
-                              [attr.title]="puedeRegistrarPago() ? null : PAGO_BLOQUEADO"
-                              (click)="abrirModal(row)"
-                              [attr.aria-label]="'Registrar pago para ' + row.nombre"
-                              data-llm-action="pagar-instructor"
+                              class="btn-anticipo shadow-sm"
+                              (click)="darAnticipo.emit(row)"
+                              [attr.aria-label]="'Dar anticipo a ' + row.nombre"
+                              data-llm-action="dar-anticipo-instructor"
                             >
-                              <app-icon name="banknote" [size]="13" />
-                              Pagar
+                              <app-icon name="hand-coins" [size]="12" />
+                              Anticipo
                             </button>
-                          }
+                            @if (row.status === 'paid') {
+                              <div class="flex items-center justify-center gap-2">
+                                <span class="btn-pagado">
+                                  <app-icon
+                                    name="check-circle"
+                                    [size]="13"
+                                    color="var(--state-success)"
+                                  />
+                                  Pagado
+                                </span>
+                                <button
+                                  class="btn-deshacer shadow-sm"
+                                  (click)="onDeshacer(row)"
+                                  [attr.aria-label]="'Deshacer pago de ' + row.nombre"
+                                  data-llm-action="deshacer-pago-instructor"
+                                >
+                                  <app-icon name="rotate-ccw" [size]="11" />
+                                  Deshacer
+                                </button>
+                              </div>
+                            } @else {
+                              <button
+                                class="btn-pagar shadow-sm"
+                                [disabled]="!puedeRegistrarPago()"
+                                [attr.title]="puedeRegistrarPago() ? null : PAGO_BLOQUEADO"
+                                (click)="abrirModal(row)"
+                                [attr.aria-label]="'Registrar pago para ' + row.nombre"
+                                data-llm-action="pagar-instructor"
+                              >
+                                <app-icon name="banknote" [size]="13" />
+                                Pagar
+                              </button>
+                            }
+                          </div>
                         </td>
                       </tr>
                     }
@@ -608,7 +627,9 @@ function formatCLP(value: number): string {
                         }}</span>
                       </td>
                       <td class="text-right tabular-nums">
-                        <span class="text-sm font-bold text-brand">{{ totales().horas }}</span>
+                        <span class="text-sm font-bold text-brand">{{
+                          formatHoras(totales().horas)
+                        }}</span>
                         <span class="text-xs text-text-muted ml-1">hrs</span>
                       </td>
                       <td class="text-right tabular-nums">
@@ -708,7 +729,7 @@ function formatCLP(value: number): string {
                         >Horas Equivalentes</span
                       >
                       <div class="text-compact font-bold tabular-nums text-brand">
-                        {{ row.totalHours }}
+                        {{ formatHoras(row.totalHours) }}
                         <span class="font-normal text-text-muted">hrs</span>
                         <span class="text-2xs font-normal text-text-muted ml-1"
                           >({{ row.practicalSessions }}
@@ -740,6 +761,15 @@ function formatCLP(value: number): string {
 
                   <!-- Actions Card -->
                   <div class="flex flex-col sm:flex-row justify-end gap-2 mt-2">
+                    <button
+                      class="btn-anticipo w-full sm:w-auto justify-center py-2.5 shadow-sm"
+                      (click)="darAnticipo.emit(row)"
+                      [attr.aria-label]="'Dar anticipo a ' + row.nombre"
+                      data-llm-action="dar-anticipo-instructor"
+                    >
+                      <app-icon name="hand-coins" [size]="14" />
+                      Dar anticipo
+                    </button>
                     @if (row.status === 'paid') {
                       <button
                         class="btn-deshacer w-full sm:w-auto justify-center py-2.5 shadow-sm"
@@ -825,6 +855,9 @@ export class LiquidacionesContentComponent implements AfterViewInit {
   mesSiguiente = output<void>();
   deshacer = output<LiquidacionRow>();
   pagar = output<LiquidacionRow>();
+  /** spec 0012-i AC16: "Dar anticipo" de la fila; la página abre el drawer con ese instructor. */
+  darAnticipo = output<LiquidacionRow>();
+  protected readonly formatHoras = formatPayrollHours;
   exportRequested = output<'excel' | 'pdf'>();
 
   // ── Inputs adicionales ────────────────────────────────────────────────────
@@ -920,9 +953,8 @@ export class LiquidacionesContentComponent implements AfterViewInit {
     const rows = this.filtradas();
     return {
       clases: rows.reduce((s, r) => s + r.practicalSessions, 0),
-      // Redondeo a 1 decimal: las horas equivalentes de BD son NUMERIC(6,1); sumarlas
-      // en float acumula error (8.3 + 9.8 + … = 144.89999999999998) y se muestra cruda.
-      horas: Math.round(rows.reduce((s, r) => s + r.totalHours, 0) * 10) / 10,
+      // spec 0012-i AC17: suma exacta a 2 decimales (2,25 × 3 + 3 = 9,75), sin deriva de float.
+      horas: sumPayrollHours(rows),
       base: rows.reduce((s, r) => s + r.totalBaseAmount, 0),
       anticipos: rows.reduce((s, r) => s + r.totalAdvances, 0),
       total: rows.reduce((s, r) => s + r.finalPaymentAmount, 0),

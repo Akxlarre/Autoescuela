@@ -205,7 +205,7 @@ describe('CuadraturaFacade', () => {
         monto: 20_000,
         paymentMethod: 'transferencia',
       },
-      { id: 3, tipo: 'advance', descripcion: 'Anticipo', monto: 5_000, paymentMethod: 'tarjeta' },
+      { id: 3, tipo: 'expense', descripcion: 'Peaje', monto: 5_000, paymentMethod: 'tarjeta' },
     ]);
 
     expect(facade.totalEgresosEfectivoHoy()).toBe(10_000);
@@ -402,35 +402,19 @@ describe('CuadraturaFacade.registrarEgreso — gasto/combustible (fix-006-i, fix
     expect(insertSpy).not.toHaveBeenCalled();
   });
 
-  // ─── AC-3: el tipo "anticipo" ya no lo maneja este facade ─────────────────
-  it('rechaza tipo "anticipo" (se enruta por AnticiposFacade desde el componente)', async () => {
-    const ok = await facade.registrarEgreso({
-      tipo: 'anticipo',
-      monto: 15_000,
-      descripcion: 'Anticipo Juan',
-      instructorId: 3,
-      metodoPago: 'efectivo',
-    });
-
-    expect(ok).toBe(false);
-    expect(insertSpy).not.toHaveBeenCalled();
-  });
 });
 
-// ─── fix-243-m: fetchExpensesAndAdvances filtra anticipos por sede ───────────
+// ─── spec 0012-i AC15: el anticipo ya no es parte de la caja ───────────────────
 
-describe('CuadraturaFacade.fetchExpensesAndAdvances — filtro de sede en anticipos (fix-243-m)', () => {
+describe('CuadraturaFacade — sin anticipos (spec 0012-i AC15)', () => {
   function setup(selectedBranchId: number | null) {
-    const advEqCalls: Array<[string, unknown]> = [];
-
+    const tablas: string[] = [];
     const chain = (table: string): any => {
+      tablas.push(table);
       const obj: any = {
         select: () => obj,
         in: () => obj,
-        eq: (col: string, val: unknown) => {
-          if (table === 'instructor_advances') advEqCalls.push([col, val]);
-          return obj;
-        },
+        eq: () => obj,
         gte: () => obj,
         lte: () => obj,
         lt: () => obj,
@@ -458,19 +442,14 @@ describe('CuadraturaFacade.fetchExpensesAndAdvances — filtro de sede en antici
       ],
     });
 
-    return { facade: TestBed.inject(CuadraturaFacade), advEqCalls };
+    return { facade: TestBed.inject(CuadraturaFacade), tablas };
   }
 
-  it('agrega .eq("instructors.users.branch_id") cuando hay una sede activa', async () => {
-    const { facade, advEqCalls } = setup(7);
+  it.each([7, null])('la carga de la Caja nunca consulta instructor_advances (sede %s)', async (sede) => {
+    const { facade, tablas } = setup(sede);
     await facade.refresh();
-    expect(advEqCalls).toContainEqual(['instructors.users.branch_id', 7]);
-  });
-
-  it('NO filtra anticipos por sede cuando el admin está en "Todas las sedes"', async () => {
-    const { facade, advEqCalls } = setup(null);
-    await facade.refresh();
-    expect(advEqCalls.some(([col]) => col === 'instructors.users.branch_id')).toBe(false);
+    expect(tablas).toContain('expenses');
+    expect(tablas).not.toContain('instructor_advances');
   });
 });
 
@@ -1360,42 +1339,6 @@ describe('CuadraturaFacade — anular una venta de servicio especial (fix-443-m)
 });
 
 describe('CuadraturaFacade — quitar egresos (fix-044-i AC-2)', () => {
-  it('la secretaria no puede quitar un anticipo: ni siquiera intenta escribir', async () => {
-    const { facade, db, toast } = setupFix044({}, 'secretary');
-
-    const ok = await facade.eliminarEgreso({
-      id: 5,
-      tipo: 'advance',
-      category: null,
-      descripcion: 'Anticipo',
-      monto: 10_000,
-      paymentMethod: 'efectivo',
-    });
-
-    expect(ok).toBe(false);
-    expect(db.calls).toEqual([]);
-    expect(toast.success).not.toHaveBeenCalled();
-  });
-
-  it('quitar un anticipo que la RLS bloquea (0 filas) no dice "eliminado"', async () => {
-    const { facade, toast } = setupFix044({
-      'instructor_advances:delete': { data: [], error: null },
-    });
-
-    const ok = await facade.eliminarEgreso({
-      id: 5,
-      tipo: 'advance',
-      category: null,
-      descripcion: 'Anticipo',
-      monto: 10_000,
-      paymentMethod: 'efectivo',
-    });
-
-    expect(ok).toBe(false);
-    expect(toast.success).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalled();
-  });
-
   it('quitar un gasto de un día cerrado no dice "eliminado"', async () => {
     const { facade, toast } = setupFix044({
       'expenses:delete': { data: null, error: { code: 'P0001', message: 'CAJA_CERRADA' } },
@@ -1467,7 +1410,6 @@ describe('CuadraturaFacade — lecturas que fallan (fix-044-i AC-5)', () => {
     ['standalone_course_enrollments:select'],
     ['special_service_sales:select'],
     ['expenses:select'],
-    ['instructor_advances:select'],
     ['cash_closings:select'],
   ])('si falla %s, la carga queda marcada como fallida y no se puede cerrar', async (key) => {
     const { facade } = setupFix044({ [key]: { data: null, error: { message: 'network' } } });

@@ -30,11 +30,14 @@ export interface IngresoRow {
   anulacion?: AnulacionPago | null;
 }
 
-/** Fila de egreso (expense o instructor_advance) para la cuadratura. */
+/**
+ * Fila de egreso (`expenses`) para la cuadratura. Los anticipos ya no son egresos de la caja
+ * (spec 0012-i AC15).
+ */
 export interface EgresoRow {
   id: number;
-  tipo: 'expense' | 'advance';
-  /** Categoría del gasto (ej. 'combustible', 'gasto') — null para anticipos o gastos sin categoría. */
+  tipo: 'expense';
+  /** Categoría del gasto (ej. 'combustible', 'gasto') — null para gastos sin categoría. */
   category: string | null;
   descripcion: string;
   monto: number;
@@ -44,17 +47,14 @@ export interface EgresoRow {
 
 /** Datos del formulario para registrar un egreso desde el modal. */
 export interface EgresoFormData {
-  tipo: 'gasto' | 'anticipo' | 'combustible';
+  tipo: 'gasto' | 'combustible';
   monto: number;
   descripcion: string;
-  /** Vehículo asociado — OBLIGATORIO para tipo `combustible` (de él sale la sede). */
+  /** Vehículo asociado — OBLIGATORIO para tipo `combustible`. */
   vehiculoId?: number | null;
-  /** Instructor asociado — OBLIGATORIO para tipo `anticipo` (de él sale la sede vía join). */
-  instructorId?: number | null;
   /**
-   * Sede del egreso (fix-243-m). Para `gasto` la elige el usuario; para `combustible` se deriva
-   * del vehículo (o se elige si el vehículo es legacy sin sede); para `anticipo` no aplica
-   * — `instructor_advances` no tiene columna `branch_id`, la sede se resuelve por el instructor.
+   * Sede del egreso (fix-243-m). Para `gasto` la elige el usuario; para `combustible` es la caja
+   * de quien registra (fix-082-i, `resolveFuelExpenseBranch`).
    * NUNCA debe llegar `null` al insert de `expenses`.
    */
   branchId?: number | null;

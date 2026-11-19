@@ -350,6 +350,19 @@ describe('LiquidacionesFacade', () => {
       expect(fila(10).totalBaseAmount).toBe(16100);
       expect(fila(10).finalPaymentAmount).toBe(16100);
     });
+
+    it('AC17 (spec 0012-i): 3 clases = 2,25 h exactas y base $11.250 a $5.000/h', async () => {
+      payrollConfigSpy.rateForBranch.mockReturnValue(5000);
+      tablas['instructors'] = () => ok([ANA]);
+      tablas['instructor_advances'] = () => ok([]);
+      tablas['instructor_monthly_hours'] = () =>
+        ok([{ instructor_id: 10, practical_sessions: 3, total_equivalent: 2.25 }]);
+
+      await facade.initialize();
+
+      expect(fila(10).totalHours).toBe(2.25);
+      expect(fila(10).totalBaseAmount).toBe(11250);
+    });
   });
 
   // ─── spec 0060-b T1.3: una lectura que falla no se ve como un monto ────────
