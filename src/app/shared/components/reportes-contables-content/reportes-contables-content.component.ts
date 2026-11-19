@@ -252,7 +252,7 @@ type ReporteTab = 'categorias' | 'evolucion' | 'rentabilidad' | 'gastos-fijos';
                 <button
                   alertAction
                   type="button"
-                  class="btn-secondary flex items-center gap-2 shrink-0 py-2"
+                  class="btn-secondary flex items-center gap-2 shrink-0"
                   data-llm-action="reintentar-reportes-contables"
                   (click)="reintentar.emit()"
                 >

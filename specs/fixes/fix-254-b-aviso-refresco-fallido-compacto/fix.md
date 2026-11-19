@@ -41,7 +41,7 @@ Ninguno de 0060-b cambia: el aviso sigue dentro de `.bento-fill`, primer hijo `s
 - [x] AC-1, AC-2, AC-4 implementados.
 - [x] Test de regresión verde (2026-11-19): `admin-pagos` 30/30, `secretaria-pagos` 27/27 y
   `reportes-contables-content` en verde con `npx vitest run`; `npm run lint:arch:strict` con 0 errores.
-- [x] AC-3 admin-pagos (1440x900, claro y oscuro; `rest.fetch` parcheado solo en la pestaña, con escrituras bloqueadas): el aviso mide 57 px (69 px con su envoltorio). La lista pasa de 310 px sin aviso a 241 px con él; antes quedaba en 168 px. No hay scroll de página. Con el botón en `py-2`: sin él, el aviso medía 65 px.
+- [x] AC-3 admin-pagos (1440x900, claro y oscuro; `rest.fetch` parcheado solo en la pestaña, con escrituras bloqueadas): el aviso mide 57 px (69 px con su envoltorio). La lista pasa de 310 px sin aviso a 241 px con él; antes quedaba en 168 px. No hay scroll de página. El botón mantiene su tamaño (ARCH-16 prohíbe `py-*` sobre `btn-*`); los 57 px salen del padding vertical `--space-1` del aviso, mientras que con `--space-2` medía 65 px.
 - [x] AC-3 reportes (admin, 1440x900, claro y oscuro, mismo método): el aviso mide 57 px. Cada panel pasa de 258 px sin aviso a 189 px con él; antes quedaba en 116 px. No hay scroll de página.
 - [x] AC-3 secretaria-pagos (sesión de secretaria, 1440x900, claro y oscuro, mismo método): el aviso mide 57 px. La lista pasa de 381 px sin aviso a 312 px con él; antes quedaba en 239 px. Se ven 4 filas. No hay scroll de página.
 - Límite: no hay spec propio del modo `compact` de `app-alert-card`. Los `input()` de signal no se

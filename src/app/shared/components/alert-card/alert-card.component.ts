@@ -34,7 +34,7 @@ export type AlertSeverity = 'error' | 'warning' | 'info' | 'success';
  *
  * <app-alert-card compact severity="error" title="No se pudieron actualizar los pagos">
  *   Los montos y la lista pueden no estar al día.
- *   <button alertAction type="button" class="btn-secondary py-2" data-llm-action="reintentar-x">
+ *   <button alertAction type="button" class="btn-secondary" data-llm-action="reintentar-x">
  *     Reintentar
  *   </button>
  * </app-alert-card>
@@ -50,7 +50,7 @@ export type AlertSeverity = 'error' | 'warning' | 'info' | 'success';
     '[class.items-start]': '!compact()',
     '[class.items-center]': 'compact()',
     '[style.padding]':
-      "compact() ? 'var(--space-2) var(--space-2) var(--space-2) var(--space-4)' : null",
+      "compact() ? 'var(--space-1) var(--space-1) var(--space-1) var(--space-4)' : null",
     '[style.background]': 'tintBg()',
     '[style.border-left]': 'accentBorder()',
     role: 'alert',
