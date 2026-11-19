@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { todayIso } from '@core/utils/date.utils';
+import { vincularInstructorAnticipo } from './vincular-instructor-anticipo';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { AnticiposFacade } from '@core/facades/anticipos.facade';
@@ -151,7 +152,7 @@ const MOTIVO_OPTIONS = [
           type="button"
           class="btn-primary flex items-center gap-2"
           (click)="onSubmit()"
-          [disabled]="facade.isSaving() || form.invalid || instructoresNoCargaron()"
+          [disabled]="facade.isSaving() || form.invalid || instructorAnticipo.bloqueado()"
           data-llm-action="save-anticipo"
         >
           @if (facade.isSaving()) {
@@ -191,14 +192,26 @@ export class RegistrarAnticipoDrawerComponent {
     description: [''],
   });
 
+  /** hotfix-189-b: la página recarga la lista al cambiar de sede; acá se revisa lo elegido. */
+  protected readonly instructorAnticipo = vincularInstructorAnticipo({
+    control: this.form.controls.instructorId,
+    valorVacio: '',
+    lista: computed(() => ({
+      instructores: this.facade.instructores(),
+      cargando: this.facade.isLoading(),
+      conError: this.instructoresNoCargaron(),
+    })),
+  });
+
   protected isInvalid(field: string): boolean {
     const ctrl = this.form.get(field);
     return !!(ctrl?.invalid && ctrl.touched);
   }
 
   protected async onSubmit(): Promise<void> {
+    const instructorConfirmado = this.instructorAnticipo.confirmar();
     this.form.markAllAsTouched();
-    if (this.form.invalid || this.instructoresNoCargaron()) return;
+    if (this.form.invalid || !instructorConfirmado) return;
 
     const raw = this.form.getRawValue();
     const ok = await this.facade.registrarAnticipo({
