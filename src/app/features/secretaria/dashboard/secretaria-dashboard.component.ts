@@ -258,11 +258,38 @@ import {
           appCardHover
           [appScrollReveal]="{ delay: 0.2 }"
         >
-          <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-4 shrink-0">
+            <div class="flex items-center gap-2 shrink-0">
               <app-icon name="bell" [size]="16" class="text-warning" />
               <h2 class="m-0 font-semibold text-text-primary">Alertas Importantes</h2>
             </div>
+            <!-- Caso B: en la cabecera y a su misma altura, porque esta celda es baja y cualquier
+                 aviso encima de la lista la deja sin alto -->
+            @if (!loading() && alertsRefreshFailed() && alerts().length) {
+              <div class="flex items-center gap-1.5 min-w-0" role="alert">
+                <span class="sr-only">No se pudieron actualizar las alertas.</span>
+                <app-icon name="triangle-alert" [size]="14" class="text-warning shrink-0" />
+                <span
+                  class="text-xs text-text-secondary whitespace-nowrap"
+                  aria-hidden="true"
+                  pTooltip="No se pudieron actualizar las alertas. Pueden no estar al día."
+                  tooltipPosition="top"
+                  >Sin actualizar</span
+                >
+                <button
+                  type="button"
+                  class="btn-ghost btn-sm flex items-center h-6 shrink-0"
+                  aria-label="Reintentar"
+                  pTooltip="Reintentar"
+                  tooltipPosition="top"
+                  data-llm-action="reintentar-alertas-secretaria"
+                  [disabled]="alertsLoading()"
+                  (click)="retryAlerts()"
+                >
+                  <app-icon name="refresh-cw" [size]="12" />
+                </button>
+              </div>
+            }
           </div>
 
           @if (loading() || (alertsLoading() && !alerts().length)) {
@@ -280,27 +307,7 @@ import {
               }
             </ul>
           } @else {
-            @if (alertsRefreshFailed() && alerts().length) {
-              <div class="mb-3 shrink-0">
-                <app-alert-card severity="warning" title="No se pudieron actualizar las alertas">
-                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <span class="text-compact text-text-secondary">
-                      Los datos mostrados pueden no estar actualizados.
-                    </span>
-                    <button
-                      type="button"
-                      class="btn-secondary flex items-center gap-2 shrink-0"
-                      data-llm-action="reintentar-alertas-secretaria"
-                      [disabled]="alertsLoading()"
-                      (click)="retryAlerts()"
-                    >
-                      <app-icon name="refresh-cw" [size]="14" />
-                      Reintentar
-                    </button>
-                  </div>
-                </app-alert-card>
-              </div>
-            } @else if (alertsProblem() && alerts().length) {
+            @if (!alertsRefreshFailed() && alertsProblem() && alerts().length) {
               <p class="m-0 mb-2 text-xs text-text-muted shrink-0" role="status">
                 {{ alertsProblem() }} Puede faltar alguna.
               </p>
