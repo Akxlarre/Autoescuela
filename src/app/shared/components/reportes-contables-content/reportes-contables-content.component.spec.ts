@@ -133,6 +133,19 @@ describe('ReportesContablesContentComponent — lecturas fallidas (spec 0060-b)'
     expect(reintentos).toHaveLength(1);
   });
 
+  it('caso B: el aviso es compacto, primer hijo de la celda, con "Reintentar" en su ranura (fix-254-b)', () => {
+    const { el } = render({ kpis: KPIS, refreshFailed: true });
+    const aviso = el.querySelector('app-alert-card') as HTMLElement;
+    const envoltorio = aviso.parentElement!;
+
+    expect(aviso.hasAttribute('compact')).toBe(true);
+    expect(envoltorio.classList.contains('shrink-0')).toBe(true);
+    expect(envoltorio.parentElement!.firstElementChild).toBe(envoltorio);
+    expect(envoltorio.parentElement!.classList.contains('bento-fill')).toBe(true);
+    const boton = aviso.querySelector(':scope > button[alertAction]');
+    expect(boton?.getAttribute('data-llm-action')).toBe('reintentar-reportes-contables');
+  });
+
   it('caso A: no suma el aviso de refresco, porque no quedan datos a los que referirse', () => {
     const { el, emptyState } = render({
       error: 'No se pudo cargar el reporte contable.',

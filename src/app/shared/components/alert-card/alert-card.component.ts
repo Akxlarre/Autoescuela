@@ -1,4 +1,10 @@
-import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  input,
+  computed,
+  booleanAttribute,
+} from '@angular/core';
 import { IconComponent } from '../icon/icon.component';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 
@@ -16,9 +22,21 @@ export type AlertSeverity = 'error' | 'warning' | 'info' | 'success';
  * La entrada anima sola vía `AnimateInDirective` (hostDirectives) — no requiere que el
  * consumidor agregue `appAnimateIn`.
  *
+ * Con `compact` es una sola franja (ícono, título, texto y acción en línea, padding reducido):
+ * la forma del aviso de refresco fallido (caso B de swr-pattern.md) dentro de una celda
+ * `.bento-fill`, donde cada píxel del aviso sale de la lista (fix-254-b). La acción va en la
+ * ranura `[alertAction]`, al final de la franja; en un ancho angosto el texto pasa abajo.
+ *
  * @example
  * <app-alert-card severity="error" title="No se pudo guardar">
  *   Hubo un problema al conectarse con el servidor.
+ * </app-alert-card>
+ *
+ * <app-alert-card compact severity="error" title="No se pudieron actualizar los pagos">
+ *   Los montos y la lista pueden no estar al día.
+ *   <button alertAction type="button" class="btn-secondary py-2" data-llm-action="reintentar-x">
+ *     Reintentar
+ *   </button>
  * </app-alert-card>
  */
 @Component({
@@ -28,7 +46,11 @@ export type AlertSeverity = 'error' | 'warning' | 'info' | 'success';
   imports: [IconComponent],
   hostDirectives: [AnimateInDirective],
   host: {
-    class: 'card flex items-start gap-3',
+    class: 'card flex gap-3',
+    '[class.items-start]': '!compact()',
+    '[class.items-center]': 'compact()',
+    '[style.padding]':
+      "compact() ? 'var(--space-2) var(--space-2) var(--space-2) var(--space-4)' : null",
     '[style.background]': 'tintBg()',
     '[style.border-left]': 'accentBorder()',
     role: 'alert',
@@ -38,15 +60,26 @@ export type AlertSeverity = 'error' | 'warning' | 'info' | 'success';
       [name]="iconName()"
       [size]="18"
       [style.color]="accentColor()"
-      class="shrink-0 mt-0.5"
+      [style.margin-top.px]="compact() ? 0 : 2"
+      class="shrink-0"
     />
 
-    <div class="flex-1 min-w-0 flex flex-col gap-1 py-0.5">
+    <div
+      class="flex-1 min-w-0 flex"
+      [style.padding-block.px]="compact() ? 0 : 2"
+      [class.flex-col]="!compact()"
+      [class.gap-1]="!compact()"
+      [class.flex-wrap]="compact()"
+      [class.items-baseline]="compact()"
+      [class.gap-x-3]="compact()"
+    >
       <p class="item-title m-0">{{ title() }}</p>
-      <div class="text-sm text-text-secondary leading-relaxed">
+      <div class="text-sm text-text-secondary" [class.leading-relaxed]="!compact()">
         <ng-content />
       </div>
     </div>
+
+    <ng-content select="[alertAction]" />
   `,
 })
 export class AlertCardComponent {
@@ -55,6 +88,9 @@ export class AlertCardComponent {
 
   /** Título de la alerta (requerido — frase corta y accionable). */
   readonly title = input.required<string>();
+
+  /** Una sola franja con la acción en línea (aviso del caso B dentro de `.bento-fill`). */
+  readonly compact = input(false, { transform: booleanAttribute });
 
   // ── Computed internos — derivados de severity ─────────────────────────────
 

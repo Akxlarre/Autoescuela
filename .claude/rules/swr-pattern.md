@@ -129,6 +129,12 @@ El resto de las escrituras sigue disponible: la BD las valida.
   interno si la card lleva `p-0`), nunca como hijo directo de la grilla: esas variantes definen
   filas fijas y un hijo extra en el grid se queda con la fila que crece (`1fr`), dejando la lista
   aplastada debajo.
+- Dentro de una `.bento-fill`, ese aviso del caso B es **`app-alert-card compact`**: una franja con
+  título, texto y el "Reintentar" (`btn-secondary py-2`) en la ranura `alertAction`, en un envoltorio
+  `px-4 pt-3 shrink-0`: mide 57 px.
+  La celda tiene alto fijo en desktop, así que todo lo que mide el aviso sale de la lista. La forma
+  de nota (título arriba, padding de `.card`) medía 126 px y a 1440x900 dejaba la lista de pagos de
+  admin con una fila y media.
 - Con la carga fallida los KPIs **no se renderizan en 0**: el estado de error los reemplaza.
 - El botón "Reintentar" lleva `data-llm-action`.
 - Lo verifica el bloque X01 de `e2e/transversal-shell.spec.ts`: corta la red y exige "Reintentar"
