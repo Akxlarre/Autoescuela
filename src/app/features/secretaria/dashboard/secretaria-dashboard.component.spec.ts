@@ -455,9 +455,9 @@ describe('SecretariaDashboardComponent', () => {
       alertasMock.refreshFailed.set(true);
       const host = mountDom().nativeElement as HTMLElement;
       const titulo = Array.from(host.querySelectorAll('h2')).find((h) =>
-        h.textContent?.includes('Alertas Importantes'),
+        h.textContent?.includes('Alertas importantes'),
       );
-      const cabecera = titulo?.parentElement?.parentElement;
+      const cabecera = titulo?.parentElement;
       const aviso = cabecera?.querySelector('[role="alert"]');
       const retryBtn = cabecera?.querySelector(
         '[data-llm-action="reintentar-alertas-secretaria"]',
@@ -618,7 +618,7 @@ describe('SecretariaDashboardComponent', () => {
       const aviso = grid.querySelector('app-live-classes-panel.bento-fill app-alert-card');
       expect(aviso).not.toBeNull();
       expect(tagsDeLaGrilla(grid)).not.toContain('app-alert-card');
-      expect(grid.children).toHaveLength(4); // hero + clases + actividad + alertas
+      expect(grid.children).toHaveLength(3); // hero + clases + alertas/actividad (fix-255-b)
       expect(cmp.heroKpis().map((k) => k.value)).toEqual(['1.234.567', '12']);
       expect(grid.querySelector('app-empty-state[actionLabel="Reintentar"]')).toBeNull();
     });
@@ -636,6 +636,90 @@ describe('SecretariaDashboardComponent', () => {
       facade.refreshing.set(true);
       dom.detectChanges();
       expect(boton.disabled).toBe(true);
+    });
+
+    // ─── fix-255-b: Alertas y Actividad comparten una celda alta, con pestañas ──
+    describe('pestañas Alertas / Actividad (fix-255-b)', () => {
+      const celdaDePestanas = (grid: HTMLElement) =>
+        grid.querySelector('[data-llm-description="alertas y actividad reciente"]') as HTMLElement;
+      const listas = (host: HTMLElement) =>
+        Array.from(host.querySelectorAll('ul[aria-label]')).map((ul) =>
+          ul.getAttribute('aria-label'),
+        );
+
+      it('empieza en "Alertas", con el número de alertas en la pestaña', () => {
+        const { cmp } = montar({ data: DATOS });
+
+        expect(cmp.feedTab()).toBe('alertas');
+        expect(cmp.feedTabs().map((t) => [t.id, t.count ?? null])).toEqual([
+          ['alertas', 1],
+          ['actividad', null],
+        ]);
+      });
+
+      it('mientras carga, la pestaña de alertas no muestra un número', () => {
+        const { cmp, dom } = montar({ data: DATOS });
+        alertas.isLoading.set(true);
+        alertas.activeAlerts.set([]);
+        dom.detectChanges();
+
+        expect(cmp.feedTabs()[0].count).toBeNull();
+      });
+
+      it('la celda ocupa las dos filas de la grilla, a la par de Clases Actuales', () => {
+        const { grid } = montar({ data: DATOS });
+
+        const celda = celdaDePestanas(grid);
+        expect(celda.parentElement).toBe(grid);
+        expect(celda.classList).toContain('bento-fill');
+        expect(celda.getAttribute('data-row-span')).toBe('2');
+        expect(celda.getAttribute('data-row-span-md')).toBe('2');
+      });
+
+      it('muestra solo la lista de la pestaña activa, con su pie', () => {
+        const { cmp, dom, host } = montar({ data: DATOS });
+
+        expect(listas(host)).toEqual(['Alertas importantes']);
+        expect(host.querySelector('[data-llm-action="view-all-alerts"]')).not.toBeNull();
+        expect(host.querySelector('[data-llm-action="view-all-activity"]')).toBeNull();
+
+        cmp.setFeedTab('actividad');
+        dom.detectChanges();
+
+        expect(listas(host)).toEqual(['Actividad reciente']);
+        expect(host.querySelector('[data-llm-action="view-all-activity"]')).not.toBeNull();
+        expect(host.querySelector('[data-llm-action="view-all-alerts"]')).toBeNull();
+      });
+
+      it('el panel visible queda ligado a su pestaña', () => {
+        const { cmp, dom, host } = montar({ data: DATOS });
+        const panel = () => host.querySelector('[role="tabpanel"]') as HTMLElement;
+
+        expect(panel().id).toBe('feed-secretaria-panel-alertas');
+        expect(panel().getAttribute('aria-labelledby')).toBe('feed-secretaria-tab-alertas');
+
+        cmp.setFeedTab('actividad');
+        dom.detectChanges();
+        expect(panel().id).toBe('feed-secretaria-panel-actividad');
+      });
+
+      it('el aviso del caso B de alertas solo aparece con la pestaña "Alertas"', () => {
+        const { cmp, dom, host } = montar({ data: DATOS });
+        alertas.refreshFailed.set(true);
+        dom.detectChanges();
+        const aviso = () => host.querySelector('[data-llm-action="reintentar-alertas-secretaria"]');
+
+        expect(aviso()).not.toBeNull();
+        cmp.setFeedTab('actividad');
+        dom.detectChanges();
+        expect(aviso()).toBeNull();
+      });
+
+      it('setFeedTab ignora ids desconocidos', () => {
+        const { cmp } = montar({ data: DATOS });
+        cmp.setFeedTab('otra');
+        expect(cmp.feedTab()).toBe('alertas');
+      });
     });
 
     it('con la carga bien no hay aviso ni estado de error', () => {

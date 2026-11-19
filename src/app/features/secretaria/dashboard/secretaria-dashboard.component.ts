@@ -6,6 +6,7 @@ import {
   effect,
   ElementRef,
   inject,
+  signal,
   untracked,
   viewChild,
 } from '@angular/core';
@@ -19,6 +20,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { LiveClassesPanelComponent } from '@shared/components/live-classes-panel/live-classes-panel.component';
+import { TabsComponent, type TabOption } from '@shared/components/tabs/tabs.component';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -57,6 +59,7 @@ import {
     SectionHeroComponent,
     EmptyStateComponent,
     LiveClassesPanelComponent,
+    TabsComponent,
   ],
   styles: `
     .custom-scrollbar::-webkit-scrollbar {
@@ -162,110 +165,35 @@ import {
           }
         </app-live-classes-panel>
 
-        <!-- Actividad reciente -->
+        <!-- Alertas y Actividad reciente: una celda a las dos filas, con pestañas (fix-255-b).
+             Apiladas, cada una quedaba en una fila de ~179 px y su lista en 15 px a 1280x800. -->
         <div
           class="bento-wide bento-card bento-fill flex flex-col w-full h-full overflow-hidden"
+          data-row-span-md="2"
+          data-row-span="2"
+          data-llm-description="alertas y actividad reciente"
           appCardHover
           [appScrollReveal]="{ delay: 0.1 }"
         >
-          <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center gap-2">
-              <app-icon name="activity" [size]="16" class="text-brand" />
-              <h2 class="m-0 font-semibold text-text-primary">Actividad reciente</h2>
+          <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 shrink-0">
+            <h2 class="sr-only">Alertas importantes y actividad reciente</h2>
+            <!-- Envoltura a la medida de las pestañas: app-tabs ocupa el 100% del ancho y
+                 empujaría el aviso del caso B a otra línea -->
+            <div class="min-w-0 max-w-full">
+              <app-tabs
+                variant="segmented"
+                ariaLabel="Alertas y actividad"
+                idPrefix="feed-secretaria"
+                [tabs]="feedTabs()"
+                [activeId]="feedTab()"
+                (activeIdChange)="setFeedTab($event)"
+              />
             </div>
-          </div>
-
-          @if (loading()) {
-            <ul class="m-0 p-0 list-none flex flex-col gap-1 overflow-hidden">
-              @for (i of [1, 2, 3, 4]; track i) {
-                <li
-                  class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle animate-pulse"
-                >
-                  <div class="shrink-0 w-8 h-8 rounded-full bg-border-subtle"></div>
-                  <div class="flex-1 min-w-0 flex flex-col gap-2 py-1">
-                    <div class="h-3.5 bg-border-subtle rounded w-2/3"></div>
-                    <div class="h-2.5 bg-border-subtle rounded w-1/3"></div>
-                  </div>
-                </li>
-              }
-            </ul>
-          } @else {
-            <div class="scroll-fade flex-1 min-h-0">
-              <ul
-                class="m-0 p-0 list-none flex flex-col gap-1 h-full overflow-y-auto custom-scrollbar pr-2"
-                tabindex="0"
-                aria-label="Actividad reciente"
-              >
-                @for (item of visibleActivities(); track item.id; let i = $index) {
-                  <li
-                    class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
-                    [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
-                  >
-                    <div
-                      class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
-                      [style.background]="item.iconBg"
-                      [style.color]="item.iconColor"
-                    >
-                      <app-icon [name]="item.icon" [size]="14" />
-                    </div>
-                    <div class="flex-1 min-w-0">
-                      <p
-                        class="m-0 text-sm font-medium text-text-primary truncate"
-                        [pTooltip]="item.title"
-                        tooltipPosition="top"
-                      >
-                        {{ item.title }}
-                      </p>
-                      <p
-                        class="m-0 text-xs text-text-muted truncate"
-                        [pTooltip]="item.description"
-                        tooltipPosition="bottom"
-                      >
-                        {{ item.description }}
-                      </p>
-                    </div>
-                    <span class="shrink-0 text-xs text-text-muted self-center">{{
-                      item.time
-                    }}</span>
-                  </li>
-                } @empty {
-                  <li class="flex-1 flex flex-col justify-center py-6">
-                    <app-empty-state
-                      icon="activity"
-                      message="Sin actividad reciente"
-                      subtitle="Aún no hay registros en la escuela."
-                    />
-                  </li>
-                }
-              </ul>
-            </div>
-            <!-- Footer fijo: siempre visible, fuera del área scrolleable -->
-            <div class="pt-2 mt-1 border-t border-border-subtle shrink-0">
-              <button
-                class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
-                (click)="openRecentActivity()"
-                data-llm-action="view-all-activity"
-              >
-                Ver toda la actividad
-              </button>
-            </div>
-          }
-        </div>
-
-        <!-- Alertas Importantes -->
-        <div
-          class="bento-wide bento-card bento-fill flex flex-col w-full h-full overflow-hidden"
-          appCardHover
-          [appScrollReveal]="{ delay: 0.2 }"
-        >
-          <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-4 shrink-0">
-            <div class="flex items-center gap-2 shrink-0">
-              <app-icon name="bell" [size]="16" class="text-warning" />
-              <h2 class="m-0 font-semibold text-text-primary">Alertas Importantes</h2>
-            </div>
-            <!-- Caso B: en la cabecera y a su misma altura, porque esta celda es baja y cualquier
-                 aviso encima de la lista la deja sin alto -->
-            @if (!loading() && alertsRefreshFailed() && alerts().length) {
+            <!-- Caso B: en la cabecera y a su misma altura, para no quitarle alto a la lista
+                 (hotfix-190-b). Solo con la pestaña de alertas: el aviso habla de ellas. -->
+            @if (
+              feedTab() === 'alertas' && !loading() && alertsRefreshFailed() && alerts().length
+            ) {
               <div class="flex items-center gap-1.5 min-w-0" role="alert">
                 <span class="sr-only">No se pudieron actualizar las alertas.</span>
                 <app-icon name="triangle-alert" [size]="14" class="text-warning shrink-0" />
@@ -292,100 +220,192 @@ import {
             }
           </div>
 
-          @if (loading() || (alertsLoading() && !alerts().length)) {
-            <ul class="m-0 p-0 list-none flex flex-col gap-1 overflow-hidden">
-              @for (i of [1, 2, 3]; track i) {
-                <li
-                  class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle animate-pulse"
-                >
-                  <div class="shrink-0 w-8 h-8 rounded-full bg-border-subtle"></div>
-                  <div class="flex-1 min-w-0 flex flex-col gap-2 py-1">
-                    <div class="h-3.5 bg-border-subtle rounded w-2/3"></div>
-                    <div class="h-2.5 bg-border-subtle rounded w-1/3"></div>
-                  </div>
-                </li>
-              }
-            </ul>
-          } @else {
-            @if (!alertsRefreshFailed() && alertsProblem() && alerts().length) {
-              <p class="m-0 mb-2 text-xs text-text-muted shrink-0" role="status">
-                {{ alertsProblem() }} Puede faltar alguna.
-              </p>
-            }
-            <div class="scroll-fade flex-1 min-h-0">
-              <ul
-                class="m-0 p-0 list-none flex flex-col gap-1 h-full overflow-y-auto custom-scrollbar pr-2"
-                tabindex="0"
-                aria-label="Alertas importantes"
-              >
-                @for (alert of visibleAlerts(); track alert.id; let i = $index) {
-                  <li
-                    class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
-                    [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
+          @if (feedTab() === 'actividad') {
+            <div
+              role="tabpanel"
+              id="feed-secretaria-panel-actividad"
+              aria-labelledby="feed-secretaria-tab-actividad"
+              class="flex flex-col flex-1 min-h-0"
+            >
+              @if (loading()) {
+                <ul class="m-0 p-0 list-none flex flex-col gap-1 overflow-hidden">
+                  @for (i of [1, 2, 3, 4]; track i) {
+                    <li
+                      class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle animate-pulse"
+                    >
+                      <div class="shrink-0 w-8 h-8 rounded-full bg-border-subtle"></div>
+                      <div class="flex-1 min-w-0 flex flex-col gap-2 py-1">
+                        <div class="h-3.5 bg-border-subtle rounded w-2/3"></div>
+                        <div class="h-2.5 bg-border-subtle rounded w-1/3"></div>
+                      </div>
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <div class="scroll-fade flex-1 min-h-0">
+                  <ul
+                    class="m-0 p-0 list-none flex flex-col gap-1 h-full overflow-y-auto custom-scrollbar pr-2"
+                    tabindex="0"
+                    aria-label="Actividad reciente"
                   >
-                    <div
-                      class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
-                      [style.background]="getAlertBg(alert.severity)"
-                      [style.color]="getAlertColor(alert.severity)"
-                    >
-                      <app-icon [name]="getAlertIcon(alert.severity)" [size]="14" />
-                    </div>
-                    <div class="flex-1 min-w-0">
-                      <p
-                        class="m-0 text-sm font-medium text-text-primary truncate"
-                        [pTooltip]="alert.title"
-                        tooltipPosition="top"
+                    @for (item of visibleActivities(); track item.id; let i = $index) {
+                      <li
+                        class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
+                        [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
                       >
-                        {{ alert.title }}
-                      </p>
-                      <p
-                        class="m-0 text-xs text-text-muted truncate"
-                        [pTooltip]="alert.description"
-                        tooltipPosition="bottom"
-                      >
-                        {{ alert.description }}
-                      </p>
-                    </div>
-                    <button
-                      aria-label="Descartar"
-                      class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-none bg-transparent cursor-pointer text-text-muted hover:bg-subtle hover:text-text-primary transition-colors self-center"
-                      (click)="dashboardAlertsFacade.dismissAlert(alert.id)"
-                      pTooltip="Descartar"
-                    >
-                      <app-icon name="x" [size]="12" />
-                    </button>
-                  </li>
-                } @empty {
-                  <li class="flex-1 flex flex-col justify-center py-6">
-                    @if (alertsProblem(); as problem) {
-                      <app-empty-state
-                        icon="triangle-alert"
-                        [message]="problem"
-                        subtitle="No significa que no haya alertas. Vuelve a intentarlo."
-                        actionLabel="Reintentar"
-                        actionIcon="refresh-cw"
-                        (action)="retryAlerts()"
-                      />
-                    } @else {
-                      <app-empty-state
-                        icon="bell"
-                        message="Todo en orden"
-                        subtitle="No hay alertas importantes por revisar."
-                      />
+                        <div
+                          class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
+                          [style.background]="item.iconBg"
+                          [style.color]="item.iconColor"
+                        >
+                          <app-icon [name]="item.icon" [size]="14" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <p
+                            class="m-0 text-sm font-medium text-text-primary truncate"
+                            [pTooltip]="item.title"
+                            tooltipPosition="top"
+                          >
+                            {{ item.title }}
+                          </p>
+                          <p
+                            class="m-0 text-xs text-text-muted truncate"
+                            [pTooltip]="item.description"
+                            tooltipPosition="bottom"
+                          >
+                            {{ item.description }}
+                          </p>
+                        </div>
+                        <span class="shrink-0 text-xs text-text-muted self-center">{{
+                          item.time
+                        }}</span>
+                      </li>
+                    } @empty {
+                      <li class="flex-1 flex flex-col justify-center py-6">
+                        <app-empty-state
+                          icon="activity"
+                          message="Sin actividad reciente"
+                          subtitle="Aún no hay registros en la escuela."
+                        />
+                      </li>
                     }
-                  </li>
-                }
-              </ul>
+                  </ul>
+                </div>
+                <!-- Footer fijo: siempre visible, fuera del área scrolleable -->
+                <div class="pt-2 mt-1 border-t border-border-subtle shrink-0">
+                  <button
+                    class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
+                    (click)="openRecentActivity()"
+                    data-llm-action="view-all-activity"
+                  >
+                    Ver toda la actividad
+                  </button>
+                </div>
+              }
             </div>
-            <!-- Footer fijo: siempre visible, fuera del área scrolleable -->
-            <div class="pt-2 mt-1 border-t border-border-subtle shrink-0">
-              <button
-                class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
-                (click)="openAlerts()"
-                data-llm-action="view-all-alerts"
-              >
-                Ver todas las alertas
-              </button>
+          } @else {
+            <div
+              role="tabpanel"
+              id="feed-secretaria-panel-alertas"
+              aria-labelledby="feed-secretaria-tab-alertas"
+              class="flex flex-col flex-1 min-h-0"
+            >
+              @if (loading() || (alertsLoading() && !alerts().length)) {
+                <ul class="m-0 p-0 list-none flex flex-col gap-1 overflow-hidden">
+                  @for (i of [1, 2, 3]; track i) {
+                    <li
+                      class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle animate-pulse"
+                    >
+                      <div class="shrink-0 w-8 h-8 rounded-full bg-border-subtle"></div>
+                      <div class="flex-1 min-w-0 flex flex-col gap-2 py-1">
+                        <div class="h-3.5 bg-border-subtle rounded w-2/3"></div>
+                        <div class="h-2.5 bg-border-subtle rounded w-1/3"></div>
+                      </div>
+                    </li>
+                  }
+                </ul>
+              } @else {
+                @if (!alertsRefreshFailed() && alertsProblem() && alerts().length) {
+                  <p class="m-0 mb-2 text-xs text-text-muted shrink-0" role="status">
+                    {{ alertsProblem() }} Puede faltar alguna.
+                  </p>
+                }
+                <div class="scroll-fade flex-1 min-h-0">
+                  <ul
+                    class="m-0 p-0 list-none flex flex-col gap-1 h-full overflow-y-auto custom-scrollbar pr-2"
+                    tabindex="0"
+                    aria-label="Alertas importantes"
+                  >
+                    @for (alert of visibleAlerts(); track alert.id; let i = $index) {
+                      <li
+                        class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
+                        [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
+                      >
+                        <div
+                          class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
+                          [style.background]="getAlertBg(alert.severity)"
+                          [style.color]="getAlertColor(alert.severity)"
+                        >
+                          <app-icon [name]="getAlertIcon(alert.severity)" [size]="14" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <p
+                            class="m-0 text-sm font-medium text-text-primary truncate"
+                            [pTooltip]="alert.title"
+                            tooltipPosition="top"
+                          >
+                            {{ alert.title }}
+                          </p>
+                          <p
+                            class="m-0 text-xs text-text-muted truncate"
+                            [pTooltip]="alert.description"
+                            tooltipPosition="bottom"
+                          >
+                            {{ alert.description }}
+                          </p>
+                        </div>
+                        <button
+                          aria-label="Descartar"
+                          class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-none bg-transparent cursor-pointer text-text-muted hover:bg-subtle hover:text-text-primary transition-colors self-center"
+                          (click)="dashboardAlertsFacade.dismissAlert(alert.id)"
+                          pTooltip="Descartar"
+                        >
+                          <app-icon name="x" [size]="12" />
+                        </button>
+                      </li>
+                    } @empty {
+                      <li class="flex-1 flex flex-col justify-center py-6">
+                        @if (alertsProblem(); as problem) {
+                          <app-empty-state
+                            icon="triangle-alert"
+                            [message]="problem"
+                            subtitle="No significa que no haya alertas. Vuelve a intentarlo."
+                            actionLabel="Reintentar"
+                            actionIcon="refresh-cw"
+                            (action)="retryAlerts()"
+                          />
+                        } @else {
+                          <app-empty-state
+                            icon="bell"
+                            message="Todo en orden"
+                            subtitle="No hay alertas importantes por revisar."
+                          />
+                        }
+                      </li>
+                    }
+                  </ul>
+                </div>
+                <!-- Footer fijo: siempre visible, fuera del área scrolleable -->
+                <div class="pt-2 mt-1 border-t border-border-subtle shrink-0">
+                  <button
+                    class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
+                    (click)="openAlerts()"
+                    data-llm-action="view-all-alerts"
+                  >
+                    Ver todas las alertas
+                  </button>
+                </div>
+              }
             </div>
           }
         </div>
@@ -441,6 +461,27 @@ export class SecretariaDashboardComponent {
   readonly visibleAlerts = computed(() =>
     sliceByBudget(this.alerts(), this.isDesktopTier() ? null : 3),
   );
+
+  // ── Alertas y Actividad comparten una celda alta, con pestañas (fix-255-b) ──
+  private readonly _feedTab = signal<'alertas' | 'actividad'>('alertas');
+  readonly feedTab = this._feedTab.asReadonly();
+  /** El número de alertas se muestra solo cuando ya cargaron: mientras cargan no hay un total real. */
+  readonly feedTabs = computed((): TabOption[] => {
+    const alertsReady = !this.loading() && !this.alertsLoading();
+    return [
+      {
+        id: 'alertas',
+        label: 'Alertas',
+        icon: 'bell',
+        count: alertsReady ? this.alerts().length : null,
+      },
+      { id: 'actividad', label: 'Actividad', icon: 'activity' },
+    ];
+  });
+
+  setFeedTab(id: string): void {
+    if (id === 'alertas' || id === 'actividad') this._feedTab.set(id);
+  }
 
   readonly heroSectionTitle = computed(
     () => `¡Bienvenido, ${this.hero()?.userName ?? this.authFacade.currentUser()?.name ?? ''}!`,
