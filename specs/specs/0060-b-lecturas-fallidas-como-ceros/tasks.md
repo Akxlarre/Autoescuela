@@ -438,9 +438,12 @@ Las tareas T1.x a T4.x migran un facade y sus pantallas. Todas cumplen esto, ade
       misma altura de 24px, con "Sin actualizar" y un botón de ícono con nombre accesible
       "Reintentar". Medido con la corrección: 91-92px con y sin aviso a 1440x900, claro y oscuro; 15px
       con y sin aviso a 1280x800; a 375x812 las 3 alertas se ven completas; "Reintentar" recupera.
-    - **Hallazgo 3, previo y sin corregir.** A 1280x800 la lista de alertas mide 15px **sin ningún
+    - **Hallazgo 3, previo.** A 1280x800 la lista de alertas mide 15px **sin ningún
       aviso**, y a 1440x900 solo muestra una alerta completa: la celda es baja por el reparto de
-      filas del dashboard, no por la falla de lectura.
+      filas del dashboard, no por la falla de lectura. **Corregido en fix-255-b:** Alertas y
+      Actividad comparten una celda a las dos filas, con pestañas. Lista: 223px (3 filas completas)
+      a 1280x800 y 375px (6) a 1440x900, en claro y oscuro; con el aviso del caso B, 195px (3) y
+      375px (6).
     - **Hallazgo 2, menor.** El aviso de 126px deja poca lista en pagos (admin 310→168px, una fila
       completa y otra cortada; secretaria 381→239px) y en reportes (258→116px por panel). Liquidaciones
       (488→346px) y anticipos (458→316px) quedan cómodas. No corregido.
