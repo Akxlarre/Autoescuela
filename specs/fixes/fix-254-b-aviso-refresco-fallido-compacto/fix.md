@@ -1,7 +1,8 @@
 # Fix: Aviso de refresco fallido (caso B) compacto en pagos y reportes
 > id: fix-254-b-aviso-refresco-fallido-compacto
 > refs: 0060-b-lecturas-fallidas-como-ceros (alturas medidas en la validación T1.6)
-> status: in_progress
+> status: done
+> closed: 2026-11-19
 > created: 2026-11-19
 
 ## Root Cause
@@ -42,7 +43,7 @@ Ninguno de 0060-b cambia: el aviso sigue dentro de `.bento-fill`, primer hijo `s
   `reportes-contables-content` en verde con `npx vitest run`; `npm run lint:arch:strict` con 0 errores.
 - [x] AC-3 admin-pagos (1440x900, claro y oscuro; `rest.fetch` parcheado solo en la pestaña, con escrituras bloqueadas): el aviso mide 57 px (69 px con su envoltorio). La lista pasa de 310 px sin aviso a 241 px con él; antes quedaba en 168 px. No hay scroll de página. Con el botón en `py-2`: sin él, el aviso medía 65 px.
 - [x] AC-3 reportes (admin, 1440x900, claro y oscuro, mismo método): el aviso mide 57 px. Cada panel pasa de 258 px sin aviso a 189 px con él; antes quedaba en 116 px. No hay scroll de página.
-- [ ] AC-3 secretaria-pagos: pendiente de una sesión de secretaria (la ruta tiene guard de rol). El bloque es idéntico al de admin, así que se espera 381 → ~312 px.
+- [x] AC-3 secretaria-pagos (sesión de secretaria, 1440x900, claro y oscuro, mismo método): el aviso mide 57 px. La lista pasa de 381 px sin aviso a 312 px con él; antes quedaba en 239 px. Se ven 4 filas. No hay scroll de página.
 - Límite: no hay spec propio del modo `compact` de `app-alert-card`. Los `input()` de signal no se
   compilan en JIT sin el plugin de Angular, el mismo motivo por el que `alert-card.component.spec.ts`
   está excluido en `vitest.config.ts`.
