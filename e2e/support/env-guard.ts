@@ -7,7 +7,7 @@
  */
 
 /** Refs de proyectos Supabase contra los que la suite tiene permitido correr. */
-export const ALLOWED_SUPABASE_REFS = ['skvekggejikzxhzsjmkz'];
+export const ALLOWED_SUPABASE_REFS = ['klcwwrwfdqdciffraozq'];
 
 export function assertDevSupabase(url: string, allowedRefs: readonly string[]): void {
   let host: string;

@@ -160,3 +160,17 @@
   prohibiendo la clase ambigua, no revisando cada uso a ojo.**
 - Guardrail: **ARCH-29** — error duro, sin ratchet. Corre como paso propio de `npm run lint:arch`
   (`scripts/check-theme-name-collisions.mjs`).
+
+## AP-019 — Ref del proyecto Supabase escrito en una URL del código (evitar)
+
+- **NO** escribas `https://<ref>.supabase.co/...` en una edge function ni en un componente o
+  Facade para apuntar a un archivo de Storage.
+- **Sí** arma la URL desde el proyecto en que corre el código: en edge functions,
+  `publicStorageUrl(bucket, path)` de `supabase/functions/_shared/storage-urls.ts` (lee
+  `SUPABASE_URL`); en el front, `storage.from(bucket).getPublicUrl(path)` dentro del Facade.
+- El único lugar donde el ref va escrito es `src/environments/*.ts` (y los guards de e2e, que
+  justamente existen para comparar contra él).
+- **Por qué:** un ref fijo funciona igual hasta el día en que se cambia de proyecto (traspaso de
+  cuenta, proyecto de staging); ahí los PDFs y la web siguen pidiendo archivos al proyecto viejo,
+  sin error visible mientras ese proyecto exista. Criterio general: **una dirección que depende del
+  entorno se deriva del entorno, no se copia en cada uso.**

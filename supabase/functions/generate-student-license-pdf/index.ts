@@ -1,3 +1,4 @@
+import { SCHOOL_LOGO_URL } from '../_shared/storage-urls.ts';
 // supabase/functions/generate-student-license-pdf/index.ts
 // @ts-nocheck
 
@@ -30,7 +31,7 @@ const SCHOOL = {
 };
 
 const LOGO_URL =
-  'https://skvekggejikzxhzsjmkz.supabase.co/storage/v1/object/public/assets/chillan_capacita.png';
+  SCHOOL_LOGO_URL();
 
 const WEB_URLS = [
   '*https://www.educacionvial.cl/examen-interactivo.html',

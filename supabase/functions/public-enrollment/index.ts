@@ -1,3 +1,4 @@
+import { SCHOOL_LOGO_URL } from '../_shared/storage-urls.ts';
 import {
   chileToday,
   formatChileDate,
@@ -49,7 +50,7 @@ import {
 // generate-certificate-professional-pdf / generate-student-license-pdf — bucket público `assets`
 // de Storage, no un archivo del repo.
 const LOGO_URL =
-  'https://skvekggejikzxhzsjmkz.supabase.co/storage/v1/object/public/assets/chillan_capacita.png';
+  SCHOOL_LOGO_URL();
 import {
   RATE_LIMIT_MAX,
   RATE_LIMIT_WINDOW_MS,

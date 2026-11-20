@@ -1,3 +1,4 @@
+import { SCHOOL_LOGO_URL } from '../_shared/storage-urls.ts';
 import { chileParts, chileToday, formatChilePattern } from '../_shared/chile-time.ts';
 // supabase/functions/generate-certificate-professional-pdf/index.ts
 //
@@ -75,7 +76,7 @@ const SAMPLE_STUDENT = {
 };
 
 const LOGO_URL =
-  'https://skvekggejikzxhzsjmkz.supabase.co/storage/v1/object/public/assets/chillan_capacita.png';
+  SCHOOL_LOGO_URL();
 
 // ─── Main ───
 Deno.serve(async (req: Request) => {

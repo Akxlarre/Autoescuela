@@ -23,9 +23,9 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // ── Config (same as environment.development.ts) ──
-const SUPABASE_URL = 'https://skvekggejikzxhzsjmkz.supabase.co';
+const SUPABASE_URL = 'https://klcwwrwfdqdciffraozq.supabase.co';
 const ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNrdmVrZ2dlamlrenhoenNqbWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAyMjI1NDAsImV4cCI6MjA4NTc5ODU0MH0.YW_6cgyTorOmhhTzhp10N6isHSdlyxMritz25Q4qGw4';
+  'sb_publishable_DKH5Cv3N09Sc9rXzebLZSQ_VWNaTE4D';
 
 const TEST_RUT = '99.999.999-9';
 const TEST_BRANCH_ID = 1;
