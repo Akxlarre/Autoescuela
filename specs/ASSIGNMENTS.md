@@ -24,6 +24,9 @@
 | ASG-i-063 | Cerrar una matrícula y reiniciar el curso (Clase B) | `cualquiera` | spec | P1 | i | **Decisión de negocio primero.** Cerrar con motivo; deuda: perdonar o mantener; ¿también la secretaria? (el admin es el dueño y no siempre está) |
 | ASG-i-067 | Alumno de otra sede y traslado de sede (Clase B) | `cualquiera` | spec | P2 | i | **Pospuesta (2026-10-24).** B3-1 de `fix-058-i`: reusar la ficha de un alumno de otra sede (búsqueda por RPC) y elegir cómo trasladar una matrícula en curso. ⚠️ Solapa con ASG-i-063 |
 | ASG-b-100 | QA visual del portal del Instructor cuando se levante la fase piloto | `cualquiera` | fix | P2 | b | Bloqueada hasta que se levante la fase. `ASG-i-012` dejó este portal fuera de alcance. Incluye cerrar AC1b de `fix-169-b`. ⚠️ `instructor@test.com` tiene 0 alumnos — hay que sembrar datos antes |
+| ASG-b-104 | Lecturas fallidas en la matrícula (presencial y pública) | `i` | spec | P1 | b | Parte de ASG-b-102: T2.1 y T2.2 de `0060-b`, sin track nuevo. `enrollment.facade.ts` va en un PR solo |
+| ASG-b-105 | Lecturas fallidas en Clase Profesional | `m` | spec | P1 | b | Parte de ASG-b-102: fase 4 de `0060-b` y `admin-pre-inscritos`. Casi todas las pantallas están ocultas en el piloto: probarlas desbloqueando en local |
+| ASG-b-106 | Lecturas fallidas en ficha del alumno, servicios, certificados B y cierre de 0060-b | `b` | spec | P1 | b | Parte de ASG-b-102: T2.3 a T2.5 y la fase 5. El cierre espera a ASG-b-104 y ASG-b-105 |
 
 ### Tanda testing profundo del piloto por módulo — 2026-09-29
 
