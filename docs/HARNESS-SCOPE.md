@@ -67,6 +67,7 @@ nueva, se clasifica en el mismo cambio.
 | `AP-016` | mixto | El criterio de rol es genérico; la lista de organismos es de este proyecto |
 | `AP-017` | boilerplate | Spacing sin verificar el `display` |
 | `AP-018` | boilerplate | Color del `@theme` con nombre de tamaño |
+| `AP-019` | mixto | Derivar la URL del entorno es genérico; el helper citado (`_shared/storage-urls.ts`) es de este proyecto |
 
 ## Skills (`.claude/skills/`)
 
