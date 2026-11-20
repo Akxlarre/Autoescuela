@@ -81,6 +81,17 @@ describe('WebsiteConfigFacade', () => {
     social: { facebook: 'fb', instagram: 'ig' },
   };
 
+  // fix-503-m: storage falso que arma la URL pública como lo hace supabase-js.
+  const fakeStorage = {
+    from: (bucket: string) => ({
+      getPublicUrl: (path: string) => ({
+        data: {
+          publicUrl: `https://nuevo-ref.supabase.co/storage/v1/object/public/${bucket}/${path}`,
+        },
+      }),
+    }),
+  };
+
   beforeEach(() => {
     supabaseSpy = { client: {} };
     toastSpy = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
@@ -136,7 +147,10 @@ describe('WebsiteConfigFacade', () => {
       const maybeSingleSpy = vi.fn().mockResolvedValue({ data: null, error: null });
       const eqSpy = vi.fn().mockReturnValue({ maybeSingle: maybeSingleSpy });
       const selectSpy = vi.fn().mockReturnValue({ eq: eqSpy });
-      supabaseSpy.client = { from: vi.fn().mockReturnValue({ select: selectSpy }) };
+      supabaseSpy.client = {
+        from: vi.fn().mockReturnValue({ select: selectSpy }),
+        storage: fakeStorage,
+      };
 
       await facade.loadConfig(2);
 
@@ -146,6 +160,25 @@ describe('WebsiteConfigFacade', () => {
       expect(loaded?.courses).toEqual([]);
     });
 
+    it('fix-503-m: el logo por defecto sale del proyecto configurado, no de un ref fijo', async () => {
+      const maybeSingleSpy = vi.fn().mockResolvedValue({ data: null, error: null });
+      const eqSpy = vi.fn().mockReturnValue({ maybeSingle: maybeSingleSpy });
+      const selectSpy = vi.fn().mockReturnValue({ eq: eqSpy });
+      supabaseSpy.client = {
+        from: vi.fn().mockReturnValue({ select: selectSpy }),
+        storage: fakeStorage,
+      };
+
+      await facade.loadConfig(1);
+
+      expect(facade.config()?.brand.logo).toBe(
+        'https://nuevo-ref.supabase.co/storage/v1/object/public/website-public/seeds/azul-logo.svg',
+      );
+      expect(facade.seedAssetUrl('roja-og-image.jpg')).toBe(
+        'https://nuevo-ref.supabase.co/storage/v1/object/public/website-public/seeds/roja-og-image.jpg',
+      );
+    });
+
     it.each([
       [1, 'roja'],
       [2, 'azul'],
@@ -153,7 +186,10 @@ describe('WebsiteConfigFacade', () => {
       const maybeSingleSpy = vi.fn().mockResolvedValue({ data: null, error: null });
       const eqSpy = vi.fn().mockReturnValue({ maybeSingle: maybeSingleSpy });
       const selectSpy = vi.fn().mockReturnValue({ eq: eqSpy });
-      supabaseSpy.client = { from: vi.fn().mockReturnValue({ select: selectSpy }) };
+      supabaseSpy.client = {
+        from: vi.fn().mockReturnValue({ select: selectSpy }),
+        storage: fakeStorage,
+      };
 
       await facade.loadConfig(branchId);
 

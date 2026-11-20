@@ -1,3 +1,4 @@
+import { SCHOOL_LOGO_URL } from '../_shared/storage-urls.ts';
 import { addDaysIso, formatChilePattern, mondayOfIso } from '../_shared/chile-time.ts';
 // supabase/functions/generate-class-book-pdf/index.ts
 //
@@ -3122,7 +3123,7 @@ async function buildClassBookPdf(d: ClassBookData): Promise<Uint8Array> {
 
   // Logo desde Supabase Storage (bucket public "assets")
   const logo = await loadPngForPdf(
-    'https://skvekggejikzxhzsjmkz.supabase.co/storage/v1/object/public/assets/chillan_capacita.png',
+    SCHOOL_LOGO_URL(),
   );
   const logoH = 68;
   const logoW = logo ? Math.round((logo.width / logo.height) * logoH) : 0;

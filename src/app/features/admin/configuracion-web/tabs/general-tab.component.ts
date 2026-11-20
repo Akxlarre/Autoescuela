@@ -11,9 +11,6 @@ const TEMA_OPTIONS = [
   { value: 'roja', label: 'Roja (Red/Orange)' },
 ];
 
-const CDN_URL =
-  'https://skvekggejikzxhzsjmkz.supabase.co/storage/v1/object/public/website-public/seeds';
-
 @Component({
   selector: 'app-general-tab',
   standalone: true,
@@ -298,15 +295,17 @@ export class GeneralTabComponent {
   }
 
   protected clearLogo(): void {
-    const defaultLogo =
-      this.branchId() === 2 ? `${CDN_URL}/roja-logo.svg` : `${CDN_URL}/azul-logo.svg`;
+    const defaultLogo = this.facade.seedAssetUrl(
+      this.branchId() === 2 ? 'roja-logo.svg' : 'azul-logo.svg',
+    );
     this.brandGroup().get('logo')?.setValue(defaultLogo);
     this.brandGroup().markAsDirty();
   }
 
   protected clearOg(): void {
-    const defaultOg =
-      this.branchId() === 2 ? `${CDN_URL}/roja-og-image.jpg` : `${CDN_URL}/azul-og-image.jpg`;
+    const defaultOg = this.facade.seedAssetUrl(
+      this.branchId() === 2 ? 'roja-og-image.jpg' : 'azul-og-image.jpg',
+    );
     this.brandGroup().get('ogImage')?.setValue(defaultOg);
     this.brandGroup().markAsDirty();
   }

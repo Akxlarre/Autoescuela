@@ -7,7 +7,7 @@
 import { assert, assertEquals, assertStringIncludes } from 'jsr:@std/assert';
 import { authEmailContent, buildAuthVerifyUrl } from './auth-email.ts';
 
-const SUPABASE_URL = 'https://skvekggejikzxhzsjmkz.supabase.co';
+const SUPABASE_URL = 'https://klcwwrwfdqdciffraozq.supabase.co';
 const PLATFORM = 'cuentas@gestordeautoescuelas.cl';
 
 const RECOVERY = {

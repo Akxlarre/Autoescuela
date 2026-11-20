@@ -279,9 +279,18 @@ export class WebsiteConfigFacade {
     };
   }
 
+  /**
+   * URL pública de una imagen por defecto de la web (`website-public/seeds/<archivo>`).
+   * fix-503-m: sale del proyecto de Supabase configurado; con el ref escrito a mano, un
+   * traspaso de proyecto dejaba los logos por defecto apuntando al proyecto viejo.
+   */
+  seedAssetUrl(fileName: string): string {
+    return this.supabase.client.storage.from('website-public').getPublicUrl(`seeds/${fileName}`)
+      .data.publicUrl;
+  }
+
   private getDefaultBrandConfig(branchId: number, isRoja: boolean) {
-    const cdnUrl =
-      'https://skvekggejikzxhzsjmkz.supabase.co/storage/v1/object/public/website-public/seeds';
+    const seed = (fileName: string) => this.seedAssetUrl(fileName);
     return {
       name: isRoja ? 'Conductores Chillán' : 'Autoescuela Chillán',
       shortName: isRoja ? 'Conductores' : 'Autoescuela',
@@ -292,8 +301,8 @@ export class WebsiteConfigFacade {
       // significa "es Conductores" (sede 2) por herencia de nombres; no sirve para el tema.
       theme: branchIdToTheme(branchId),
       domain: isRoja ? 'conductoreschillan.cl' : 'autoescuelachillan.cl',
-      logo: isRoja ? `${cdnUrl}/roja-logo.svg` : `${cdnUrl}/azul-logo.svg`,
-      ogImage: isRoja ? `${cdnUrl}/roja-og-image.jpg` : `${cdnUrl}/azul-og-image.jpg`,
+      logo: seed(isRoja ? 'roja-logo.svg' : 'azul-logo.svg'),
+      ogImage: seed(isRoja ? 'roja-og-image.jpg' : 'azul-og-image.jpg'),
       favicon: '',
       branchId: branchId,
     };

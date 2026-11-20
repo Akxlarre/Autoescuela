@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { assertDevSupabase } from './env-guard';
 
 describe('assertDevSupabase', () => {
-  const allowed = ['skvekggejikzxhzsjmkz'];
+  const allowed = ['klcwwrwfdqdciffraozq'];
 
   it('acepta la URL del proyecto de desarrollo', () => {
     expect(() =>
-      assertDevSupabase('https://skvekggejikzxhzsjmkz.supabase.co', allowed),
+      assertDevSupabase('https://klcwwrwfdqdciffraozq.supabase.co', allowed),
     ).not.toThrow();
   });
 
@@ -16,7 +16,7 @@ describe('assertDevSupabase', () => {
   });
 
   it('rechaza un dominio que solo contiene el ref como prefijo', () => {
-    expect(() => assertDevSupabase('https://skvekggejikzxhzsjmkz.evil.com', allowed)).toThrow();
+    expect(() => assertDevSupabase('https://klcwwrwfdqdciffraozq.evil.com', allowed)).toThrow();
   });
 
   it('rechaza una URL malformada', () => {
@@ -24,6 +24,6 @@ describe('assertDevSupabase', () => {
   });
 
   it('rechaza todo si la lista de permitidos está vacía', () => {
-    expect(() => assertDevSupabase('https://skvekggejikzxhzsjmkz.supabase.co', [])).toThrow();
+    expect(() => assertDevSupabase('https://klcwwrwfdqdciffraozq.supabase.co', [])).toThrow();
   });
 });

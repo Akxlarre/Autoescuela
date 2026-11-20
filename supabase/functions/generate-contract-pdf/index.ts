@@ -1,3 +1,4 @@
+import { SCHOOL_LOGO_URL } from '../_shared/storage-urls.ts';
 import { chileYear } from '../_shared/chile-time.ts';
 // supabase/functions/generate-contract-pdf/index.ts
 //
@@ -38,7 +39,7 @@ import { loadPngForPdf } from '../_shared/pdf-utils.ts';
 // Mismo logo que generate-certificate-b-pdf / generate-certificate-professional-pdf /
 // generate-student-license-pdf — bucket público `assets` de Storage, no un archivo del repo.
 const LOGO_URL =
-  'https://skvekggejikzxhzsjmkz.supabase.co/storage/v1/object/public/assets/chillan_capacita.png';
+  SCHOOL_LOGO_URL();
 
 // ─── CORS headers ───
 
