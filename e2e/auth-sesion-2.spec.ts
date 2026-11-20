@@ -6,7 +6,7 @@
  */
 import type { Page } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
-import { environment } from '../src/environments/environment';
+import { environment } from '../src/environments/environment.development';
 import { ACCOUNTS } from './support/accounts';
 import { getAdminClient } from './support/supabase-admin';
 import { expect, test } from './support/fixtures';

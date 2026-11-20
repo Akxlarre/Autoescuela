@@ -5,7 +5,7 @@
  * (la misma de la app), así que la RLS aplica igual que en la UI: nunca clave de servicio.
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { environment } from '../../src/environments/environment';
+import { environment } from '../../src/environments/environment.development';
 import { ACCOUNTS } from './accounts';
 
 let client: Promise<SupabaseClient> | null = null;

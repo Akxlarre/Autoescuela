@@ -9,7 +9,7 @@
 import type { Page } from '@playwright/test';
 import { ACCOUNTS } from './support/accounts';
 import { getAdminClient, getClientFor } from './support/supabase-admin';
-import { environment } from '../src/environments/environment';
+import { environment } from '../src/environments/environment.development';
 import { expect, test } from './support/fixtures';
 
 test.describe.configure({ timeout: 120_000 });

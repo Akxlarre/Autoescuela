@@ -16,7 +16,7 @@
  */
 import type { Page } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
-import { environment } from '../src/environments/environment';
+import { environment } from '../src/environments/environment.development';
 import { ACCOUNTS, storageStatePath } from './support/accounts';
 import { expect, test, watchErrors } from './support/fixtures';
 
