@@ -64,7 +64,7 @@ supabase/.branches/
 # Secrets generados localmente por `supabase start` — nunca commitear (GitHub push protection)
 supabase/.temp/start-secrets/
 
-environments/
+src/environments/environment.development.ts
 docs/2020libros-curso-profesional.pdf
 docs/2020libros-curso-profesional.xlsx
 docs/2TESTPSICOLOGICO.doc
