@@ -121,6 +121,16 @@ La lógica vive en `scripts/lib/deploy-manifest.js`, con su test en
 | Secret `FTP_USERNAME`        | cuenta FTP dedicada, **enjaulada en el docroot del subdominio**                                                                                                                  |
 | Secret `FTP_PASSWORD`        | contraseña de esa cuenta                                                                                                                                                         |
 | Variable `APP_DOMAIN`        | dominio sin `https://` (hoy `app.gestordeautoescuelas.cl`)                                                                                                                       |
+| Secret `SUPABASE_DB_URL`     | URL del **Session pooler** de la BD de producción, con su contraseña (Supabase → proyecto PROD → Connect → Direct → Session pooler)                                              |
+| Secret `SUPABASE_ACCESS_TOKEN` | token de acceso de Supabase con alcance **solo** a la organización de producción ("Gestor de Autoescuelas"), sin vencimiento corto                                             |
+| Variable `SUPABASE_PROJECT_REF` | ref del proyecto de producción (hoy `vbbzcfrilnolrhcwjabr`)                                                                                                                   |
+
+**Backend de Supabase al publicar (fix-507-m).** Después de la aprobación y antes de subir el front,
+el job aplica en producción las migraciones pendientes (`supabase db push`, el resumen del run
+muestra cuáles) y despliega todas las functions. Si algo falla ahí, el front no se sube. Un rollback
+no toca la BD ni las functions: solo vuelve a subir el front de esa versión. Por eso una migración
+debe ser compatible con el front anterior mientras dure la publicación (agregar columnas, no
+renombrarlas ni borrarlas en el mismo paso).
 
 Los secrets van **en el environment**, no como _Repository secrets_: así solo los lee el job que
 pasó la aprobación.
