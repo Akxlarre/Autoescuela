@@ -49,7 +49,7 @@
 | Arquetipo | Cuándo | Referencia | Regla | Guard |
 |---|---|---|---|---|
 | Edge function con guard y test | Función que lee o escribe datos en nombre de un usuario | `supabase/functions/export-special-services/index.ts` | `testing-tdd.md` §Las capas de test | ARCH-36 |
-| Regla de negocio en la base, con su test | Candado o permiso que la app no debe poder saltarse | `supabase/migrations/20261016150000_fix445_egresos_caja_cerrada.sql` y `supabase/tests/caja/fix-445-m-egresos-caja-cerrada.sql` | `database.md`, `testing-tdd.md` §Tests SQL | ARCH-37 |
+| Regla de negocio en la base, con su test | Candado o permiso que la app no debe poder saltarse | `supabase/migrations/20261016150001_fix445_egresos_caja_cerrada.sql` y `supabase/tests/caja/fix-445-m-egresos-caja-cerrada.sql` | `database.md`, `testing-tdd.md` §Tests SQL | ARCH-37 |
 
 ## Guardrails
 

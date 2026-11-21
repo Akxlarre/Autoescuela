@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * check-qa-guardrails.mjs — Runner de ARCH-31 a ARCH-42.
+ * check-qa-guardrails.mjs — Runner de ARCH-31 a ARCH-43.
  *
  * Reglas que vigilan lo que architect.js no recorre: el propio harness y las capas de test fuera
  * de src/app. La detección vive en scripts/lib; acá solo se lee el disco.
@@ -17,6 +17,7 @@
  *   ARCH-40  Facade con initialize() sin la bandera o el refresco silencioso de SWR       deuda
  *   ARCH-41  página con .bento-grid sin modificador app-like ni entrada en el registro    error
  *   ARCH-42  regla, antipatrón o skill sin alcance declarado (boilerplate o proyecto)     error
+ *   ARCH-43  dos migraciones con la misma versión (la CLI salta una sin avisar)          error
  *
  * Un "error" falla siempre. Un "trinquete" compara contra la línea base: avisa en modo normal y
  * falla con --strict, que es como corre el CI de pull requests. Una "deuda" es una lista de archivos
@@ -59,6 +60,7 @@ import {
   countVitestExcludedSpecs,
   findStaleGuardExemptions,
   findUnguardedFunctions,
+  findDuplicateMigrationVersions,
   findUntestedPermissionMigrations,
 } from './lib/test-discipline.js';
 import {
@@ -367,6 +369,19 @@ if (fs.existsSync(abs(MIGRATIONS_DIR)) && typeof after === 'string') {
   }
 }
 
+// ══ ARCH-43 — una versión por migración ════════════════════════════════════════════════════
+if (fs.existsSync(abs(MIGRATIONS_DIR))) {
+  const names = fs.readdirSync(abs(MIGRATIONS_DIR)).filter((name) => name.endsWith('.sql'));
+  for (const { version, files } of findDuplicateMigrationVersions(names)) {
+    fail(
+      'ARCH-43',
+      `${MIGRATIONS_DIR}/${version}_*`,
+      `${files.length} migraciones comparten la versión ${version} (${files.join(', ')}). La CLI aplica una, registra la versión y salta las demás creyéndolas aplicadas.`,
+      'Renombra la que va después con otro timestamp (por ejemplo, un segundo más) y actualiza los tests de supabase/tests que nombran la versión vieja.',
+    );
+  }
+}
+
 // ══ ARCH-38 — referencias del catálogo de patrones ═════════════════════════════════════════
 const PATTERNS_INDEX = 'indices/PATTERNS.md';
 const patternsText = read(PATTERNS_INDEX);
@@ -506,11 +521,11 @@ if (UPDATE) {
 }
 
 if (errors > 0) {
-  console.error(red(`\n❌ ARCH-31…42: ${errors} error(es).`));
+  console.error(red(`\n❌ ARCH-31…43: ${errors} error(es).`));
   process.exit(1);
 }
 if (warnings > 0) {
-  console.error(yellow(`\n⚠️  ARCH-31…42: ${warnings} regresión(es) de trinquete. Con --strict son error.`));
+  console.error(yellow(`\n⚠️  ARCH-31…43: ${warnings} regresión(es) de trinquete. Con --strict son error.`));
   process.exit(0);
 }
-console.log(green('✅ ARCH-31…42: harness y capas de test sin regresiones.'));
+console.log(green('✅ ARCH-31…43: harness y capas de test sin regresiones.'));

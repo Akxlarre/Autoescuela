@@ -2,7 +2,7 @@
 -- Prueba de BD — fix-445-m: un gasto no se registra ni se mueve a un día con caja
 -- cerrada; los cambios que no mueven dinero siguen funcionando
 -- ============================================================================
--- Migración: 20261016150000_fix445_egresos_caja_cerrada.sql.
+-- Migración: 20261016150001_fix445_egresos_caja_cerrada.sql.
 -- Los anticipos tenían el mismo candado hasta spec 0012-i (20261119120000): dejaron de ser parte
 -- de la caja. Sus casos están en supabase/tests/caja/0012-i-anticipos-fuera-de-caja.sql.
 -- Los datos de base los crea postgres; las pruebas corren como el rol authenticated suplantando a

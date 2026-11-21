@@ -4,7 +4,7 @@
 -- V1 de specs/fixes/fix-224-b-vehiculo-no-operativo/fix.md. Toma un instructor activo con
 -- vehículo asignado que hoy genera turnos y cambia el estado de ese vehículo DENTRO de un
 -- sub-bloque que siempre aborta (SQLSTATE ZZ001): no deja cambios.
--- Requiere la migración 20261015120000. Correr como postgres.
+-- Requiere la migración 20261015120001. Correr como postgres.
 -- ============================================================================
 
 DROP TABLE IF EXISTS pg_temp.r224;

@@ -14,6 +14,13 @@ paths:
 - Naming: `YYYYMMDDHHMMSS_<dominio>_<tipo>_<descripcion>.sql`
 - **NUNCA** alterar la BD desde el Dashboard de Supabase manualmente
 - Los scripts deben ser idempotentes (`CREATE TABLE IF NOT EXISTS`, etc.)
+- **El timestamp de cada archivo es único.** La CLI identifica una migración solo por esos 14
+  dígitos: si dos archivos lo comparten, aplica uno, registra la versión y salta el otro
+  creyéndolo aplicado, sin avisar. Al crear una migración, revisa que su timestamp no exista ya.
+  Guardrail: **ARCH-43** (`npm run lint:arch`).
+- **Una migración se aplica con la CLI, no pegándola en el SQL Editor** (`npx supabase db push`
+  en desarrollo; en producción, con `--db-url`). El SQL Editor y el MCP no registran la versión
+  del archivo, y la próxima `db push` intenta aplicarla de nuevo o la da por pendiente para siempre.
 
 ## Documentación obligatoria
 

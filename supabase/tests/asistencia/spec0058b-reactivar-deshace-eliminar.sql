@@ -5,7 +5,7 @@
 -- Crea sus propias matrículas y clases, llama a las RPCs como secretaria@test.com (sede 1),
 -- secretaria2@test.com (sede 2), admin@test.com e instructor@test.com, y termina SIEMPRE con
 -- RAISE EXCEPTION: no deja cambios. Correr como postgres, después de aplicar
--- 20261109180000_spec0058b_reactivar_deshace_eliminar.sql.
+-- 20261109235903_spec0058b_reactivar_deshace_eliminar.sql.
 -- ============================================================================
 
 CREATE FUNCTION pg_temp.enr(p_template int) RETURNS int

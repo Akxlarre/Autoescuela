@@ -101,7 +101,7 @@ async function main() {
   result.stderr = `${result.stderr}${agentsMirror.stderr}`;
   result.code = result.code === 0 ? agentsMirror.code : result.code;
 
-  // ARCH-31…42 (el harness, las capas de test fuera de src/app y los patrones de facades y
+  // ARCH-31…43 (el harness, las capas de test fuera de src/app y los patrones de facades y
   // páginas): hooks sin conectar, credenciales versionadas, tests desactivados, edge functions
   // sin guard, migraciones de permisos sin test, guard de orden, SWR y app-like. Solo se le pasa --strict: su --update-qa-baseline no debe activarse
   // desde lint:arch, igual que el --fix del espejo.
