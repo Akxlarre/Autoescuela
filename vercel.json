@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npx ng build --configuration preview",
   "git": {
     "deploymentEnabled": {
       "main": false
