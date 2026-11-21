@@ -9,6 +9,7 @@ import {
   countFixedWaits,
   countUnitSkips,
   countVitestExcludedSpecs,
+  findDuplicateMigrationVersions,
   findStaleGuardExemptions,
   findUnguardedFunctions,
   findUntestedPermissionMigrations,
@@ -137,6 +138,18 @@ check('migración nombrada por un test → no se marca', !untested.includes('202
 check('migración que no cambia permisos → no se marca', !untested.includes('20261203100000_solo_columna.sql'));
 check('migración exenta → no se marca', !untested.includes('20261204100000_exenta.sql'));
 check('solo se marca la que corresponde', untested.length === 1);
+
+// ── findDuplicateMigrationVersions (ARCH-43) ────────────────────────────────────────────────
+const dupes = findDuplicateMigrationVersions([
+  '20261016120000_fix225_aviso.sql',
+  '20261016120000_fix444_candado.sql',
+  '20261016120001_otra.sql',
+  'seed.sql',
+]);
+check('dos archivos con la misma versión → se marcan juntos', dupes.length === 1
+  && dupes[0].version === '20261016120000' && dupes[0].files.length === 2);
+check('versiones distintas por un segundo → no se marcan', !dupes.some((d) => d.version === '20261016120001'));
+check('sin repetidas → lista vacía', findDuplicateMigrationVersions(['20260101000000_a.sql', '20260101000001_b.sql']).length === 0);
 
 if (failures > 0) {
   console.error(`\n${failures} caso(s) fallaron.`);

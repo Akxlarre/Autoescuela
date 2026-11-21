@@ -2047,7 +2047,7 @@
   `UPDATE` (así lo hacen `reschedule_class_b_sessions` y `reciclarSesion()` de la ficha). Para eliminar
   un horario, siempre la RPC; nunca un `update` directo desde un Facade.
 - **Fuente:** `specs/specs/0058-b-reactivar-horario-deshace-eliminar`, migración
-  `20261109180000_spec0058b_reactivar_deshace_eliminar.sql`, test
+  `20261109235903_spec0058b_reactivar_deshace_eliminar.sql`, test
   `supabase/tests/asistencia/spec0058b-reactivar-deshace-eliminar.sql`.
 
 ### DG-123 — Una lectura de supabase-js que falla tampoco lanza: con `data ?? []` la pantalla dice "no hay nada"

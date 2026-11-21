@@ -1,6 +1,6 @@
 -- ============================================================================
 -- Prueba de BD — spec 0010-i (AC7): aviso tras la clase 6 para toda matrícula con deuda
--- Migración: 20261013130000_spec0010i_aviso_clase6_toda_deuda.sql.
+-- Migración: 20261013130001_spec0010i_aviso_clase6_toda_deuda.sql.
 -- Todo corre en un sub-bloque que SIEMPRE aborta (ZZ001): no deja clases, saldos ni avisos.
 -- Correr como postgres en el SQL Editor. Resultado: último SELECT; "❌" = falla.
 -- ============================================================================

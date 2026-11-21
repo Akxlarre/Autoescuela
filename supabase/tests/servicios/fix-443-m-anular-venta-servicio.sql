@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Prueba de BD — fix-443-m: una venta de servicio especial se anula, no se borra
 -- ============================================================================
--- Migración: 20261016130000_fix443_anular_venta_servicio.sql.
+-- Migración: 20261016130001_fix443_anular_venta_servicio.sql.
 -- Corre como el rol authenticated suplantando a admin@test.com y secretaria@test.com (sede 1)
 -- dentro de una transacción que termina en RAISE: no deja cambios. Fecha 2099 (sin cierres).
 --   npx supabase db query --linked -f supabase/tests/servicios/fix-443-m-anular-venta-servicio.sql

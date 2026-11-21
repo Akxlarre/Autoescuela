@@ -2,7 +2,7 @@
 -- Prueba de BD — spec 0010-i: la clase 7+ no se inicia sin el segundo pago
 -- ============================================================================
 -- ACs en specs/specs/0010-i-clase-7-bloqueada-sin-segundo-pago/spec.md.
--- Migración: 20261013120000_spec0010i_bloqueo_clase7_pago_pendiente.sql.
+-- Migración: 20261013120001_spec0010i_bloqueo_clase7_pago_pendiente.sql.
 -- Todo lo que escribe corre en sub-bloques que SIEMPRE abortan (ZZ001): no deja clases cambiadas,
 -- saldos tocados, habilitaciones ni notificaciones. Los resultados se acumulan en v_rows y se
 -- escriben en r0010 al final (una fila escrita dentro de un sub-bloque que aborta se desharía).

@@ -5,7 +5,7 @@
 -- specs/specs/0057-b-disponibilidad-clase-b-por-sede/spec.md. Marca un instructor de la sede 1
 -- con asignación activa (y después su vehículo) como "Ambas" DENTRO de un sub-bloque que siempre
 -- aborta (SQLSTATE ZZ001): no deja cambios. Lee la vista como postgres y como la secretaria de la
--- sede 2 (regla de fix-226-b). Requiere la migración 20261106150000. Correr como postgres.
+-- sede 2 (regla de fix-226-b). Requiere la migración 20261106192321. Correr como postgres.
 -- ============================================================================
 
 DROP TABLE IF EXISTS pg_temp.r0057;

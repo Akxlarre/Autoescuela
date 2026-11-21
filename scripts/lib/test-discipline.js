@@ -101,6 +101,26 @@ export function migrationTimestamp(fileName) {
 }
 
 /**
+ * Versiones de migración que usan dos o más archivos. La CLI de Supabase identifica una migración
+ * solo por su versión (los 14 dígitos): al aplicar una, registra esa versión y salta la otra
+ * creyéndola aplicada, sin avisar.
+ *
+ * @param {string[]} fileNames nombres de archivo de supabase/migrations
+ * @returns {{ version: string, files: string[] }[]}
+ */
+export function findDuplicateMigrationVersions(fileNames) {
+  const byVersion = new Map();
+  for (const name of fileNames) {
+    const version = migrationTimestamp(name);
+    if (!version) continue;
+    byVersion.set(version, [...(byVersion.get(version) ?? []), name]);
+  }
+  return [...byVersion]
+    .filter(([, files]) => files.length > 1)
+    .map(([version, files]) => ({ version, files }));
+}
+
+/**
  * Migraciones posteriores al corte que cambian permisos y que ningún test de supabase/tests
  * nombra. El vínculo es explícito: el test menciona el timestamp de la migración.
  *
